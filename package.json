@@ -20,17 +20,17 @@
     "access": "public"
   },
   "scripts": {
-    "dev:package": "tsup src/index.ts --watch",
-    "build:package": "tsup",
-    "lint:package": "eslint .",
-    "lint:fix:package": "eslint . --fix",
-    "check-types:package": "tsc --noEmit",
-    "check-exports:package": "attw --pack .",
-    "format:package": "prettier --check .",
-    "format:fix:package": "prettier --write --list-different .",
-    "test:package": "vitest run",
-    "ci:package": "pnpm run build:package && pnpm run check-format:package && pnpm run check-exports:package && pnpm run lint:package && pnpm run test:package",
-    "publish:package": "pnpm install --frozen-lockfile && changeset version && changeset publish"
+    "dev": "tsup src/index.ts --watch",
+    "build": "tsup",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write --list-different .",
+    "check-types": "tsc --noEmit",
+    "check-exports": "attw --pack .",
+    "test": "vitest run",
+    "ci": "pnpm run build && pnpm run lint && pnpm run format && pnpm run check-types && pnpm run check-exports && pnpm run test",
+    "release": "changeset version && changeset publish"
   },
   "main": "dist/index.js",
   "module": "dist/index.js",
