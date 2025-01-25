@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@digitalculture/typescript-config/library.json",
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "tsup.config.ts"]
+}

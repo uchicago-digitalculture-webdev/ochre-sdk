@@ -1,0 +1,62 @@
+{
+  "name": "@digitalculture/ochre-sdk",
+  "version": "0.1.20",
+  "type": "module",
+  "license": "MIT",
+  "description": "Node.js library for working with OCHRE (Online Cultural and Historical Research Environment) data",
+  "author": "Firat Ciftci <firatciftci@uchicago.edu> (https://digitalculture.uchicago.edu)",
+  "keywords": [
+    "ochre",
+    "uchicago",
+    "digital-culture",
+    "digital-humanities",
+    "typescript",
+    "sdk",
+    "parser",
+    "cultural-heritage",
+    "research"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev:package": "tsup src/index.ts --watch",
+    "build:package": "tsup",
+    "lint:package": "eslint .",
+    "lint:fix:package": "eslint . --fix",
+    "check-types:package": "tsc --noEmit",
+    "check-exports:package": "attw --pack .",
+    "format:package": "prettier --check .",
+    "format:fix:package": "prettier --write --list-different .",
+    "test:package": "vitest run",
+    "ci:package": "pnpm run build:package && pnpm run check-format:package && pnpm run check-exports:package && pnpm run lint:package && pnpm run test:package",
+    "publish:package": "pnpm install --frozen-lockfile && changeset version && changeset publish"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "iso-639-3": "^3.0.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.17.3",
+    "@changesets/cli": "^2.27.12",
+    "@digitalculture/eslint-config": "workspace:^",
+    "@digitalculture/typescript-config": "workspace:*",
+    "@types/node": "^22.10.10",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.4"
+  },
+  "packageManager": "pnpm@9.15.4"
+}
