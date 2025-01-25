@@ -1,8 +1,6 @@
-/** @type {import('prettier').Config & import('prettier-plugin-tailwindcss').PluginOptions} */
+/** @type {import('prettier').Config} */
 const config = {
   experimentalTernaries: true,
-  plugins: ["prettier-plugin-tailwindcss"],
-  tailwindFunctions: ["cva", "cn"],
 };
 
 export default config;
