@@ -1,5 +1,23 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "extends": "@digitalculture/typescript-config/library.json",
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "lib": ["ES2024"],
+    "module": "NodeNext",
+    "target": "ES2024",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noErrorTruncation": true,
+    "declaration": true,
+    "sourceMap": true
+  },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "tsup.config.ts"]
 }

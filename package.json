@@ -49,11 +49,11 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@antfu/eslint-config": "^4.1.0",
     "@arethetypeswrong/cli": "^0.17.3",
     "@changesets/cli": "^2.27.12",
-    "@digitalculture/eslint-config": "workspace:^",
-    "@digitalculture/typescript-config": "workspace:*",
     "@types/node": "^22.10.10",
+    "eslint-plugin-unused-imports": "^4.1.4",
     "tsup": "^8.3.6",
     "typescript": "^5.7.3",
     "vitest": "^3.0.4"
