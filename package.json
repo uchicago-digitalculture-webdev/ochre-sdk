@@ -30,6 +30,7 @@
     "check-exports": "attw --pack .",
     "test": "vitest run",
     "ci": "pnpm run build && pnpm run lint && pnpm run format && pnpm run check-types && pnpm run check-exports && pnpm run test",
+    "changeset": "changeset add",
     "release": "changeset version && changeset publish"
   },
   "main": "dist/index.js",

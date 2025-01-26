@@ -2134,6 +2134,7 @@ function parseWebsiteProperties(
       ?.uuid ?? null;
 
   let isHeaderDisplayed = true;
+  let headerVariant: "default" | "floating" = "default";
   let isFooterDisplayed = true;
   let isSidebarDisplayed = false;
   let searchCollectionUuid: string | null = null;
@@ -2143,6 +2144,13 @@ function parseWebsiteProperties(
   )?.values[0];
   if (headerProperty) {
     isHeaderDisplayed = headerProperty.content === "Yes";
+  }
+
+  const headerVariantProperty = websiteProperties.find(
+    (property) => property.label === "navbar-variant",
+  )?.values[0];
+  if (headerVariantProperty) {
+    headerVariant = headerVariantProperty.content as "default" | "floating";
   }
 
   const footerProperty = websiteProperties.find(
@@ -2177,6 +2185,7 @@ function parseWebsiteProperties(
     privacy: validatedPrivacy,
     status: validatedStatus,
     isHeaderDisplayed,
+    headerVariant,
     isFooterDisplayed,
     isSidebarDisplayed,
     searchCollectionUuid,

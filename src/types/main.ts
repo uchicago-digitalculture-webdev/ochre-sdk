@@ -464,6 +464,7 @@ export type WebsiteProperties = {
   privacy: "public" | "password" | "private";
   status: "development" | "preview" | "production";
   isHeaderDisplayed: boolean;
+  headerVariant: "default" | "floating";
   isFooterDisplayed: boolean;
   isSidebarDisplayed: boolean;
   searchCollectionUuid: string | null;
