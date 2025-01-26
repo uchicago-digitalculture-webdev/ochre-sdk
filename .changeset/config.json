@@ -6,14 +6,5 @@
   "linked": [],
   "access": "restricted",
   "baseBranch": "main",
-  "updateInternalDependencies": "patch",
-  "ignore": [
-    "@digitalculture/ochre-app",
-    "@digitalculture/uchicago-node",
-    "@digitalculture/components",
-    "@digitalculture/utils",
-    "@digitalculture/eslint-config",
-    "@digitalculture/tailwind-config",
-    "@digitalculture/typescript-config"
-  ]
+  "updateInternalDependencies": "patch"
 }
