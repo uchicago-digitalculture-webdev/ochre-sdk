@@ -19,6 +19,6 @@
     "declaration": true,
     "sourceMap": true
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "tsup.config.ts"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "tsup.config.ts", "reset.d.ts"],
   "exclude": ["node_modules"]
 }
