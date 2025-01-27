@@ -5,6 +5,14 @@
   "license": "MIT",
   "description": "Node.js library for working with OCHRE (Online Cultural and Historical Research Environment) data",
   "author": "Firat Ciftci <firatciftci@uchicago.edu> (https://digitalculture.uchicago.edu)",
+  "homepage": "https://github.com/forumfordigitalculture/ochre-sdk",
+  "bugs": {
+    "url": "https://github.com/forumfordigitalculture/ochre-sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/forumfordigitalculture/ochre-sdk.git"
+  },
   "keywords": [
     "ochre",
     "uchicago",
