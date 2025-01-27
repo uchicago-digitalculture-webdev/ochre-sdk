@@ -1,15 +1,45 @@
 # OCHRE SDK
 
-A JavaScript/TypeScript SDK for working with OCHRE (Online Cultural and Historical Research Environment) data.
+This is the OCHRE JavaScript/TypeScript SDK for interacting with OCHRE (Online Cultural and Historical Research Environment) data.
 
 ## Installation
 
 ```bash
-pnpm add @uchicago/ochre
+pnpm add @digital-culture/ochre-sdk
+```
+
 or
-npm install @uchicago/ochre
+
+```bash
+npm install @digital-culture/ochre-sdk
+```
+
 or
-bun install @uchicago/ochre
+
+```bash
+bun add @digital-culture/ochre-sdk
+```
+
+## Start development server
+
+From the root directory of the project, run the following command:
+
+```bash
+pnpm run dev:ochre-sdk
+```
+
+## Build production server
+
+From the root directory of the project, run the following command:
+
+```bash
+pnpm run ci
+```
+
+## Release new version to NPM
+
+```bash
+pnpm run release
 ```
 
 ## Features
