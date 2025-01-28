@@ -333,6 +333,7 @@ export type Set = {
  */
 export type Bibliography = {
   uuid: string;
+  category: "bibliography";
   publicationDateTime: Date | null;
   type: string | null;
   number: number | null;
@@ -368,6 +369,7 @@ export type Bibliography = {
  */
 export type Period = {
   uuid: string;
+  category: "period";
   publicationDateTime: Date | null;
   type: string | null;
   number: number | null;

@@ -806,6 +806,7 @@ export function parseImageMap(imageMap: OchreImageMap): ImageMap {
 export function parsePeriod(period: OchrePeriod): Period {
   return {
     uuid: period.uuid,
+    category: "period",
     publicationDateTime:
       period.publicationDateTime != null ?
         new Date(period.publicationDateTime)
@@ -858,6 +859,7 @@ export function parseBibliography(
 
   return {
     uuid: bibliography.uuid,
+    category: "bibliography",
     publicationDateTime:
       bibliography.publicationDateTime != null ?
         new Date(bibliography.publicationDateTime)
