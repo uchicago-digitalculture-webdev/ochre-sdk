@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.1.22
+
+### Patch Changes
+
+- 06f2831: Implement bibliographies for Set and Tree, implement image gallery fetcher
+
 ## 0.1.21
 
 ### Patch Changes
