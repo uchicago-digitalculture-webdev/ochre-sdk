@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.1.26
+
+### Patch Changes
+
+- b06eca8: Add Periods property to Bibliography
+
 ## 0.1.25
 
 ### Patch Changes
