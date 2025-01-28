@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.1.24
+
+### Patch Changes
+
+- e8b794d: Add fetchers for Bibliography and Period
+
 ## 0.1.23
 
 ### Patch Changes
