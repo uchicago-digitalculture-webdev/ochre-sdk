@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.1.23
+
+### Patch Changes
+
+- 5da8677: Add category property to Bibliography and Period
+
 ## 0.1.22
 
 ### Patch Changes
