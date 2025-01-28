@@ -931,6 +931,14 @@ export function parseBibliography(
           `https://ochre.lib.uchicago.edu/ochre?uuid=${bibliography.sourceDocument.uuid}&load`
         : null,
     },
+    periods:
+      bibliography.periods ?
+        parsePeriods(
+          Array.isArray(bibliography.periods.period) ?
+            bibliography.periods.period
+          : [bibliography.periods.period],
+        )
+      : [],
     authors:
       bibliography.authors ?
         parsePersons(

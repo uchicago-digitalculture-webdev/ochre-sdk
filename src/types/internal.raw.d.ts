@@ -420,6 +420,7 @@ export type OchreBibliography = {
       "uuid" | "type" | "publicationDateTime" | "identification"
     >;
   };
+  periods?: { period: OchrePeriod | Array<OchrePeriod> };
   authors?: { person: OchrePerson | Array<OchrePerson> };
   properties?: { property: OchreProperty | Array<OchreProperty> };
 };

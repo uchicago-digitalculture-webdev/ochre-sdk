@@ -360,6 +360,7 @@ export type Bibliography = {
     > | null;
     documentUrl: string | null;
   };
+  periods: Array<Period>;
   authors: Array<Person>;
   properties: Array<Property>;
 };
