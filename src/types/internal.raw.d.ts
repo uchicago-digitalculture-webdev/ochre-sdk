@@ -103,6 +103,7 @@ export type OchreData = {
     | { resource: OchreResource }
     | { spatialUnit: OchreSpatialUnit }
     | { concept: OchreConcept }
+    | { period: OchrePeriod }
     | { bibliography: OchreBibliography }
   );
 };
