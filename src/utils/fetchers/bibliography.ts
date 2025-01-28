@@ -55,7 +55,7 @@ export async function fetchBibliography(uuid: string) {
       item: bibliographyItem as Bibliography,
     };
 
-    return { metadata: data.metadata, resource: data.item };
+    return { metadata: data.metadata, bibliography: data.item };
   } catch (error) {
     console.error(error);
     return null;

@@ -51,7 +51,7 @@ export async function fetchPeriod(uuid: string) {
       item: periodItem as Period,
     };
 
-    return { metadata: data.metadata, resource: data.item };
+    return { metadata: data.metadata, period: data.item };
   } catch (error) {
     console.error(error);
     return null;
