@@ -324,6 +324,7 @@ export type Set = {
     spatialUnits: Array<NestedSpatialUnit>;
     concepts: Array<NestedConcept>;
     periods: Array<Period>;
+    bibliographies: Array<Bibliography>;
   };
 };
 
@@ -426,8 +427,19 @@ export type Tree = {
     spatialUnits: Array<SpatialUnit>;
     concepts: Array<Concept>;
     periods: Array<Period>;
+    bibliographies: Array<Bibliography>;
   };
   properties: Array<Property>;
+};
+
+/**
+ * Represents a gallery with its identification, project identification, resources and max length
+ */
+export type Gallery = {
+  identification: Identification;
+  projectIdentification: Identification;
+  resources: Array<Resource>;
+  maxLength: number;
 };
 
 /**
@@ -550,7 +562,8 @@ export type WebElementComponent =
       image: WebImage;
       imageOpacity: number | null;
       content: string;
-    };
+    }
+  | { component: "timeline"; timelineId: string };
 
 /**
  * Represents an image used in web elements

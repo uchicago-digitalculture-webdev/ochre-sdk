@@ -146,7 +146,8 @@ export type OchreTree = {
       }
     | { spatialUnit: OchreSpatialUnit | Array<OchreSpatialUnit> }
     | { concept: OchreConcept | Array<OchreConcept> }
-    | { period: OchrePeriod | Array<OchrePeriod> };
+    | { period: OchrePeriod | Array<OchrePeriod> }
+    | { bibliography: OchreBibliography | Array<OchreBibliography> };
   properties?: { property: OchreProperty | Array<OchreProperty> };
 };
 
@@ -169,7 +170,8 @@ export type OchreSet = {
     | { resource: OchreResource | Array<OchreResource> }
     | { spatialUnit: OchreSpatialUnit | Array<OchreSpatialUnit> }
     | { concept: OchreConcept | Array<OchreConcept> }
-    | { period: OchrePeriod | Array<OchrePeriod> };
+    | { period: OchrePeriod | Array<OchrePeriod> }
+    | { bibliography: OchreBibliography | Array<OchreBibliography> };
 };
 
 /**
@@ -552,4 +554,20 @@ export type OchreInterpretation = {
   date: string; // YYYY-MM-DD
   interpretationNo: number;
   properties?: { property: OchreProperty | Array<OchreProperty> };
+};
+
+/**
+ * Raw gallery response structure
+ */
+export type GalleryResponse = {
+  result:
+    | {
+        gallery: {
+          project: { identification: OchreIdentification };
+          item: OchreIdentification;
+          resource: OchreResource | Array<OchreResource>;
+          maxLength: number;
+        };
+      }
+    | [];
 };

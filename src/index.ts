@@ -1,5 +1,6 @@
 export * from "./types/main.js";
 export * from "./utils/fetchers/concept.js";
+export * from "./utils/fetchers/gallery.js";
 export * from "./utils/fetchers/generic.js";
 export * from "./utils/fetchers/resource.js";
 export * from "./utils/fetchers/set.js";

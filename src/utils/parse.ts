@@ -130,6 +130,7 @@ const componentSchema = z.enum(
     "table",
     "text",
     "text-image",
+    "timeline",
   ] as const satisfies ReadonlyArray<WebElementComponent["component"]>,
   { message: "Invalid component" },
 );
@@ -988,6 +989,7 @@ export function parseTree(tree: OchreTree): Tree | null {
   let spatialUnits: Array<SpatialUnit> = [];
   let concepts: Array<Concept> = [];
   let periods: Array<Period> = [];
+  let bibliographies: Array<Bibliography> = [];
   if (typeof tree.items !== "string" && "resource" in tree.items) {
     resources = parseResources(
       Array.isArray(tree.items.resource) ?
@@ -1016,6 +1018,13 @@ export function parseTree(tree: OchreTree): Tree | null {
       : [tree.items.period],
     );
   }
+  if (typeof tree.items !== "string" && "bibliography" in tree.items) {
+    bibliographies = parseBibliographies(
+      Array.isArray(tree.items.bibliography) ?
+        tree.items.bibliography
+      : [tree.items.bibliography],
+    );
+  }
 
   const returnTree: Tree = {
     uuid: tree.uuid,
@@ -1032,6 +1041,7 @@ export function parseTree(tree: OchreTree): Tree | null {
       spatialUnits,
       concepts,
       periods,
+      bibliographies,
     },
     properties:
       tree.properties ?
@@ -1057,6 +1067,7 @@ export function parseSet(set: OchreSet): Set {
   let spatialUnits: Array<NestedSpatialUnit> = [];
   let concepts: Array<NestedConcept> = [];
   let periods: Array<Period> = [];
+  let bibliographies: Array<Bibliography> = [];
 
   if (typeof set.items !== "string" && "resource" in set.items) {
     resources = parseResources(
@@ -1087,6 +1098,13 @@ export function parseSet(set: OchreSet): Set {
       Array.isArray(set.items.period) ? set.items.period : [set.items.period],
     );
   }
+  if (typeof set.items !== "string" && "bibliography" in set.items) {
+    bibliographies = parseBibliographies(
+      Array.isArray(set.items.bibliography) ?
+        set.items.bibliography
+      : [set.items.bibliography],
+    );
+  }
 
   return {
     uuid: set.uuid,
@@ -1113,6 +1131,7 @@ export function parseSet(set: OchreSet): Set {
       spatialUnits,
       concepts,
       periods,
+      bibliographies,
     },
   };
 }
@@ -1856,6 +1875,17 @@ async function parseWebElementProperties(
       };
       // TODO: Get image opacity
       properties.imageOpacity = null;
+      break;
+    }
+    case "timeline": {
+      const timelineLink = links.find((link) => link.category === "tree");
+      if (!timelineLink) {
+        throw new Error(
+          `Timeline link not found for the following component: “${componentName}”`,
+        );
+      }
+
+      properties.timelineId = timelineLink.uuid;
       break;
     }
     default: {
