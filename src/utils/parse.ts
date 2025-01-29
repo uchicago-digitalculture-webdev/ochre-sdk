@@ -2092,7 +2092,7 @@ async function parseWebpage(
       variant,
       backgroundImageUrl:
         imageLink ?
-          `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&preview`
+          `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`
         : null,
       cssStyles,
     },
