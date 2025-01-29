@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.1.27
+
+### Patch Changes
+
+- 5a63361: Update webpage background image to use &load instead of &preview
+
 ## 0.1.26
 
 ### Patch Changes
