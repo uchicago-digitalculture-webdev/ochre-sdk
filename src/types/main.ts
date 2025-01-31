@@ -510,7 +510,16 @@ export type WebpageProperties = {
  */
 export type WebElement = {
   uuid: string;
-  title: string;
+  title: {
+    label: string;
+    variant: "default" | "simple";
+    properties: {
+      isNameDisplayed: boolean;
+      isDescriptionDisplayed: boolean;
+      isDateDisplayed: boolean;
+      isCreatorsDisplayed: boolean;
+    };
+  };
   cssStyles: Array<Style>;
 } & WebElementComponent;
 
@@ -522,7 +531,7 @@ export type WebElementComponent =
       component: "annotated-document";
       document: Document;
     }
-  | { component: "annotated-image"; imageUuid: string }
+  | { component: "annotated-image"; imageUuid: string; isSearchable: boolean }
   | {
       component: "bibliography";
       bibliographies: Array<Bibliography>;
@@ -537,12 +546,17 @@ export type WebElementComponent =
       collectionId: string;
     }
   | { component: "iiif-viewer"; IIIFId: string }
-  | { component: "image"; image: WebImage }
+  | {
+      component: "image";
+      variant: "default" | "carousel";
+      images: Array<WebImage>;
+      imageQuality: "high" | "low";
+      captionSource: "name" | "abbreviation" | "description";
+      captionLayout: "top" | "bottom" | "suppress";
+      altTextSource: "name" | "abbreviation" | "description";
+    }
   | { component: "image-gallery"; galleryId: string }
-  | { component: "interactive-chapter-table" }
   | { component: "item-gallery"; galleryId: string }
-  | { component: "menu" }
-  | { component: "menu-item" }
   | { component: "n-columns"; columns: Array<WebElement> }
   | { component: "n-rows"; rows: Array<WebElement> }
   | { component: "network-graph" }
@@ -555,18 +569,21 @@ export type WebElementComponent =
   | {
       component: "text-image";
       variant: "title" | "block" | "banner";
+      image: WebImage;
+      imageQuality: "high" | "low";
       layout:
         | "image-top"
         | "image-bottom"
         | "image-start"
         | "image-end"
         | "image-background";
+      captionSource: "name" | "abbreviation" | "description";
       captionLayout: "top" | "bottom" | "suppress";
-      image: WebImage;
-      imageOpacity: number | null;
+      altTextSource: "name" | "abbreviation" | "description";
       content: string;
     }
-  | { component: "timeline"; timelineId: string };
+  | { component: "timeline"; timelineId: string }
+  | { component: "video"; isChaptersDislayed: boolean };
 
 /**
  * Represents an image used in web elements

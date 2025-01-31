@@ -120,10 +120,7 @@ const componentSchema = z.enum(
     "iiif-viewer",
     "image",
     "image-gallery",
-    "interactive-chapter-table",
     "item-gallery",
-    "menu",
-    "menu-item",
     "n-columns",
     "n-rows",
     "network-graph",
@@ -131,6 +128,7 @@ const componentSchema = z.enum(
     "text",
     "text-image",
     "timeline",
+    "video",
   ] as const satisfies ReadonlyArray<WebElementComponent["component"]>,
   { message: "Invalid component" },
 );
@@ -1727,12 +1725,48 @@ async function parseWebElementProperties(
         );
       }
 
+      let captionLayout = getPropertyValueByLabel(
+        componentProperty.properties,
+        "caption-layout",
+      );
+      if (captionLayout === null) {
+        captionLayout = "bottom";
+      }
+
+      let imageQuality = getPropertyValueByLabel(
+        componentProperty.properties,
+        "image-quality",
+      );
+      if (imageQuality === null) {
+        imageQuality = "high";
+      }
+
+      let captionSource = getPropertyValueByLabel(
+        componentProperty.properties,
+        "caption-source",
+      );
+      if (captionSource === null) {
+        captionSource = "name";
+      }
+
+      let altTextSource = getPropertyValueByLabel(
+        componentProperty.properties,
+        "alt-text-source",
+      );
+      if (altTextSource === null) {
+        altTextSource = "name";
+      }
+
       properties.image = {
         url: `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`,
         label: imageLink.identification?.label ?? null,
         width: imageLink.image?.width ?? 0,
         height: imageLink.image?.height ?? 0,
       };
+      properties.imageQuality = imageQuality;
+      properties.captionLayout = captionLayout;
+      properties.captionSource = captionSource;
+      properties.altTextSource = altTextSource;
       break;
     }
     case "image-gallery": {
@@ -1747,10 +1781,6 @@ async function parseWebElementProperties(
 
       break;
     }
-    case "interactive-chapter-table": {
-      // TODO: Implement interactive chapter table
-      break;
-    }
     case "item-gallery": {
       const galleryLink = links.find((link) => link.category === "tree");
       if (!galleryLink) {
@@ -1760,12 +1790,6 @@ async function parseWebElementProperties(
       }
 
       properties.galleryId = galleryLink.uuid;
-      break;
-    }
-    case "menu": {
-      break;
-    }
-    case "menu-item": {
       break;
     }
     case "n-columns": {
@@ -1873,18 +1897,43 @@ async function parseWebElementProperties(
         );
       }
 
+      let imageQuality = getPropertyValueByLabel(
+        componentProperty.properties,
+        "image-quality",
+      );
+      if (imageQuality === null) {
+        imageQuality = "high";
+      }
+
+      let captionSource = getPropertyValueByLabel(
+        componentProperty.properties,
+        "caption-source",
+      );
+      if (captionSource === null) {
+        captionSource = "name";
+      }
+
+      let altTextSource = getPropertyValueByLabel(
+        componentProperty.properties,
+        "alt-text-source",
+      );
+      if (altTextSource === null) {
+        altTextSource = "name";
+      }
+
       properties.variant = variant;
-      properties.layout = layout;
-      properties.captionLayout = captionLayout;
-      properties.content = document.content;
       properties.image = {
         url: `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&preview`,
         label: imageLink.identification?.label ?? null,
         width: imageLink.image?.width ?? 0,
         height: imageLink.image?.height ?? 0,
       };
-      // TODO: Get image opacity
-      properties.imageOpacity = null;
+      properties.imageQuality = imageQuality;
+      properties.layout = layout;
+      properties.captionSource = captionSource;
+      properties.captionLayout = captionLayout;
+      properties.altTextSource = altTextSource;
+      properties.content = document.content;
       break;
     }
     case "timeline": {
@@ -1898,12 +1947,33 @@ async function parseWebElementProperties(
       properties.timelineId = timelineLink.uuid;
       break;
     }
+    case "video": {
+      const videoLink = links.find((link) => link.type === "video");
+      if (!videoLink) {
+        throw new Error(
+          `Video link not found for the following component: “${componentName}”`,
+        );
+      }
+
+      let isChaptersDislayed = getPropertyValueByLabel(
+        componentProperty.properties,
+        "chapters-displayed",
+      );
+      if (isChaptersDislayed == null) {
+        isChaptersDislayed = "Yes";
+      }
+
+      properties.videoId = videoLink.uuid;
+      properties.isChaptersDislayed = isChaptersDislayed === "Yes";
+      break;
+    }
     default: {
       console.warn(
         `Invalid or non-implemented component name “${componentName as string}” for the following element: “${parseStringContent(
           elementResource.identification.label,
         )}”`,
       );
+      break;
     }
   }
 
@@ -1959,9 +2029,53 @@ async function parseWebElement(
     cssStyles.push({ label: property.label, value: cssStyle });
   }
 
+  const titleProperties = elementResourceProperties.find(
+    (property) => property.label === "title",
+  )?.properties;
+
+  let variant: "default" | "simple" = "default";
+  let isNameDisplayed = false;
+  let isDescriptionDisplayed = false;
+  let isDateDisplayed = false;
+  let isCreatorsDisplayed = false;
+
+  if (titleProperties) {
+    const titleVariant = getPropertyValueByLabel(titleProperties, "variant");
+    if (titleVariant) {
+      variant = titleVariant as "default" | "simple";
+    }
+
+    const titleShow = titleProperties.filter(
+      (property) => property.label === "display",
+    );
+    if (titleShow.length > 0) {
+      isNameDisplayed = titleShow.some(
+        (property) => property.values[0]!.content === "name",
+      );
+      isDescriptionDisplayed = titleShow.some(
+        (property) => property.values[0]!.content === "description",
+      );
+      isDateDisplayed = titleShow.some(
+        (property) => property.values[0]!.content === "date",
+      );
+      isCreatorsDisplayed = titleShow.some(
+        (property) => property.values[0]!.content === "creators",
+      );
+    }
+  }
+
   return {
     uuid: elementResource.uuid,
-    title: identification.label,
+    title: {
+      label: identification.label,
+      variant,
+      properties: {
+        isNameDisplayed,
+        isDescriptionDisplayed,
+        isDateDisplayed,
+        isCreatorsDisplayed,
+      },
+    },
     cssStyles,
     ...properties,
   };
