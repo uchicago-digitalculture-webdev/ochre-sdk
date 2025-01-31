@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.1.28
+
+### Patch Changes
+
+- 7e18657: Update gallery item identification parsing
+
 ## 0.1.27
 
 ### Patch Changes
