@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.2.1
+
+### Patch Changes
+
+- 0d0d5f2: Add isSearchable property to `annotated-image`, `image-gallery`, and `item-gallery`
+
 ## 0.2.0
 
 ### Minor Changes
