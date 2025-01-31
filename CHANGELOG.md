@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.2.0
+
+### Minor Changes
+
+- 4c913ba: Change title parsing for Web Element, implement title display options for WebElement, add "video" type for Component, add component properties to Image component
+
 ## 0.1.29
 
 ### Patch Changes
