@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.1.29
+
+### Patch Changes
+
+- c2dd73e: Fix gallery response type
+
 ## 0.1.28
 
 ### Patch Changes
