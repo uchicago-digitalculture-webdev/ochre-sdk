@@ -87,9 +87,11 @@ export async function fetchGallery(
       identification: galleryIdentification,
       projectIdentification: galleryProjectIdentification,
       resources:
-        Array.isArray(data.result.gallery.resource) ?
-          (parseResources(data.result.gallery.resource) as Array<Resource>)
-        : [parseResource(data.result.gallery.resource) as Resource],
+        data.result.gallery.resource ?
+          Array.isArray(data.result.gallery.resource) ?
+            (parseResources(data.result.gallery.resource) as Array<Resource>)
+          : [parseResource(data.result.gallery.resource) as Resource]
+        : [],
       maxLength: data.result.gallery.maxLength,
     };
 
