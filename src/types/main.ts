@@ -541,9 +541,10 @@ export type WebElementComponent =
   | { component: "button"; href: string; isExternal: boolean; label: string }
   | {
       component: "collection";
+      collectionId: string;
       variant: "full" | "highlights";
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
-      collectionId: string;
+      isSearchable: boolean;
     }
   | { component: "iiif-viewer"; IIIFId: string }
   | {
@@ -555,8 +556,8 @@ export type WebElementComponent =
       captionLayout: "top" | "bottom" | "suppress";
       altTextSource: "name" | "abbreviation" | "description";
     }
-  | { component: "image-gallery"; galleryId: string }
-  | { component: "item-gallery"; galleryId: string }
+  | { component: "image-gallery"; galleryId: string; isSearchable: boolean }
+  | { component: "item-gallery"; galleryId: string; isSearchable: boolean }
   | { component: "n-columns"; columns: Array<WebElement> }
   | { component: "n-rows"; rows: Array<WebElement> }
   | { component: "network-graph" }

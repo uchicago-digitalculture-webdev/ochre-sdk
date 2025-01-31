@@ -1601,14 +1601,11 @@ async function parseWebElementProperties(
         );
       }
 
-      let isSearchable =
+      const isSearchable =
         getPropertyValueByLabel(
           componentProperty.properties,
           "is-searchable",
         ) === "Yes";
-      if (!isSearchable) {
-        isSearchable = false;
-      }
 
       properties.imageUuid = imageLink.uuid;
       properties.isSearchable = isSearchable;
@@ -1777,8 +1774,14 @@ async function parseWebElementProperties(
         );
       }
 
-      properties.galleryId = galleryLink.uuid;
+      const isSearchable =
+        getPropertyValueByLabel(
+          componentProperty.properties,
+          "is-searchable",
+        ) === "Yes";
 
+      properties.galleryId = galleryLink.uuid;
+      properties.isSearchable = isSearchable;
       break;
     }
     case "item-gallery": {
@@ -1789,7 +1792,14 @@ async function parseWebElementProperties(
         );
       }
 
+      const isSearchable =
+        getPropertyValueByLabel(
+          componentProperty.properties,
+          "is-searchable",
+        ) === "Yes";
+
       properties.galleryId = galleryLink.uuid;
+      properties.isSearchable = isSearchable;
       break;
     }
     case "n-columns": {
