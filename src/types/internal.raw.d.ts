@@ -566,7 +566,7 @@ export type GalleryResponse = {
     | {
         gallery: {
           project: { identification: OchreIdentification };
-          item: OchreIdentification;
+          item: { identification: OchreIdentification };
           resource: OchreResource | Array<OchreResource>;
           maxLength: number;
         };

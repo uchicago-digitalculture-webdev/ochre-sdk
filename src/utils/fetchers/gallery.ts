@@ -76,7 +76,9 @@ export async function fetchGallery(
       throw new Error("Failed to fetch gallery");
     }
 
-    const galleryIdentification = parseIdentification(data.result.gallery.item);
+    const galleryIdentification = parseIdentification(
+      data.result.gallery.item.identification,
+    );
     const galleryProjectIdentification = parseIdentification(
       data.result.gallery.project.identification,
     );
