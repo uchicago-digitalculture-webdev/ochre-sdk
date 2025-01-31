@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.2.2
+
+### Patch Changes
+
+- 8655afa: Fix bug with multiple images for `image` component
+
 ## 0.2.1
 
 ### Patch Changes
