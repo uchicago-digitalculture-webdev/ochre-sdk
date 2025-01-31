@@ -60,6 +60,7 @@ import type {
   Tree,
   WebElement,
   WebElementComponent,
+  WebImage,
   Webpage,
   Website,
   WebsiteProperties,
@@ -1565,7 +1566,7 @@ async function parseWebElementProperties(
         : [elementResource.links],
       )
     : [];
-  const imageLink = links.find((link) => link.type === "image");
+  const imageLinks = links.filter((link) => link.type === "image");
 
   let document: Document | null =
     elementResource.document ?
@@ -1595,7 +1596,7 @@ async function parseWebElementProperties(
       break;
     }
     case "annotated-image": {
-      if (!imageLink) {
+      if (imageLinks.length === 0) {
         throw new Error(
           `Image link not found for the following component: “${componentName}”`,
         );
@@ -1607,7 +1608,7 @@ async function parseWebElementProperties(
           "is-searchable",
         ) === "Yes";
 
-      properties.imageUuid = imageLink.uuid;
+      properties.imageUuid = imageLinks[0]!.uuid;
       properties.isSearchable = isSearchable;
       break;
     }
@@ -1716,7 +1717,7 @@ async function parseWebElementProperties(
       break;
     }
     case "image": {
-      if (!imageLink) {
+      if (imageLinks.length === 0) {
         throw new Error(
           `Image link not found for the following component: “${componentName}”`,
         );
@@ -1754,12 +1755,17 @@ async function parseWebElementProperties(
         altTextSource = "name";
       }
 
-      properties.image = {
-        url: `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`,
-        label: imageLink.identification?.label ?? null,
-        width: imageLink.image?.width ?? 0,
-        height: imageLink.image?.height ?? 0,
-      };
+      const images: Array<WebImage> = [];
+      for (const imageLink of imageLinks) {
+        images.push({
+          url: `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`,
+          label: imageLink.identification?.label ?? null,
+          width: imageLink.image?.width ?? 0,
+          height: imageLink.image?.height ?? 0,
+        });
+      }
+
+      properties.images = images;
       properties.imageQuality = imageQuality;
       properties.captionLayout = captionLayout;
       properties.captionSource = captionSource;
