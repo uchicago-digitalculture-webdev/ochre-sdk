@@ -124,7 +124,7 @@ export type OchreMetadata = {
   publisher: OchreStringContent;
   dataset: OchreStringContent;
   project?: { identification: OchreIdentification };
-  language: OchreLanguage | Array<OchreLanguage>;
+  language?: OchreLanguage | Array<OchreLanguage>;
   description: OchreStringContent;
 };
 

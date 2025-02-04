@@ -175,8 +175,13 @@ export function parseIdentification(
  * @returns Array of language codes as strings
  */
 export function parseLanguages(
-  language: OchreLanguage | Array<OchreLanguage>,
+  language: OchreLanguage | Array<OchreLanguage> | undefined,
 ): Array<string> {
+  if (language == null) {
+    // Default to English if no language is provided
+    return ["eng"];
+  }
+
   if (Array.isArray(language)) {
     return language.map((lang) => parseStringContent(lang));
   } else {
