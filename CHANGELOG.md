@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.2.4
+
+### Patch Changes
+
+- afa84e9: Fix string parsing for older set identification and description
+
 ## 0.2.3
 
 ### Patch Changes
