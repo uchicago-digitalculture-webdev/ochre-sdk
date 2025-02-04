@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.2.3
+
+### Patch Changes
+
+- 1206cd4: Fix language parsing inside Metadata
+
 ## 0.2.2
 
 ### Patch Changes
