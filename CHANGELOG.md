@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.2.5
+
+### Patch Changes
+
+- 9cdae44: Fix property value parsing for older Sets
+
 ## 0.2.4
 
 ### Patch Changes
