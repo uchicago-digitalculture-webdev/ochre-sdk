@@ -25,6 +25,7 @@ import type {
   OchreResource,
   OchreSet,
   OchreSpatialUnit,
+  OchreStringContent,
   OchreStringRichText,
   OchreTree,
 } from "../types/internal.raw.d.ts";
@@ -145,7 +146,10 @@ export function parseIdentification(
 ): Identification {
   try {
     const returnIdentification: Identification = {
-      label: parseStringContent(identification.label),
+      label:
+        ["string", "number", "boolean"].includes(typeof identification.label) ?
+          parseFakeString(identification.label as FakeString)
+        : parseStringContent(identification.label as OchreStringContent),
       abbreviation: "",
     };
 
@@ -153,7 +157,7 @@ export function parseIdentification(
       (key) => key !== "label",
     )) {
       returnIdentification[key as keyof Identification] = parseStringContent(
-        identification[key as keyof Identification]!,
+        identification[key as keyof OchreIdentification]! as OchreStringContent,
       );
     }
 
@@ -1129,7 +1133,12 @@ export function parseSet(set: OchreSet): Set {
     license: parseLicense(set.availability),
     identification: parseIdentification(set.identification),
     isSuppressingBlanks: set.suppressBlanks ?? false,
-    description: set.description ? parseStringContent(set.description) : "",
+    description:
+      set.description ?
+        ["string", "number", "boolean"].includes(typeof set.description) ?
+          parseFakeString(set.description as FakeString)
+        : parseStringContent(set.description as OchreStringContent)
+      : "",
     creators:
       set.creators ?
         parsePersons(
@@ -1333,7 +1342,13 @@ export function parseSpatialUnit(
     image: spatialUnit.image ? parseImage(spatialUnit.image) : null,
     description:
       spatialUnit.description ?
-        parseStringContent(spatialUnit.description)
+        (
+          ["string", "number", "boolean"].includes(
+            typeof spatialUnit.description,
+          )
+        ) ?
+          parseFakeString(spatialUnit.description as FakeString)
+        : parseStringContent(spatialUnit.description as OchreStringContent)
       : "",
     coordinates:
       spatialUnit.coordinates ?
@@ -1676,9 +1691,16 @@ async function parseWebElementProperties(
 
       properties.href = href;
       properties.isExternal = isExternal;
-      properties.label = parseStringContent(
-        elementResource.identification.label,
-      );
+      properties.label =
+        (
+          ["string", "number", "boolean"].includes(
+            typeof elementResource.identification.label,
+          )
+        ) ?
+          parseFakeString(elementResource.identification.label as FakeString)
+        : parseStringContent(
+            elementResource.identification.label as OchreStringContent,
+          );
       break;
     }
     case "collection": {
@@ -1991,7 +2013,7 @@ async function parseWebElementProperties(
     default: {
       console.warn(
         `Invalid or non-implemented component name “${componentName as string}” for the following element: “${parseStringContent(
-          elementResource.identification.label,
+          elementResource.identification.label as OchreStringContent,
         )}”`,
       );
       break;

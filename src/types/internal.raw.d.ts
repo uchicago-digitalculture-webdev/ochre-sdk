@@ -164,7 +164,7 @@ export type OchreSet = {
   identification: OchreIdentification;
   date?: string; // YYYY-MM-DD
   suppressBlanks?: boolean;
-  description?: OchreStringContent;
+  description?: OchreStringContent | FakeString;
   creators?: { creator: OchrePerson | Array<OchrePerson> };
   items:
     | string
@@ -229,7 +229,7 @@ export type OchreSpatialUnit = {
   context?: OchreContext;
   identification: OchreIdentification;
   image?: OchreImage;
-  description?: OchreStringContent;
+  description?: OchreStringContent | FakeString;
   coordinates?: OchreCoordinates;
   events?: { event: OchreEvent | Array<OchreEvent> };
   observations?: { observation: OchreObservation | Array<OchreObservation> };
@@ -290,8 +290,8 @@ export type OchreProperty = {
  * Raw identification structure corresponding to the parsed Identification type
  */
 export type OchreIdentification = {
-  label: OchreStringContent;
-  abbreviation?: OchreStringContent;
+  label: OchreStringContent | FakeString;
+  abbreviation?: OchreStringContent | FakeString;
   MIMEType?: string;
   widthPreview?: number;
   heightPreview?: number;

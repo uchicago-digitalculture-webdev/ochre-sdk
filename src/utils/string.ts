@@ -418,7 +418,15 @@ export function parseStringDocumentItem(
 
         const linkContent =
           linkPerson.identification ?
-            parseStringContent(linkPerson.identification.label)
+            (
+              ["string", "number", "boolean"].includes(
+                typeof linkPerson.identification.label,
+              )
+            ) ?
+              parseFakeString(linkPerson.identification.label as FakeString)
+            : parseStringContent(
+                linkPerson.identification.label as OchreStringContent,
+              )
           : null;
 
         if (linkPerson.publicationDateTime != null) {
