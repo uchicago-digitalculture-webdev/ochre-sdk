@@ -53,6 +53,7 @@ import type {
   Period,
   Person,
   Property,
+  PropertyValue,
   PropertyValueType,
   Resource,
   Set,
@@ -713,16 +714,31 @@ export function parseProperties(
         : [property.value]
       : [];
 
-    const values = valuesToParse.map((value) => ({
-      content: parseStringContent(value),
-      type: value.type as PropertyValueType,
-      category: value.category !== "value" ? (value.category ?? null) : null,
-      uuid: value.uuid ?? null,
-      publicationDateTime:
-        value.publicationDateTime != null ?
-          new Date(value.publicationDateTime)
-        : null,
-    }));
+    const values: Array<PropertyValue> = valuesToParse.map((value) =>
+      (
+        !["string", "number", "boolean"].includes(typeof value) &&
+        typeof value === "object" &&
+        "uuid" in value
+      ) ?
+        {
+          content: parseStringContent(value),
+          type: value.type as PropertyValueType,
+          category:
+            value.category !== "value" ? (value.category ?? null) : null,
+          uuid: value.uuid ?? null,
+          publicationDateTime:
+            value.publicationDateTime != null ?
+              new Date(value.publicationDateTime)
+            : null,
+        }
+      : {
+          content: parseFakeString(value as FakeString),
+          type: "string",
+          category: "value",
+          uuid: null,
+          publicationDateTime: null,
+        },
+    );
 
     returnProperties.push({
       label: parseStringContent(property.label, language)

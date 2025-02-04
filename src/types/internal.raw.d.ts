@@ -281,7 +281,7 @@ export type OchrePropertyValue = OchreStringContent & {
  */
 export type OchreProperty = {
   label: OchreStringContent & { uuid: string };
-  value?: OchrePropertyValue | Array<OchrePropertyValue>;
+  value?: OchrePropertyValue | Array<OchrePropertyValue> | FakeString;
   comment?: FakeString;
   property?: OchreProperty | Array<OchreProperty>;
 };
