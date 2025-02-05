@@ -29,7 +29,7 @@
   },
   "scripts": {
     "dev": "tsup src/index.ts --watch",
-    "build:ochre-sdk": "tsup",
+    "build": "tsup",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --check .",
@@ -37,7 +37,7 @@
     "check-types": "tsc --noEmit",
     "check-exports": "attw --pack .",
     "test": "vitest run",
-    "ci": "pnpm run build:ochre-sdk && pnpm run lint && pnpm run format && pnpm run check-types && pnpm run check-exports && pnpm run test",
+    "ci": "pnpm run build && pnpm run lint && pnpm run format && pnpm run check-types && pnpm run check-exports && pnpm run test",
     "changeset": "changeset add",
     "release": "changeset version && changeset publish"
   },
