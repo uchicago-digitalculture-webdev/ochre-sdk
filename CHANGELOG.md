@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.2.6
+
+### Patch Changes
+
+- f3bc4e2: - Add support for Person inside Set and Tree
+  - Add height and width as props to Image
+
 ## 0.2.5
 
 ### Patch Changes
