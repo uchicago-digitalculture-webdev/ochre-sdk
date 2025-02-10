@@ -555,6 +555,11 @@ export type WebElementComponent =
       captionSource: "name" | "abbreviation" | "description";
       captionLayout: "top" | "bottom" | "suppress";
       altTextSource: "name" | "abbreviation" | "description";
+      carousel: {
+        secondsPerImage: number;
+        isFullWidth: boolean;
+        isFullHeight: boolean;
+      } | null;
     }
   | { component: "image-gallery"; galleryId: string; isSearchable: boolean }
   | { component: "item-gallery"; galleryId: string; isSearchable: boolean }

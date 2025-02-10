@@ -1766,6 +1766,16 @@ async function parseWebElementProperties(
         );
       }
 
+      const images: Array<WebImage> = [];
+      for (const imageLink of imageLinks) {
+        images.push({
+          url: `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`,
+          label: imageLink.identification?.label ?? null,
+          width: imageLink.image?.width ?? 0,
+          height: imageLink.image?.height ?? 0,
+        });
+      }
+
       let captionLayout = getPropertyValueByLabel(
         componentProperty.properties,
         "caption-layout",
@@ -1798,14 +1808,42 @@ async function parseWebElementProperties(
         altTextSource = "name";
       }
 
-      const images: Array<WebImage> = [];
-      for (const imageLink of imageLinks) {
-        images.push({
-          url: `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`,
-          label: imageLink.identification?.label ?? null,
-          width: imageLink.image?.width ?? 0,
-          height: imageLink.image?.height ?? 0,
-        });
+      const carousel: {
+        secondsPerImage: number;
+        isFullWidth: boolean;
+        isFullHeight: boolean;
+      } | null =
+        images.length > 1 ?
+          {
+            secondsPerImage: 5,
+            isFullWidth: false,
+            isFullHeight: false,
+          }
+        : null;
+      if (carousel !== null) {
+        const carouselSecondsPerImage = getPropertyValueByLabel(
+          componentProperty.properties,
+          "carousel-seconds-per-image",
+        );
+        if (carouselSecondsPerImage !== null) {
+          carousel.secondsPerImage = Number.parseFloat(carouselSecondsPerImage);
+        }
+
+        const carouselIsFullWidth = getPropertyValueByLabel(
+          componentProperty.properties,
+          "carousel-full-width",
+        );
+        if (carouselIsFullWidth !== null) {
+          carousel.isFullWidth = carouselIsFullWidth === "Yes";
+        }
+
+        const carouselIsFullHeight = getPropertyValueByLabel(
+          componentProperty.properties,
+          "carousel-full-height",
+        );
+        if (carouselIsFullHeight !== null) {
+          carousel.isFullHeight = carouselIsFullHeight === "Yes";
+        }
       }
 
       properties.images = images;
@@ -1813,6 +1851,7 @@ async function parseWebElementProperties(
       properties.captionLayout = captionLayout;
       properties.captionSource = captionSource;
       properties.altTextSource = altTextSource;
+      properties.carousel = carousel;
       break;
     }
     case "image-gallery": {
