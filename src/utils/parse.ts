@@ -331,26 +331,34 @@ export function parseLicense(license: OchreLicense): License | null {
 /**
  * Parses raw person data into the standardized Person type
  *
- * @param persons - Raw person data from OCHRE format
+ * @param person - Raw person data from OCHRE format
+ * @returns Parsed Person object
+ */
+export function parsePerson(person: OchrePerson): Person {
+  return {
+    uuid: person.uuid,
+    publicationDateTime:
+      person.publicationDateTime != null ?
+        new Date(person.publicationDateTime)
+      : null,
+    type: person.type ?? null,
+    date: person.date != null ? new Date(person.date) : null,
+    identification:
+      person.identification ? parseIdentification(person.identification) : null,
+    content: person.content != null ? parseFakeString(person.content) : null,
+  };
+}
+
+/**
+ * Parses raw person data into the standardized Person type
+ *
+ * @param persons - Array of raw person data from OCHRE format
  * @returns Array of parsed Person objects
  */
 export function parsePersons(persons: Array<OchrePerson>): Array<Person> {
   const returnPersons: Array<Person> = [];
   for (const person of persons) {
-    returnPersons.push({
-      uuid: person.uuid,
-      publicationDateTime:
-        person.publicationDateTime != null ?
-          new Date(person.publicationDateTime)
-        : null,
-      type: person.type ?? null,
-      date: person.date != null ? new Date(person.date) : null,
-      identification:
-        person.identification ?
-          parseIdentification(person.identification)
-        : null,
-      content: person.content != null ? parseFakeString(person.content) : null,
-    });
+    returnPersons.push(parsePerson(person));
   }
 
   return returnPersons;
@@ -1024,6 +1032,8 @@ export function parseTree(tree: OchreTree): Tree | null {
   let concepts: Array<Concept> = [];
   let periods: Array<Period> = [];
   let bibliographies: Array<Bibliography> = [];
+  let persons: Array<Person> = [];
+
   if (typeof tree.items !== "string" && "resource" in tree.items) {
     resources = parseResources(
       Array.isArray(tree.items.resource) ?
@@ -1059,6 +1069,13 @@ export function parseTree(tree: OchreTree): Tree | null {
       : [tree.items.bibliography],
     );
   }
+  if (typeof tree.items !== "string" && "person" in tree.items) {
+    persons = parsePersons(
+      Array.isArray(tree.items.person) ?
+        tree.items.person
+      : [tree.items.person],
+    );
+  }
 
   const returnTree: Tree = {
     uuid: tree.uuid,
@@ -1076,6 +1093,7 @@ export function parseTree(tree: OchreTree): Tree | null {
       concepts,
       periods,
       bibliographies,
+      persons,
     },
     properties:
       tree.properties ?
@@ -1102,6 +1120,7 @@ export function parseSet(set: OchreSet): Set {
   let concepts: Array<NestedConcept> = [];
   let periods: Array<Period> = [];
   let bibliographies: Array<Bibliography> = [];
+  let persons: Array<Person> = [];
 
   if (typeof set.items !== "string" && "resource" in set.items) {
     resources = parseResources(
@@ -1139,6 +1158,11 @@ export function parseSet(set: OchreSet): Set {
       : [set.items.bibliography],
     );
   }
+  if (typeof set.items !== "string" && "person" in set.items) {
+    persons = parsePersons(
+      Array.isArray(set.items.person) ? set.items.person : [set.items.person],
+    );
+  }
 
   return {
     uuid: set.uuid,
@@ -1171,6 +1195,7 @@ export function parseSet(set: OchreSet): Set {
       concepts,
       periods,
       bibliographies,
+      persons,
     },
   };
 }

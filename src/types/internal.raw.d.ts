@@ -105,6 +105,7 @@ export type OchreData = {
     | { concept: OchreConcept }
     | { period: OchrePeriod }
     | { bibliography: OchreBibliography }
+    | { person: OchrePerson }
   );
 };
 
@@ -148,7 +149,8 @@ export type OchreTree = {
     | { spatialUnit: OchreSpatialUnit | Array<OchreSpatialUnit> }
     | { concept: OchreConcept | Array<OchreConcept> }
     | { period: OchrePeriod | Array<OchrePeriod> }
-    | { bibliography: OchreBibliography | Array<OchreBibliography> };
+    | { bibliography: OchreBibliography | Array<OchreBibliography> }
+    | { person: OchrePerson | Array<OchrePerson> };
   properties?: { property: OchreProperty | Array<OchreProperty> };
 };
 
@@ -172,7 +174,8 @@ export type OchreSet = {
     | { spatialUnit: OchreSpatialUnit | Array<OchreSpatialUnit> }
     | { concept: OchreConcept | Array<OchreConcept> }
     | { period: OchrePeriod | Array<OchrePeriod> }
-    | { bibliography: OchreBibliography | Array<OchreBibliography> };
+    | { bibliography: OchreBibliography | Array<OchreBibliography> }
+    | { person: OchrePerson | Array<OchrePerson> };
 };
 
 /**

@@ -11,7 +11,15 @@ export type Data = {
   };
   publicationDateTime: Date;
   metadata: Metadata;
-  item: Tree | Set | Resource | SpatialUnit | Concept;
+  item:
+    | Tree
+    | Set
+    | Resource
+    | SpatialUnit
+    | Concept
+    | Period
+    | Bibliography
+    | Person;
 };
 
 /**
@@ -325,6 +333,7 @@ export type Set = {
     concepts: Array<NestedConcept>;
     periods: Array<Period>;
     bibliographies: Array<Bibliography>;
+    persons: Array<Person>;
   };
 };
 
@@ -431,6 +440,7 @@ export type Tree = {
     concepts: Array<Concept>;
     periods: Array<Period>;
     bibliographies: Array<Bibliography>;
+    persons: Array<Person>;
   };
   properties: Array<Property>;
 };
