@@ -529,6 +529,10 @@ export function parseImage(image: OchreImage): Image | null {
       image.htmlImgSrcPrefix != null && image.content != null ?
         parseFakeString(image.content)
       : null,
+    widthPreview: image.widthPreview ?? null,
+    heightPreview: image.heightPreview ?? null,
+    width: image.width ?? null,
+    height: image.height ?? null,
   };
 }
 

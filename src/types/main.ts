@@ -115,6 +115,10 @@ export type Image = {
   url: string | null;
   htmlPrefix: string | null;
   content: string | null;
+  widthPreview: number | null;
+  heightPreview: number | null;
+  width: number | null;
+  height: number | null;
 };
 
 /**

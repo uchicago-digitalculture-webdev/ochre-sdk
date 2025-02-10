@@ -355,6 +355,10 @@ export type OchreImage = {
   href?: string;
   htmlImgSrcPrefix?: string;
   content?: FakeString;
+  widthPreview?: number;
+  heightPreview?: number;
+  width?: number;
+  height?: number;
 };
 
 /**
