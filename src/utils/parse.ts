@@ -1805,6 +1805,14 @@ async function parseWebElementProperties(
         });
       }
 
+      let variant = getPropertyValueByLabel(
+        componentProperty.properties,
+        "variant",
+      );
+      if (variant === null) {
+        variant = "default";
+      }
+
       let captionLayout = getPropertyValueByLabel(
         componentProperty.properties,
         "caption-layout",
@@ -1837,50 +1845,42 @@ async function parseWebElementProperties(
         altTextSource = "name";
       }
 
-      const carousel: {
-        secondsPerImage: number;
-        isFullWidth: boolean;
-        isFullHeight: boolean;
-      } | null =
-        images.length > 1 ?
-          {
-            secondsPerImage: 5,
-            isFullWidth: false,
-            isFullHeight: false,
-          }
-        : null;
-      if (carousel !== null) {
-        const carouselSecondsPerImage = getPropertyValueByLabel(
-          componentProperty.properties,
-          "carousel-seconds-per-image",
-        );
-        if (carouselSecondsPerImage !== null) {
-          carousel.secondsPerImage = Number.parseFloat(carouselSecondsPerImage);
-        }
+      let secondsPerImage = images.length > 1 ? 5 : null;
+      const secondsPerImageProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "seconds-per-image",
+      );
+      if (secondsPerImageProperty !== null) {
+        secondsPerImage = Number.parseFloat(secondsPerImageProperty);
+      }
 
-        const carouselIsFullWidth = getPropertyValueByLabel(
-          componentProperty.properties,
-          "carousel-full-width",
-        );
-        if (carouselIsFullWidth !== null) {
-          carousel.isFullWidth = carouselIsFullWidth === "Yes";
-        }
+      let isFullWidth = false;
+      const isFullWidthProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "is-full-width",
+      );
+      if (isFullWidthProperty !== null) {
+        isFullWidth = isFullWidthProperty === "Yes";
+      }
 
-        const carouselIsFullHeight = getPropertyValueByLabel(
-          componentProperty.properties,
-          "carousel-full-height",
-        );
-        if (carouselIsFullHeight !== null) {
-          carousel.isFullHeight = carouselIsFullHeight === "Yes";
-        }
+      let isFullHeight = false;
+      const isFullHeightProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "is-full-height",
+      );
+      if (isFullHeightProperty !== null) {
+        isFullHeight = isFullHeightProperty === "Yes";
       }
 
       properties.images = images;
+      properties.variant = variant;
       properties.imageQuality = imageQuality;
       properties.captionLayout = captionLayout;
       properties.captionSource = captionSource;
       properties.altTextSource = altTextSource;
-      properties.carousel = carousel;
+      properties.secondsPerImage = secondsPerImage;
+      properties.isFullWidth = isFullWidth;
+      properties.isFullHeight = isFullHeight;
       break;
     }
     case "image-gallery": {
