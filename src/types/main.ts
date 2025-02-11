@@ -494,8 +494,11 @@ export type WebsiteProperties = {
   status: "development" | "preview" | "production";
   isHeaderDisplayed: boolean;
   headerVariant: "default" | "floating";
+  headerAlignment: "start" | "center" | "end";
+  isHeaderProjectDisplayed: boolean;
   isFooterDisplayed: boolean;
   isSidebarDisplayed: boolean;
+  supportsThemeToggle: boolean;
   searchCollectionUuid: string | null;
   logoUrl: string | null;
 };

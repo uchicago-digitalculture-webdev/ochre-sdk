@@ -2415,9 +2415,12 @@ function parseWebsiteProperties(
 
   let isHeaderDisplayed = true;
   let headerVariant: "default" | "floating" = "default";
+  let headerAlignment: "start" | "center" | "end" = "start";
+  let isHeaderProjectDisplayed = true;
   let isFooterDisplayed = true;
   let isSidebarDisplayed = false;
   let searchCollectionUuid: string | null = null;
+  let supportsThemeToggle = true;
 
   const headerProperty = websiteProperties.find(
     (property) => property.label === "navbar-visible",
@@ -2431,6 +2434,24 @@ function parseWebsiteProperties(
   )?.values[0];
   if (headerVariantProperty) {
     headerVariant = headerVariantProperty.content as "default" | "floating";
+  }
+
+  const headerAlignmentProperty = websiteProperties.find(
+    (property) => property.label === "navbar-alignment",
+  )?.values[0];
+  if (headerAlignmentProperty) {
+    headerAlignment = headerAlignmentProperty.content as
+      | "start"
+      | "center"
+      | "end";
+  }
+
+  const isHeaderProjectDisplayedProperty = websiteProperties.find(
+    (property) => property.label === "navbar-project-visible",
+  )?.values[0];
+  if (isHeaderProjectDisplayedProperty) {
+    isHeaderProjectDisplayed =
+      isHeaderProjectDisplayedProperty.content === "Yes";
   }
 
   const footerProperty = websiteProperties.find(
@@ -2454,6 +2475,13 @@ function parseWebsiteProperties(
     searchCollectionUuid = collectionSearchProperty.uuid;
   }
 
+  const supportsThemeToggleProperty = websiteProperties.find(
+    (property) => property.label === "supports-theme-toggle",
+  )?.values[0];
+  if (supportsThemeToggleProperty) {
+    supportsThemeToggle = supportsThemeToggleProperty.content === "Yes";
+  }
+
   const {
     type: validatedType,
     status: validatedStatus,
@@ -2466,8 +2494,11 @@ function parseWebsiteProperties(
     status: validatedStatus,
     isHeaderDisplayed,
     headerVariant,
+    headerAlignment,
+    isHeaderProjectDisplayed,
     isFooterDisplayed,
     isSidebarDisplayed,
+    supportsThemeToggle,
     searchCollectionUuid,
     logoUrl:
       logoUuid !== null ?
