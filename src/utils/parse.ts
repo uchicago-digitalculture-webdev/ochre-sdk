@@ -729,8 +729,7 @@ export function parseProperties(
     const values: Array<PropertyValue> = valuesToParse.map((value) =>
       (
         !["string", "number", "boolean"].includes(typeof value) &&
-        typeof value === "object" &&
-        "uuid" in value
+        typeof value === "object"
       ) ?
         {
           content: parseStringContent(value),
