@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.2.10
+
+### Patch Changes
+
+- fdaf4dd: refactor: Restructure image component properties with carousel options
+
 ## 0.2.9
 
 ### Patch Changes
