@@ -69,7 +69,10 @@ import type {
 } from "../types/main.js";
 import { z } from "zod";
 import { fetchResource } from "../utils/fetchers/resource.js";
-import { getPropertyValueByLabel } from "../utils/getters.js";
+import {
+  getPropertyByLabel,
+  getPropertyValueByLabel,
+} from "../utils/getters.js";
 import {
   parseEmailAndUrl,
   parseFakeString,
@@ -1844,43 +1847,60 @@ async function parseWebElementProperties(
         altTextSource = "name";
       }
 
-      let secondsPerImage = 5;
-      const secondsPerImageProperty = getPropertyValueByLabel(
-        componentProperty.properties,
-        "seconds-per-image",
-      );
-      if (secondsPerImageProperty !== null) {
-        secondsPerImage = Number.parseFloat(secondsPerImageProperty);
-      }
+      let carouselOptions: {
+        secondsPerImage: number | null;
+        isFullWidth: boolean | null;
+        isFullHeight: boolean | null;
+      } | null = null;
+      if (images.length > 1) {
+        const variantProperty = getPropertyByLabel(
+          componentProperty.properties,
+          "variant",
+        );
 
-      let isFullWidth = false;
-      const isFullWidthProperty = getPropertyValueByLabel(
-        componentProperty.properties,
-        "is-full-width",
-      );
-      if (isFullWidthProperty !== null) {
-        isFullWidth = isFullWidthProperty === "Yes";
-      }
+        let secondsPerImage = 5;
+        let isFullWidth = false;
+        let isFullHeight = false;
 
-      let isFullHeight = false;
-      const isFullHeightProperty = getPropertyValueByLabel(
-        componentProperty.properties,
-        "is-full-height",
-      );
-      if (isFullHeightProperty !== null) {
-        isFullHeight = isFullHeightProperty === "Yes";
+        if (
+          variantProperty &&
+          variantProperty.values[0]!.content === "carousel"
+        ) {
+          const secondsPerImageProperty = getPropertyValueByLabel(
+            variantProperty.properties,
+            "seconds-per-image",
+          );
+          if (secondsPerImageProperty !== null) {
+            secondsPerImage = Number.parseFloat(secondsPerImageProperty);
+          }
+
+          const isFullWidthProperty = getPropertyValueByLabel(
+            variantProperty.properties,
+            "is-full-width",
+          );
+          if (isFullWidthProperty !== null) {
+            isFullWidth = isFullWidthProperty === "Yes";
+          }
+
+          const isFullHeightProperty = getPropertyValueByLabel(
+            variantProperty.properties,
+            "is-full-height",
+          );
+          if (isFullHeightProperty !== null) {
+            isFullHeight = isFullHeightProperty === "Yes";
+          }
+        }
+
+        carouselOptions = {
+          secondsPerImage,
+          isFullWidth,
+          isFullHeight,
+        };
       }
 
       properties.images = images;
       properties.variant = variant;
-      properties.carouselOptions =
-        images.length > 1 ?
-          {
-            secondsPerImage,
-            isFullWidth,
-            isFullHeight,
-          }
-        : null;
+      properties.carouselOptions = carouselOptions;
       properties.imageQuality = imageQuality;
       properties.captionLayout = captionLayout;
       properties.captionSource = captionSource;
