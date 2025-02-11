@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.2.11
+
+### Patch Changes
+
+- 4425047: refactor: Fix carousel options parsing in image component
+
 ## 0.2.10
 
 ### Patch Changes
