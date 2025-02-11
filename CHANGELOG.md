@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.2.9
+
+### Patch Changes
+
+- 9b1ab62: feat: Add header alignment, project visibility, and theme toggle options to website properties
+
 ## 0.2.8
 
 ### Patch Changes
