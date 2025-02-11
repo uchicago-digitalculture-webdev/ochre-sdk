@@ -1844,7 +1844,7 @@ async function parseWebElementProperties(
         altTextSource = "name";
       }
 
-      let secondsPerImage = images.length > 1 ? 5 : null;
+      let secondsPerImage = 5;
       const secondsPerImageProperty = getPropertyValueByLabel(
         componentProperty.properties,
         "seconds-per-image",
@@ -1873,13 +1873,18 @@ async function parseWebElementProperties(
 
       properties.images = images;
       properties.variant = variant;
+      properties.carouselOptions =
+        images.length > 1 ?
+          {
+            secondsPerImage,
+            isFullWidth,
+            isFullHeight,
+          }
+        : null;
       properties.imageQuality = imageQuality;
       properties.captionLayout = captionLayout;
       properties.captionSource = captionSource;
       properties.altTextSource = altTextSource;
-      properties.secondsPerImage = secondsPerImage;
-      properties.isFullWidth = isFullWidth;
-      properties.isFullHeight = isFullHeight;
       break;
     }
     case "image-gallery": {

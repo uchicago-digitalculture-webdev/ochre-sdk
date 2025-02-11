@@ -566,15 +566,17 @@ export type WebElementComponent =
   | { component: "iiif-viewer"; IIIFId: string }
   | {
       component: "image";
-      variant: "default" | "carousel";
       images: Array<WebImage>;
+      variant: "default" | "carousel";
+      carouselOptions: {
+        secondsPerImage: number | null;
+        isFullWidth: boolean | null;
+        isFullHeight: boolean | null;
+      } | null;
       imageQuality: "high" | "low";
       captionSource: "name" | "abbreviation" | "description";
       captionLayout: "top" | "bottom" | "suppress";
       altTextSource: "name" | "abbreviation" | "description";
-      secondsPerImage: number | null;
-      isFullWidth: boolean | null;
-      isFullHeight: boolean | null;
     }
   | { component: "image-gallery"; galleryId: string; isSearchable: boolean }
   | { component: "item-gallery"; galleryId: string; isSearchable: boolean }
