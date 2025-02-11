@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.2.7
+
+### Patch Changes
+
+- 0861a4b: Readjust carousel support for image component
+
 ## 0.2.6
 
 ### Patch Changes
