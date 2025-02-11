@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.2.8
+
+### Patch Changes
+
+- acf13cb: Fix regression in Property parsing
+
 ## 0.2.7
 
 ### Patch Changes
