@@ -476,6 +476,7 @@ export type Website = {
   sidebar: {
     elements: Array<WebElement>;
     title: WebElement["title"];
+    layout: "start" | "end";
     cssStyles: Array<Style>;
   } | null;
   properties: WebsiteProperties;

@@ -2566,11 +2566,7 @@ export async function parseWebsite(
 
   const pages = await parseWebpages(resources);
 
-  let sidebar: {
-    elements: Array<WebElement>;
-    title: WebElement["title"];
-    cssStyles: Array<Style>;
-  } | null = null;
+  let sidebar: Website["sidebar"] | null = null;
   const sidebarElements: Array<WebElement> = [];
   const sidebarTitle: WebElement["title"] = {
     label: "",
@@ -2582,6 +2578,7 @@ export async function parseWebsite(
       isCreatorsDisplayed: false,
     },
   };
+  let sidebarLayout: "start" | "end" = "start";
   const sidebarCssStyles: Array<Style> = [];
 
   const sidebarResource = resources.find((resource) => {
@@ -2619,6 +2616,15 @@ export async function parseWebsite(
           : [sidebarResource.properties.property],
         )
       : [];
+
+    const sidebarLayoutProperty = sidebarProperties.find(
+      (property) => property.label === "layout",
+    );
+    if (sidebarLayoutProperty) {
+      sidebarLayout = sidebarLayoutProperty.values[0]!.content as
+        | "start"
+        | "end";
+    }
 
     const cssProperties =
       sidebarProperties.find(
@@ -2696,6 +2702,7 @@ export async function parseWebsite(
     sidebar = {
       elements: sidebarElements,
       title: sidebarTitle,
+      layout: sidebarLayout,
       cssStyles: sidebarCssStyles,
     };
   }
