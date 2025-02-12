@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.2.12
+
+### Patch Changes
+
+- 35302b2: feat: Add support for slug parsing in property values
+
 ## 0.2.11
 
 ### Patch Changes
