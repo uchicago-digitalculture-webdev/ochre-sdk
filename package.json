@@ -1,6 +1,6 @@
 {
   "name": "@digitalculture/ochre-sdk",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "type": "module",
   "license": "MIT",
   "description": "Node.js library for working with OCHRE (Online Cultural and Historical Research Environment) data",
