@@ -17,7 +17,7 @@ it("website", async () => {
 });
 
 it("website with sidebar", async () => {
-  expect(guerrillaTelevision?.sidebarElements.length).toBeGreaterThan(0);
+  expect(guerrillaTelevision?.sidebar?.elements.length).toBeGreaterThan(0);
 });
 
 it("website with page with css styles", async () => {
