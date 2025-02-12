@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.3.3
+
+### Patch Changes
+
+- 7644616: feat: Add sidebar layout property to support start and end positioning
+
 ## 0.3.2
 
 ### Patch Changes
