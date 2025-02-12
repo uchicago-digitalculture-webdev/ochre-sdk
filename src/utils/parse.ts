@@ -2307,6 +2307,7 @@ async function parseWebpage(
   let displayedInHeader = true;
   let width: "default" | "full" | "large" | "narrow" = "default";
   let variant: "default" | "no-background" = "default";
+  let isSidebarDisplayed = true;
 
   const webpageSubProperties = webpageProperties.find(
     (property) =>
@@ -2334,6 +2335,13 @@ async function parseWebpage(
     )?.values[0];
     if (variantProperty) {
       variant = variantProperty.content as "default" | "no-background";
+    }
+
+    const isSidebarDisplayedProperty = webpageSubProperties.find(
+      (property) => property.label === "sidebar-visible",
+    )?.values[0];
+    if (isSidebarDisplayedProperty) {
+      isSidebarDisplayed = isSidebarDisplayedProperty.content === "Yes";
     }
   }
 
@@ -2364,6 +2372,7 @@ async function parseWebpage(
         imageLink ?
           `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`
         : null,
+      isSidebarDisplayed,
       cssStyles,
     },
     webpages,

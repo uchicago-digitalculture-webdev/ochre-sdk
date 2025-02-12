@@ -524,6 +524,7 @@ export type WebpageProperties = {
   width: "full" | "large" | "narrow" | "default";
   variant: "default" | "no-background";
   backgroundImageUrl: string | null;
+  isSidebarDisplayed: boolean;
   cssStyles: Array<Style>;
 };
 
