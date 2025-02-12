@@ -473,7 +473,11 @@ export type Website = {
   creators: Array<Person>;
   license: License | null;
   pages: Array<Webpage>;
-  sidebarElements: Array<WebElement>;
+  sidebar: {
+    elements: Array<WebElement>;
+    title: WebElement["title"];
+    cssStyles: Array<Style>;
+  } | null;
   properties: WebsiteProperties;
 };
 

@@ -2564,8 +2564,25 @@ export async function parseWebsite(
 
   const pages = await parseWebpages(resources);
 
+  let sidebar: {
+    elements: Array<WebElement>;
+    title: WebElement["title"];
+    cssStyles: Array<Style>;
+  } | null = null;
   const sidebarElements: Array<WebElement> = [];
-  const sidebar = resources.find((resource) => {
+  const sidebarTitle: WebElement["title"] = {
+    label: "title",
+    variant: "default",
+    properties: {
+      isNameDisplayed: false,
+      isDescriptionDisplayed: false,
+      isDateDisplayed: false,
+      isCreatorsDisplayed: false,
+    },
+  };
+  const sidebarCssStyles: Array<Style> = [];
+
+  const sidebarResource = resources.find((resource) => {
     const resourceProperties =
       resource.properties ?
         parseProperties(
@@ -2582,12 +2599,12 @@ export async function parseWebsite(
         property.properties[0]?.values[0]?.content === "sidebar",
     );
   });
-  if (sidebar) {
+  if (sidebarResource) {
     const sidebarResources =
-      sidebar.resource ?
-        Array.isArray(sidebar.resource) ?
-          sidebar.resource
-        : [sidebar.resource]
+      sidebarResource.resource ?
+        Array.isArray(sidebarResource.resource) ?
+          sidebarResource.resource
+        : [sidebarResource.resource]
       : [];
 
     for (const resource of sidebarResources) {
@@ -2609,7 +2626,59 @@ export async function parseWebsite(
         )?.properties ?? [],
       );
       sidebarElements.push(element);
+
+      const cssProperties =
+        sidebarResourceProperties.find(
+          (property) =>
+            property.label === "presentation" &&
+            property.values[0]!.content === "css",
+        )?.properties ?? [];
+
+      for (const property of cssProperties) {
+        const cssStyle = property.values[0]!.content;
+        sidebarCssStyles.push({ label: property.label, value: cssStyle });
+      }
+
+      const titleProperties = sidebarResourceProperties.find(
+        (property) => property.label === "title",
+      )?.properties;
+
+      if (titleProperties) {
+        const titleVariant = getPropertyValueByLabel(
+          titleProperties,
+          "variant",
+        );
+        if (titleVariant) {
+          sidebarTitle.variant = titleVariant as "default" | "simple";
+        }
+
+        const titleShow = titleProperties.filter(
+          (property) => property.label === "display",
+        );
+        if (titleShow.length > 0) {
+          sidebarTitle.properties.isNameDisplayed = titleShow.some(
+            (property) => property.values[0]!.content === "name",
+          );
+          sidebarTitle.properties.isDescriptionDisplayed = titleShow.some(
+            (property) => property.values[0]!.content === "description",
+          );
+          sidebarTitle.properties.isDateDisplayed = titleShow.some(
+            (property) => property.values[0]!.content === "date",
+          );
+          sidebarTitle.properties.isCreatorsDisplayed = titleShow.some(
+            (property) => property.values[0]!.content === "creators",
+          );
+        }
+      }
     }
+  }
+
+  if (sidebarElements.length > 0) {
+    sidebar = {
+      elements: sidebarElements,
+      title: sidebarTitle,
+      cssStyles: sidebarCssStyles,
+    };
   }
 
   return {
@@ -2633,7 +2702,7 @@ export async function parseWebsite(
       : [],
     license: parseLicense(websiteTree.availability),
     pages,
-    sidebarElements,
+    sidebar,
     properties,
   };
 }
