@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.3.4
+
+### Patch Changes
+
+- de0de88: feat: Add sidebar visibility property to webpage parsing
+
 ## 0.3.3
 
 ### Patch Changes
