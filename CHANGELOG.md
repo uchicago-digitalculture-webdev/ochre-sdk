@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.3.2
+
+### Patch Changes
+
+- bbdf6b4: fix: Update title property parsing with presentation label
+
 ## 0.3.1
 
 ### Patch Changes
