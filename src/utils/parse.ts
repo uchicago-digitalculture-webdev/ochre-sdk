@@ -2184,7 +2184,9 @@ async function parseWebElement(
   }
 
   const titleProperties = elementResourceProperties.find(
-    (property) => property.label === "title",
+    (property) =>
+      property.label === "presentation" &&
+      property.values[0]!.content === "title",
   )?.properties;
 
   let variant: "default" | "simple" = "default";
@@ -2631,7 +2633,9 @@ export async function parseWebsite(
     }
 
     const titleProperties = sidebarProperties.find(
-      (property) => property.label === "title",
+      (property) =>
+        property.label === "presentation" &&
+        property.values[0]!.content === "title",
     )?.properties;
 
     if (titleProperties) {
