@@ -735,7 +735,10 @@ export function parseProperties(
         typeof value === "object"
       ) ?
         {
-          content: parseStringContent(value),
+          content:
+            value.slug ?
+              parseFakeString(value.slug)
+            : parseStringContent(value),
           type: value.type as PropertyValueType,
           category:
             value.category !== "value" ? (value.category ?? null) : null,

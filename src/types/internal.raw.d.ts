@@ -277,6 +277,7 @@ export type OchrePropertyValue = OchreStringContent & {
   publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
   type: string;
   category?: string;
+  slug?: FakeString;
 };
 
 /**
