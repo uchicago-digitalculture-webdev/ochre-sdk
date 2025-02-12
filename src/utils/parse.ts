@@ -2571,7 +2571,7 @@ export async function parseWebsite(
   } | null = null;
   const sidebarElements: Array<WebElement> = [];
   const sidebarTitle: WebElement["title"] = {
-    label: "title",
+    label: "",
     variant: "default",
     properties: {
       isNameDisplayed: false,
@@ -2600,6 +2600,65 @@ export async function parseWebsite(
     );
   });
   if (sidebarResource) {
+    sidebarTitle.label =
+      (
+        typeof sidebarResource.identification.label === "string" ||
+        typeof sidebarResource.identification.label === "number" ||
+        typeof sidebarResource.identification.label === "boolean"
+      ) ?
+        parseFakeString(sidebarResource.identification.label)
+      : parseStringContent(sidebarResource.identification.label);
+
+    const sidebarProperties =
+      sidebarResource.properties ?
+        parseProperties(
+          Array.isArray(sidebarResource.properties.property) ?
+            sidebarResource.properties.property
+          : [sidebarResource.properties.property],
+        )
+      : [];
+
+    const cssProperties =
+      sidebarProperties.find(
+        (property) =>
+          property.label === "presentation" &&
+          property.values[0]!.content === "css",
+      )?.properties ?? [];
+
+    for (const property of cssProperties) {
+      const cssStyle = property.values[0]!.content;
+      sidebarCssStyles.push({ label: property.label, value: cssStyle });
+    }
+
+    const titleProperties = sidebarProperties.find(
+      (property) => property.label === "title",
+    )?.properties;
+
+    if (titleProperties) {
+      const titleVariant = getPropertyValueByLabel(titleProperties, "variant");
+      if (titleVariant) {
+        sidebarTitle.variant = titleVariant as "default" | "simple";
+      }
+
+      const titleShow = titleProperties.filter(
+        (property) => property.label === "display",
+      );
+      if (titleShow.length > 0) {
+        sidebarTitle.properties.isNameDisplayed = titleShow.some(
+          (property) => property.values[0]!.content === "name",
+        );
+        sidebarTitle.properties.isDescriptionDisplayed = titleShow.some(
+          (property) => property.values[0]!.content === "description",
+        );
+        sidebarTitle.properties.isDateDisplayed = titleShow.some(
+          (property) => property.values[0]!.content === "date",
+        );
+        sidebarTitle.properties.isCreatorsDisplayed = titleShow.some(
+          (property) => property.values[0]!.content === "creators",
+        );
+      }
+    }
+
     const sidebarResources =
       sidebarResource.resource ?
         Array.isArray(sidebarResource.resource) ?
@@ -2626,50 +2685,6 @@ export async function parseWebsite(
         )?.properties ?? [],
       );
       sidebarElements.push(element);
-
-      const cssProperties =
-        sidebarResourceProperties.find(
-          (property) =>
-            property.label === "presentation" &&
-            property.values[0]!.content === "css",
-        )?.properties ?? [];
-
-      for (const property of cssProperties) {
-        const cssStyle = property.values[0]!.content;
-        sidebarCssStyles.push({ label: property.label, value: cssStyle });
-      }
-
-      const titleProperties = sidebarResourceProperties.find(
-        (property) => property.label === "title",
-      )?.properties;
-
-      if (titleProperties) {
-        const titleVariant = getPropertyValueByLabel(
-          titleProperties,
-          "variant",
-        );
-        if (titleVariant) {
-          sidebarTitle.variant = titleVariant as "default" | "simple";
-        }
-
-        const titleShow = titleProperties.filter(
-          (property) => property.label === "display",
-        );
-        if (titleShow.length > 0) {
-          sidebarTitle.properties.isNameDisplayed = titleShow.some(
-            (property) => property.values[0]!.content === "name",
-          );
-          sidebarTitle.properties.isDescriptionDisplayed = titleShow.some(
-            (property) => property.values[0]!.content === "description",
-          );
-          sidebarTitle.properties.isDateDisplayed = titleShow.some(
-            (property) => property.values[0]!.content === "date",
-          );
-          sidebarTitle.properties.isCreatorsDisplayed = titleShow.some(
-            (property) => property.values[0]!.content === "creators",
-          );
-        }
-      }
     }
   }
 
