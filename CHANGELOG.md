@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.3.1
+
+### Patch Changes
+
+- 45b79ea: refactor: Restructure sidebar title and properties parsing logic
+
 ## 0.3.0
 
 ### Minor Changes
