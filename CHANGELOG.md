@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.3.0
+
+### Minor Changes
+
+- d4bfb88: refactor: Enhance sidebar parsing with title and style properties
+
 ## 0.2.12
 
 ### Patch Changes
