@@ -593,6 +593,7 @@ export type WebElementComponent =
   | {
       component: "text";
       variant: "title" | "block" | "banner";
+      heading: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | null;
       content: string;
     }
   | {

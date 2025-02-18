@@ -2005,7 +2005,13 @@ async function parseWebElementProperties(
         variant = "block";
       }
 
+      const heading = getPropertyValueByLabel(
+        componentProperty.properties,
+        "heading",
+      );
+
       properties.variant = variant;
+      properties.heading = heading;
       properties.content = document.content;
       break;
     }
