@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.3.5
+
+### Patch Changes
+
+- e86f8c9: feat: Add heading property to text component
+
 ## 0.3.4
 
 ### Patch Changes
