@@ -2623,7 +2623,7 @@ export async function parseWebsite(
         parseFakeString(sidebarResource.identification.label)
       : parseStringContent(sidebarResource.identification.label);
 
-    const sidebarProperties =
+    const sidebarBaseProperties =
       sidebarResource.properties ?
         parseProperties(
           Array.isArray(sidebarResource.properties.property) ?
@@ -2631,6 +2631,19 @@ export async function parseWebsite(
           : [sidebarResource.properties.property],
         )
       : [];
+
+    const sidebarProperties =
+      sidebarBaseProperties
+        .find(
+          (property) =>
+            property.label === "presentation" &&
+            property.values[0]?.content === "element",
+        )
+        ?.properties.find(
+          (property) =>
+            property.label === "component" &&
+            property.values[0]?.content === "sidebar",
+        )?.properties ?? [];
 
     const sidebarLayoutProperty = sidebarProperties.find(
       (property) => property.label === "layout",
@@ -2642,7 +2655,7 @@ export async function parseWebsite(
     }
 
     const cssProperties =
-      sidebarProperties.find(
+      sidebarBaseProperties.find(
         (property) =>
           property.label === "presentation" &&
           property.values[0]!.content === "css",
@@ -2653,7 +2666,7 @@ export async function parseWebsite(
       sidebarCssStyles.push({ label: property.label, value: cssStyle });
     }
 
-    const titleProperties = sidebarProperties.find(
+    const titleProperties = sidebarBaseProperties.find(
       (property) =>
         property.label === "presentation" &&
         property.values[0]!.content === "title",
