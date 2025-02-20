@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.3.6
+
+### Patch Changes
+
+- efeb112: fix: Handle sidebar property extraction logic
+
 ## 0.3.5
 
 ### Patch Changes
