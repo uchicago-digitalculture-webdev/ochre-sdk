@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.3.8
+
+### Patch Changes
+
+- 2dcf8c0: refactor: Restructure image component properties and parsing
+
 ## 0.3.7
 
 ### Patch Changes
