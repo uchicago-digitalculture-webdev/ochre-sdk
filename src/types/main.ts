@@ -498,7 +498,7 @@ export type WebsiteProperties = {
   privacy: "public" | "password" | "private";
   status: "development" | "preview" | "production";
   isHeaderDisplayed: boolean;
-  headerVariant: "default" | "floating";
+  headerVariant: "default" | "floating" | "inline";
   headerAlignment: "start" | "center" | "end";
   isHeaderProjectDisplayed: boolean;
   isFooterDisplayed: boolean;

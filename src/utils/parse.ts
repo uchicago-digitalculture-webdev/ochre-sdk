@@ -2459,7 +2459,7 @@ function parseWebsiteProperties(
       ?.uuid ?? null;
 
   let isHeaderDisplayed = true;
-  let headerVariant: "default" | "floating" = "default";
+  let headerVariant: "default" | "floating" | "inline" = "default";
   let headerAlignment: "start" | "center" | "end" = "start";
   let isHeaderProjectDisplayed = true;
   let isFooterDisplayed = true;
@@ -2478,7 +2478,10 @@ function parseWebsiteProperties(
     (property) => property.label === "navbar-variant",
   )?.values[0];
   if (headerVariantProperty) {
-    headerVariant = headerVariantProperty.content as "default" | "floating";
+    headerVariant = headerVariantProperty.content as
+      | "default"
+      | "floating"
+      | "inline";
   }
 
   const headerAlignmentProperty = websiteProperties.find(
