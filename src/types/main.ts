@@ -575,10 +575,10 @@ export type WebElementComponent =
       images: Array<WebImage>;
       variant: "default" | "carousel";
       carouselOptions: {
-        secondsPerImage: number | null;
-        isFullWidth: boolean | null;
-        isFullHeight: boolean | null;
+        secondsPerImage: number;
       } | null;
+      isFullWidth: boolean;
+      isFullHeight: boolean;
       imageQuality: "high" | "low";
       captionSource: "name" | "abbreviation" | "description";
       captionLayout: "top" | "bottom" | "suppress";

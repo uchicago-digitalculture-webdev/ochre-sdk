@@ -1826,6 +1826,24 @@ async function parseWebElementProperties(
         captionLayout = "bottom";
       }
 
+      let isFullWidth = true;
+      const isFullWidthProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "is-full-width",
+      );
+      if (isFullWidthProperty !== null) {
+        isFullWidth = isFullWidthProperty === "Yes";
+      }
+
+      let isFullHeight = true;
+      const isFullHeightProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "is-full-height",
+      );
+      if (isFullHeightProperty !== null) {
+        isFullHeight = isFullHeightProperty === "Yes";
+      }
+
       let imageQuality = getPropertyValueByLabel(
         componentProperty.properties,
         "image-quality",
@@ -1851,9 +1869,7 @@ async function parseWebElementProperties(
       }
 
       let carouselOptions: {
-        secondsPerImage: number | null;
-        isFullWidth: boolean | null;
-        isFullHeight: boolean | null;
+        secondsPerImage: number;
       } | null = null;
       if (images.length > 1) {
         const variantProperty = getPropertyByLabel(
@@ -1862,8 +1878,6 @@ async function parseWebElementProperties(
         );
 
         let secondsPerImage = 5;
-        let isFullWidth = false;
-        let isFullHeight = false;
 
         if (
           variantProperty &&
@@ -1876,34 +1890,18 @@ async function parseWebElementProperties(
           if (secondsPerImageProperty !== null) {
             secondsPerImage = Number.parseFloat(secondsPerImageProperty);
           }
-
-          const isFullWidthProperty = getPropertyValueByLabel(
-            variantProperty.properties,
-            "is-full-width",
-          );
-          if (isFullWidthProperty !== null) {
-            isFullWidth = isFullWidthProperty === "Yes";
-          }
-
-          const isFullHeightProperty = getPropertyValueByLabel(
-            variantProperty.properties,
-            "is-full-height",
-          );
-          if (isFullHeightProperty !== null) {
-            isFullHeight = isFullHeightProperty === "Yes";
-          }
         }
 
         carouselOptions = {
           secondsPerImage,
-          isFullWidth,
-          isFullHeight,
         };
       }
 
       properties.images = images;
       properties.variant = variant;
       properties.carouselOptions = carouselOptions;
+      properties.isFullWidth = isFullWidth;
+      properties.isFullHeight = isFullHeight;
       properties.imageQuality = imageQuality;
       properties.captionLayout = captionLayout;
       properties.captionSource = captionSource;
