@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.3.7
+
+### Patch Changes
+
+- fd1a24a: feat: Add inline header variant option
+
 ## 0.3.6
 
 ### Patch Changes
