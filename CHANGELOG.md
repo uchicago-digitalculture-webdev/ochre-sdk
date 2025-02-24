@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.1
+
+### Patch Changes
+
+- 172e785: fix: Update default spacing to 'auto' in parsing functions
+
 ## 0.4.0
 
 ### Minor Changes
