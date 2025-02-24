@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.0
+
+### Minor Changes
+
+- f5f73c6: feat: Enhance block and webpage type definitions with new properties
+
 ## 0.3.8
 
 ### Patch Changes
