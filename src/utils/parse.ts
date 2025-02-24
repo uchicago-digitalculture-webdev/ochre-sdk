@@ -31,6 +31,7 @@ import type {
 } from "../types/internal.raw.d.ts";
 import type {
   Bibliography,
+  Block,
   Concept,
   Context,
   ContextItem,
@@ -1543,11 +1544,21 @@ export function parseConcept(
  * @param type - Type of resource to parse ("element" or "page")
  * @returns Array of parsed WebElement or Webpage objects
  */
-const parseWebpageResources = async <T extends "element" | "page">(
+const parseWebpageResources = async <T extends "element" | "page" | "block">(
   webpageResources: Array<OchreResource>,
   type: T,
-): Promise<Array<T extends "element" ? WebElement : Webpage>> => {
-  const returnElements: Array<T extends "element" ? WebElement : Webpage> = [];
+): Promise<
+  Array<
+    T extends "element" ? WebElement
+    : T extends "page" ? Webpage
+    : Block
+  >
+> => {
+  const returnElements: Array<
+    T extends "element" ? WebElement
+    : T extends "page" ? Webpage
+    : Block
+  > = [];
 
   for (const resource of webpageResources) {
     const resourceProperties =
@@ -1566,21 +1577,44 @@ const parseWebpageResources = async <T extends "element" | "page">(
     );
     if (!resourceProperty) continue;
 
-    if (type === "element") {
-      const element = await parseWebElement(
-        resource,
-        resourceProperty.properties,
-      );
-
-      returnElements.push(
-        element as T extends "element" ? WebElement : Webpage,
-      );
-    } else {
-      const webpage = await parseWebpage(resource);
-      if (webpage) {
-        returnElements.push(
-          webpage as T extends "element" ? WebElement : Webpage,
+    switch (type) {
+      case "element": {
+        const element = await parseWebElement(
+          resource,
+          resourceProperty.properties,
         );
+
+        returnElements.push(
+          element as T extends "element" ? WebElement
+          : T extends "page" ? Webpage
+          : Block,
+        );
+
+        break;
+      }
+      case "page": {
+        const webpage = await parseWebpage(resource);
+        if (webpage) {
+          returnElements.push(
+            webpage as T extends "element" ? WebElement
+            : T extends "page" ? Webpage
+            : Block,
+          );
+        }
+
+        break;
+      }
+      case "block": {
+        const block = await parseBlock(resource);
+        if (block) {
+          returnElements.push(
+            block as T extends "element" ? WebElement
+            : T extends "page" ? Webpage
+            : Block,
+          );
+        }
+
+        break;
       }
     }
   }
@@ -1723,6 +1757,14 @@ async function parseWebElementProperties(
       break;
     }
     case "button": {
+      let variant = getPropertyValueByLabel(
+        componentProperty.properties,
+        "variant",
+      );
+      if (variant === null) {
+        variant = "default";
+      }
+
       let isExternal = false;
       let href = getPropertyValueByLabel(
         componentProperty.properties,
@@ -1739,6 +1781,7 @@ async function parseWebElementProperties(
         }
       }
 
+      properties.variant = variant;
       properties.href = href;
       properties.isExternal = isExternal;
       properties.label =
@@ -2288,15 +2331,45 @@ async function parseWebpage(
     (link) => link.type === "image" || link.type === "IIIF",
   );
 
-  const elements =
+  const blocks =
     webpageResource.resource ?
       await parseWebpageResources(
         Array.isArray(webpageResource.resource) ?
           webpageResource.resource
         : [webpageResource.resource],
-        "element",
+        "block",
       )
     : [];
+  if (blocks.length === 0) {
+    const defaultBlock: Block = {
+      uuid: webpageResource.uuid,
+      layout: "vertical",
+      blocks: [],
+      elements: [],
+      properties: {
+        spacing: "default",
+        gap: "none",
+        alignItems: "stretch",
+        justifyContent: "stretch",
+      },
+      cssStyles: [],
+    };
+    blocks.push(defaultBlock);
+
+    // check if there are any elements
+    const elements =
+      webpageResource.resource ?
+        await parseWebpageResources(
+          Array.isArray(webpageResource.resource) ?
+            webpageResource.resource
+          : [webpageResource.resource],
+          "element",
+        )
+      : [];
+    if (elements.length > 0) {
+      defaultBlock.elements = elements;
+    }
+  }
 
   const webpages =
     webpageResource.resource ?
@@ -2367,7 +2440,7 @@ async function parseWebpage(
   return {
     title: identification.label,
     slug,
-    elements,
+    blocks,
     properties: {
       displayedInHeader,
       width,
@@ -2404,6 +2477,142 @@ async function parseWebpages(
   }
 
   return returnPages;
+}
+
+/**
+ * Parses raw block data into a standardized Block structure
+ *
+ * @param blockResource - Raw block resource data in OCHRE format
+ * @returns Parsed Block object
+ */
+async function parseBlock(blockResource: OchreResource): Promise<Block | null> {
+  const returnBlock: Block = {
+    uuid: blockResource.uuid,
+    layout: "vertical",
+    blocks: [],
+    elements: [],
+    properties: {
+      spacing: "default",
+      gap: "none",
+      alignItems: "stretch",
+      justifyContent: "stretch",
+    },
+    cssStyles: [],
+  };
+
+  const blockProperties =
+    blockResource.properties ?
+      parseProperties(
+        Array.isArray(blockResource.properties.property) ?
+          blockResource.properties.property
+        : [blockResource.properties.property],
+      )
+    : [];
+
+  const blockMainProperties = blockProperties.find(
+    (property) =>
+      property.label === "presentation" &&
+      property.values[0]?.content === "block",
+  )?.properties;
+  if (blockMainProperties) {
+    const layoutProperty = blockMainProperties.find(
+      (property) => property.label === "layout",
+    )?.values[0];
+    if (layoutProperty) {
+      returnBlock.layout = layoutProperty.content as
+        | "vertical"
+        | "horizontal"
+        | "grid";
+    }
+
+    const spacingProperty = blockMainProperties.find(
+      (property) => property.label === "spacing",
+    )?.values[0];
+    if (spacingProperty) {
+      returnBlock.properties.spacing = spacingProperty.content as
+        | "default"
+        | "full"
+        | "large"
+        | "narrow";
+    }
+
+    const gapProperty = blockMainProperties.find(
+      (property) => property.label === "gap",
+    )?.values[0];
+    if (gapProperty) {
+      returnBlock.properties.gap = gapProperty.content as
+        | "none"
+        | "small"
+        | "medium"
+        | "large";
+    }
+
+    const alignItemsProperty = blockMainProperties.find(
+      (property) => property.label === "align-items",
+    )?.values[0];
+    if (alignItemsProperty) {
+      returnBlock.properties.alignItems = alignItemsProperty.content as
+        | "stretch"
+        | "start"
+        | "center"
+        | "end"
+        | "space-between";
+    }
+
+    const justifyContentProperty = blockMainProperties.find(
+      (property) => property.label === "justify-content",
+    )?.values[0];
+    if (justifyContentProperty) {
+      returnBlock.properties.justifyContent = justifyContentProperty.content as
+        | "stretch"
+        | "start"
+        | "center"
+        | "end"
+        | "space-between";
+    }
+  }
+
+  const blockBlocks =
+    blockResource.resource ?
+      await parseWebpageResources(
+        Array.isArray(blockResource.resource) ?
+          blockResource.resource
+        : [blockResource.resource],
+        "block",
+      )
+    : [];
+  for (const block of blockBlocks) {
+    returnBlock.blocks.push(block);
+  }
+
+  const blockElements =
+    blockResource.resource ?
+      await parseWebpageResources(
+        Array.isArray(blockResource.resource) ?
+          blockResource.resource
+        : [blockResource.resource],
+        "element",
+      )
+    : [];
+  for (const element of blockElements) {
+    returnBlock.elements.push(element);
+  }
+
+  const blockCssStyles = blockProperties.find(
+    (property) =>
+      property.label === "presentation" &&
+      property.values[0]?.content === "css",
+  )?.properties;
+  if (blockCssStyles) {
+    for (const property of blockCssStyles) {
+      returnBlock.cssStyles.push({
+        label: property.label,
+        value: property.values[0]!.content,
+      });
+    }
+  }
+
+  return returnBlock;
 }
 
 /**
@@ -2462,6 +2671,7 @@ function parseWebsiteProperties(
   let isHeaderProjectDisplayed = true;
   let isFooterDisplayed = true;
   let isSidebarDisplayed = false;
+  let sidebarVariant: "default" | "inline" = "default";
   let searchCollectionUuid: string | null = null;
   let supportsThemeToggle = true;
 
@@ -2514,6 +2724,13 @@ function parseWebsiteProperties(
     isSidebarDisplayed = sidebarProperty.content === "Yes";
   }
 
+  const sidebarVariantProperty = websiteProperties.find(
+    (property) => property.label === "sidebar-variant",
+  )?.values[0];
+  if (sidebarVariantProperty) {
+    sidebarVariant = sidebarVariantProperty.content as "default" | "inline";
+  }
+
   const collectionSearchProperty = websiteProperties.find(
     (property) => property.label === "search-collection",
   )?.values[0];
@@ -2544,6 +2761,7 @@ function parseWebsiteProperties(
     isHeaderProjectDisplayed,
     isFooterDisplayed,
     isSidebarDisplayed,
+    sidebarVariant,
     supportsThemeToggle,
     searchCollectionUuid,
     logoUrl:

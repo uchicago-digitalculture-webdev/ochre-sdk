@@ -503,6 +503,7 @@ export type WebsiteProperties = {
   isHeaderProjectDisplayed: boolean;
   isFooterDisplayed: boolean;
   isSidebarDisplayed: boolean;
+  sidebarVariant: "default" | "inline";
   supportsThemeToggle: boolean;
   searchCollectionUuid: string | null;
   logoUrl: string | null;
@@ -512,7 +513,7 @@ export type Webpage = {
   title: string;
   slug: string;
   properties: WebpageProperties;
-  elements: Array<WebElement>;
+  blocks: Array<Block>;
   webpages: Array<Webpage>;
 };
 
@@ -561,7 +562,13 @@ export type WebElementComponent =
       layout: "long" | "short";
     }
   | { component: "blog"; blogId: string }
-  | { component: "button"; href: string; isExternal: boolean; label: string }
+  | {
+      component: "button";
+      variant: "default" | "transparent";
+      href: string;
+      isExternal: boolean;
+      label: string;
+    }
   | {
       component: "collection";
       collectionId: string;
@@ -631,4 +638,33 @@ export type WebImage = {
 export type Style = {
   label: string;
   value: string;
+};
+
+/**
+ * Represents a block of vertical or horizontal content alignment
+ */
+export type Block = {
+  uuid: string;
+  layout: "vertical" | "horizontal" | "grid";
+  blocks: Array<Block>;
+  elements: Array<WebElement>;
+  properties: {
+    /**
+     * valid `gridTemplateColumns` or `gridTemplateRows` CSS property value
+     */
+    spacing: string;
+    /**
+     * `gap` CSS property value
+     */
+    gap: "none" | "small" | "medium" | "large";
+    /**
+     * `align-items` CSS property value
+     */
+    alignItems: "stretch" | "start" | "center" | "end" | "space-between";
+    /**
+     * `justify-content` CSS property value
+     */
+    justifyContent: "stretch" | "start" | "center" | "end" | "space-between";
+  };
+  cssStyles: Array<Style>;
 };
