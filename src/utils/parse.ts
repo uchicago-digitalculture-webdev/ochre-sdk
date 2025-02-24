@@ -2347,7 +2347,7 @@ async function parseWebpage(
       blocks: [],
       elements: [],
       properties: {
-        spacing: "default",
+        spacing: "auto",
         gap: "none",
         alignItems: "stretch",
         justifyContent: "stretch",
@@ -2492,7 +2492,7 @@ async function parseBlock(blockResource: OchreResource): Promise<Block | null> {
     blocks: [],
     elements: [],
     properties: {
-      spacing: "default",
+      spacing: "auto",
       gap: "none",
       alignItems: "stretch",
       justifyContent: "stretch",
