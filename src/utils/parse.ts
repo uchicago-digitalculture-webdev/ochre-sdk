@@ -124,6 +124,7 @@ const componentSchema = z.enum(
     "blog",
     "button",
     "collection",
+    "empty-space",
     "iiif-viewer",
     "image",
     "image-gallery",
@@ -1823,6 +1824,20 @@ async function parseWebElementProperties(
       properties.variant = variant;
       properties.layout = layout;
       properties.collectionId = collectionLink.uuid;
+      break;
+    }
+    case "empty-space": {
+      const height = getPropertyValueByLabel(
+        componentProperty.properties,
+        "height",
+      );
+      const width = getPropertyValueByLabel(
+        componentProperty.properties,
+        "width",
+      );
+
+      properties.height = height;
+      properties.width = width;
       break;
     }
     case "iiif-viewer": {
