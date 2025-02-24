@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.2
+
+### Patch Changes
+
+- 4e22ae2: feat: Add empty-space component to web element types and parsing
+
 ## 0.4.1
 
 ### Patch Changes
