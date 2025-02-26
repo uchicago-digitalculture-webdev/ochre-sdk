@@ -655,7 +655,7 @@ export type Block = {
     /**
      * valid `gridTemplateColumns` or `gridTemplateRows` CSS property value
      */
-    spacing: string;
+    spacing: string | null;
     /**
      * `gap` CSS property value
      */
