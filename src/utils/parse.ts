@@ -68,6 +68,7 @@ import type {
   Website,
   WebsiteProperties,
 } from "../types/main.js";
+import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { fetchResource } from "../utils/fetchers/resource.js";
 import {
@@ -2385,7 +2386,7 @@ async function parseWebpage(
         );
 
         const block: Block = {
-          uuid: resource.uuid,
+          uuid: uuidv4(),
           layout: "vertical",
           blocks: [],
           elements,
@@ -2411,7 +2412,7 @@ async function parseWebpage(
     const elements = await parseWebpageResources(elementsToHandle, "element");
 
     const block: Block = {
-      uuid: webpageResource.uuid,
+      uuid: uuidv4(),
       layout: "vertical",
       blocks: [],
       elements,
