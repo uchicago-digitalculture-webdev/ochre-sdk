@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.4
+
+### Patch Changes
+
+- fad6c20: fix: generate new UUID for non-OCHRE Blocks
+
 ## 0.4.3
 
 ### Patch Changes
