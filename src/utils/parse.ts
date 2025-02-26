@@ -1885,6 +1885,24 @@ async function parseWebElementProperties(
         captionLayout = "bottom";
       }
 
+      let width = null;
+      const widthProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "width",
+      );
+      if (widthProperty !== null) {
+        width = Number.parseFloat(widthProperty);
+      }
+
+      let height = null;
+      const heightProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "height",
+      );
+      if (heightProperty !== null) {
+        height = Number.parseFloat(heightProperty);
+      }
+
       let isFullWidth = true;
       const isFullWidthProperty = getPropertyValueByLabel(
         componentProperty.properties,
@@ -1958,13 +1976,15 @@ async function parseWebElementProperties(
 
       properties.images = images;
       properties.variant = variant;
-      properties.carouselOptions = carouselOptions;
+      properties.width = width;
+      properties.height = height;
       properties.isFullWidth = isFullWidth;
       properties.isFullHeight = isFullHeight;
       properties.imageQuality = imageQuality;
       properties.captionLayout = captionLayout;
       properties.captionSource = captionSource;
       properties.altTextSource = altTextSource;
+      properties.carouselOptions = carouselOptions;
       break;
     }
     case "image-gallery": {

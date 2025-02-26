@@ -582,15 +582,17 @@ export type WebElementComponent =
       component: "image";
       images: Array<WebImage>;
       variant: "default" | "carousel";
-      carouselOptions: {
-        secondsPerImage: number;
-      } | null;
+      width: number | null;
+      height: number | null;
       isFullWidth: boolean;
       isFullHeight: boolean;
       imageQuality: "high" | "low";
       captionSource: "name" | "abbreviation" | "description";
       captionLayout: "top" | "bottom" | "suppress";
       altTextSource: "name" | "abbreviation" | "description";
+      carouselOptions: {
+        secondsPerImage: number;
+      } | null;
     }
   | { component: "image-gallery"; galleryId: string; isSearchable: boolean }
   | { component: "item-gallery"; galleryId: string; isSearchable: boolean }
