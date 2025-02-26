@@ -197,11 +197,13 @@ function parseWhitespace(contentString: string, whitespace: string): string {
     return contentString;
   }
 
-  for (const option of result.data) {
+  for (const [index, option] of result.data.entries()) {
     switch (option) {
       case "newline": {
-        // newline in markdown
-        returnString = `${returnString}\n<br />`;
+        if (index !== 0) {
+          returnString = `<br />\n${returnString}`;
+        }
+
         break;
       }
       case "trailing": {
