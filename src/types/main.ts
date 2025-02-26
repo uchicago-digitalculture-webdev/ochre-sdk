@@ -477,6 +477,7 @@ export type Website = {
     elements: Array<WebElement>;
     title: WebElement["title"];
     layout: "start" | "end";
+    mobileLayout: "default" | "inline";
     cssStyles: Array<Style>;
   } | null;
   properties: WebsiteProperties;
@@ -503,7 +504,6 @@ export type WebsiteProperties = {
   isHeaderProjectDisplayed: boolean;
   isFooterDisplayed: boolean;
   isSidebarDisplayed: boolean;
-  sidebarVariant: "default" | "inline";
   supportsThemeToggle: boolean;
   searchCollectionUuid: string | null;
   logoUrl: string | null;

@@ -2727,7 +2727,6 @@ function parseWebsiteProperties(
   let isHeaderProjectDisplayed = true;
   let isFooterDisplayed = true;
   let isSidebarDisplayed = false;
-  let sidebarVariant: "default" | "inline" = "default";
   let searchCollectionUuid: string | null = null;
   let supportsThemeToggle = true;
 
@@ -2780,13 +2779,6 @@ function parseWebsiteProperties(
     isSidebarDisplayed = sidebarProperty.content === "Yes";
   }
 
-  const sidebarVariantProperty = websiteProperties.find(
-    (property) => property.label === "sidebar-variant",
-  )?.values[0];
-  if (sidebarVariantProperty) {
-    sidebarVariant = sidebarVariantProperty.content as "default" | "inline";
-  }
-
   const collectionSearchProperty = websiteProperties.find(
     (property) => property.label === "search-collection",
   )?.values[0];
@@ -2817,7 +2809,6 @@ function parseWebsiteProperties(
     isHeaderProjectDisplayed,
     isFooterDisplayed,
     isSidebarDisplayed,
-    sidebarVariant,
     supportsThemeToggle,
     searchCollectionUuid,
     logoUrl:
@@ -2869,6 +2860,7 @@ export async function parseWebsite(
     },
   };
   let sidebarLayout: "start" | "end" = "start";
+  let sidebarMobileLayout: "default" | "inline" = "default";
   const sidebarCssStyles: Array<Style> = [];
 
   const sidebarResource = resources.find((resource) => {
@@ -2927,6 +2919,15 @@ export async function parseWebsite(
       sidebarLayout = sidebarLayoutProperty.values[0]!.content as
         | "start"
         | "end";
+    }
+
+    const sidebarMobileLayoutProperty = sidebarProperties.find(
+      (property) => property.label === "layout-mobile",
+    );
+    if (sidebarMobileLayoutProperty) {
+      sidebarMobileLayout = sidebarMobileLayoutProperty.values[0]!.content as
+        | "default"
+        | "inline";
     }
 
     const cssProperties =
@@ -3006,6 +3007,7 @@ export async function parseWebsite(
       elements: sidebarElements,
       title: sidebarTitle,
       layout: sidebarLayout,
+      mobileLayout: sidebarMobileLayout,
       cssStyles: sidebarCssStyles,
     };
   }
