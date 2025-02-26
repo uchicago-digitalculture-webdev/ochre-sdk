@@ -197,13 +197,10 @@ function parseWhitespace(contentString: string, whitespace: string): string {
     return contentString;
   }
 
-  for (const [index, option] of result.data.entries()) {
+  for (const option of result.data) {
     switch (option) {
       case "newline": {
-        if (index !== 0) {
-          returnString = `<br />\n${returnString}`;
-        }
-
+        returnString = `<br />\n${returnString}`;
         break;
       }
       case "trailing": {
@@ -294,7 +291,7 @@ export function parseStringItem(item: OchreStringItem): string {
     }
   }
 
-  return returnString.replaceAll("&#39;", "'");
+  return trimStartLineBreaks(trimEndLineBreaks(returnString));
 }
 
 /**
@@ -491,7 +488,7 @@ export function parseStringDocumentItem(
     }
   }
 
-  return returnString.replaceAll("&#39;", "'");
+  return trimStartLineBreaks(trimEndLineBreaks(returnString));
 }
 
 /**
@@ -514,6 +511,31 @@ export function trimEndLineBreaks(string: string): string {
   const finalLineBreaks = /\n<br \/>$/.exec(trimmedString);
   if (finalLineBreaks) {
     return trimEndLineBreaks(trimmedString);
+  }
+
+  return trimmedString;
+}
+
+/**
+ * Removes leading line breaks from a string
+ *
+ * @param string - Input string to trim
+ * @returns String with leading line breaks removed
+ *
+ * @example
+ * ```ts
+ * const trimmed = trimStartLineBreaks("<br />\n<br />\nHello");
+ * // Returns: "Hello"
+ * ```
+ */
+export function trimStartLineBreaks(string: string): string {
+  // trim "<br />\n" from the start of the string
+  const trimmedString = string.replaceAll(/^<br \/>\n|<br \/>\n$/g, "");
+
+  // check if there are other leading line breaks
+  const leadingLineBreaks = /^<br \/>\n/.exec(trimmedString);
+  if (leadingLineBreaks) {
+    return trimStartLineBreaks(trimmedString);
   }
 
   return trimmedString;
