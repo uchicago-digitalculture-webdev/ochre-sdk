@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.6
+
+### Patch Changes
+
+- 1a72106: feat: Add width and height support for image components
+
 ## 0.4.5
 
 ### Patch Changes
