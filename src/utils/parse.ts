@@ -2345,21 +2345,76 @@ async function parseWebpage(
     (link) => link.type === "image" || link.type === "IIIF",
   );
 
-  const blocks =
+  const webpageResources =
     webpageResource.resource ?
-      await parseWebpageResources(
-        Array.isArray(webpageResource.resource) ?
-          webpageResource.resource
-        : [webpageResource.resource],
-        "block",
-      )
+      Array.isArray(webpageResource.resource) ?
+        webpageResource.resource
+      : [webpageResource.resource]
     : [];
-  if (blocks.length === 0) {
-    const defaultBlock: Block = {
+
+  // check if there are any Elements not part of a Block
+  // loop over all webpageResource.resource and group them by Block
+  // if you hit a Block, add all before it to the elements array
+  const blocks: Array<Block> = [];
+  let elementsToHandle: Array<OchreResource> = [];
+  for (const resource of webpageResources) {
+    const resourceProperties =
+      resource.properties ?
+        parseProperties(
+          Array.isArray(resource.properties.property) ?
+            resource.properties.property
+          : [resource.properties.property],
+        )
+      : [];
+
+    const resourceType = getPropertyValueByLabel(
+      resourceProperties,
+      "presentation",
+    );
+    if (!resourceType) {
+      continue;
+    }
+
+    if (resourceType !== "block") {
+      elementsToHandle.push(resource);
+    } else {
+      if (elementsToHandle.length > 0) {
+        const elements = await parseWebpageResources(
+          elementsToHandle,
+          "element",
+        );
+
+        const block: Block = {
+          uuid: resource.uuid,
+          layout: "vertical",
+          blocks: [],
+          elements,
+          properties: {
+            spacing: "auto",
+            gap: "none",
+            alignItems: "stretch",
+            justifyContent: "stretch",
+          },
+          cssStyles: [],
+        };
+        blocks.push(block);
+
+        elementsToHandle = [];
+      }
+
+      const parsedBlocks = await parseWebpageResources([resource], "block");
+      blocks.push(...parsedBlocks);
+    }
+  }
+
+  if (elementsToHandle.length > 0) {
+    const elements = await parseWebpageResources(elementsToHandle, "element");
+
+    const block: Block = {
       uuid: webpageResource.uuid,
       layout: "vertical",
       blocks: [],
-      elements: [],
+      elements,
       properties: {
         spacing: "auto",
         gap: "none",
@@ -2368,21 +2423,7 @@ async function parseWebpage(
       },
       cssStyles: [],
     };
-    blocks.push(defaultBlock);
-
-    // check if there are any elements
-    const elements =
-      webpageResource.resource ?
-        await parseWebpageResources(
-          Array.isArray(webpageResource.resource) ?
-            webpageResource.resource
-          : [webpageResource.resource],
-          "element",
-        )
-      : [];
-    if (elements.length > 0) {
-      defaultBlock.elements = elements;
-    }
+    blocks.push(block);
   }
 
   const webpages =
