@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.3
+
+### Patch Changes
+
+- 8a3dd16: Fix `"newline"` parsing
+- 8a3dd16: Fix edge cases for `Block` parsing
+
 ## 0.4.2
 
 ### Patch Changes
