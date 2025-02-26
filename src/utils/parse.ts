@@ -2328,8 +2328,7 @@ async function parseWebpage(
 
   const identification = parseIdentification(webpageResource.identification);
 
-  // TODO: Remove this "/" check once OCHRE is updated
-  const slug = webpageResource.slug === "/" ? "" : webpageResource.slug;
+  const slug = webpageResource.slug;
   if (slug === undefined) {
     throw new Error(`Slug not found for page “${identification.label}”`);
   }
