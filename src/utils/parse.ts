@@ -1879,7 +1879,7 @@ async function parseWebElementProperties(
 
       let captionLayout = getPropertyValueByLabel(
         componentProperty.properties,
-        "caption-layout",
+        "layout-caption",
       );
       if (captionLayout === null) {
         captionLayout = "bottom";
@@ -2097,7 +2097,7 @@ async function parseWebElementProperties(
 
       let captionLayout = getPropertyValueByLabel(
         componentProperty.properties,
-        "caption-layout",
+        "layout-caption",
       );
       if (captionLayout === null) {
         captionLayout = "bottom";
@@ -2376,9 +2376,9 @@ async function parseWebpage(
       continue;
     }
 
-    if (resourceType !== "block") {
+    if (resourceType === "element") {
       elementsToHandle.push(resource);
-    } else {
+    } else if (resourceType === "block") {
       if (elementsToHandle.length > 0) {
         const elements = await parseWebpageResources(
           elementsToHandle,
