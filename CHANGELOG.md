@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.7
+
+### Patch Changes
+
+- cb272d0: refactor: Update default block properties and type definitions
+
 ## 0.4.6
 
 ### Patch Changes
