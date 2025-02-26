@@ -1,5 +1,13 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.5
+
+### Patch Changes
+
+- 9e3ec8f: Bug fixes
+- 9e3ec8f: feat: Add mobile layout support for sidebar
+- 9e3ec8f: Actually fix `"newline"` parsing
+
 ## 0.4.4
 
 ### Patch Changes
