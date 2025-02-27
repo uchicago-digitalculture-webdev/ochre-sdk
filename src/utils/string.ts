@@ -291,7 +291,7 @@ export function parseStringItem(item: OchreStringItem): string {
     }
   }
 
-  return trimStartLineBreaks(trimEndLineBreaks(returnString));
+  return returnString;
 }
 
 /**
@@ -488,57 +488,7 @@ export function parseStringDocumentItem(
     }
   }
 
-  return trimStartLineBreaks(trimEndLineBreaks(returnString));
-}
-
-/**
- * Removes trailing line breaks from a string
- *
- * @param string - Input string to trim
- * @returns String with trailing line breaks removed
- *
- * @example
- * ```ts
- * const trimmed = trimEndLineBreaks("Hello\n<br />\n<br />");
- * // Returns: "Hello"
- * ```
- */
-export function trimEndLineBreaks(string: string): string {
-  // trim "\n<br" from the end of the string
-  const trimmedString = string.replaceAll(/^\n<br \/>|\n<br \/>$/g, "");
-
-  // check if there are other final line breaks
-  const finalLineBreaks = /\n<br \/>$/.exec(trimmedString);
-  if (finalLineBreaks) {
-    return trimEndLineBreaks(trimmedString);
-  }
-
-  return trimmedString;
-}
-
-/**
- * Removes leading line breaks from a string
- *
- * @param string - Input string to trim
- * @returns String with leading line breaks removed
- *
- * @example
- * ```ts
- * const trimmed = trimStartLineBreaks("<br />\n<br />\nHello");
- * // Returns: "Hello"
- * ```
- */
-export function trimStartLineBreaks(string: string): string {
-  // trim "<br />\n" from the start of the string
-  const trimmedString = string.replaceAll(/^<br \/>\n|<br \/>\n$/g, "");
-
-  // check if there are other leading line breaks
-  const leadingLineBreaks = /^<br \/>\n/.exec(trimmedString);
-  if (leadingLineBreaks) {
-    return trimStartLineBreaks(trimmedString);
-  }
-
-  return trimmedString;
+  return returnString;
 }
 
 /**
