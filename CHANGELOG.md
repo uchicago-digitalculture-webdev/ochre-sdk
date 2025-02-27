@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.9
+
+### Patch Changes
+
+- ffdefbc: feat: Add isTransparentBackground and isCover properties to "image" compontent
+
 ## 0.4.8
 
 ### Patch Changes
