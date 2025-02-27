@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.8
+
+### Patch Changes
+
+- d097eca: roll back changes for `"newline"` parsing
+- 85f6d1e: roll back changes for `"newline"` parsing
+
 ## 0.4.7
 
 ### Patch Changes
