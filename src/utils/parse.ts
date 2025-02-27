@@ -80,7 +80,6 @@ import {
   parseFakeString,
   parseStringContent,
   parseStringDocumentItem,
-  trimEndLineBreaks,
 } from "../utils/string.js";
 
 /**
@@ -505,8 +504,6 @@ export function parseDocument(
       returnString += parseStringDocumentItem(item, footnotes);
     }
   }
-
-  returnString = trimEndLineBreaks(returnString);
 
   return { content: returnString, footnotes };
 }
