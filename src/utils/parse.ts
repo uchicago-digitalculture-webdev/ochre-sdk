@@ -1669,7 +1669,9 @@ async function parseWebElementProperties(
         : [elementResource.links],
       )
     : [];
-  const imageLinks = links.filter((link) => link.type === "image");
+  const imageLinks = links.filter(
+    (link) => link.type === "image" || link.type === "IIIF",
+  );
 
   let document: Document | null =
     elementResource.document ?
