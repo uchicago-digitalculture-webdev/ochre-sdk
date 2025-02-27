@@ -590,6 +590,8 @@ export type WebElementComponent =
       captionSource: "name" | "abbreviation" | "description";
       captionLayout: "top" | "bottom" | "suppress";
       altTextSource: "name" | "abbreviation" | "description";
+      isTransparentBackground: boolean;
+      isCover: boolean;
       carouselOptions: {
         secondsPerImage: number;
       } | null;

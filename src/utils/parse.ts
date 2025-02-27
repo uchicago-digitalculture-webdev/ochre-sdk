@@ -1942,6 +1942,24 @@ async function parseWebElementProperties(
         altTextSource = "name";
       }
 
+      let isTransparentBackground = false;
+      const isTransparentBackgroundProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "is-transparent",
+      );
+      if (isTransparentBackgroundProperty !== null) {
+        isTransparentBackground = isTransparentBackgroundProperty === "Yes";
+      }
+
+      let isCover = false;
+      const isCoverProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "is-cover",
+      );
+      if (isCoverProperty !== null) {
+        isCover = isCoverProperty === "Yes";
+      }
+
       let carouselOptions: {
         secondsPerImage: number;
       } | null = null;
@@ -1981,6 +1999,8 @@ async function parseWebElementProperties(
       properties.captionLayout = captionLayout;
       properties.captionSource = captionSource;
       properties.altTextSource = altTextSource;
+      properties.isTransparentBackground = isTransparentBackground;
+      properties.isCover = isCover;
       properties.carouselOptions = carouselOptions;
       break;
     }
