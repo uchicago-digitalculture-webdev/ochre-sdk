@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.10
+
+### Patch Changes
+
+- c37c8b7: feat: Include IIIF links in image link filtering
+
 ## 0.4.9
 
 ### Patch Changes
