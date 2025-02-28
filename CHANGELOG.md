@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.13
+
+### Patch Changes
+
+- c397601: feat: Add href support for webpage link rendering
+
 ## 0.4.12
 
 ### Patch Changes
