@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.14
+
+### Patch Changes
+
+- df27724: feat: Improve link string parsing to support rich text content
+- 59de70a: Bug fixes
+
 ## 0.4.13
 
 ### Patch Changes
