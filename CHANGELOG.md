@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.11
+
+### Patch Changes
+
+- b638285: fix: Add character escape for parsing string items beginning with a numeric character followed by a dot; fix typing and parsing of `OchreStringItem`
+
 ## 0.4.10
 
 ### Patch Changes
