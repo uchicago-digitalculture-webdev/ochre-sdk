@@ -479,6 +479,7 @@ export type Website = {
     layout: "start" | "end";
     mobileLayout: "default" | "inline";
     cssStyles: Array<Style>;
+    cssStylesMobile: Array<Style>;
   } | null;
   properties: WebsiteProperties;
 };
@@ -527,6 +528,7 @@ export type WebpageProperties = {
   backgroundImageUrl: string | null;
   isSidebarDisplayed: boolean;
   cssStyles: Array<Style>;
+  cssStylesMobile: Array<Style>;
 };
 
 /**
@@ -545,6 +547,7 @@ export type WebElement = {
     };
   };
   cssStyles: Array<Style>;
+  cssStylesMobile: Array<Style>;
 } & WebElementComponent;
 
 /**
@@ -672,4 +675,5 @@ export type Block = {
     justifyContent: "stretch" | "start" | "center" | "end" | "space-between";
   };
   cssStyles: Array<Style>;
+  cssStylesMobile: Array<Style>;
 };

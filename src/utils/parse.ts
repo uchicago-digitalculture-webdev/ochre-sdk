@@ -2285,6 +2285,19 @@ async function parseWebElement(
     cssStyles.push({ label: property.label, value: cssStyle });
   }
 
+  const mobileCssProperties =
+    elementResourceProperties.find(
+      (property) =>
+        property.label === "presentation" &&
+        property.values[0]!.content === "css-mobile",
+    )?.properties ?? [];
+
+  const cssStylesMobile: Array<Style> = [];
+  for (const property of mobileCssProperties) {
+    const cssStyle = property.values[0]!.content;
+    cssStylesMobile.push({ label: property.label, value: cssStyle });
+  }
+
   const titleProperties = elementResourceProperties.find(
     (property) =>
       property.label === "presentation" &&
@@ -2335,6 +2348,7 @@ async function parseWebElement(
       },
     },
     cssStyles,
+    cssStylesMobile,
     ...properties,
   };
 }
@@ -2436,6 +2450,7 @@ async function parseWebpage(
             justifyContent: "stretch",
           },
           cssStyles: [],
+          cssStylesMobile: [],
         };
         blocks.push(block);
 
@@ -2462,6 +2477,7 @@ async function parseWebpage(
         justifyContent: "stretch",
       },
       cssStyles: [],
+      cssStylesMobile: [],
     };
     blocks.push(block);
   }
@@ -2532,6 +2548,21 @@ async function parseWebpage(
     }
   }
 
+  const mobileCssStyleSubProperties = webpageProperties.find(
+    (property) =>
+      property.label === "presentation" &&
+      property.values[0]?.content === "css-mobile",
+  )?.properties;
+  const cssStylesMobile: Array<Style> = [];
+  if (mobileCssStyleSubProperties) {
+    for (const property of mobileCssStyleSubProperties) {
+      cssStylesMobile.push({
+        label: property.label,
+        value: property.values[0]!.content,
+      });
+    }
+  }
+
   return {
     title: identification.label,
     slug,
@@ -2546,6 +2577,7 @@ async function parseWebpage(
         : null,
       isSidebarDisplayed,
       cssStyles,
+      cssStylesMobile,
     },
     webpages,
   };
@@ -2593,6 +2625,7 @@ async function parseBlock(blockResource: OchreResource): Promise<Block | null> {
       justifyContent: "stretch",
     },
     cssStyles: [],
+    cssStylesMobile: [],
   };
 
   const blockProperties =
@@ -2701,6 +2734,20 @@ async function parseBlock(blockResource: OchreResource): Promise<Block | null> {
   if (blockCssStyles) {
     for (const property of blockCssStyles) {
       returnBlock.cssStyles.push({
+        label: property.label,
+        value: property.values[0]!.content,
+      });
+    }
+  }
+
+  const blockMobileCssStyles = blockProperties.find(
+    (property) =>
+      property.label === "presentation" &&
+      property.values[0]?.content === "css-mobile",
+  )?.properties;
+  if (blockMobileCssStyles) {
+    for (const property of blockMobileCssStyles) {
+      returnBlock.cssStylesMobile.push({
         label: property.label,
         value: property.values[0]!.content,
       });
@@ -2901,6 +2948,7 @@ export async function parseWebsite(
   let sidebarLayout: "start" | "end" = "start";
   let sidebarMobileLayout: "default" | "inline" = "default";
   const sidebarCssStyles: Array<Style> = [];
+  const sidebarCssStylesMobile: Array<Style> = [];
 
   const sidebarResource = resources.find((resource) => {
     const resourceProperties =
@@ -2981,6 +3029,18 @@ export async function parseWebsite(
       sidebarCssStyles.push({ label: property.label, value: cssStyle });
     }
 
+    const mobileCssProperties =
+      sidebarBaseProperties.find(
+        (property) =>
+          property.label === "presentation" &&
+          property.values[0]!.content === "css-mobile",
+      )?.properties ?? [];
+
+    for (const property of mobileCssProperties) {
+      const cssStyle = property.values[0]!.content;
+      sidebarCssStylesMobile.push({ label: property.label, value: cssStyle });
+    }
+
     const titleProperties = sidebarBaseProperties.find(
       (property) =>
         property.label === "presentation" &&
@@ -3048,6 +3108,7 @@ export async function parseWebsite(
       layout: sidebarLayout,
       mobileLayout: sidebarMobileLayout,
       cssStyles: sidebarCssStyles,
+      cssStylesMobile: sidebarCssStylesMobile,
     };
   }
 
