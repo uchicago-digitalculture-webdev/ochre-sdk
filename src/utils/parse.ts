@@ -31,7 +31,6 @@ import type {
 } from "../types/internal.raw.d.ts";
 import type {
   Bibliography,
-  Block,
   Concept,
   Context,
   ContextItem,
@@ -61,6 +60,7 @@ import type {
   SpatialUnit,
   Style,
   Tree,
+  WebBlock,
   WebElement,
   WebElementComponent,
   WebImage,
@@ -1550,13 +1550,13 @@ const parseWebpageResources = async <T extends "element" | "page" | "block">(
   Array<
     T extends "element" ? WebElement
     : T extends "page" ? Webpage
-    : Block
+    : WebBlock
   >
 > => {
   const returnElements: Array<
     T extends "element" ? WebElement
     : T extends "page" ? Webpage
-    : Block
+    : WebBlock
   > = [];
 
   for (const resource of webpageResources) {
@@ -1586,7 +1586,7 @@ const parseWebpageResources = async <T extends "element" | "page" | "block">(
         returnElements.push(
           element as T extends "element" ? WebElement
           : T extends "page" ? Webpage
-          : Block,
+          : WebBlock,
         );
 
         break;
@@ -1597,7 +1597,7 @@ const parseWebpageResources = async <T extends "element" | "page" | "block">(
           returnElements.push(
             webpage as T extends "element" ? WebElement
             : T extends "page" ? Webpage
-            : Block,
+            : WebBlock,
           );
         }
 
@@ -1609,7 +1609,7 @@ const parseWebpageResources = async <T extends "element" | "page" | "block">(
           returnElements.push(
             block as T extends "element" ? WebElement
             : T extends "page" ? Webpage
-            : Block,
+            : WebBlock,
           );
         }
 
@@ -2409,7 +2409,7 @@ async function parseWebpage(
   // check if there are any Elements not part of a Block
   // loop over all webpageResource.resource and group them by Block
   // if you hit a Block, add all before it to the elements array
-  const blocks: Array<Block> = [];
+  const blocks: Array<WebBlock> = [];
   let elementsToHandle: Array<OchreResource> = [];
   for (const resource of webpageResources) {
     const resourceProperties =
@@ -2438,17 +2438,18 @@ async function parseWebpage(
           "element",
         );
 
-        const block: Block = {
+        const block: WebBlock = {
           uuid: uuidv4(),
           layout: "vertical",
           blocks: [],
           elements,
           properties: {
-            spacing: null,
-            gap: "none",
+            spacing: undefined,
+            gap: undefined,
             alignItems: "start",
             justifyContent: "stretch",
           },
+          propertiesMobile: null,
           cssStyles: [],
           cssStylesMobile: [],
         };
@@ -2465,17 +2466,18 @@ async function parseWebpage(
   if (elementsToHandle.length > 0) {
     const elements = await parseWebpageResources(elementsToHandle, "element");
 
-    const block: Block = {
+    const block: WebBlock = {
       uuid: uuidv4(),
       layout: "vertical",
       blocks: [],
       elements,
       properties: {
-        spacing: null,
-        gap: "none",
+        spacing: undefined,
+        gap: undefined,
         alignItems: "start",
         justifyContent: "stretch",
       },
+      propertiesMobile: null,
       cssStyles: [],
       cssStylesMobile: [],
     };
@@ -2612,18 +2614,21 @@ async function parseWebpages(
  * @param blockResource - Raw block resource data in OCHRE format
  * @returns Parsed Block object
  */
-async function parseBlock(blockResource: OchreResource): Promise<Block | null> {
-  const returnBlock: Block = {
+async function parseBlock(
+  blockResource: OchreResource,
+): Promise<WebBlock | null> {
+  const returnBlock: WebBlock = {
     uuid: blockResource.uuid,
     layout: "vertical",
     blocks: [],
     elements: [],
     properties: {
-      spacing: null,
-      gap: "none",
+      spacing: undefined,
+      gap: undefined,
       alignItems: "start",
       justifyContent: "stretch",
     },
+    propertiesMobile: null,
     cssStyles: [],
     cssStylesMobile: [],
   };
@@ -2657,22 +2662,14 @@ async function parseBlock(blockResource: OchreResource): Promise<Block | null> {
       (property) => property.label === "spacing",
     )?.values[0];
     if (spacingProperty) {
-      returnBlock.properties.spacing = spacingProperty.content as
-        | "default"
-        | "full"
-        | "large"
-        | "narrow";
+      returnBlock.properties.spacing = spacingProperty.content;
     }
 
     const gapProperty = blockMainProperties.find(
       (property) => property.label === "gap",
     )?.values[0];
     if (gapProperty) {
-      returnBlock.properties.gap = gapProperty.content as
-        | "none"
-        | "small"
-        | "medium"
-        | "large";
+      returnBlock.properties.gap = gapProperty.content;
     }
 
     const alignItemsProperty = blockMainProperties.find(
@@ -2697,6 +2694,20 @@ async function parseBlock(blockResource: OchreResource): Promise<Block | null> {
         | "center"
         | "end"
         | "space-between";
+    }
+
+    const mobileOverwriteProperty = blockMainProperties.find(
+      (property) => property.label === "overwrite-mobile",
+    );
+    if (mobileOverwriteProperty) {
+      const mobileOverwriteProperties = mobileOverwriteProperty.properties;
+
+      const propertiesMobile: Record<string, string> = {};
+      for (const property of mobileOverwriteProperties) {
+        propertiesMobile[property.label] = property.values[0]!.content;
+      }
+
+      returnBlock.propertiesMobile = propertiesMobile;
     }
   }
 

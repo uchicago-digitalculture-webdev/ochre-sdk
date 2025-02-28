@@ -514,7 +514,7 @@ export type Webpage = {
   title: string;
   slug: string;
   properties: WebpageProperties;
-  blocks: Array<Block>;
+  blocks: Array<WebBlock>;
   webpages: Array<Webpage>;
 };
 
@@ -651,20 +651,20 @@ export type Style = {
 /**
  * Represents a block of vertical or horizontal content alignment
  */
-export type Block = {
+export type WebBlock = {
   uuid: string;
   layout: "vertical" | "horizontal" | "grid";
-  blocks: Array<Block>;
+  blocks: Array<WebBlock>;
   elements: Array<WebElement>;
   properties: {
     /**
      * valid `gridTemplateColumns` or `gridTemplateRows` CSS property value
      */
-    spacing: string | null;
+    spacing: string | undefined;
     /**
      * `gap` CSS property value
      */
-    gap: "none" | "small" | "medium" | "large";
+    gap: string | undefined;
     /**
      * `align-items` CSS property value
      */
@@ -674,6 +674,7 @@ export type Block = {
      */
     justifyContent: "stretch" | "start" | "center" | "end" | "space-between";
   };
+  propertiesMobile: Record<string, string> | null;
   cssStyles: Array<Style>;
   cssStylesMobile: Array<Style>;
 };
