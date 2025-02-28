@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.15
+
+### Patch Changes
+
+- cc949b1: refactor: Simplify email parsing by removing URL parsing
+
 ## 0.4.14
 
 ### Patch Changes
