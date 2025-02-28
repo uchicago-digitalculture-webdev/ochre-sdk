@@ -400,6 +400,11 @@ export function parseStringDocumentItem(
               }>${itemString}</TooltipSpan>`;
             }
           }
+          case "webpage": {
+            return `<ExternalLink href="${linkResource.href}" type="webpage" ${
+              linkContent !== null ? `content="${linkContent}"` : ""
+            }>${itemString}</ExternalLink>`;
+          }
           default: {
             return "";
           }

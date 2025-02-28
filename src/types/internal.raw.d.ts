@@ -336,6 +336,7 @@ export type OchreLinkItem = {
   widthPreview?: number;
   height?: number;
   width?: number;
+  href?: string;
 };
 
 /**
