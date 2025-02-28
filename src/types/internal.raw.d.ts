@@ -28,7 +28,10 @@ export type OchreStringItemContent = {
  * Raw string item with language metadata
  */
 export type OchreStringItem = {
-  string: FakeString | OchreStringItemContent | Array<OchreStringItemContent>;
+  string:
+    | FakeString
+    | OchreStringItemContent
+    | Array<FakeString | OchreStringItemContent>;
   lang?: Language["iso6393"]; // 3 character code (zxx = "a.k.a.")
   languages?: string; // 3 character codes, semicolon separated
 };

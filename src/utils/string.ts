@@ -241,7 +241,9 @@ export function parseFakeString(string: FakeString): string {
     returnString = string ? "Yes" : "No";
   }
 
-  return returnString.replaceAll("&#39;", "'");
+  return returnString
+    .replaceAll("&#39;", "'")
+    .replaceAll(/^(\d+)\./gm, String.raw`$1\.`);
 }
 
 /**
@@ -268,20 +270,28 @@ export function parseStringItem(item: OchreStringItem): string {
         Array.isArray(item.string) ? item.string : [item.string];
 
       for (const stringItem of stringItems) {
-        const renderedText =
-          stringItem.rend != null ?
-            parseRenderOptions(
-              parseFakeString(stringItem.content),
-              stringItem.rend,
-            )
-          : parseFakeString(stringItem.content);
+        if (
+          typeof stringItem === "string" ||
+          typeof stringItem === "number" ||
+          typeof stringItem === "boolean"
+        ) {
+          returnString += parseFakeString(stringItem);
+        } else {
+          const renderedText =
+            stringItem.rend != null ?
+              parseRenderOptions(
+                parseFakeString(stringItem.content),
+                stringItem.rend,
+              )
+            : parseFakeString(stringItem.content);
 
-        const whitespacedText =
-          stringItem.whitespace != null ?
-            parseWhitespace(renderedText, stringItem.whitespace)
-          : renderedText;
+          const whitespacedText =
+            stringItem.whitespace != null ?
+              parseWhitespace(renderedText, stringItem.whitespace)
+            : renderedText;
 
-        returnString += whitespacedText;
+          returnString += whitespacedText;
+        }
       }
       break;
     }
@@ -291,7 +301,7 @@ export function parseStringItem(item: OchreStringItem): string {
     }
   }
 
-  return returnString;
+  return returnString.replaceAll(/^(\d+)\./gm, String.raw`$1\.`);
 }
 
 /**
@@ -469,7 +479,9 @@ export function parseStringDocumentItem(
       );
     }
 
-    return returnString.replaceAll("&#39;", "'");
+    return returnString
+      .replaceAll("&#39;", "'")
+      .replaceAll(/^(\d+)\./gm, String.raw`$1\.`);
   } else {
     returnString = parseFakeString(item.content);
 
@@ -488,7 +500,7 @@ export function parseStringDocumentItem(
     }
   }
 
-  return returnString;
+  return returnString.replaceAll(/^(\d+)\./gm, String.raw`$1\.`);
 }
 
 /**
@@ -531,7 +543,7 @@ export function parseStringContent(
       }
     }
     default: {
-      return String(content.content);
+      return String(content.content).replaceAll(/^(\d+)\./gm, String.raw`$1\.`);
     }
   }
 }
