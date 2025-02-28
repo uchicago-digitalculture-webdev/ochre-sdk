@@ -333,9 +333,18 @@ export function parseStringDocumentItem(
   }
 
   if ("links" in item) {
-    const itemString = parseFakeString(item.string)
-      .replaceAll("<", String.raw`\<`)
-      .replaceAll("{", String.raw`\{`);
+    let itemString = "";
+    if (
+      typeof item.string === "string" ||
+      typeof item.string === "number" ||
+      typeof item.string === "boolean"
+    ) {
+      itemString = parseFakeString(item.string)
+        .replaceAll("<", String.raw`\<`)
+        .replaceAll("{", String.raw`\{`);
+    } else {
+      itemString = parseStringContent(item.string as OchreStringContent);
+    }
 
     const itemLinks = Array.isArray(item.links) ? item.links : [item.links];
     for (const link of itemLinks) {

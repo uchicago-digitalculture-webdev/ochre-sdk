@@ -59,7 +59,7 @@ export type OchreStringRichTextItemContent = {
  */
 export type OchreStringRichTextItemAnnotation = {
   annotation: string; // UUID
-  string: FakeString;
+  string: FakeString | OchreStringRichTextItemContent;
   links: OchreLink | Array<OchreLink>;
 };
 
