@@ -334,16 +334,12 @@ export function parseStringDocumentItem(
 
   if ("links" in item) {
     let itemString = "";
-    if (
-      typeof item.string === "string" ||
-      typeof item.string === "number" ||
-      typeof item.string === "boolean"
-    ) {
+    if (typeof item.string === "object") {
+      itemString = parseStringContent(item.string);
+    } else {
       itemString = parseFakeString(item.string)
         .replaceAll("<", String.raw`\<`)
         .replaceAll("{", String.raw`\{`);
-    } else {
-      itemString = parseStringContent(item.string as OchreStringContent);
     }
 
     const itemLinks = Array.isArray(item.links) ? item.links : [item.links];
