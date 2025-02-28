@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.4.12
+
+### Patch Changes
+
+- bd60130: feat: Enhance WebBlock type with mobile styling properties
+
 ## 0.4.11
 
 ### Patch Changes
