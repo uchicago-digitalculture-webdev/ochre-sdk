@@ -76,7 +76,7 @@ import {
   getPropertyValueByLabel,
 } from "../utils/getters.js";
 import {
-  parseEmailAndUrl,
+  parseEmail,
   parseFakeString,
   parseStringContent,
   parseStringDocumentItem,
@@ -491,9 +491,7 @@ export function parseDocument(
     typeof documentWithLanguage.string === "number" ||
     typeof documentWithLanguage.string === "boolean"
   ) {
-    returnString += parseEmailAndUrl(
-      parseFakeString(documentWithLanguage.string),
-    );
+    returnString += parseEmail(parseFakeString(documentWithLanguage.string));
   } else {
     const documentItems =
       Array.isArray(documentWithLanguage.string) ?
@@ -589,9 +587,9 @@ export function parseNotes(
       typeof noteWithLanguage.string === "number" ||
       typeof noteWithLanguage.string === "boolean"
     ) {
-      content = parseEmailAndUrl(parseFakeString(noteWithLanguage.string));
+      content = parseEmail(parseFakeString(noteWithLanguage.string));
     } else {
-      content = parseEmailAndUrl(parseDocument(noteWithLanguage).content);
+      content = parseEmail(parseDocument(noteWithLanguage).content);
     }
 
     returnNotes.push({

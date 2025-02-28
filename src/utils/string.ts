@@ -50,29 +50,6 @@ const whitespaceSchema = z
 const emailSchema = z.string().email({ message: "Invalid email" });
 
 /**
- * Schema for validating URLs
- * @internal
- */
-const urlSchema = z.string().refine((v) => (v ? isUrlValid(v) : false), {
-  message: "Invalid URL",
-});
-
-/**
- * Validates if a URL string matches a valid URL pattern
- *
- * @param url - The URL string to validate
- * @returns True if URL is valid, false otherwise
- * @internal
- */
-function isUrlValid(url: string) {
-  const pattern =
-    // eslint-disable-next-line regexp/no-useless-quantifier, regexp/no-unused-capturing-group
-    /((([A-Za-z]{3,9}:(?:\/\/)?)(?:[\w$&+,:;=-]+@)?[\d.A-Za-z-]+(:\d+)?|(?:www.|[\w$&+,:;=-]+@)[\d.A-Za-z-]+)((?:\/[\w%+./~-]*)?\??[\w%&+.;=@-]*#?\w*)?)/;
-
-  return !!pattern.test(url);
-}
-
-/**
  * Finds a string item in an array by language code
  *
  * @param content - Array of string items to search
@@ -89,19 +66,18 @@ function getStringItemByLanguage(
 }
 
 /**
- * Parses email addresses and URLs in a string into HTML links
+ * Parses email addresses in a string into HTML links
  *
  * @param string - Input string to parse
- * @returns String with emails and URLs converted to HTML links
+ * @returns String with emails converted to HTML links
  *
  * @example
  * ```ts
- * const parsed = parseEmailAndUrl("Contact us at info@example.com or visit www.example.com");
- * // Returns: "Contact us at <ExternalLink href="mailto:info@example.com">info@example.com</ExternalLink>
- * //          or visit <ExternalLink href="www.example.com">www.example.com</ExternalLink>"
+ * const parsed = parseEmail("Contact us at info@example.com");
+ * // Returns: "Contact us at <ExternalLink href="mailto:info@example.com">info@example.com</ExternalLink>"
  * ```
  */
-export function parseEmailAndUrl(string: string): string {
+export function parseEmail(string: string): string {
   const splitString = string.split(" ");
   const returnSplitString: Array<string> = [];
 
@@ -120,14 +96,6 @@ export function parseEmailAndUrl(string: string): string {
       returnSplitString.push(
         before,
         `${before}<ExternalLink href="mailto:${cleanString}">${cleanString}</ExternalLink>${after}`,
-      );
-      continue;
-    }
-
-    const isUrl = urlSchema.safeParse(cleanString).success;
-    if (isUrl) {
-      returnSplitString.push(
-        `${before}<ExternalLink href="${cleanString}">${cleanString}</ExternalLink>${after}`,
       );
       continue;
     }
@@ -320,7 +288,7 @@ export function parseStringDocumentItem(
     typeof item === "number" ||
     typeof item === "boolean"
   ) {
-    return parseEmailAndUrl(parseFakeString(item));
+    return parseEmail(parseFakeString(item));
   }
 
   if ("whitespace" in item && !("content" in item) && !("string" in item)) {
@@ -483,10 +451,7 @@ export function parseStringDocumentItem(
     }
 
     if ("whitespace" in item && item.whitespace != null) {
-      returnString = parseWhitespace(
-        parseEmailAndUrl(returnString),
-        item.whitespace,
-      );
+      returnString = parseWhitespace(parseEmail(returnString), item.whitespace);
     }
 
     return returnString
@@ -496,17 +461,11 @@ export function parseStringDocumentItem(
     returnString = parseFakeString(item.content);
 
     if (item.rend != null) {
-      returnString = parseRenderOptions(
-        parseEmailAndUrl(returnString),
-        item.rend,
-      );
+      returnString = parseRenderOptions(parseEmail(returnString), item.rend);
     }
 
     if (item.whitespace != null) {
-      returnString = parseWhitespace(
-        parseEmailAndUrl(returnString),
-        item.whitespace,
-      );
+      returnString = parseWhitespace(parseEmail(returnString), item.whitespace);
     }
   }
 
