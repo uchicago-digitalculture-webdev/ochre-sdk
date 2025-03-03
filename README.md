@@ -25,7 +25,7 @@ bun add @digitalculture/ochre-sdk
 From the root directory of the project, run the following command:
 
 ```bash
-pnpm run dev:ochre-sdk
+pnpm run dev
 ```
 
 ## Build production server
