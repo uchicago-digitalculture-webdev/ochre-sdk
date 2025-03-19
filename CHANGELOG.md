@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.0
+
+### Minor Changes
+
+- 74549bc: refactor: Update Webpage and WebBlock types to use a unified items array for elements and blocks
+
 ## 0.4.15
 
 ### Patch Changes
