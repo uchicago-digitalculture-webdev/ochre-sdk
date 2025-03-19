@@ -514,7 +514,7 @@ export type Webpage = {
   title: string;
   slug: string;
   properties: WebpageProperties;
-  blocks: Array<WebBlock>;
+  items: Array<WebElement | WebBlock>;
   webpages: Array<Webpage>;
 };
 
@@ -536,6 +536,7 @@ export type WebpageProperties = {
  */
 export type WebElement = {
   uuid: string;
+  type: "element";
   title: {
     label: string;
     variant: "default" | "simple";
@@ -653,9 +654,9 @@ export type Style = {
  */
 export type WebBlock = {
   uuid: string;
+  type: "block";
   layout: "vertical" | "horizontal" | "grid";
-  blocks: Array<WebBlock>;
-  elements: Array<WebElement>;
+  items: Array<WebElement | WebBlock>;
   properties: {
     /**
      * valid `gridTemplateColumns` or `gridTemplateRows` CSS property value

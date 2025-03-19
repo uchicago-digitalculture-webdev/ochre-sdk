@@ -68,7 +68,6 @@ import type {
   Website,
   WebsiteProperties,
 } from "../types/main.js";
-import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { fetchResource } from "../utils/fetchers/resource.js";
 import {
@@ -1576,10 +1575,7 @@ const parseWebpageResources = async <T extends "element" | "page" | "block">(
 
     switch (type) {
       case "element": {
-        const element = await parseWebElement(
-          resource,
-          resourceProperty.properties,
-        );
+        const element = await parseWebElement(resource);
 
         returnElements.push(
           element as T extends "element" ? WebElement
@@ -2238,16 +2234,32 @@ async function parseWebElementProperties(
  * Parses raw web element data into a standardized WebElement structure
  *
  * @param elementResource - Raw element resource data in OCHRE format
- * @param elementProperties - Array of raw element properties in OCHRE format
  * @returns Parsed WebElement object
  */
 async function parseWebElement(
   elementResource: OchreResource,
-  elementProperties: Array<Property>,
 ): Promise<WebElement> {
   const identification = parseIdentification(elementResource.identification);
 
-  const componentProperty = elementProperties.find(
+  const elementProperties =
+    elementResource.properties?.property ?
+      parseProperties(
+        Array.isArray(elementResource.properties.property) ?
+          elementResource.properties.property
+        : [elementResource.properties.property],
+      )
+    : [];
+
+  const presentationProperty = elementProperties.find(
+    (property) => property.label === "presentation",
+  );
+  if (!presentationProperty) {
+    throw new Error(
+      `Presentation property not found for element “${identification.label}”`,
+    );
+  }
+
+  const componentProperty = presentationProperty.properties.find(
     (property) => property.label === "component",
   );
   if (!componentProperty) {
@@ -2335,6 +2347,7 @@ async function parseWebElement(
 
   return {
     uuid: elementResource.uuid,
+    type: "element",
     title: {
       label: identification.label,
       variant,
@@ -2404,11 +2417,7 @@ async function parseWebpage(
       : [webpageResource.resource]
     : [];
 
-  // check if there are any Elements not part of a Block
-  // loop over all webpageResource.resource and group them by Block
-  // if you hit a Block, add all before it to the elements array
-  const blocks: Array<WebBlock> = [];
-  let elementsToHandle: Array<OchreResource> = [];
+  const items: Array<WebElement | WebBlock> = [];
   for (const resource of webpageResources) {
     const resourceProperties =
       resource.properties ?
@@ -2427,59 +2436,20 @@ async function parseWebpage(
       continue;
     }
 
-    if (resourceType === "element") {
-      elementsToHandle.push(resource);
-    } else if (resourceType === "block") {
-      if (elementsToHandle.length > 0) {
-        const elements = await parseWebpageResources(
-          elementsToHandle,
-          "element",
-        );
-
-        const block: WebBlock = {
-          uuid: uuidv4(),
-          layout: "vertical",
-          blocks: [],
-          elements,
-          properties: {
-            spacing: undefined,
-            gap: undefined,
-            alignItems: "start",
-            justifyContent: "stretch",
-          },
-          propertiesMobile: null,
-          cssStyles: [],
-          cssStylesMobile: [],
-        };
-        blocks.push(block);
-
-        elementsToHandle = [];
+    switch (resourceType) {
+      case "element": {
+        const element = await parseWebElement(resource);
+        items.push(element);
+        break;
       }
-
-      const parsedBlocks = await parseWebpageResources([resource], "block");
-      blocks.push(...parsedBlocks);
+      case "block": {
+        const block = await parseBlock(resource);
+        if (block) {
+          items.push(block);
+        }
+        break;
+      }
     }
-  }
-
-  if (elementsToHandle.length > 0) {
-    const elements = await parseWebpageResources(elementsToHandle, "element");
-
-    const block: WebBlock = {
-      uuid: uuidv4(),
-      layout: "vertical",
-      blocks: [],
-      elements,
-      properties: {
-        spacing: undefined,
-        gap: undefined,
-        alignItems: "start",
-        justifyContent: "stretch",
-      },
-      propertiesMobile: null,
-      cssStyles: [],
-      cssStylesMobile: [],
-    };
-    blocks.push(block);
   }
 
   const webpages =
@@ -2566,7 +2536,7 @@ async function parseWebpage(
   return {
     title: identification.label,
     slug,
-    blocks,
+    items,
     properties: {
       displayedInHeader,
       width,
@@ -2617,9 +2587,9 @@ async function parseBlock(
 ): Promise<WebBlock | null> {
   const returnBlock: WebBlock = {
     uuid: blockResource.uuid,
+    type: "block",
     layout: "vertical",
-    blocks: [],
-    elements: [],
+    items: [],
     properties: {
       spacing: undefined,
       gap: undefined,
@@ -2709,31 +2679,48 @@ async function parseBlock(
     }
   }
 
-  const blockBlocks =
+  const blockResources =
     blockResource.resource ?
-      await parseWebpageResources(
-        Array.isArray(blockResource.resource) ?
-          blockResource.resource
-        : [blockResource.resource],
-        "block",
-      )
+      Array.isArray(blockResource.resource) ?
+        blockResource.resource
+      : [blockResource.resource]
     : [];
-  for (const block of blockBlocks) {
-    returnBlock.blocks.push(block);
+  const blockItems: Array<WebElement | WebBlock> = [];
+  for (const resource of blockResources) {
+    const resourceProperties =
+      resource.properties ?
+        parseProperties(
+          Array.isArray(resource.properties.property) ?
+            resource.properties.property
+          : [resource.properties.property],
+        )
+      : [];
+
+    const resourceType = getPropertyValueByLabel(
+      resourceProperties,
+      "presentation",
+    );
+    if (!resourceType) {
+      continue;
+    }
+
+    switch (resourceType) {
+      case "element": {
+        const element = await parseWebElement(resource);
+        blockItems.push(element);
+        break;
+      }
+      case "block": {
+        const block = await parseBlock(resource);
+        if (block) {
+          blockItems.push(block);
+        }
+        break;
+      }
+    }
   }
 
-  const blockElements =
-    blockResource.resource ?
-      await parseWebpageResources(
-        Array.isArray(blockResource.resource) ?
-          blockResource.resource
-        : [blockResource.resource],
-        "element",
-      )
-    : [];
-  for (const element of blockElements) {
-    returnBlock.elements.push(element);
-  }
+  returnBlock.items = blockItems;
 
   const blockCssStyles = blockProperties.find(
     (property) =>
@@ -3089,23 +3076,7 @@ export async function parseWebsite(
       : [];
 
     for (const resource of sidebarResources) {
-      const sidebarResourceProperties =
-        resource.properties ?
-          parseProperties(
-            Array.isArray(resource.properties.property) ?
-              resource.properties.property
-            : [resource.properties.property],
-          )
-        : [];
-
-      const element = await parseWebElement(
-        resource,
-        sidebarResourceProperties.find(
-          (property) =>
-            property.label === "presentation" &&
-            property.values[0]?.content === "element",
-        )?.properties ?? [],
-      );
+      const element = await parseWebElement(resource);
       sidebarElements.push(element);
     }
   }
