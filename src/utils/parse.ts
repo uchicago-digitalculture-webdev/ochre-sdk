@@ -124,6 +124,7 @@ const componentSchema = z.enum(
     "button",
     "collection",
     "empty-space",
+    "iframe",
     "iiif-viewer",
     "image",
     "image-gallery",
@@ -410,6 +411,7 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
             parseFakeString(link.content)
           : null
         : null,
+      href: "href" in link && link.href != null ? link.href : null,
       uuid: link.uuid,
       type: link.type ?? null,
       identification:
@@ -1731,9 +1733,7 @@ async function parseWebElementProperties(
         componentProperty.properties,
         "layout",
       );
-      if (layout === null) {
-        layout = "long";
-      }
+      layout ??= "long";
 
       properties.bibliographies = bibliographyLink.bibliographies;
       properties.layout = layout;
@@ -1756,9 +1756,7 @@ async function parseWebElementProperties(
         componentProperty.properties,
         "variant",
       );
-      if (variant === null) {
-        variant = "default";
-      }
+      variant ??= "default";
 
       let isExternal = false;
       let href = getPropertyValueByLabel(
@@ -1796,17 +1794,13 @@ async function parseWebElementProperties(
         componentProperty.properties,
         "variant",
       );
-      if (variant === null) {
-        variant = "full";
-      }
+      variant ??= "full";
 
       let layout = getPropertyValueByLabel(
         componentProperty.properties,
         "layout",
       );
-      if (layout === null) {
-        layout = "image-start";
-      }
+      layout ??= "image-start";
 
       const collectionLink = links.find((link) => link.category === "set");
       if (!collectionLink) {
@@ -1832,6 +1826,17 @@ async function parseWebElementProperties(
 
       properties.height = height;
       properties.width = width;
+      break;
+    }
+    case "iframe": {
+      const url = links.find((link) => link.type === "webpage")?.href;
+      if (!url) {
+        throw new Error(
+          `URL not found for the following component: “${componentName}”`,
+        );
+      }
+
+      properties.url = url;
       break;
     }
     case "iiif-viewer": {
@@ -1866,17 +1871,13 @@ async function parseWebElementProperties(
         componentProperty.properties,
         "variant",
       );
-      if (variant === null) {
-        variant = "default";
-      }
+      variant ??= "default";
 
       let captionLayout = getPropertyValueByLabel(
         componentProperty.properties,
         "layout-caption",
       );
-      if (captionLayout === null) {
-        captionLayout = "bottom";
-      }
+      captionLayout ??= "bottom";
 
       let width = null;
       const widthProperty = getPropertyValueByLabel(
@@ -1918,25 +1919,19 @@ async function parseWebElementProperties(
         componentProperty.properties,
         "image-quality",
       );
-      if (imageQuality === null) {
-        imageQuality = "high";
-      }
+      imageQuality ??= "high";
 
       let captionSource = getPropertyValueByLabel(
         componentProperty.properties,
         "caption-source",
       );
-      if (captionSource === null) {
-        captionSource = "name";
-      }
+      captionSource ??= "name";
 
       let altTextSource = getPropertyValueByLabel(
         componentProperty.properties,
         "alt-text-source",
       );
-      if (altTextSource === null) {
-        altTextSource = "name";
-      }
+      altTextSource ??= "name";
 
       let isTransparentBackground = false;
       const isTransparentBackgroundProperty = getPropertyValueByLabel(
@@ -2091,9 +2086,7 @@ async function parseWebElementProperties(
         componentProperty.properties,
         "variant",
       );
-      if (variant === null) {
-        variant = "block";
-      }
+      variant ??= "block";
 
       const heading = getPropertyValueByLabel(
         componentProperty.properties,
@@ -2116,25 +2109,19 @@ async function parseWebElementProperties(
         componentProperty.properties,
         "variant",
       );
-      if (variant === null) {
-        variant = "block";
-      }
+      variant ??= "block";
 
       let layout = getPropertyValueByLabel(
         componentProperty.properties,
         "layout",
       );
-      if (layout === null) {
-        layout = "image-start";
-      }
+      layout ??= "image-start";
 
       let captionLayout = getPropertyValueByLabel(
         componentProperty.properties,
         "layout-caption",
       );
-      if (captionLayout === null) {
-        captionLayout = "bottom";
-      }
+      captionLayout ??= "bottom";
 
       const imageLink = links.find(
         (link) => link.type === "image" || link.type === "IIIF",
@@ -2151,25 +2138,19 @@ async function parseWebElementProperties(
         componentProperty.properties,
         "image-quality",
       );
-      if (imageQuality === null) {
-        imageQuality = "high";
-      }
+      imageQuality ??= "high";
 
       let captionSource = getPropertyValueByLabel(
         componentProperty.properties,
         "caption-source",
       );
-      if (captionSource === null) {
-        captionSource = "name";
-      }
+      captionSource ??= "name";
 
       let altTextSource = getPropertyValueByLabel(
         componentProperty.properties,
         "alt-text-source",
       );
-      if (altTextSource === null) {
-        altTextSource = "name";
-      }
+      altTextSource ??= "name";
 
       properties.variant = variant;
       properties.image = {
@@ -2209,9 +2190,7 @@ async function parseWebElementProperties(
         componentProperty.properties,
         "chapters-displayed",
       );
-      if (isChaptersDislayed == null) {
-        isChaptersDislayed = "Yes";
-      }
+      isChaptersDislayed ??= "Yes";
 
       properties.videoId = videoLink.uuid;
       properties.isChaptersDislayed = isChaptersDislayed === "Yes";
@@ -2786,9 +2765,7 @@ function parseWebsiteProperties(
   let privacy = websiteProperties.find(
     (property) => property.label === "privacy",
   )?.values[0]?.content;
-  if (privacy == null) {
-    privacy = "public";
-  }
+  privacy ??= "public";
 
   const result = websiteSchema.safeParse({
     type,

@@ -139,6 +139,7 @@ export type Link = {
     | null;
   identification: Identification | null;
   content: string | null;
+  href: string | null;
   image: {
     isInline: boolean;
     heightPreview: number;
@@ -581,6 +582,7 @@ export type WebElementComponent =
       isSearchable: boolean;
     }
   | { component: "empty-space"; height: string | null; width: string | null }
+  | { component: "iframe"; url: string }
   | { component: "iiif-viewer"; IIIFId: string }
   | {
       component: "image";
