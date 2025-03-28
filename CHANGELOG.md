@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.1
+
+### Patch Changes
+
+- 6796fe4: Add new `iframe` component
+
 ## 0.5.0
 
 ### Minor Changes
