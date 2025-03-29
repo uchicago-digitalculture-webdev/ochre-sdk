@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.2
+
+### Patch Changes
+
+- c5adbd7: Fix type and parsing of `description` for `OchreResource`
+
 ## 0.5.1
 
 ### Patch Changes
