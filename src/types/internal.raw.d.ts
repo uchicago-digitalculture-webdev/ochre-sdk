@@ -196,7 +196,7 @@ export type OchreResource = {
   copyright?: FakeString;
   identification: OchreIdentification;
   href?: string;
-  description?: OchreStringContent;
+  description?: OchreStringContent | FakeString;
   date?: string; // YYYY-MM-DD
   image?: OchreImage;
   creators?: { creator: OchrePerson | Array<OchrePerson> };

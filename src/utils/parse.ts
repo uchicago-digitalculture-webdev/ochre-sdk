@@ -1261,7 +1261,11 @@ export function parseResource(
         )
       : [],
     description:
-      resource.description ? parseStringContent(resource.description) : "",
+      resource.description ?
+        ["string", "number", "boolean"].includes(typeof resource.description) ?
+          parseFakeString(resource.description as FakeString)
+        : parseStringContent(resource.description as OchreStringContent)
+      : "",
     document:
       resource.document ? parseDocument(resource.document.content) : null,
     href: resource.href ?? null,
