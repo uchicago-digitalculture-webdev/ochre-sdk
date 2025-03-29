@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.3
+
+### Patch Changes
+
+- fc69222: Minor bug fix in string parsing
+
 ## 0.5.2
 
 ### Patch Changes
