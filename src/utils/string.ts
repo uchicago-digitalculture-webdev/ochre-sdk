@@ -269,7 +269,9 @@ export function parseStringItem(item: OchreStringItem): string {
     }
   }
 
-  return returnString.replaceAll(/^(\d+)\./gm, String.raw`$1\.`);
+  return returnString
+    .replaceAll("&#39;", "'")
+    .replaceAll(/^(\d+)\./gm, String.raw`$1\.`);
 }
 
 /**
