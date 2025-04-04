@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.5
+
+### Patch Changes
+
+- 987a6a6: Enhance OchreLink and Link types to include spatialUnit category and support in parsing logic
+
 ## 0.5.4
 
 ### Patch Changes
