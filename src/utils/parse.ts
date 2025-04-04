@@ -378,6 +378,7 @@ export function parsePersons(persons: Array<OchrePerson>): Array<Person> {
 export function parseLink(linkRaw: OchreLink): Array<Link> {
   const links =
     "resource" in linkRaw ? linkRaw.resource
+    : "spatialUnit" in linkRaw ? linkRaw.spatialUnit
     : "concept" in linkRaw ? linkRaw.concept
     : "set" in linkRaw ? linkRaw.set
     : "tree" in linkRaw ? linkRaw.tree
@@ -398,6 +399,7 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
     const returnLink: Link = {
       category:
         "resource" in linkRaw ? "resource"
+        : "spatialUnit" in linkRaw ? "spatialUnit"
         : "concept" in linkRaw ? "concept"
         : "set" in linkRaw ? "set"
         : "person" in linkRaw ? "person"

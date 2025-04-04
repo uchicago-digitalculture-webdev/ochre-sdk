@@ -345,6 +345,7 @@ export type OchreLinkItem = {
  */
 export type OchreLink =
   | { resource: OchreLinkItem | Array<OchreLinkItem> }
+  | { spatialUnit: OchreLinkItem | Array<OchreLinkItem> }
   | { concept: OchreLinkItem | Array<OchreLinkItem> }
   | { set: OchreLinkItem | Array<OchreLinkItem> }
   | { tree: OchreLinkItem | Array<OchreLinkItem> }

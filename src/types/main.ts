@@ -130,6 +130,7 @@ export type Link = {
   type: string | null;
   category:
     | "resource"
+    | "spatialUnit"
     | "concept"
     | "set"
     | "tree"
