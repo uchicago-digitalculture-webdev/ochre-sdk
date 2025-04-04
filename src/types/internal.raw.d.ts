@@ -337,6 +337,7 @@ export type OchreLinkItem = {
   height?: number;
   width?: number;
   href?: string;
+  isPrimary?: boolean;
 };
 
 /**

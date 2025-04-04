@@ -440,6 +440,7 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
     ) {
       returnLink.image = {
         isInline: link.rend === "inline",
+        isPrimary: link.isPrimary ?? false,
         heightPreview: link.heightPreview,
         widthPreview: link.widthPreview,
         height: link.height,

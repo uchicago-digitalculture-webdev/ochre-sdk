@@ -142,6 +142,7 @@ export type Link = {
   href: string | null;
   image: {
     isInline: boolean;
+    isPrimary: boolean;
     heightPreview: number;
     widthPreview: number;
     height: number;
