@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.4
+
+### Patch Changes
+
+- 65db23c: feat: Add isPrimary property to Link and OchreLinkItem types
+
 ## 0.5.3
 
 ### Patch Changes
