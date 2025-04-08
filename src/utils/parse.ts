@@ -1781,6 +1781,15 @@ async function parseWebElementProperties(
         }
       }
 
+      let icon = null;
+      const iconProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "icon",
+      );
+      if (iconProperty !== null) {
+        icon = iconProperty;
+      }
+
       properties.variant = variant;
       properties.href = href;
       properties.isExternal = isExternal;
@@ -1794,6 +1803,7 @@ async function parseWebElementProperties(
         : parseStringContent(
             elementResource.identification.label as OchreStringContent,
           );
+      properties.icon = icon;
       break;
     }
     case "collection": {

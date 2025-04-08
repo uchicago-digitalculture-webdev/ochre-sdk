@@ -575,6 +575,7 @@ export type WebElementComponent =
       href: string;
       isExternal: boolean;
       label: string;
+      icon: string | null;
     }
   | {
       component: "collection";
