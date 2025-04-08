@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.6
+
+### Patch Changes
+
+- 689b37d: feat: add icon property to "button" component
+
 ## 0.5.5
 
 ### Patch Changes
