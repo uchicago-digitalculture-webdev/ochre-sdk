@@ -1813,6 +1813,12 @@ async function parseWebElementProperties(
       );
       variant ??= "full";
 
+      let itemVariant = getPropertyValueByLabel(
+        componentProperty.properties,
+        "item-variant",
+      );
+      itemVariant ??= "default";
+
       let layout = getPropertyValueByLabel(
         componentProperty.properties,
         "layout",
@@ -1827,6 +1833,7 @@ async function parseWebElementProperties(
       }
 
       properties.variant = variant;
+      properties.itemVariant = itemVariant;
       properties.layout = layout;
       properties.collectionId = collectionLink.uuid;
       break;

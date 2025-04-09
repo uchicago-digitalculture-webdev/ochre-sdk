@@ -581,6 +581,7 @@ export type WebElementComponent =
       component: "collection";
       collectionId: string;
       variant: "full" | "highlights";
+      itemVariant: "default" | "card";
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
       isSearchable: boolean;
     }
