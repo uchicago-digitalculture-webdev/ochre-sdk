@@ -1807,6 +1807,13 @@ async function parseWebElementProperties(
       break;
     }
     case "collection": {
+      const collectionLink = links.find((link) => link.category === "set");
+      if (!collectionLink) {
+        throw new Error(
+          `Collection link not found for the following component: “${componentName}”`,
+        );
+      }
+
       let variant = getPropertyValueByLabel(
         componentProperty.properties,
         "variant",
@@ -1819,23 +1826,36 @@ async function parseWebElementProperties(
       );
       itemVariant ??= "default";
 
+      let showCount = false;
+      const showCountProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "show-count",
+      );
+      if (showCountProperty !== null) {
+        showCount = showCountProperty === "Yes";
+      }
+
+      let isSearchable = false;
+      const isSearchableProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "is-searchable",
+      );
+      if (isSearchableProperty !== null) {
+        isSearchable = isSearchableProperty === "Yes";
+      }
+
       let layout = getPropertyValueByLabel(
         componentProperty.properties,
         "layout",
       );
       layout ??= "image-start";
 
-      const collectionLink = links.find((link) => link.category === "set");
-      if (!collectionLink) {
-        throw new Error(
-          `Collection link not found for the following component: “${componentName}”`,
-        );
-      }
-
+      properties.collectionId = collectionLink.uuid;
       properties.variant = variant;
       properties.itemVariant = itemVariant;
+      properties.isSearchable = isSearchable;
+      properties.showCount = showCount;
       properties.layout = layout;
-      properties.collectionId = collectionLink.uuid;
       break;
     }
     case "empty-space": {
