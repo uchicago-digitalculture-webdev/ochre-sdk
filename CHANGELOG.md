@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.9
+
+### Patch Changes
+
+- adc50b2: Remove deprecated `text-image` component
+
 ## 0.5.8
 
 ### Patch Changes
