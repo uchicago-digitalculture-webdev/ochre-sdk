@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.10
+
+### Patch Changes
+
+- 3da930f: Remove `item-gallery` component from type definitions and parsing logic, updating related gallery link retrieval to include "set" category
+
 ## 0.5.9
 
 ### Patch Changes
