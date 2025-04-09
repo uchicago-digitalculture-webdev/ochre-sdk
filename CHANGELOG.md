@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.8
+
+### Patch Changes
+
+- b64043f: feat: add showCount property and update parse logic for "collection" component
+
 ## 0.5.7
 
 ### Patch Changes
