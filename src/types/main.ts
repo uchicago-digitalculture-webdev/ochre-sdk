@@ -608,7 +608,6 @@ export type WebElementComponent =
       } | null;
     }
   | { component: "image-gallery"; galleryId: string; isSearchable: boolean }
-  | { component: "item-gallery"; galleryId: string; isSearchable: boolean }
   | { component: "n-columns"; columns: Array<WebElement> }
   | { component: "n-rows"; rows: Array<WebElement> }
   | { component: "network-graph" }

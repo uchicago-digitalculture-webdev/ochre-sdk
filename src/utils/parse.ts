@@ -128,7 +128,6 @@ const componentSchema = z.enum(
     "iiif-viewer",
     "image",
     "image-gallery",
-    "item-gallery",
     "n-columns",
     "n-rows",
     "network-graph",
@@ -2039,28 +2038,12 @@ async function parseWebElementProperties(
       break;
     }
     case "image-gallery": {
-      const galleryLink = links.find((link) => link.category === "tree");
+      const galleryLink = links.find(
+        (link) => link.category === "tree" || link.category === "set",
+      );
       if (!galleryLink) {
         throw new Error(
           `Image gallery link not found for the following component: “${componentName}”`,
-        );
-      }
-
-      const isSearchable =
-        getPropertyValueByLabel(
-          componentProperty.properties,
-          "is-searchable",
-        ) === "Yes";
-
-      properties.galleryId = galleryLink.uuid;
-      properties.isSearchable = isSearchable;
-      break;
-    }
-    case "item-gallery": {
-      const galleryLink = links.find((link) => link.category === "tree");
-      if (!galleryLink) {
-        throw new Error(
-          `Item gallery link not found for the following component: “${componentName}”`,
         );
       }
 
