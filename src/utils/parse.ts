@@ -134,7 +134,6 @@ const componentSchema = z.enum(
     "network-graph",
     "table",
     "text",
-    "text-image",
     "timeline",
     "video",
   ] as const satisfies ReadonlyArray<WebElementComponent["component"]>,
@@ -2139,75 +2138,6 @@ async function parseWebElementProperties(
 
       properties.variant = variant;
       properties.heading = heading;
-      properties.content = document.content;
-      break;
-    }
-    case "text-image": {
-      if (!document) {
-        throw new Error(
-          `Document not found for the following component: “${componentName}”`,
-        );
-      }
-
-      let variant = getPropertyValueByLabel(
-        componentProperty.properties,
-        "variant",
-      );
-      variant ??= "block";
-
-      let layout = getPropertyValueByLabel(
-        componentProperty.properties,
-        "layout",
-      );
-      layout ??= "image-start";
-
-      let captionLayout = getPropertyValueByLabel(
-        componentProperty.properties,
-        "layout-caption",
-      );
-      captionLayout ??= "bottom";
-
-      const imageLink = links.find(
-        (link) => link.type === "image" || link.type === "IIIF",
-      );
-      if (!imageLink) {
-        throw new Error(
-          `Image link not found for the following component: “${componentName}”: ${JSON.stringify(
-            links,
-          )}`,
-        );
-      }
-
-      let imageQuality = getPropertyValueByLabel(
-        componentProperty.properties,
-        "image-quality",
-      );
-      imageQuality ??= "high";
-
-      let captionSource = getPropertyValueByLabel(
-        componentProperty.properties,
-        "caption-source",
-      );
-      captionSource ??= "name";
-
-      let altTextSource = getPropertyValueByLabel(
-        componentProperty.properties,
-        "alt-text-source",
-      );
-      altTextSource ??= "name";
-
-      properties.variant = variant;
-      properties.image = {
-        url: `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&preview`,
-        label: imageLink.identification?.label ?? null,
-        width: imageLink.image?.width ?? 0,
-        height: imageLink.image?.height ?? 0,
-      };
-      properties.imageQuality = imageQuality;
-      properties.layout = layout;
-      properties.captionSource = captionSource;
-      properties.captionLayout = captionLayout;
-      properties.altTextSource = altTextSource;
       properties.content = document.content;
       break;
     }

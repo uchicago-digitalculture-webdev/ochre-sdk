@@ -619,22 +619,6 @@ export type WebElementComponent =
       heading: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | null;
       content: string;
     }
-  | {
-      component: "text-image";
-      variant: "title" | "block" | "banner";
-      image: WebImage;
-      imageQuality: "high" | "low";
-      layout:
-        | "image-top"
-        | "image-bottom"
-        | "image-start"
-        | "image-end"
-        | "image-background";
-      captionSource: "name" | "abbreviation" | "description";
-      captionLayout: "top" | "bottom" | "suppress";
-      altTextSource: "name" | "abbreviation" | "description";
-      content: string;
-    }
   | { component: "timeline"; timelineId: string }
   | { component: "video"; isChaptersDislayed: boolean };
 
