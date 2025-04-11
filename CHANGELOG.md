@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.13
+
+### Patch Changes
+
+- 33b3940: refactor: update propertyValue type and parsing logic to align with new data structure
+
 ## 0.5.12
 
 ### Patch Changes
