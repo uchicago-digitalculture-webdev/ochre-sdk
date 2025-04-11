@@ -1037,7 +1037,14 @@ export function parsePropertyValue(
         new Date(propertyValue.publicationDateTime)
       : null,
     identification: parseIdentification(propertyValue.identification),
-    description: parseStringContent(propertyValue.description),
+    description:
+      (
+        ["string", "number", "boolean"].includes(
+          typeof propertyValue.description,
+        )
+      ) ?
+        parseFakeString(propertyValue.description as FakeString)
+      : parseStringContent(propertyValue.description as OchreStringContent),
     notes:
       propertyValue.notes ?
         parseNotes(

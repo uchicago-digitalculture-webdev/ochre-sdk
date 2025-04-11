@@ -587,7 +587,7 @@ export type OchrePropertyValue = {
   n: number;
   publicationDateTime?: string; // YYYY-MM-DDThh:mm:ss
   identification: OchreIdentification;
-  description: OchreStringContent;
+  description: OchreStringContent | FakeString;
   notes?: { note: OchreNote | Array<OchreNote> };
   links?: OchreLink | Array<OchreLink>;
 };
