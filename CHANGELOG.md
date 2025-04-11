@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.11
+
+### Patch Changes
+
+- f32ad15: - feat: add propertyValue type and parsing logic to support new data structure
+  - feat: add search-bar component with variant support to type definitions and parsing logic
+
 ## 0.5.10
 
 ### Patch Changes
