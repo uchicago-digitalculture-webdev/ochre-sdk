@@ -132,6 +132,7 @@ const componentSchema = z.enum(
     "n-columns",
     "n-rows",
     "network-graph",
+    "search-bar",
     "table",
     "text",
     "timeline",
@@ -2173,6 +2174,16 @@ async function parseWebElementProperties(
       }
 
       properties.tableId = tableLink.uuid;
+      break;
+    }
+    case "search-bar": {
+      let variant = getPropertyValueByLabel(
+        componentProperty.properties,
+        "variant",
+      );
+      variant ??= "default";
+
+      properties.variant = variant;
       break;
     }
     case "text": {

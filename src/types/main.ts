@@ -624,6 +624,7 @@ export type WebElementComponent =
   | { component: "n-columns"; columns: Array<WebElement> }
   | { component: "n-rows"; rows: Array<WebElement> }
   | { component: "network-graph" }
+  | { component: "search-bar"; variant: "default" | "full" }
   | { component: "table"; tableId: string }
   | {
       component: "text";
