@@ -109,6 +109,7 @@ export type OchreData = {
     | { period: OchrePeriod }
     | { bibliography: OchreBibliography }
     | { person: OchrePerson }
+    | { propertyValue: OchrePropertyValue }
   );
 };
 
@@ -153,7 +154,8 @@ export type OchreTree = {
     | { concept: OchreConcept | Array<OchreConcept> }
     | { period: OchrePeriod | Array<OchrePeriod> }
     | { bibliography: OchreBibliography | Array<OchreBibliography> }
-    | { person: OchrePerson | Array<OchrePerson> };
+    | { person: OchrePerson | Array<OchrePerson> }
+    | { propertyValue: OchrePropertyValue | Array<OchrePropertyValue> };
   properties?: { property: OchreProperty | Array<OchreProperty> };
 };
 
@@ -178,7 +180,8 @@ export type OchreSet = {
     | { concept: OchreConcept | Array<OchreConcept> }
     | { period: OchrePeriod | Array<OchrePeriod> }
     | { bibliography: OchreBibliography | Array<OchreBibliography> }
-    | { person: OchrePerson | Array<OchrePerson> };
+    | { person: OchrePerson | Array<OchrePerson> }
+    | { propertyValue: OchrePropertyValue | Array<OchrePropertyValue> };
 };
 
 /**
@@ -275,7 +278,7 @@ export type OchreNestedConcept = Omit<OchreConcept, "context" | "availability">;
 /**
  * Raw property value structure corresponding to the parsed PropertyValue type
  */
-export type OchrePropertyValue = OchreStringContent & {
+export type OchrePropertyValueContent = OchreStringContent & {
   uuid?: string;
   publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
   type: string;
@@ -288,7 +291,10 @@ export type OchrePropertyValue = OchreStringContent & {
  */
 export type OchreProperty = {
   label: OchreStringContent & { uuid: string };
-  value?: OchrePropertyValue | Array<OchrePropertyValue> | FakeString;
+  value?:
+    | OchrePropertyValueContent
+    | Array<OchrePropertyValueContent>
+    | FakeString;
   comment?: FakeString;
   property?: OchreProperty | Array<OchreProperty>;
 };
@@ -351,7 +357,8 @@ export type OchreLink =
   | { tree: OchreLinkItem | Array<OchreLinkItem> }
   | { person: OchreLinkItem | Array<OchreLinkItem> }
   | { epigraphicUnit: OchreLinkItem | Array<OchreLinkItem> }
-  | { bibliography: OchreBibliography | Array<OchreBibliography> };
+  | { bibliography: OchreBibliography | Array<OchreBibliography> }
+  | { propertyValue: OchreLinkItem | Array<OchreLinkItem> };
 
 /**
  * Raw image structure corresponding to the parsed Image type
@@ -570,6 +577,19 @@ export type OchreInterpretation = {
   date: string; // YYYY-MM-DD
   interpretationNo: number;
   properties?: { property: OchreProperty | Array<OchreProperty> };
+};
+
+/**
+ * Raw property value structure corresponding to the parsed PropertyValue type
+ */
+export type OchrePropertyValue = {
+  uuid: string;
+  n: number;
+  publicationDateTime?: string; // YYYY-MM-DDThh:mm:ss
+  identification: OchreIdentification;
+  description: OchreStringContent;
+  notes?: { note: OchreNote | Array<OchreNote> };
+  links?: OchreLink | Array<OchreLink>;
 };
 
 /**

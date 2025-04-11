@@ -19,7 +19,8 @@ export type Data = {
     | Concept
     | Period
     | Bibliography
-    | Person;
+    | Person
+    | PropertyValue;
 };
 
 /**
@@ -137,6 +138,7 @@ export type Link = {
     | "person"
     | "bibliography"
     | "epigraphicUnit"
+    | "propertyValue"
     | null;
   identification: Identification | null;
   content: string | null;
@@ -341,6 +343,7 @@ export type Set = {
     periods: Array<Period>;
     bibliographies: Array<Bibliography>;
     persons: Array<Person>;
+    propertyValues: Array<PropertyValue>;
   };
 };
 
@@ -395,24 +398,33 @@ export type Period = {
 };
 
 /**
- * Valid types for property values
+ * Represents a property value with type information
  */
-export type PropertyValueType =
-  | "string"
-  | "number"
-  | "integer"
-  | "boolean"
-  | "date"
-  | "dateTime"
-  | "time"
-  | "IDREF";
+export type PropertyValue = {
+  uuid: string;
+  category: "propertyValue";
+  n: number;
+  publicationDateTime: Date | null;
+  identification: Identification;
+  description: string;
+  notes: Array<Note>;
+  links: Array<Link>;
+};
 
 /**
  * Represents a property value with type information
  */
-export type PropertyValue = {
+export type PropertyValueContent = {
   content: string;
-  type: PropertyValueType;
+  type:
+    | "string"
+    | "number"
+    | "integer"
+    | "boolean"
+    | "date"
+    | "dateTime"
+    | "time"
+    | "IDREF";
   category: string | null;
   uuid: string | null;
   publicationDateTime: Date | null;
@@ -423,7 +435,7 @@ export type PropertyValue = {
  */
 export type Property = {
   label: string;
-  values: Array<PropertyValue>;
+  values: Array<PropertyValueContent>;
   comment: string | null;
   properties: Array<Property>;
 };
@@ -448,6 +460,7 @@ export type Tree = {
     periods: Array<Period>;
     bibliographies: Array<Bibliography>;
     persons: Array<Person>;
+    propertyValues: Array<PropertyValue>;
   };
   properties: Array<Property>;
 };

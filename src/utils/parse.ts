@@ -22,6 +22,7 @@ import type {
   OchrePeriod,
   OchrePerson,
   OchreProperty,
+  OchrePropertyValue,
   OchreResource,
   OchreSet,
   OchreSpatialUnit,
@@ -54,7 +55,7 @@ import type {
   Person,
   Property,
   PropertyValue,
-  PropertyValueType,
+  PropertyValueContent,
   Resource,
   Set,
   SpatialUnit,
@@ -383,6 +384,7 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
     : "person" in linkRaw ? linkRaw.person
     : "bibliography" in linkRaw ? linkRaw.bibliography
     : "epigraphicUnit" in linkRaw ? linkRaw.epigraphicUnit
+    : "propertyValue" in linkRaw ? linkRaw.propertyValue
     : null;
   if (!links) {
     throw new Error(
@@ -404,6 +406,7 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
         : "tree" in linkRaw ? "tree"
         : "bibliography" in linkRaw ? "bibliography"
         : "epigraphicUnit" in linkRaw ? "epigraphicUnit"
+        : "propertyValue" in linkRaw ? "propertyValue"
         : null,
       content:
         "content" in link ?
@@ -729,7 +732,7 @@ export function parseProperties(
         : [property.value]
       : [];
 
-    const values: Array<PropertyValue> = valuesToParse.map((value) =>
+    const values: Array<PropertyValueContent> = valuesToParse.map((value) =>
       (
         !["string", "number", "boolean"].includes(typeof value) &&
         typeof value === "object"
@@ -739,7 +742,7 @@ export function parseProperties(
             value.slug ?
               parseFakeString(value.slug)
             : parseStringContent(value),
-          type: value.type as PropertyValueType,
+          type: value.type as PropertyValueContent["type"],
           category:
             value.category !== "value" ? (value.category ?? null) : null,
           uuid: value.uuid ?? null,
@@ -1016,6 +1019,60 @@ export function parseBibliographies(
 }
 
 /**
+ * Parses raw property value data into a standardized PropertyValue structure
+ *
+ * @param propertyValue - Raw property value data in OCHRE format
+ * @returns Parsed PropertyValue object
+ */
+export function parsePropertyValue(
+  propertyValue: OchrePropertyValue,
+): PropertyValue {
+  return {
+    uuid: propertyValue.uuid,
+    category: "propertyValue",
+    n: propertyValue.n,
+    publicationDateTime:
+      propertyValue.publicationDateTime ?
+        new Date(propertyValue.publicationDateTime)
+      : null,
+    identification: parseIdentification(propertyValue.identification),
+    description: parseStringContent(propertyValue.description),
+    notes:
+      propertyValue.notes ?
+        parseNotes(
+          Array.isArray(propertyValue.notes.note) ?
+            propertyValue.notes.note
+          : [propertyValue.notes.note],
+        )
+      : [],
+    links:
+      propertyValue.links ?
+        parseLinks(
+          Array.isArray(propertyValue.links) ?
+            propertyValue.links
+          : [propertyValue.links],
+        )
+      : [],
+  };
+}
+
+/**
+ * Parses an array of raw property values into standardized PropertyValue objects
+ *
+ * @param propertyValues - Array of raw property values in OCHRE format
+ * @returns Array of parsed PropertyValue objects
+ */
+export function parsePropertyValues(
+  propertyValues: Array<OchrePropertyValue>,
+): Array<PropertyValue> {
+  const returnPropertyValues: Array<PropertyValue> = [];
+  for (const propertyValue of propertyValues) {
+    returnPropertyValues.push(parsePropertyValue(propertyValue));
+  }
+  return returnPropertyValues;
+}
+
+/**
  * Parses a raw tree structure into a standardized Tree object
  *
  * @param tree - Raw tree data in OCHRE format
@@ -1042,6 +1099,7 @@ export function parseTree(tree: OchreTree): Tree | null {
   let periods: Array<Period> = [];
   let bibliographies: Array<Bibliography> = [];
   let persons: Array<Person> = [];
+  let propertyValues: Array<PropertyValue> = [];
 
   if (typeof tree.items !== "string" && "resource" in tree.items) {
     resources = parseResources(
@@ -1085,6 +1143,13 @@ export function parseTree(tree: OchreTree): Tree | null {
       : [tree.items.person],
     );
   }
+  if (typeof tree.items !== "string" && "propertyValue" in tree.items) {
+    propertyValues = parsePropertyValues(
+      Array.isArray(tree.items.propertyValue) ?
+        tree.items.propertyValue
+      : [tree.items.propertyValue],
+    );
+  }
 
   const returnTree: Tree = {
     uuid: tree.uuid,
@@ -1103,6 +1168,7 @@ export function parseTree(tree: OchreTree): Tree | null {
       periods,
       bibliographies,
       persons,
+      propertyValues,
     },
     properties:
       tree.properties ?
@@ -1130,7 +1196,7 @@ export function parseSet(set: OchreSet): Set {
   let periods: Array<Period> = [];
   let bibliographies: Array<Bibliography> = [];
   let persons: Array<Person> = [];
-
+  let propertyValues: Array<PropertyValue> = [];
   if (typeof set.items !== "string" && "resource" in set.items) {
     resources = parseResources(
       Array.isArray(set.items.resource) ?
@@ -1172,6 +1238,13 @@ export function parseSet(set: OchreSet): Set {
       Array.isArray(set.items.person) ? set.items.person : [set.items.person],
     );
   }
+  if (typeof set.items !== "string" && "propertyValue" in set.items) {
+    propertyValues = parsePropertyValues(
+      Array.isArray(set.items.propertyValue) ?
+        set.items.propertyValue
+      : [set.items.propertyValue],
+    );
+  }
 
   return {
     uuid: set.uuid,
@@ -1205,6 +1278,7 @@ export function parseSet(set: OchreSet): Set {
       periods,
       bibliographies,
       persons,
+      propertyValues,
     },
   };
 }
