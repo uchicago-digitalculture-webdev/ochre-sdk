@@ -4,6 +4,7 @@ export * from "./utils/fetchers/concept.js";
 export * from "./utils/fetchers/gallery.js";
 export * from "./utils/fetchers/generic.js";
 export * from "./utils/fetchers/period.js";
+export * from "./utils/fetchers/property-value.js";
 export * from "./utils/fetchers/resource.js";
 export * from "./utils/fetchers/set.js";
 export * from "./utils/fetchers/spatial-unit.js";
