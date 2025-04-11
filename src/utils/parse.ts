@@ -1036,15 +1036,31 @@ export function parsePropertyValue(
       propertyValue.publicationDateTime ?
         new Date(propertyValue.publicationDateTime)
       : null,
+    context: propertyValue.context ? parseContext(propertyValue.context) : null,
+    availability:
+      propertyValue.availability ?
+        parseLicense(propertyValue.availability)
+      : null,
     identification: parseIdentification(propertyValue.identification),
-    description:
-      (
-        ["string", "number", "boolean"].includes(
-          typeof propertyValue.description,
+    date: propertyValue.date ? new Date(propertyValue.date) : null,
+    creators:
+      propertyValue.creators ?
+        parsePersons(
+          Array.isArray(propertyValue.creators.creator) ?
+            propertyValue.creators.creator
+          : [propertyValue.creators.creator],
         )
-      ) ?
-        parseFakeString(propertyValue.description as FakeString)
-      : parseStringContent(propertyValue.description as OchreStringContent),
+      : [],
+    description:
+      propertyValue.description ?
+        (
+          ["string", "number", "boolean"].includes(
+            typeof propertyValue.description,
+          )
+        ) ?
+          parseFakeString(propertyValue.description as FakeString)
+        : parseStringContent(propertyValue.description as OchreStringContent)
+      : "",
     notes:
       propertyValue.notes ?
         parseNotes(

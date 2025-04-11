@@ -109,7 +109,7 @@ export type OchreData = {
     | { period: OchrePeriod }
     | { bibliography: OchreBibliography }
     | { person: OchrePerson }
-    | { propertyValue: OchrePropertyValue }
+    | { value: OchrePropertyValue }
   );
 };
 
@@ -584,10 +584,14 @@ export type OchreInterpretation = {
  */
 export type OchrePropertyValue = {
   uuid: string;
+  publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
   n: number;
-  publicationDateTime?: string; // YYYY-MM-DDThh:mm:ss
+  context?: OchreContext;
+  availability?: OchreLicense;
   identification: OchreIdentification;
-  description: OchreStringContent | FakeString;
+  date?: string; // YYYY-MM-DD
+  creators?: { creator: OchrePerson | Array<OchrePerson> };
+  description?: OchreStringContent | FakeString;
   notes?: { note: OchreNote | Array<OchreNote> };
   links?: OchreLink | Array<OchreLink>;
 };

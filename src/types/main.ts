@@ -405,7 +405,11 @@ export type PropertyValue = {
   category: "propertyValue";
   n: number;
   publicationDateTime: Date | null;
+  context: Context | null;
+  availability: License | null;
   identification: Identification;
+  date: Date | null;
+  creators: Array<Person>;
   description: string;
   notes: Array<Note>;
   links: Array<Link>;
