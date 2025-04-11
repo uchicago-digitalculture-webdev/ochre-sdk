@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.12
+
+### Patch Changes
+
+- 8400c4d: feat: export property-value fetcher to support new data structure
+
 ## 0.5.11
 
 ### Patch Changes
