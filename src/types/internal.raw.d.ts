@@ -109,7 +109,7 @@ export type OchreData = {
     | { period: OchrePeriod }
     | { bibliography: OchreBibliography }
     | { person: OchrePerson }
-    | { value: OchrePropertyValue }
+    | { propertyValue: OchrePropertyValue }
   );
 };
 

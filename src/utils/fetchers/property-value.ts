@@ -34,11 +34,13 @@ export async function fetchPropertyValue(uuid: string) {
       throw new Error(error);
     }
 
-    if (!("value" in dataRaw.ochre)) {
-      throw new Error("Invalid OCHRE data: API response missing 'value' key");
+    if (!("propertyValue" in dataRaw.ochre)) {
+      throw new Error(
+        "Invalid OCHRE data: API response missing 'propertyValue' key",
+      );
     }
 
-    const propertyValueItem = parsePropertyValue(dataRaw.ochre.value);
+    const propertyValueItem = parsePropertyValue(dataRaw.ochre.propertyValue);
 
     const data: Omit<Data, "item"> & { item: PropertyValue } = {
       uuid: parseFakeString(dataRaw.ochre.uuid),
