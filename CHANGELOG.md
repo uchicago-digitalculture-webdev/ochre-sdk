@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.14
+
+### Patch Changes
+
+- 39ba818: fix: update propertyValue key in type definition and fetcher logic
+
 ## 0.5.13
 
 ### Patch Changes
