@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.15
+
+### Patch Changes
+
+- c213d1d: refactor: update iframe properties in type definition and parsing logic to include href, height, and width
+
 ## 0.5.14
 
 ### Patch Changes
