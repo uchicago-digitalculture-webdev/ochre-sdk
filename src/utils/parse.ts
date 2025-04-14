@@ -3013,7 +3013,7 @@ export async function parseWebsite(
         property.label === "presentation" &&
         property.values[0]?.content === "element" &&
         property.properties[0]?.label === "component" &&
-        property.properties[0]?.values[0]?.content === "sidebar",
+        property.properties[0].values[0]?.content === "sidebar",
     );
   });
   if (sidebarResource) {
