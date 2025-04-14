@@ -604,7 +604,12 @@ export type WebElementComponent =
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
     }
   | { component: "empty-space"; height: string | null; width: string | null }
-  | { component: "iframe"; url: string }
+  | {
+      component: "iframe";
+      href: string;
+      height: string | null;
+      width: string | null;
+    }
   | { component: "iiif-viewer"; IIIFId: string }
   | {
       component: "image";

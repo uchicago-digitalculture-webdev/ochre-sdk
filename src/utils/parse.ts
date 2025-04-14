@@ -1969,14 +1969,25 @@ async function parseWebElementProperties(
       break;
     }
     case "iframe": {
-      const url = links.find((link) => link.type === "webpage")?.href;
-      if (!url) {
+      const href = links.find((link) => link.type === "webpage")?.href;
+      if (!href) {
         throw new Error(
           `URL not found for the following component: “${componentName}”`,
         );
       }
 
-      properties.url = url;
+      const height = getPropertyValueByLabel(
+        componentProperty.properties,
+        "height",
+      );
+      const width = getPropertyValueByLabel(
+        componentProperty.properties,
+        "width",
+      );
+
+      properties.href = href;
+      properties.height = height;
+      properties.width = width;
       break;
     }
     case "iiif-viewer": {
