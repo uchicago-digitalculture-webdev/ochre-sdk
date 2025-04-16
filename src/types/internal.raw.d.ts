@@ -278,12 +278,14 @@ export type OchreNestedConcept = Omit<OchreConcept, "context" | "availability">;
 /**
  * Raw property value structure corresponding to the parsed PropertyValue type
  */
-export type OchrePropertyValueContent = OchreStringContent & {
+export type OchrePropertyValueContent = {
   uuid?: string;
   publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
   type: string;
   category?: string;
   slug?: FakeString;
+  booleanValue?: boolean;
+  content?: FakeString | OchreStringItem | Array<OchreStringItem>;
 };
 
 /**

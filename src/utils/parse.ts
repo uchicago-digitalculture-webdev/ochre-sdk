@@ -741,9 +741,11 @@ export function parseProperties(
       ) ?
         {
           content:
-            value.slug ?
-              parseFakeString(value.slug)
-            : parseStringContent(value),
+            value.slug ? parseFakeString(value.slug)
+            : value.content != null ?
+              parseStringContent({ content: value.content })
+            : "",
+          booleanValue: value.booleanValue ?? null,
           type: value.type as PropertyValueContent["type"],
           category:
             value.category !== "value" ? (value.category ?? null) : null,
@@ -755,6 +757,7 @@ export function parseProperties(
         }
       : {
           content: parseFakeString(value as FakeString),
+          booleanValue: null,
           type: "string",
           category: "value",
           uuid: null,

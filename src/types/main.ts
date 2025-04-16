@@ -420,6 +420,7 @@ export type PropertyValue = {
  */
 export type PropertyValueContent = {
   content: string;
+  booleanValue: boolean | null;
   type:
     | "string"
     | "number"
