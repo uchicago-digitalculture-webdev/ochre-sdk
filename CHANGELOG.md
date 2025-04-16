@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.16
+
+### Patch Changes
+
+- de26223: Add filter-categories component type and parsing logic
+
 ## 0.5.15
 
 ### Patch Changes
