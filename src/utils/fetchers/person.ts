@@ -1,4 +1,4 @@
-import type { Data, Person } from "../../types/main.js";
+import type { Data, Metadata, Person } from "../../types/main.js";
 import { parseMetadata, parsePerson } from "../parse.js";
 import { parseFakeString } from "../string.js";
 import { fetchByUuid } from "./generic.js";
@@ -24,7 +24,10 @@ import { fetchByUuid } from "./generic.js";
  * The returned person includes:
  * - Full person metadata
  */
-export async function fetchPerson(uuid: string) {
+export async function fetchPerson(uuid: string): Promise<{
+  metadata: Metadata;
+  person: Person;
+} | null> {
   try {
     const [error, dataRaw] = await fetchByUuid(uuid);
     if (error !== null) {

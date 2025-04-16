@@ -1,4 +1,4 @@
-import type { Data, Set } from "../../types/main.js";
+import type { Data, Metadata, Set } from "../../types/main.js";
 import { fetchByUuid } from "../fetchers/generic.js";
 import { parseMetadata, parseSet } from "../parse.js";
 import { parseFakeString } from "../string.js";
@@ -29,7 +29,10 @@ import { parseFakeString } from "../string.js";
  * - Description and type information
  * - License details
  */
-export async function fetchSet(uuid: string) {
+export async function fetchSet(uuid: string): Promise<{
+  metadata: Metadata;
+  set: Set;
+} | null> {
   try {
     const [error, dataRaw] = await fetchByUuid(uuid);
     if (error !== null) {

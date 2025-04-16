@@ -1,4 +1,4 @@
-import type { Data, PropertyValue } from "../../types/main.js";
+import type { Data, Metadata, PropertyValue } from "../../types/main.js";
 import { parseMetadata, parsePropertyValue } from "../parse.js";
 import { parseFakeString } from "../string.js";
 import { fetchByUuid } from "./generic.js";
@@ -27,7 +27,10 @@ import { fetchByUuid } from "./generic.js";
  * - Notes
  * - Links
  */
-export async function fetchPropertyValue(uuid: string) {
+export async function fetchPropertyValue(uuid: string): Promise<{
+  metadata: Metadata;
+  propertyValue: PropertyValue;
+} | null> {
   try {
     const [error, dataRaw] = await fetchByUuid(uuid);
     if (error !== null) {

@@ -1,4 +1,4 @@
-import type { Data, Period } from "../../types/main.js";
+import type { Data, Metadata, Period } from "../../types/main.js";
 import { parseMetadata, parsePeriod } from "../parse.js";
 import { parseFakeString } from "../string.js";
 import { fetchByUuid } from "./generic.js";
@@ -27,7 +27,10 @@ import { fetchByUuid } from "./generic.js";
  * - Description
  * - Properties
  */
-export async function fetchPeriod(uuid: string) {
+export async function fetchPeriod(uuid: string): Promise<{
+  metadata: Metadata;
+  period: Period;
+} | null> {
   try {
     const [error, dataRaw] = await fetchByUuid(uuid);
     if (error !== null) {

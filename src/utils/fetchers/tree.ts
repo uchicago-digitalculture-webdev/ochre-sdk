@@ -1,4 +1,4 @@
-import type { Data, Tree } from "../../types/main.js";
+import type { Data, Metadata, Tree } from "../../types/main.js";
 import { fetchByUuid } from "../fetchers/generic.js";
 import { parseMetadata, parseTree } from "../parse.js";
 import { parseFakeString } from "../string.js";
@@ -29,7 +29,10 @@ import { parseFakeString } from "../string.js";
  * - Properties and type information
  * - License details
  */
-export async function fetchTree(uuid: string) {
+export async function fetchTree(uuid: string): Promise<{
+  metadata: Metadata;
+  tree: Tree;
+} | null> {
   try {
     const [error, dataRaw] = await fetchByUuid(uuid);
     if (error !== null) {

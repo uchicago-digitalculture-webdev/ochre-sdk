@@ -1,4 +1,4 @@
-import type { Concept, Data } from "../../types/main.js";
+import type { Concept, Data, Metadata } from "../../types/main.js";
 import { fetchByUuid } from "../fetchers/generic.js";
 import { parseConcept, parseMetadata } from "../parse.js";
 import { parseFakeString } from "../string.js";
@@ -27,7 +27,10 @@ import { parseFakeString } from "../string.js";
  * - Context information
  * - License details
  */
-export async function fetchConcept(uuid: string) {
+export async function fetchConcept(uuid: string): Promise<{
+  metadata: Metadata;
+  concept: Concept;
+} | null> {
   try {
     const [error, dataRaw] = await fetchByUuid(uuid);
     if (error !== null) {

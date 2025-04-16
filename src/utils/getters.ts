@@ -211,7 +211,7 @@ export function filterProperties(
   property: Property,
   filter: { label: string; value: string },
   options: PropertyOptions = DEFAULT_OPTIONS,
-) {
+): boolean {
   const { searchNestedProperties } = options;
 
   const isAllFields = filter.label.toLocaleLowerCase("en-US") === "all fields";

@@ -1,4 +1,4 @@
-import type { Bibliography, Data } from "../../types/main.js";
+import type { Bibliography, Data, Metadata } from "../../types/main.js";
 import { parseBibliography, parseMetadata } from "../parse.js";
 import { parseFakeString } from "../string.js";
 import { fetchByUuid } from "./generic.js";
@@ -29,7 +29,10 @@ import { fetchByUuid } from "./generic.js";
  * - Author information
  * - Properties
  */
-export async function fetchBibliography(uuid: string) {
+export async function fetchBibliography(uuid: string): Promise<{
+  metadata: Metadata;
+  bibliography: Bibliography;
+} | null> {
   try {
     const [error, dataRaw] = await fetchByUuid(uuid);
     if (error !== null) {

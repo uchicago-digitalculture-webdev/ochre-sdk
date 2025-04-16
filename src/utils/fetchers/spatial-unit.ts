@@ -1,4 +1,4 @@
-import type { Data, SpatialUnit } from "../../types/main.js";
+import type { Data, Metadata, SpatialUnit } from "../../types/main.js";
 import { fetchByUuid } from "../fetchers/generic.js";
 import { parseMetadata, parseSpatialUnit } from "../parse.js";
 import { parseFakeString } from "../string.js";
@@ -32,7 +32,10 @@ import { parseFakeString } from "../string.js";
  * - Context information
  * - License details
  */
-export async function fetchSpatialUnit(uuid: string) {
+export async function fetchSpatialUnit(uuid: string): Promise<{
+  metadata: Metadata;
+  spatialUnit: SpatialUnit;
+} | null> {
   try {
     const [error, dataRaw] = await fetchByUuid(uuid);
     if (error !== null) {

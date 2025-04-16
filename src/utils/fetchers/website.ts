@@ -1,4 +1,5 @@
 import type { OchreData } from "../../types/internal.raw.d.ts";
+import type { Website } from "../../types/main.js";
 import { parseIdentification, parseWebsite } from "../parse.js";
 
 /**
@@ -30,7 +31,9 @@ import { parseIdentification, parseWebsite } from "../parse.js";
  *
  * The abbreviation is case-insensitive and should match the website's configured abbreviation in OCHRE.
  */
-export async function fetchWebsite(abbreviation: string) {
+export async function fetchWebsite(
+  abbreviation: string,
+): Promise<Website | null> {
   try {
     const response = await fetch(
       `https://ochre.lib.uchicago.edu/ochre?xquery=for $q in input()/ochre[tree[@type='lesson'][identification/abbreviation='${abbreviation.toLocaleLowerCase("en-US")}']] return $q&format=json`,

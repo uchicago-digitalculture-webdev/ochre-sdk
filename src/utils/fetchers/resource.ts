@@ -1,4 +1,4 @@
-import type { Data, Resource } from "../../types/main.js";
+import type { Data, Metadata, Resource } from "../../types/main.js";
 import { fetchByUuid } from "../fetchers/generic.js";
 import { parseMetadata, parseResource } from "../parse.js";
 import { parseFakeString } from "../string.js";
@@ -29,7 +29,10 @@ import { parseFakeString } from "../string.js";
  * - Notes and bibliographic references
  * - Properties and nested resources
  */
-export async function fetchResource(uuid: string) {
+export async function fetchResource(uuid: string): Promise<{
+  metadata: Metadata;
+  resource: Resource;
+} | null> {
   try {
     const [error, dataRaw] = await fetchByUuid(uuid);
     if (error !== null) {
