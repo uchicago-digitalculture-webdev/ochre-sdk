@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.17
+
+### Patch Changes
+
+- 53ceff7: Add "inset" option to captionLayout for image component
+
 ## 0.5.16
 
 ### Patch Changes
