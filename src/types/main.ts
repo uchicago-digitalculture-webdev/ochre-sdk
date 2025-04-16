@@ -625,7 +625,7 @@ export type WebElementComponent =
       isFullHeight: boolean;
       imageQuality: "high" | "low";
       captionSource: "name" | "abbreviation" | "description";
-      captionLayout: "top" | "bottom" | "suppress";
+      captionLayout: "top" | "bottom" | "inset" | "suppress";
       altTextSource: "name" | "abbreviation" | "description";
       isTransparentBackground: boolean;
       isCover: boolean;
