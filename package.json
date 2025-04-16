@@ -60,7 +60,7 @@
   "devDependencies": {
     "@antfu/eslint-config": "^4.12.0",
     "@arethetypeswrong/cli": "^0.17.4",
-    "@changesets/cli": "^2.29.0",
+    "@changesets/cli": "^2.29.1",
     "@total-typescript/ts-reset": "^0.6.1",
     "@types/node": "^22.14.1",
     "eslint": "^9.24.0",
