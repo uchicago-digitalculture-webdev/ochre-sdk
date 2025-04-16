@@ -125,6 +125,7 @@ const componentSchema = z.enum(
     "button",
     "collection",
     "empty-space",
+    "filter-categories",
     "iframe",
     "iiif-viewer",
     "image",
@@ -1966,6 +1967,17 @@ async function parseWebElementProperties(
 
       properties.height = height;
       properties.width = width;
+      break;
+    }
+    case "filter-categories": {
+      const filterLink = links.find((link) => link.category === "set");
+      if (!filterLink) {
+        throw new Error(
+          `Filter link not found for the following component: “${componentName}”`,
+        );
+      }
+
+      properties.filterId = filterLink.uuid;
       break;
     }
     case "iframe": {

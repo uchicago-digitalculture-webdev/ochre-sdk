@@ -605,6 +605,10 @@ export type WebElementComponent =
     }
   | { component: "empty-space"; height: string | null; width: string | null }
   | {
+      component: "filter-categories";
+      filterId: string;
+    }
+  | {
       component: "iframe";
       href: string;
       height: string | null;
