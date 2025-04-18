@@ -312,6 +312,7 @@ export type OchreIdentification = {
   heightPreview?: number;
   height?: number;
   width?: number;
+  email?: FakeString;
   website?: string;
 };
 
