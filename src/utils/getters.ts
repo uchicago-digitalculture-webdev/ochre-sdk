@@ -77,7 +77,7 @@ export function getPropertyValuesByLabel(
   properties: Array<Property>,
   label: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
-): Array<string> | null {
+): Array<string | number | boolean | Date | null> | null {
   const { searchNestedProperties } = options;
 
   const property = properties.find((property) => property.label === label);
@@ -123,7 +123,7 @@ export function getPropertyValueByLabel(
   properties: Array<Property>,
   label: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
-): string | null {
+): string | number | boolean | Date | null {
   const { searchNestedProperties } = options;
   const values = getPropertyValuesByLabel(properties, label, {
     searchNestedProperties,
@@ -209,7 +209,7 @@ export function getAllPropertyLabels(
  */
 export function filterProperties(
   property: Property,
-  filter: { label: string; value: string },
+  filter: { label: string; value: string | number | boolean | Date },
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): boolean {
   const { searchNestedProperties } = options;
@@ -221,11 +221,47 @@ export function filterProperties(
     property.label.toLocaleLowerCase("en-US") ===
       filter.label.toLocaleLowerCase("en-US")
   ) {
-    let isFound = property.values.some((value) =>
-      value.content
-        .toLocaleLowerCase("en-US")
-        .includes(filter.value.toLocaleLowerCase("en-US")),
-    );
+    let isFound = property.values.some((value) => {
+      if (value.content === null) {
+        return false;
+      }
+
+      if (typeof value.content === "string") {
+        if (typeof filter.value !== "string") {
+          return false;
+        }
+
+        return value.content
+          .toLocaleLowerCase("en-US")
+          .includes(filter.value.toLocaleLowerCase("en-US"));
+      }
+
+      if (typeof value.content === "number") {
+        if (typeof filter.value !== "number") {
+          return false;
+        }
+
+        return value.content === filter.value;
+      }
+
+      if (typeof value.content === "boolean") {
+        if (typeof filter.value !== "boolean") {
+          return false;
+        }
+
+        return value.booleanValue === filter.value;
+      }
+
+      if (value.content instanceof Date) {
+        if (!(filter.value instanceof Date)) {
+          return false;
+        }
+
+        return value.content.getTime() === filter.value.getTime();
+      }
+
+      return false;
+    });
 
     if (!isFound && searchNestedProperties) {
       isFound = property.properties.some((property) =>

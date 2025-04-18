@@ -235,6 +235,20 @@ export type Footnote = {
   content: string;
 };
 
+export type ResourceType =
+  | "audio"
+  | "document"
+  | "drawing"
+  | "FITS"
+  | "geospatial"
+  | "IIIF"
+  | "image"
+  | "model"
+  | "PTM"
+  | "TEI"
+  | "video"
+  | "webpage";
+
 /**
  * Represents a resource item with associated metadata, content and relationships
  */
@@ -242,7 +256,7 @@ export type Resource = {
   uuid: string;
   category: "resource";
   publicationDateTime: Date | null;
-  type: string;
+  type: ResourceType;
   number: number;
   context: Context | null;
   license: License | null;
@@ -415,22 +429,29 @@ export type PropertyValue = {
   links: Array<Link>;
 };
 
+export type PropertyValueContentType =
+  | "string"
+  | "integer"
+  | "decimal"
+  | "boolean"
+  | "date"
+  | "dateTime"
+  | "time"
+  | "coordinate"
+  | "IDREF";
+
 /**
  * Represents a property value with type information
  */
-export type PropertyValueContent = {
-  content: string;
-  booleanValue: boolean | null;
-  type:
-    | "string"
-    | "number"
-    | "integer"
-    | "boolean"
-    | "date"
-    | "dateTime"
-    | "time"
-    | "IDREF";
-  category: string | null;
+export type PropertyValueContent<T extends PropertyValueContentType> = {
+  content: T extends "number" ? number
+  : T extends "integer" ? number
+  : T extends "decimal" ? number
+  : T extends "dateTime" ? Date | null
+  : string;
+  booleanValue: T extends "boolean" ? boolean : null;
+  type: T;
+  category: string;
   uuid: string | null;
   publicationDateTime: Date | null;
 };
@@ -440,7 +461,7 @@ export type PropertyValueContent = {
  */
 export type Property = {
   label: string;
-  values: Array<PropertyValueContent>;
+  values: Array<PropertyValueContent<PropertyValueContentType>>;
   comment: string | null;
   properties: Array<Property>;
 };

@@ -55,12 +55,12 @@
   ],
   "dependencies": {
     "iso-639-3": "^3.0.1",
-    "zod": "^3.24.2"
+    "zod": "^3.24.3"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.12.0",
     "@arethetypeswrong/cli": "^0.17.4",
-    "@changesets/cli": "^2.29.1",
+    "@changesets/cli": "^2.29.2",
     "@total-typescript/ts-reset": "^0.6.1",
     "@types/node": "^22.14.1",
     "eslint": "^9.24.0",

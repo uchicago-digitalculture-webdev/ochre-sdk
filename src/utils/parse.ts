@@ -56,7 +56,9 @@ import type {
   Property,
   PropertyValue,
   PropertyValueContent,
+  PropertyValueContentType,
   Resource,
+  ResourceType,
   Set,
   SpatialUnit,
   Style,
@@ -112,6 +114,24 @@ const websiteSchema = z.object({
     { message: "Invalid website privacy" },
   ),
 });
+
+const resourceTypeSchema = z.enum(
+  [
+    "audio",
+    "document",
+    "drawing",
+    "FITS",
+    "geospatial",
+    "IIIF",
+    "image",
+    "model",
+    "PTM",
+    "TEI",
+    "video",
+    "webpage",
+  ] as const satisfies ReadonlyArray<ResourceType>,
+  { message: "Invalid resource type" },
+);
 
 /**
  * Valid component types for web elements
@@ -714,6 +734,103 @@ export function parseEvents(events: Array<OchreEvent>): Array<Event> {
   return returnEvents;
 }
 
+export function parseProperty<T extends PropertyValueContentType>(
+  property: OchreProperty,
+  type: T,
+  language = "eng",
+): Property {
+  const valuesToParse =
+    "value" in property && property.value ?
+      Array.isArray(property.value) ?
+        property.value
+      : [property.value]
+    : [];
+
+  const values: Array<PropertyValueContent<T>> = valuesToParse.map((value) => {
+    let content: string | number | boolean | Date | null = null;
+    let booleanValue = null;
+
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      content = parseFakeString(value);
+      const returnValue: PropertyValueContent<T> = {
+        content: content as PropertyValueContent<T>["content"],
+        booleanValue: booleanValue as PropertyValueContent<T>["booleanValue"],
+        type,
+        category: "value",
+        uuid: null,
+        publicationDateTime: null,
+      };
+
+      return returnValue;
+    } else {
+      switch (type) {
+        case "integer":
+        case "decimal": {
+          content = Number(value.content);
+          break;
+        }
+        case "dateTime": {
+          content =
+            value.content ?
+              typeof value.content === "string" ?
+                new Date(value.content)
+              : new Date(parseStringContent({ content: value.content }))
+            : null;
+          break;
+        }
+        default: {
+          if ("slug" in value && value.slug != null) {
+            content = parseFakeString(value.slug);
+          } else if (value.content != null) {
+            content = parseStringContent({ content: value.content });
+          }
+
+          if (type === "boolean") {
+            booleanValue = value.booleanValue ?? null;
+          }
+
+          break;
+        }
+      }
+
+      const returnValue: PropertyValueContent<T> = {
+        content: content as PropertyValueContent<T>["content"],
+        booleanValue: booleanValue as PropertyValueContent<T>["booleanValue"],
+        type,
+        category: value.category ?? "value",
+        uuid: value.uuid ?? null,
+        publicationDateTime:
+          value.publicationDateTime != null ?
+            new Date(value.publicationDateTime)
+          : null,
+      };
+
+      return returnValue;
+    }
+  });
+
+  return {
+    label: parseStringContent(property.label, language)
+      .replace(/\s*\.{3}$/, "")
+      .trim(),
+    values,
+    comment:
+      property.comment != null ? parseFakeString(property.comment) : null,
+    properties:
+      property.property ?
+        parseProperties(
+          Array.isArray(property.property) ?
+            property.property
+          : [property.property],
+        )
+      : [],
+  };
+}
+
 /**
  * Parses raw properties into standardized Property objects
  *
@@ -727,60 +844,9 @@ export function parseProperties(
 ): Array<Property> {
   const returnProperties: Array<Property> = [];
   for (const property of properties) {
-    const valuesToParse =
-      "value" in property && property.value ?
-        Array.isArray(property.value) ?
-          property.value
-        : [property.value]
-      : [];
-
-    const values: Array<PropertyValueContent> = valuesToParse.map((value) =>
-      (
-        !["string", "number", "boolean"].includes(typeof value) &&
-        typeof value === "object"
-      ) ?
-        {
-          content:
-            value.slug ? parseFakeString(value.slug)
-            : value.content != null ?
-              parseStringContent({ content: value.content })
-            : "",
-          booleanValue: value.booleanValue ?? null,
-          type: value.type as PropertyValueContent["type"],
-          category:
-            value.category !== "value" ? (value.category ?? null) : null,
-          uuid: value.uuid ?? null,
-          publicationDateTime:
-            value.publicationDateTime != null ?
-              new Date(value.publicationDateTime)
-            : null,
-        }
-      : {
-          content: parseFakeString(value as FakeString),
-          booleanValue: null,
-          type: "string",
-          category: "value",
-          uuid: null,
-          publicationDateTime: null,
-        },
+    returnProperties.push(
+      parseProperty<PropertyValueContentType>(property, "string", language),
     );
-
-    returnProperties.push({
-      label: parseStringContent(property.label, language)
-        .replace(/\s*\.{3}$/, "")
-        .trim(),
-      values,
-      comment:
-        property.comment != null ? parseFakeString(property.comment) : null,
-      properties:
-        property.property ?
-          parseProperties(
-            Array.isArray(property.property) ?
-              property.property
-            : [property.property],
-          )
-        : [],
-    });
   }
 
   return returnProperties;
@@ -893,13 +959,17 @@ export function parseBibliography(
 ): Bibliography {
   let resource: Bibliography["source"]["resource"] | null = null;
   if (bibliography.source?.resource) {
+    const resourceType = resourceTypeSchema.parse(
+      bibliography.source.resource.type,
+    );
+
     resource = {
       uuid: bibliography.source.resource.uuid,
       publicationDateTime:
         bibliography.source.resource.publicationDateTime ?
           new Date(bibliography.source.resource.publicationDateTime)
         : null,
-      type: bibliography.source.resource.type,
+      type: resourceType,
       identification: parseIdentification(
         bibliography.source.resource.identification,
       ),
@@ -1321,6 +1391,8 @@ export function parseResource(
   resource: OchreResource | OchreNestedResource,
   isNested = false,
 ): Resource | NestedResource {
+  const resourceType = resourceTypeSchema.parse(resource.type);
+
   const returnResource: Resource = {
     uuid: resource.uuid,
     category: "resource",
@@ -1328,7 +1400,7 @@ export function parseResource(
       resource.publicationDateTime ?
         new Date(resource.publicationDateTime)
       : null,
-    type: resource.type,
+    type: resourceType,
     number: resource.n,
     format: resource.format ?? null,
     context:
@@ -2051,7 +2123,11 @@ async function parseWebElementProperties(
         "width",
       );
       if (widthProperty !== null) {
-        width = Number.parseFloat(widthProperty);
+        if (typeof widthProperty === "number") {
+          width = widthProperty;
+        } else if (typeof widthProperty === "string") {
+          width = Number.parseFloat(widthProperty);
+        }
       }
 
       let height = null;
@@ -2060,7 +2136,11 @@ async function parseWebElementProperties(
         "height",
       );
       if (heightProperty !== null) {
-        height = Number.parseFloat(heightProperty);
+        if (typeof heightProperty === "number") {
+          height = heightProperty;
+        } else if (typeof heightProperty === "string") {
+          height = Number.parseFloat(heightProperty);
+        }
       }
 
       let isFullWidth = true;
@@ -2137,7 +2217,11 @@ async function parseWebElementProperties(
             "seconds-per-image",
           );
           if (secondsPerImageProperty !== null) {
-            secondsPerImage = Number.parseFloat(secondsPerImageProperty);
+            if (typeof secondsPerImageProperty === "number") {
+              secondsPerImage = secondsPerImageProperty;
+            } else if (typeof secondsPerImageProperty === "string") {
+              secondsPerImage = Number.parseFloat(secondsPerImageProperty);
+            }
           }
         }
 
@@ -2361,7 +2445,7 @@ async function parseWebElement(
 
   const cssStyles: Array<Style> = [];
   for (const property of cssProperties) {
-    const cssStyle = property.values[0]!.content;
+    const cssStyle = property.values[0]!.content as string;
     cssStyles.push({ label: property.label, value: cssStyle });
   }
 
@@ -2374,7 +2458,7 @@ async function parseWebElement(
 
   const cssStylesMobile: Array<Style> = [];
   for (const property of mobileCssProperties) {
-    const cssStyle = property.values[0]!.content;
+    const cssStyle = property.values[0]!.content as string;
     cssStylesMobile.push({ label: property.label, value: cssStyle });
   }
 
@@ -2501,8 +2585,8 @@ async function parseWebpage(
     const resourceType = getPropertyValueByLabel(
       resourceProperties,
       "presentation",
-    );
-    if (!resourceType) {
+    ) as "element" | "block" | undefined;
+    if (resourceType == null) {
       continue;
     }
 
@@ -2583,7 +2667,7 @@ async function parseWebpage(
     for (const property of cssStyleSubProperties) {
       cssStyles.push({
         label: property.label,
-        value: property.values[0]!.content,
+        value: property.values[0]!.content as string,
       });
     }
   }
@@ -2598,7 +2682,7 @@ async function parseWebpage(
     for (const property of mobileCssStyleSubProperties) {
       cssStylesMobile.push({
         label: property.label,
-        value: property.values[0]!.content,
+        value: property.values[0]!.content as string,
       });
     }
   }
@@ -2700,14 +2784,14 @@ async function parseBlock(
       (property) => property.label === "spacing",
     )?.values[0];
     if (spacingProperty) {
-      returnBlock.properties.spacing = spacingProperty.content;
+      returnBlock.properties.spacing = spacingProperty.content as string;
     }
 
     const gapProperty = blockMainProperties.find(
       (property) => property.label === "gap",
     )?.values[0];
     if (gapProperty) {
-      returnBlock.properties.gap = gapProperty.content;
+      returnBlock.properties.gap = gapProperty.content as string;
     }
 
     const alignItemsProperty = blockMainProperties.find(
@@ -2742,7 +2826,8 @@ async function parseBlock(
 
       const propertiesMobile: Record<string, string> = {};
       for (const property of mobileOverwriteProperties) {
-        propertiesMobile[property.label] = property.values[0]!.content;
+        propertiesMobile[property.label] = property.values[0]!
+          .content as string;
       }
 
       returnBlock.propertiesMobile = propertiesMobile;
@@ -2769,8 +2854,8 @@ async function parseBlock(
     const resourceType = getPropertyValueByLabel(
       resourceProperties,
       "presentation",
-    );
-    if (!resourceType) {
+    ) as "element" | "block" | undefined;
+    if (resourceType == null) {
       continue;
     }
 
@@ -2801,7 +2886,7 @@ async function parseBlock(
     for (const property of blockCssStyles) {
       returnBlock.cssStyles.push({
         label: property.label,
-        value: property.values[0]!.content,
+        value: property.values[0]!.content as string,
       });
     }
   }
@@ -2815,7 +2900,7 @@ async function parseBlock(
     for (const property of blockMobileCssStyles) {
       returnBlock.cssStylesMobile.push({
         label: property.label,
-        value: property.values[0]!.content,
+        value: property.values[0]!.content as string,
       });
     }
   }
@@ -3089,7 +3174,7 @@ export async function parseWebsite(
       )?.properties ?? [];
 
     for (const property of cssProperties) {
-      const cssStyle = property.values[0]!.content;
+      const cssStyle = property.values[0]!.content as string;
       sidebarCssStyles.push({ label: property.label, value: cssStyle });
     }
 
@@ -3101,7 +3186,7 @@ export async function parseWebsite(
       )?.properties ?? [];
 
     for (const property of mobileCssProperties) {
-      const cssStyle = property.values[0]!.content;
+      const cssStyle = property.values[0]!.content as string;
       sidebarCssStylesMobile.push({ label: property.label, value: cssStyle });
     }
 
