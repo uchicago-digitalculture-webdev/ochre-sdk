@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.19
+
+### Patch Changes
+
+- 38a81f3: Revert: Strict resource type typing
+
 ## 0.5.18
 
 ### Patch Changes
