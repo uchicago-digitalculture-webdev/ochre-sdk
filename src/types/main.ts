@@ -24,21 +24,6 @@ export type Data = {
 };
 
 /**
- * Represents the category of an item
- */
-export type Category =
-  | "resource"
-  | "spatialUnit"
-  | "concept"
-  | "set"
-  | "tree"
-  | "person"
-  | "bibliography"
-  | "epigraphicUnit"
-  | "propertyValue"
-  | "value";
-
-/**
  * Basic identification information used across multiple types
  */
 export type Identification = {
@@ -55,7 +40,7 @@ export type Metadata = {
   } | null;
   item: {
     identification: Identification;
-    category: Category;
+    category: string;
     type: string;
     maxLength: number | null;
   } | null;
@@ -144,7 +129,7 @@ export type Link = {
   uuid: string;
   publicationDateTime: Date | null;
   type: string | null;
-  category: Category | null;
+  category: string | null;
   identification: Identification | null;
   content: string | null;
   href: string | null;
@@ -459,7 +444,7 @@ export type PropertyValueContent<T extends PropertyValueContentType> = {
   : string;
   booleanValue: T extends "boolean" ? boolean : null;
   type: T;
-  category: Category;
+  category: string;
   uuid: string | null;
   publicationDateTime: Date | null;
 };
