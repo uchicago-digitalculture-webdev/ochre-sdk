@@ -24,6 +24,21 @@ export type Data = {
 };
 
 /**
+ * Represents the category of an item
+ */
+export type Category =
+  | "resource"
+  | "spatialUnit"
+  | "concept"
+  | "set"
+  | "tree"
+  | "person"
+  | "bibliography"
+  | "epigraphicUnit"
+  | "propertyValue"
+  | "value";
+
+/**
  * Basic identification information used across multiple types
  */
 export type Identification = {
@@ -40,7 +55,7 @@ export type Metadata = {
   } | null;
   item: {
     identification: Identification;
-    category: string;
+    category: Category;
     type: string;
     maxLength: number | null;
   } | null;
@@ -129,17 +144,7 @@ export type Link = {
   uuid: string;
   publicationDateTime: Date | null;
   type: string | null;
-  category:
-    | "resource"
-    | "spatialUnit"
-    | "concept"
-    | "set"
-    | "tree"
-    | "person"
-    | "bibliography"
-    | "epigraphicUnit"
-    | "propertyValue"
-    | null;
+  category: Category | null;
   identification: Identification | null;
   content: string | null;
   href: string | null;
@@ -235,6 +240,9 @@ export type Footnote = {
   content: string;
 };
 
+/**
+ * Represents the type of a resource
+ */
 export type ResourceType =
   | "audio"
   | "document"
@@ -451,7 +459,7 @@ export type PropertyValueContent<T extends PropertyValueContentType> = {
   : string;
   booleanValue: T extends "boolean" ? boolean : null;
   type: T;
-  category: string;
+  category: Category;
   uuid: string | null;
   publicationDateTime: Date | null;
 };
@@ -541,6 +549,7 @@ export type WebsiteProperties = {
     | "palm";
   privacy: "public" | "password" | "private";
   status: "development" | "preview" | "production";
+  contact: { name: string; email: string | null } | null;
   isHeaderDisplayed: boolean;
   headerVariant: "default" | "floating" | "inline";
   headerAlignment: "start" | "center" | "end";

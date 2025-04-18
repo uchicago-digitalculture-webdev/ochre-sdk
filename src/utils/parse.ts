@@ -32,6 +32,7 @@ import type {
 } from "../types/internal.raw.d.ts";
 import type {
   Bibliography,
+  Category,
   Concept,
   Context,
   ContextItem,
@@ -115,6 +116,24 @@ const websiteSchema = z.object({
   ),
 });
 
+/**
+ * Schema for validating categories
+ */
+const categorySchema = z.enum([
+  "resource",
+  "spatialUnit",
+  "concept",
+  "set",
+  "tree",
+  "person",
+  "bibliography",
+  "epigraphicUnit",
+  "propertyValue",
+] as const satisfies ReadonlyArray<Category>);
+
+/**
+ * Schema for validating resource types
+ */
 const resourceTypeSchema = z.enum(
   [
     "audio",
@@ -263,6 +282,9 @@ export function parseMetadata(metadata: OchreMetadata): Metadata {
     };
   }
 
+  const itemCategory =
+    metadata.item ? categorySchema.parse(metadata.item.category) : null;
+
   return {
     project:
       projectIdentification ? { identification: projectIdentification } : null,
@@ -270,7 +292,7 @@ export function parseMetadata(metadata: OchreMetadata): Metadata {
       metadata.item ?
         {
           identification,
-          category: metadata.item.category,
+          category: itemCategory!,
           type: metadata.item.type,
           maxLength: metadata.item.maxLength ?? null,
         }
@@ -797,11 +819,13 @@ export function parseProperty<T extends PropertyValueContentType>(
         }
       }
 
+      const valueCategory = categorySchema.parse(value.category ?? "value");
+
       const returnValue: PropertyValueContent<T> = {
         content: content as PropertyValueContent<T>["content"],
         booleanValue: booleanValue as PropertyValueContent<T>["booleanValue"],
         type,
-        category: value.category ?? "value",
+        category: valueCategory,
         uuid: value.uuid ?? null,
         publicationDateTime:
           value.publicationDateTime != null ?
@@ -2952,6 +2976,17 @@ function parseWebsiteProperties(
     throw new Error(`Invalid website properties: ${result.error.message}`);
   }
 
+  let contact: Website["properties"]["contact"] = null;
+  const contactProperty = websiteProperties.find(
+    (property) => property.label === "contact",
+  );
+  if (contactProperty) {
+    const [name, email] = (contactProperty.values[0]?.content as string).split(
+      ";",
+    );
+    contact = { name: name!, email: email ?? null };
+  }
+
   const logoUuid =
     websiteProperties.find((property) => property.label === "logo")?.values[0]
       ?.uuid ?? null;
@@ -3038,6 +3073,7 @@ function parseWebsiteProperties(
     type: validatedType,
     privacy: validatedPrivacy,
     status: validatedStatus,
+    contact,
     isHeaderDisplayed,
     headerVariant,
     headerAlignment,
