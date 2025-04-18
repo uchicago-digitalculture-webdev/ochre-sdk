@@ -1,5 +1,13 @@
 # @digitalculture/ochre-sdk
 
+## 0.5.18
+
+### Patch Changes
+
+- 5030855: - Enhance type safety by introducing Category type, updating Metadata and PropertyValueContent structures, and implementing category validation schema in parsing functions.
+  - Introduce ResourceType and PropertyValueContentType types, enhance PropertyValueContent structure for better type safety, and update parsing functions to accommodate new types
+- cec2d06: Revert: Strict category typing
+
 ## 0.5.17
 
 ### Patch Changes
