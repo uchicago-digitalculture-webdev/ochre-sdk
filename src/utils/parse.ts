@@ -58,7 +58,6 @@ import type {
   PropertyValueContent,
   PropertyValueContentType,
   Resource,
-  ResourceType,
   Set,
   SpatialUnit,
   Style,
@@ -114,27 +113,6 @@ const websiteSchema = z.object({
     { message: "Invalid website privacy" },
   ),
 });
-
-/**
- * Schema for validating resource types
- */
-const resourceTypeSchema = z.enum(
-  [
-    "audio",
-    "document",
-    "drawing",
-    "FITS",
-    "geospatial",
-    "IIIF",
-    "image",
-    "model",
-    "PTM",
-    "TEI",
-    "video",
-    "webpage",
-  ] as const satisfies ReadonlyArray<ResourceType>,
-  { message: "Invalid resource type" },
-);
 
 /**
  * Valid component types for web elements
@@ -962,17 +940,13 @@ export function parseBibliography(
 ): Bibliography {
   let resource: Bibliography["source"]["resource"] | null = null;
   if (bibliography.source?.resource) {
-    const resourceType = resourceTypeSchema.parse(
-      bibliography.source.resource.type,
-    );
-
     resource = {
       uuid: bibliography.source.resource.uuid,
       publicationDateTime:
         bibliography.source.resource.publicationDateTime ?
           new Date(bibliography.source.resource.publicationDateTime)
         : null,
-      type: resourceType,
+      type: bibliography.source.resource.type,
       identification: parseIdentification(
         bibliography.source.resource.identification,
       ),
@@ -1394,8 +1368,6 @@ export function parseResource(
   resource: OchreResource | OchreNestedResource,
   isNested = false,
 ): Resource | NestedResource {
-  const resourceType = resourceTypeSchema.parse(resource.type);
-
   const returnResource: Resource = {
     uuid: resource.uuid,
     category: "resource",
@@ -1403,7 +1375,7 @@ export function parseResource(
       resource.publicationDateTime ?
         new Date(resource.publicationDateTime)
       : null,
-    type: resourceType,
+    type: resource.type,
     number: resource.n,
     format: resource.format ?? null,
     context:

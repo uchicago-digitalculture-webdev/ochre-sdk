@@ -226,30 +226,13 @@ export type Footnote = {
 };
 
 /**
- * Represents the type of a resource
- */
-export type ResourceType =
-  | "audio"
-  | "document"
-  | "drawing"
-  | "FITS"
-  | "geospatial"
-  | "IIIF"
-  | "image"
-  | "model"
-  | "PTM"
-  | "TEI"
-  | "video"
-  | "webpage";
-
-/**
  * Represents a resource item with associated metadata, content and relationships
  */
 export type Resource = {
   uuid: string;
   category: "resource";
   publicationDateTime: Date | null;
-  type: ResourceType;
+  type: string;
   number: number;
   context: Context | null;
   license: License | null;
