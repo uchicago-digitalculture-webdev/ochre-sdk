@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.6.4
+
+### Patch Changes
+
+- b9fc0ca: feat: add category field to Person type and update parsePerson function
+
 ## 0.6.3
 
 ### Patch Changes
