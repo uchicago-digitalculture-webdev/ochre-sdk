@@ -63,7 +63,7 @@
     "@changesets/cli": "^2.29.2",
     "@total-typescript/ts-reset": "^0.6.1",
     "@types/node": "^22.14.1",
-    "eslint": "^9.24.0",
+    "eslint": "^9.25.0",
     "eslint-plugin-unused-imports": "^4.1.4",
     "prettier": "^3.5.3",
     "tsup": "^8.4.0",
