@@ -52,7 +52,7 @@ export async function fetchGallery(
     const response = await fetch(
       `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(`
         for $q in input()/ochre[@uuid='${parsedUuid}']
-        let $filtered := $q/tree/items/resource[contains(lower-case(identification/label), lower-case('${parsedFilter}'))]
+        let $filtered := $q//items/resource[contains(lower-case(identification/label), lower-case('${parsedFilter}'))]
         let $maxLength := count($filtered)
         return <gallery maxLength='{$maxLength}'>
           {$q/metadata/project}
