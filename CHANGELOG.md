@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.6.0
+
+### Minor Changes
+
+- d32fc0c: breaking: refactor fetchers and schemas; replace multiple fetchers with a unified `fetchItem` function, reorganize and expand validation schemas, and update type definitions.
+
 ## 0.5.19
 
 ### Patch Changes
