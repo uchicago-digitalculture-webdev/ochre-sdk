@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.6.5
+
+### Patch Changes
+
+- 092db9a: feat: update gallery fetcher XQuery to support Sets alongside Trees
+
 ## 0.6.4
 
 ### Patch Changes
