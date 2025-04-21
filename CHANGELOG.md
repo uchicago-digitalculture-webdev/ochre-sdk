@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.6.3
+
+### Patch Changes
+
+- eb81da6: fix: export website fetcher
+
 ## 0.6.2
 
 ### Patch Changes
