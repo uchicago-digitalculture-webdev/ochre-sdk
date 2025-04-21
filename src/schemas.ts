@@ -91,6 +91,19 @@ export const categorySchema = z.enum([
 ] as const satisfies ReadonlyArray<DataCategory>);
 
 /**
+ * Schema for validating gallery parameters
+ * @internal
+ */
+export const gallerySchema = z
+  .object({
+    uuid: z.string().uuid({ message: "Invalid UUID" }),
+    filter: z.string().optional(),
+    page: z.number().positive({ message: "Page must be positive" }),
+    perPage: z.number().positive({ message: "Per page must be positive" }),
+  })
+  .strict();
+
+/**
  * Schema for validating and parsing render options
  * @internal
  */
