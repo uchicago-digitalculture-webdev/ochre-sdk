@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.6.1
+
+### Patch Changes
+
+- e3897c7: fix: bring back gallery fetcher
+
 ## 0.6.0
 
 ### Minor Changes
