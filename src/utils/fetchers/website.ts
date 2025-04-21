@@ -42,9 +42,7 @@ export async function fetchWebsite(
       throw new Error("Failed to fetch website");
     }
 
-    const data = (await response.json()) as {
-      result: OchreData | [];
-    };
+    const data = (await response.json()) as { result: OchreData | [] };
 
     if (!("ochre" in data.result) || !("tree" in data.result.ochre)) {
       throw new Error("Failed to fetch website");

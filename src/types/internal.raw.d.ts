@@ -114,6 +114,11 @@ export type OchreData = {
 };
 
 /**
+ * Raw data response structure from the OCHRE API
+ */
+export type OchreDataResponse = OchreData | { result: [] };
+
+/**
  * Raw metadata structure corresponding to the parsed Metadata type
  */
 export type OchreMetadata = {
@@ -215,16 +220,8 @@ export type OchreResource = {
   citedBibliography?: {
     reference: OchreBibliography | Array<OchreBibliography>;
   };
-  resource?: OchreNestedResource | Array<OchreNestedResource>;
+  resource?: OchreResource | Array<OchreResource>;
 };
-
-/**
- * Raw nested resource structure corresponding to the parsed NestedResource type
- */
-export type OchreNestedResource = Omit<
-  OchreResource,
-  "context" | "availability" | "copyright"
->;
 
 /**
  * Raw spatial unit structure corresponding to the parsed SpatialUnit type
@@ -243,15 +240,6 @@ export type OchreSpatialUnit = {
   events?: { event: OchreEvent | Array<OchreEvent> };
   observations?: { observation: OchreObservation | Array<OchreObservation> };
   observation?: OchreObservation;
-};
-
-/**
- * Raw nested spatial unit structure corresponding to the parsed NestedSpatialUnit type
- */
-export type OchreNestedSpatialUnit = Omit<
-  OchreSpatialUnit,
-  "context" | "availability" | "observations" | "events"
-> & {
   properties?: { property: OchreProperty | Array<OchreProperty> };
 };
 
@@ -269,11 +257,6 @@ export type OchreConcept = {
     interpretation: OchreInterpretation | Array<OchreInterpretation>;
   };
 };
-
-/**
- * Raw nested concept structure corresponding to the parsed NestedConcept type
- */
-export type OchreNestedConcept = Omit<OchreConcept, "context" | "availability">;
 
 /**
  * Raw property value structure corresponding to the parsed PropertyValue type

@@ -3,51 +3,13 @@ import type {
   OchreStringContent,
   OchreStringItem,
   OchreStringRichTextItem,
-  RenderOption,
-  WhitespaceOption,
 } from "../types/internal.raw.js";
 import type { Footnote } from "../types/main.js";
-import { z } from "zod";
-
-/**
- * Schema for validating and parsing render options
- * @internal
- */
-const renderOptionsSchema = z
-  .string()
-  .transform((str) => str.split(" "))
-  .pipe(
-    z.array(
-      z.enum([
-        "bold",
-        "italic",
-        "underline",
-      ] as const satisfies ReadonlyArray<RenderOption>),
-    ),
-  );
-
-/**
- * Schema for validating and parsing whitespace options
- * @internal
- */
-const whitespaceSchema = z
-  .string()
-  .transform((str) => str.split(" "))
-  .pipe(
-    z.array(
-      z.enum([
-        "newline",
-        "trailing",
-        "leading",
-      ] as const satisfies ReadonlyArray<WhitespaceOption>),
-    ),
-  );
-
-/**
- * Schema for validating email addresses
- * @internal
- */
-const emailSchema = z.string().email({ message: "Invalid email" });
+import {
+  emailSchema,
+  renderOptionsSchema,
+  whitespaceSchema,
+} from "../schemas.js";
 
 /**
  * Finds a string item in an array by language code

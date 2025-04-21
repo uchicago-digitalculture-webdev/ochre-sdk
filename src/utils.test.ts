@@ -1,13 +1,13 @@
 import { expect, it } from "vitest";
-import { fetchSet } from "./utils/fetchers/set.js";
+import { fetchItem } from "./utils/fetchers/item.js";
 import { fetchWebsite } from "./utils/fetchers/website.js";
 
-const [ospama, guerrillaTelevision, uchicagoNode, rasShamraData] =
+const [ospama, guerrillaTelevision, uchicagoNode, { item: rasShamraData }] =
   await Promise.all([
     fetchWebsite("ospama"),
     fetchWebsite("guerrilla-television"),
     fetchWebsite("uchicago-node"),
-    fetchSet("ff48d967-f69c-48e6-aed3-4e03e52ed51d"),
+    fetchItem("ff48d967-f69c-48e6-aed3-4e03e52ed51d", "set"),
   ]);
 
 it("website", async () => {
@@ -27,5 +27,5 @@ it("website with page with css styles", async () => {
 });
 
 it("rash shamra tablet inventory set", async () => {
-  expect(rasShamraData?.set.items.spatialUnits.length).toBeGreaterThan(0);
+  expect(rasShamraData.items.length).toBeGreaterThan(0);
 });

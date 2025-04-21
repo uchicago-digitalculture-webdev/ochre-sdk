@@ -3,7 +3,7 @@ import type { Language } from "iso-639-3";
 /**
  * Represents the core data structure containing item information and metadata
  */
-export type Data = {
+export type Data<T extends DataCategory> = {
   uuid: string;
   belongsTo: {
     uuid: string;
@@ -13,7 +13,7 @@ export type Data = {
   metadata: Metadata;
   item:
     | Tree
-    | Set
+    | Set<T>
     | Resource
     | SpatialUnit
     | Concept
@@ -22,6 +22,17 @@ export type Data = {
     | Person
     | PropertyValue;
 };
+
+export type DataCategory =
+  | "tree"
+  | "set"
+  | "resource"
+  | "spatialUnit"
+  | "concept"
+  | "period"
+  | "bibliography"
+  | "person"
+  | "propertyValue";
 
 /**
  * Basic identification information used across multiple types
@@ -252,16 +263,8 @@ export type Resource = {
   reverseLinks: Array<Link>;
   properties: Array<Property>;
   citedBibliographies: Array<Bibliography>;
-  resources: Array<NestedResource>;
+  resources: Array<Resource>;
 };
-
-/**
- * A nested version of Resource type without certain metadata fields
- */
-export type NestedResource = Omit<
-  Resource,
-  "publicationDateTime" | "license" | "copyright"
->;
 
 /**
  * Represents a spatial unit with geographic coordinates and observations
@@ -280,15 +283,6 @@ export type SpatialUnit = {
   coordinates: Coordinates | null;
   observations: Array<Observation>;
   events: Array<Event>;
-};
-
-/**
- * A nested version of SpatialUnit type without certain metadata fields
- */
-export type NestedSpatialUnit = Omit<
-  SpatialUnit,
-  "publicationDateTime" | "license" | "observations" | "events"
-> & {
   properties: Array<Property>;
 };
 
@@ -307,16 +301,12 @@ export type Concept = {
 };
 
 /**
- * A nested version of Concept type without certain metadata fields
- */
-export type NestedConcept = Omit<Concept, "publicationDateTime" | "license">;
-
-/**
  * Represents a set that can contain resources, spatial units and concepts
  */
-export type Set = {
+export type Set<T extends DataCategory> = {
   uuid: string;
   category: "set";
+  itemCategory: T;
   publicationDateTime: Date | null;
   type: string;
   number: number;
@@ -326,15 +316,14 @@ export type Set = {
   isSuppressingBlanks: boolean;
   description: string;
   creators: Array<Person>;
-  items: {
-    resources: Array<NestedResource>;
-    spatialUnits: Array<NestedSpatialUnit>;
-    concepts: Array<NestedConcept>;
-    periods: Array<Period>;
-    bibliographies: Array<Bibliography>;
-    persons: Array<Person>;
-    propertyValues: Array<PropertyValue>;
-  };
+  items: T extends "resource" ? Array<Resource>
+  : T extends "spatialUnit" ? Array<SpatialUnit>
+  : T extends "concept" ? Array<Concept>
+  : T extends "period" ? Array<Period>
+  : T extends "bibliography" ? Array<Bibliography>
+  : T extends "person" ? Array<Person>
+  : T extends "propertyValue" ? Array<PropertyValue>
+  : never;
 };
 
 /**

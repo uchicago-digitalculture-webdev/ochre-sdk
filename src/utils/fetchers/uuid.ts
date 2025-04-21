@@ -1,7 +1,5 @@
-import type { OchreData } from "../../types/internal.raw.d.ts";
-import { z } from "zod";
-
-const uuidSchema = z.string().uuid({ message: "Invalid UUID provided" });
+import type { OchreData, OchreDataResponse } from "../../types/internal.raw.js";
+import { uuidSchema } from "../../schemas.js";
 
 /**
  * Fetches raw OCHRE data by UUID from the OCHRE API
@@ -25,18 +23,15 @@ export async function fetchByUuid(
   uuid: string,
 ): Promise<[null, OchreData] | [string, null]> {
   try {
-    const result = uuidSchema.safeParse(uuid);
-    if (!result.success) {
-      throw new Error(result.error.issues[0]?.message);
-    }
+    const parsedUuid = uuidSchema.parse(uuid);
 
     const response = await fetch(
-      `https://ochre.lib.uchicago.edu/ochre?uuid=${uuid}&format=json&lang="*"`,
+      `https://ochre.lib.uchicago.edu/ochre?uuid=${parsedUuid}&format=json&lang="*"`,
     );
     if (!response.ok) {
       throw new Error("Failed to fetch OCHRE data");
     }
-    const dataRaw = (await response.json()) as OchreData;
+    const dataRaw = (await response.json()) as OchreDataResponse;
     if (!("ochre" in dataRaw)) {
       throw new Error("Invalid OCHRE data: API response missing 'ochre' key");
     }

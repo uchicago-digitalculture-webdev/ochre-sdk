@@ -14,9 +14,6 @@ import type {
   OchreLicense,
   OchreLink,
   OchreMetadata,
-  OchreNestedConcept,
-  OchreNestedResource,
-  OchreNestedSpatialUnit,
   OchreNote,
   OchreObservation,
   OchrePeriod,
@@ -36,6 +33,7 @@ import type {
   Context,
   ContextItem,
   Coordinates,
+  DataCategory,
   Document,
   Event,
   Footnote,
@@ -46,9 +44,6 @@ import type {
   License,
   Link,
   Metadata,
-  NestedConcept,
-  NestedResource,
-  NestedSpatialUnit,
   Note,
   Observation,
   Period,
@@ -70,8 +65,7 @@ import type {
   Website,
   WebsiteProperties,
 } from "../types/main.js";
-import { z } from "zod";
-import { fetchResource } from "../utils/fetchers/resource.js";
+import { componentSchema, websiteSchema } from "../schemas.js";
 import {
   getPropertyByLabel,
   getPropertyValueByLabel,
@@ -82,66 +76,8 @@ import {
   parseStringContent,
   parseStringDocumentItem,
 } from "../utils/string.js";
-
-/**
- * Schema for validating website properties
- */
-const websiteSchema = z.object({
-  type: z.enum(
-    [
-      "traditional",
-      "digital-collection",
-      "plum",
-      "cedar",
-      "elm",
-      "maple",
-      "oak",
-      "palm",
-    ] as const satisfies ReadonlyArray<WebsiteProperties["type"]>,
-    { message: "Invalid website type" },
-  ),
-  status: z.enum(
-    ["development", "preview", "production"] as const satisfies ReadonlyArray<
-      WebsiteProperties["status"]
-    >,
-    { message: "Invalid website status" },
-  ),
-  privacy: z.enum(
-    ["public", "password", "private"] as const satisfies ReadonlyArray<
-      WebsiteProperties["privacy"]
-    >,
-    { message: "Invalid website privacy" },
-  ),
-});
-
-/**
- * Valid component types for web elements
- */
-const componentSchema = z.enum(
-  [
-    "annotated-document",
-    "annotated-image",
-    "bibliography",
-    "blog",
-    "button",
-    "collection",
-    "empty-space",
-    "filter-categories",
-    "iframe",
-    "iiif-viewer",
-    "image",
-    "image-gallery",
-    "n-columns",
-    "n-rows",
-    "network-graph",
-    "search-bar",
-    "table",
-    "text",
-    "timeline",
-    "video",
-  ] as const satisfies ReadonlyArray<WebElementComponent["component"]>,
-  { message: "Invalid component" },
-);
+import { fetchItem } from "./fetchers/item.js";
+import { getItemCategory } from "./helpers.js";
 
 /**
  * Parses raw identification data into the standardized Identification type
@@ -1153,7 +1089,7 @@ export function parsePropertyValues(
  * @param tree - Raw tree data in OCHRE format
  * @returns Parsed Tree object or null if invalid
  */
-export function parseTree(tree: OchreTree): Tree | null {
+export function parseTree(tree: OchreTree): Tree {
   let creators: Array<Person> = [];
   if (tree.creators) {
     creators = parsePersons(
@@ -1264,66 +1200,105 @@ export function parseTree(tree: OchreTree): Tree | null {
  * @param set - Raw set data in OCHRE format
  * @returns Parsed Set object
  */
-export function parseSet(set: OchreSet): Set {
-  let resources: Array<NestedResource> = [];
-  let spatialUnits: Array<NestedSpatialUnit> = [];
-  let concepts: Array<NestedConcept> = [];
-  let periods: Array<Period> = [];
-  let bibliographies: Array<Bibliography> = [];
-  let persons: Array<Person> = [];
-  let propertyValues: Array<PropertyValue> = [];
-  if (typeof set.items !== "string" && "resource" in set.items) {
-    resources = parseResources(
-      Array.isArray(set.items.resource) ?
-        set.items.resource
-      : [set.items.resource],
-      true,
-    ) as Array<NestedResource>;
+export function parseSet<T extends DataCategory>(set: OchreSet): Set<T> {
+  if (typeof set.items === "string") {
+    throw new TypeError("Invalid OCHRE data: Set has no items");
   }
-  if (typeof set.items !== "string" && "spatialUnit" in set.items) {
-    spatialUnits = parseSpatialUnits(
-      Array.isArray(set.items.spatialUnit) ?
-        set.items.spatialUnit
-      : [set.items.spatialUnit],
-      true,
-    );
-  }
-  if (typeof set.items !== "string" && "concept" in set.items) {
-    concepts = parseConcepts(
-      Array.isArray(set.items.concept) ?
-        set.items.concept
-      : [set.items.concept],
-      true,
-    ) as Array<NestedConcept>;
-  }
-  if (typeof set.items !== "string" && "period" in set.items) {
-    periods = parsePeriods(
-      Array.isArray(set.items.period) ? set.items.period : [set.items.period],
-    );
-  }
-  if (typeof set.items !== "string" && "bibliography" in set.items) {
-    bibliographies = parseBibliographies(
-      Array.isArray(set.items.bibliography) ?
-        set.items.bibliography
-      : [set.items.bibliography],
-    );
-  }
-  if (typeof set.items !== "string" && "person" in set.items) {
-    persons = parsePersons(
-      Array.isArray(set.items.person) ? set.items.person : [set.items.person],
-    );
-  }
-  if (typeof set.items !== "string" && "propertyValue" in set.items) {
-    propertyValues = parsePropertyValues(
-      Array.isArray(set.items.propertyValue) ?
-        set.items.propertyValue
-      : [set.items.propertyValue],
-    );
+
+  const itemCategory = getItemCategory(Object.keys(set.items));
+
+  let items:
+    | Array<Resource>
+    | Array<SpatialUnit>
+    | Array<Concept>
+    | Array<Period>
+    | Array<Bibliography>
+    | Array<Person>
+    | Array<PropertyValue> = [];
+
+  switch (itemCategory) {
+    case "resource": {
+      if (!("resource" in set.items)) {
+        throw new Error("Invalid OCHRE data: Set has no resources");
+      }
+      items = parseResources(
+        Array.isArray(set.items.resource) ?
+          set.items.resource
+        : [set.items.resource],
+      );
+      break;
+    }
+    case "spatialUnit": {
+      if (!("spatialUnit" in set.items)) {
+        throw new Error("Invalid OCHRE data: Set has no spatial units");
+      }
+      items = parseSpatialUnits(
+        Array.isArray(set.items.spatialUnit) ?
+          set.items.spatialUnit
+        : [set.items.spatialUnit],
+      );
+      break;
+    }
+    case "concept": {
+      if (!("concept" in set.items)) {
+        throw new Error("Invalid OCHRE data: Set has no concepts");
+      }
+      items = parseConcepts(
+        Array.isArray(set.items.concept) ?
+          set.items.concept
+        : [set.items.concept],
+      );
+      break;
+    }
+    case "period": {
+      if (!("period" in set.items)) {
+        throw new Error("Invalid OCHRE data: Set has no periods");
+      }
+      items = parsePeriods(
+        Array.isArray(set.items.period) ? set.items.period : [set.items.period],
+      );
+      break;
+    }
+    case "bibliography": {
+      if (!("bibliography" in set.items)) {
+        throw new Error("Invalid OCHRE data: Set has no bibliographies");
+      }
+      items = parseBibliographies(
+        Array.isArray(set.items.bibliography) ?
+          set.items.bibliography
+        : [set.items.bibliography],
+      );
+      break;
+    }
+    case "person": {
+      if (!("person" in set.items)) {
+        throw new Error("Invalid OCHRE data: Set has no persons");
+      }
+      items = parsePersons(
+        Array.isArray(set.items.person) ? set.items.person : [set.items.person],
+      );
+      break;
+    }
+    case "propertyValue": {
+      if (!("propertyValue" in set.items)) {
+        throw new Error("Invalid OCHRE data: Set has no property values");
+      }
+      items = parsePropertyValues(
+        Array.isArray(set.items.propertyValue) ?
+          set.items.propertyValue
+        : [set.items.propertyValue],
+      );
+      break;
+    }
+    default: {
+      throw new Error("Invalid OCHRE data: Set has no items or is malformed");
+    }
   }
 
   return {
     uuid: set.uuid,
     category: "set",
+    itemCategory: itemCategory as T,
     publicationDateTime:
       set.publicationDateTime ? new Date(set.publicationDateTime) : null,
     date: set.date != null ? new Date(set.date) : null,
@@ -1346,15 +1321,14 @@ export function parseSet(set: OchreSet): Set {
       : [],
     type: set.type,
     number: set.n,
-    items: {
-      resources,
-      spatialUnits,
-      concepts,
-      periods,
-      bibliographies,
-      persons,
-      propertyValues,
-    },
+    items: items as T extends "resource" ? Array<Resource>
+    : T extends "spatialUnit" ? Array<SpatialUnit>
+    : T extends "concept" ? Array<Concept>
+    : T extends "period" ? Array<Period>
+    : T extends "bibliography" ? Array<Bibliography>
+    : T extends "person" ? Array<Person>
+    : T extends "propertyValue" ? Array<PropertyValue>
+    : never,
   };
 }
 
@@ -1364,10 +1338,7 @@ export function parseSet(set: OchreSet): Set {
  * @param resource - Raw resource data in OCHRE format
  * @returns Parsed Resource object
  */
-export function parseResource(
-  resource: OchreResource | OchreNestedResource,
-  isNested = false,
-): Resource | NestedResource {
+export function parseResource(resource: OchreResource): Resource {
   const returnResource: Resource = {
     uuid: resource.uuid,
     category: "resource",
@@ -1460,35 +1431,13 @@ export function parseResource(
       : [],
     resources:
       resource.resource ?
-        (parseResources(
+        parseResources(
           Array.isArray(resource.resource) ?
             resource.resource
           : [resource.resource],
-          true,
-        ) as Array<NestedResource>)
+        )
       : [],
   };
-
-  if (isNested) {
-    const returnNestedResource: NestedResource & {
-      publicationDateTime?: null;
-      context?: null;
-      license?: null;
-      copyright?: null;
-    } = {
-      ...returnResource,
-      publicationDateTime: null,
-      context: null,
-      license: null,
-      copyright: null,
-    };
-
-    delete returnNestedResource.publicationDateTime;
-    delete returnNestedResource.license;
-    delete returnNestedResource.copyright;
-
-    return returnNestedResource as NestedResource;
-  }
 
   return returnResource;
 }
@@ -1500,30 +1449,25 @@ export function parseResource(
  * @returns Parsed Resource object
  */
 export function parseResources(
-  resources: Array<OchreResource> | Array<OchreNestedResource>,
-  isNested = false,
-): Array<Resource> | Array<NestedResource> {
-  const returnResources: Array<Resource> | Array<NestedResource> = [];
+  resources: Array<OchreResource>,
+): Array<Resource> {
+  const returnResources: Array<Resource> = [];
   const resourcesToParse = Array.isArray(resources) ? resources : [resources];
 
   for (const resource of resourcesToParse) {
-    returnResources.push(parseResource(resource, isNested) as Resource);
+    returnResources.push(parseResource(resource));
   }
 
   return returnResources;
 }
 
 /**
- * Parses raw spatial units into standardized SpatialUnit or NestedSpatialUnit objects
+ * Parses raw spatial units into standardized SpatialUnit objects
  *
  * @param spatialUnit - Raw spatial unit in OCHRE format
- * @param isNested - Whether to parse as nested spatial units
- * @returns Parsed SpatialUnit or NestedSpatialUnit object
+ * @returns Parsed SpatialUnit object
  */
-export function parseSpatialUnit(
-  spatialUnit: OchreSpatialUnit | OchreNestedSpatialUnit,
-  isNested = false,
-): SpatialUnit | NestedSpatialUnit {
+export function parseSpatialUnit(spatialUnit: OchreSpatialUnit): SpatialUnit {
   const returnSpatialUnit: SpatialUnit = {
     uuid: spatialUnit.uuid,
     category: "spatialUnit",
@@ -1574,77 +1518,47 @@ export function parseSpatialUnit(
           : [spatialUnit.events.event],
         )
       : [],
+    properties:
+      "properties" in spatialUnit && spatialUnit.properties ?
+        parseProperties(
+          Array.isArray(spatialUnit.properties.property) ?
+            spatialUnit.properties.property
+          : [spatialUnit.properties.property],
+        )
+      : [],
   };
-
-  if (isNested) {
-    const returnNestedSpatialUnit: NestedSpatialUnit & {
-      publicationDateTime?: null;
-      license?: null;
-    } = {
-      ...returnSpatialUnit,
-      publicationDateTime: null,
-      license: null,
-      properties:
-        "properties" in spatialUnit && spatialUnit.properties ?
-          parseProperties(
-            Array.isArray(spatialUnit.properties.property) ?
-              spatialUnit.properties.property
-            : [spatialUnit.properties.property],
-          )
-        : [],
-    };
-
-    delete returnNestedSpatialUnit.publicationDateTime;
-    delete returnNestedSpatialUnit.license;
-
-    return returnNestedSpatialUnit as NestedSpatialUnit;
-  }
 
   return returnSpatialUnit;
 }
 
 /**
- * Parses an array of raw spatial units into standardized SpatialUnit or NestedSpatialUnit objects
+ * Parses an array of raw spatial units into standardized SpatialUnit objects
  *
  * @param spatialUnits - Array of raw spatial units in OCHRE format
- * @param isNested - Whether to parse as nested spatial units
- * @returns Array of parsed SpatialUnit or NestedSpatialUnit objects
+ * @returns Array of parsed SpatialUnit objects
  */
-export function parseSpatialUnits<T extends boolean>(
-  spatialUnits: Array<
-    T extends true ? OchreNestedSpatialUnit : OchreSpatialUnit
-  >,
-  isNested: T = false as T,
-): Array<T extends true ? NestedSpatialUnit : SpatialUnit> {
-  const returnSpatialUnits: Array<
-    T extends true ? NestedSpatialUnit : SpatialUnit
-  > = [];
+export function parseSpatialUnits(
+  spatialUnits: Array<OchreSpatialUnit>,
+): Array<SpatialUnit> {
+  const returnSpatialUnits: Array<SpatialUnit> = [];
   const spatialUnitsToParse =
     Array.isArray(spatialUnits) ? spatialUnits : [spatialUnits];
 
   for (const spatialUnit of spatialUnitsToParse) {
-    returnSpatialUnits.push(
-      parseSpatialUnit(spatialUnit, isNested) as T extends true ?
-        NestedSpatialUnit
-      : SpatialUnit,
-    );
+    returnSpatialUnits.push(parseSpatialUnit(spatialUnit));
   }
 
   return returnSpatialUnits;
 }
 
 /**
- * Parses a raw concept into a standardized Concept or NestedConcept object
+ * Parses a raw concept into a standardized Concept object
  *
  * @param concept - Raw concept data in OCHRE format
- * @param isNested - Whether to parse as a nested concept
- * @returns Parsed Concept or NestedConcept object
+ * @returns Parsed Concept object
  */
-export function parseConcept(
-  concept: OchreConcept | OchreNestedConcept,
-  isNested = false,
-): Concept | NestedConcept {
-  const returnConcept: Concept | NestedConcept = {
+export function parseConcept(concept: OchreConcept): Concept {
+  const returnConcept: Concept = {
     uuid: concept.uuid,
     category: "concept",
     publicationDateTime:
@@ -1667,24 +1581,6 @@ export function parseConcept(
       : [concept.interpretations.interpretation],
     ),
   };
-
-  if (isNested) {
-    const returnNestedConcept: NestedConcept & {
-      publicationDateTime?: null;
-      context?: null;
-      license?: null;
-    } = {
-      ...returnConcept,
-      publicationDateTime: null,
-      context: null,
-      license: null,
-    };
-
-    delete returnNestedConcept.publicationDateTime;
-    delete returnNestedConcept.license;
-
-    return returnNestedConcept as NestedConcept;
-  }
 
   return returnConcept;
 }
@@ -1772,21 +1668,17 @@ const parseWebpageResources = async <T extends "element" | "page" | "block">(
 };
 
 /**
- * Parses raw concept data into standardized Concept or NestedConcept objects
+ * Parses raw concept data into standardized Concept objects
  *
  * @param concepts - Array of raw concept data in OCHRE format
- * @param isNested - Whether to parse as nested concepts
- * @returns Array of parsed Concept or NestedConcept objects
+ * @returns Array of parsed Concept objects
  */
-export function parseConcepts(
-  concepts: Array<OchreConcept> | Array<OchreNestedConcept>,
-  isNested = false,
-): Array<Concept> | Array<NestedConcept> {
-  const returnConcepts: Array<Concept> | Array<NestedConcept> = [];
+export function parseConcepts(concepts: Array<OchreConcept>): Array<Concept> {
+  const returnConcepts: Array<Concept> = [];
   const conceptsToParse = Array.isArray(concepts) ? concepts : [concepts];
 
   for (const concept of conceptsToParse) {
-    returnConcepts.push(parseConcept(concept, isNested) as Concept);
+    returnConcepts.push(parseConcept(concept));
   }
 
   return returnConcepts;
@@ -1830,12 +1722,12 @@ async function parseWebElementProperties(
   if (document === null) {
     const documentLink = links.find((link) => link.type === "internalDocument");
     if (documentLink) {
-      const documentResource = await fetchResource(documentLink.uuid);
-      if (documentResource === null) {
+      const { item, error } = await fetchItem(documentLink.uuid, "resource");
+      if (error !== null) {
         throw new Error("Failed to fetch OCHRE data");
       }
 
-      document = documentResource.resource.document;
+      document = item.document;
     }
   }
 
