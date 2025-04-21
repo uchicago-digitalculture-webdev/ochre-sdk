@@ -280,6 +280,7 @@ export function parseLicense(license: OchreLicense): License | null {
 export function parsePerson(person: OchrePerson): Person {
   return {
     uuid: person.uuid,
+    category: "person",
     publicationDateTime:
       person.publicationDateTime != null ?
         new Date(person.publicationDateTime)

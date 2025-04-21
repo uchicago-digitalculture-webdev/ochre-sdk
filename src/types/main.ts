@@ -102,6 +102,7 @@ export type License = {
  */
 export type Person = {
   uuid: string;
+  category: "person";
   publicationDateTime: Date | null;
   type: string | null;
   date: Date | null;
