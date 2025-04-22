@@ -409,17 +409,14 @@ export type PropertyValueContentType =
 /**
  * Represents a property value with type information
  */
-export type PropertyValueContent<T extends PropertyValueContentType> = {
-  content: T extends "number" ? number
-  : T extends "integer" ? number
-  : T extends "decimal" ? number
-  : T extends "dateTime" ? Date | null
-  : string;
-  booleanValue: T extends "boolean" ? boolean : null;
-  type: T;
+export type PropertyValueContent = {
+  content: string | number | boolean | Date | null;
+  booleanValue: boolean | null;
+  type: PropertyValueContentType;
   category: string;
   uuid: string | null;
   publicationDateTime: Date | null;
+  unit: string | null;
 };
 
 /**
@@ -427,7 +424,7 @@ export type PropertyValueContent<T extends PropertyValueContentType> = {
  */
 export type Property = {
   label: string;
-  values: Array<PropertyValueContent<PropertyValueContentType>>;
+  values: Array<PropertyValueContent>;
   comment: string | null;
   properties: Array<Property>;
 };

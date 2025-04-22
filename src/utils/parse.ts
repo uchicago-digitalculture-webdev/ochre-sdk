@@ -65,7 +65,11 @@ import type {
   Website,
   WebsiteProperties,
 } from "../types/main.js";
-import { componentSchema, websiteSchema } from "../schemas.js";
+import {
+  componentSchema,
+  propertyValueContentTypeSchema,
+  websiteSchema,
+} from "../schemas.js";
 import {
   getPropertyByLabel,
   getPropertyValueByLabel,
@@ -652,9 +656,8 @@ export function parseEvents(events: Array<OchreEvent>): Array<Event> {
   return returnEvents;
 }
 
-export function parseProperty<T extends PropertyValueContentType>(
+export function parseProperty(
   property: OchreProperty,
-  type: T,
   language = "eng",
 ): Property {
   const valuesToParse =
@@ -664,7 +667,7 @@ export function parseProperty<T extends PropertyValueContentType>(
       : [property.value]
     : [];
 
-  const values: Array<PropertyValueContent<T>> = valuesToParse.map((value) => {
+  const values = valuesToParse.map((value) => {
     let content: string | number | boolean | Date | null = null;
     let booleanValue = null;
 
@@ -674,18 +677,19 @@ export function parseProperty<T extends PropertyValueContentType>(
       typeof value === "boolean"
     ) {
       content = parseFakeString(value);
-      const returnValue: PropertyValueContent<T> = {
-        content: content as PropertyValueContent<T>["content"],
-        booleanValue: booleanValue as PropertyValueContent<T>["booleanValue"],
-        type,
+      const returnValue: PropertyValueContent = {
+        content,
+        booleanValue,
+        type: "string",
         category: "value",
         uuid: null,
         publicationDateTime: null,
+        unit: null,
       };
 
       return returnValue;
     } else {
-      switch (type) {
+      switch (value.type) {
         case "integer":
         case "decimal": {
           content = Number(value.content);
@@ -707,7 +711,7 @@ export function parseProperty<T extends PropertyValueContentType>(
             content = parseStringContent({ content: value.content });
           }
 
-          if (type === "boolean") {
+          if (value.type === "boolean") {
             booleanValue = value.booleanValue ?? null;
           }
 
@@ -715,16 +719,31 @@ export function parseProperty<T extends PropertyValueContentType>(
         }
       }
 
-      const returnValue: PropertyValueContent<T> = {
-        content: content as PropertyValueContent<T>["content"],
-        booleanValue: booleanValue as PropertyValueContent<T>["booleanValue"],
-        type,
+      let parsedType: PropertyValueContentType = "string";
+      if (value.type != null) {
+        const { data, error } = propertyValueContentTypeSchema.safeParse(
+          value.type,
+        );
+        if (error) {
+          throw new Error(
+            `Invalid property value content type: "${value.type}"`,
+          );
+        }
+
+        parsedType = data;
+      }
+
+      const returnValue: PropertyValueContent = {
+        content,
+        booleanValue,
+        type: parsedType,
         category: value.category ?? "value",
         uuid: value.uuid ?? null,
         publicationDateTime:
           value.publicationDateTime != null ?
             new Date(value.publicationDateTime)
           : null,
+        unit: value.unit ?? null,
       };
 
       return returnValue;
@@ -762,9 +781,7 @@ export function parseProperties(
 ): Array<Property> {
   const returnProperties: Array<Property> = [];
   for (const property of properties) {
-    returnProperties.push(
-      parseProperty<PropertyValueContentType>(property, "string", language),
-    );
+    returnProperties.push(parseProperty(property, language));
   }
 
   return returnProperties;

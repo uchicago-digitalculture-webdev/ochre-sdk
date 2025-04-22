@@ -1,6 +1,7 @@
 import type { RenderOption, WhitespaceOption } from "./types/internal.raw.js";
 import type {
   DataCategory,
+  PropertyValueContentType,
   WebElementComponent,
   WebsiteProperties,
 } from "./types/main.js";
@@ -89,6 +90,22 @@ export const categorySchema = z.enum([
   "set",
   "tree",
 ] as const satisfies ReadonlyArray<DataCategory>);
+
+/**
+ * Schema for validating property value content types
+ * @internal
+ */
+export const propertyValueContentTypeSchema = z.enum([
+  "string",
+  "integer",
+  "decimal",
+  "boolean",
+  "date",
+  "dateTime",
+  "time",
+  "coordinate",
+  "IDREF",
+] as const satisfies ReadonlyArray<PropertyValueContentType>);
 
 /**
  * Schema for validating gallery parameters

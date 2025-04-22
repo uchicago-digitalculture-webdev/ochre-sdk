@@ -266,9 +266,10 @@ export type OchreConcept = {
 export type OchrePropertyValueContent = {
   uuid?: string;
   publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
-  type: string;
+  type?: string;
   category?: string;
   slug?: FakeString;
+  unit?: string;
   booleanValue?: boolean;
   content?: FakeString | OchreStringItem | Array<OchreStringItem>;
 };
