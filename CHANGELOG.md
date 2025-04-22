@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.0
+
+### Minor Changes
+
+- 5181aff: feat: implement non-string property value types (number, boolean, and Date)
+
 ## 0.6.6
 
 ### Patch Changes
