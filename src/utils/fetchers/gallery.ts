@@ -1,11 +1,7 @@
 import type { GalleryResponse } from "../../types/internal.raw.d.ts";
-import type { Gallery, Resource } from "../../types/main.js";
+import type { Gallery } from "../../types/main.js";
 import { gallerySchema } from "../../schemas.js";
-import {
-  parseIdentification,
-  parseResource,
-  parseResources,
-} from "../parse.js";
+import { parseIdentification, parseResources } from "../parse.js";
 
 /**
  * Fetches and parses a gallery from the OCHRE API
@@ -81,12 +77,13 @@ export async function fetchGallery(
     const gallery = {
       identification: galleryIdentification,
       projectIdentification: galleryProjectIdentification,
-      resources:
+      resources: parseResources(
         data.result.gallery.resource ?
           Array.isArray(data.result.gallery.resource) ?
-            (parseResources(data.result.gallery.resource) as Array<Resource>)
-          : [parseResource(data.result.gallery.resource) as Resource]
+            data.result.gallery.resource
+          : [data.result.gallery.resource]
         : [],
+      ),
       maxLength: data.result.gallery.maxLength,
     };
 

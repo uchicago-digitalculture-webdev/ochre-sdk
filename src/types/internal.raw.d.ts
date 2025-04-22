@@ -209,9 +209,11 @@ export type OchreResource = {
   image?: OchreImage;
   creators?: { creator: OchrePerson | Array<OchrePerson> };
   notes?: { note: OchreNote | Array<OchreNote> };
-  document?: {
-    content: OchreStringRichText | Array<OchreStringRichText>;
-  };
+  document?:
+    | {
+        content: OchreStringRichText | Array<OchreStringRichText>;
+      }
+    | object;
   imagemap?: OchreImageMap;
   periods?: { period: OchrePeriod | Array<OchrePeriod> };
   links?: OchreLink | Array<OchreLink>;

@@ -1374,8 +1374,7 @@ export function parseResource(resource: OchreResource): Resource {
         )
       : [],
     notes:
-      // TODO: Remove this check once the { rend: "splitNotes" } issue is fixed
-      resource.notes && "note" in resource.notes ?
+      resource.notes ?
         parseNotes(
           Array.isArray(resource.notes.note) ?
             resource.notes.note
@@ -1389,7 +1388,9 @@ export function parseResource(resource: OchreResource): Resource {
         : parseStringContent(resource.description as OchreStringContent)
       : "",
     document:
-      resource.document ? parseDocument(resource.document.content) : null,
+      resource.document && "content" in resource.document ?
+        parseDocument(resource.document.content)
+      : null,
     href: resource.href ?? null,
     imageMap: resource.imagemap ? parseImageMap(resource.imagemap) : null,
     periods:
@@ -1717,7 +1718,7 @@ async function parseWebElementProperties(
   );
 
   let document: Document | null =
-    elementResource.document ?
+    elementResource.document && "content" in elementResource.document ?
       parseDocument(elementResource.document.content)
     : null;
   if (document === null) {
