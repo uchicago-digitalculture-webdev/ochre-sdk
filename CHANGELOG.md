@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.1
+
+### Patch Changes
+
+- b1d9643: feat: enhance coordinate handling in OchreSpatialUnit and parsing logic
+
 ## 0.7.0
 
 ### Minor Changes
