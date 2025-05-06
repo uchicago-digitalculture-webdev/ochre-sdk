@@ -560,7 +560,19 @@ export function parseNotes(
  * @param coordinates - Raw coordinates data in OCHRE format
  * @returns Parsed Coordinates object
  */
-export function parseCoordinates(coordinates: OchreCoordinates): Coordinates {
+export function parseCoordinates(
+  coordinates: OchreCoordinates | string,
+): Coordinates {
+  if (typeof coordinates === "string") {
+    const [latitude, longitude] = coordinates.split(", ");
+    return {
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      type: null,
+      label: null,
+    };
+  }
+
   return {
     latitude: coordinates.latitude,
     longitude: coordinates.longitude,
@@ -1517,8 +1529,8 @@ export function parseSpatialUnit(spatialUnit: OchreSpatialUnit): SpatialUnit {
         : parseStringContent(spatialUnit.description as OchreStringContent)
       : "",
     coordinates:
-      spatialUnit.coordinates ?
-        parseCoordinates(spatialUnit.coordinates)
+      spatialUnit.coordinates ? parseCoordinates(spatialUnit.coordinates)
+      : spatialUnit.coordinate ? parseCoordinates(spatialUnit.coordinate)
       : null,
     observations:
       "observations" in spatialUnit && spatialUnit.observations ?

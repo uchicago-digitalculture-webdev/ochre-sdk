@@ -238,6 +238,7 @@ export type OchreSpatialUnit = {
   identification: OchreIdentification;
   image?: OchreImage;
   description?: OchreStringContent | FakeString;
+  coordinate?: string; // "latitude, longitude"
   coordinates?: OchreCoordinates;
   events?: { event: OchreEvent | Array<OchreEvent> };
   observations?: { observation: OchreObservation | Array<OchreObservation> };
