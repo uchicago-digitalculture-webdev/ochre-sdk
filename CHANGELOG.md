@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.2
+
+### Patch Changes
+
+- 6819b4e: feat: add section sidebar item handling and update WebElement and WebBlock types
+
 ## 0.7.1
 
 ### Patch Changes
