@@ -553,6 +553,7 @@ export type WebElement = {
       isCreatorsDisplayed: boolean;
     };
   };
+  isDisplayedInBlockSectionSidebar: boolean;
   cssStyles: Array<Style>;
   cssStylesMobile: Array<Style>;
 } & WebElementComponent;
@@ -677,8 +678,16 @@ export type WebBlock = {
      * `justify-content` CSS property value
      */
     justifyContent: "stretch" | "start" | "center" | "end" | "space-between";
+    sectionSidebarItems: Array<WebSectionSidebarItem> | null;
   };
   propertiesMobile: Record<string, string> | null;
   cssStyles: Array<Style>;
   cssStylesMobile: Array<Style>;
+};
+
+export type WebSectionSidebarItem = {
+  uuid: string;
+  type: "block" | "element";
+  name: string | null;
+  items: Array<WebSectionSidebarItem> | null;
 };

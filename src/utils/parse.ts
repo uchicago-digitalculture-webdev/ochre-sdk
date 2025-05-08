@@ -62,6 +62,7 @@ import type {
   WebElementComponent,
   WebImage,
   Webpage,
+  WebSectionSidebarItem,
   Website,
   WebsiteProperties,
 } from "../types/main.js";
@@ -2325,6 +2326,12 @@ async function parseWebElement(
     elementResource,
   );
 
+  const blockSectionSidebarProperty = presentationProperty.properties.find(
+    (property) => property.label === "section-sidebar-displayed",
+  );
+  const isDisplayedInBlockSectionSidebar =
+    blockSectionSidebarProperty?.values[0]?.booleanValue === true;
+
   const elementResourceProperties =
     elementResource.properties?.property ?
       parseProperties(
@@ -2410,6 +2417,7 @@ async function parseWebElement(
         isCreatorsDisplayed,
       },
     },
+    isDisplayedInBlockSectionSidebar,
     cssStyles,
     cssStylesMobile,
     ...properties,
@@ -2647,6 +2655,7 @@ async function parseBlock(
       gap: undefined,
       alignItems: "start",
       justifyContent: "stretch",
+      sectionSidebarItems: null,
     },
     propertiesMobile: null,
     cssStyles: [],
@@ -2803,7 +2812,50 @@ async function parseBlock(
     }
   }
 
+  returnBlock.properties.sectionSidebarItems =
+    parseSectionSidebarItems(returnBlock);
+
   return returnBlock;
+}
+
+function parseSectionSidebarItems(
+  block: WebBlock,
+): Array<WebSectionSidebarItem> | null {
+  const sectionSidebarItems: Array<WebSectionSidebarItem> = [];
+
+  for (const item of block.items) {
+    switch (item.type) {
+      case "block": {
+        const subItems = parseSectionSidebarItems(item);
+        if (subItems !== null) {
+          sectionSidebarItems.push({
+            uuid: item.uuid,
+            type: "block",
+            name: null,
+            items: subItems,
+          });
+        }
+        break;
+      }
+      case "element": {
+        const isDisplayedInSectionSidebar =
+          item.isDisplayedInBlockSectionSidebar;
+        if (!isDisplayedInSectionSidebar) {
+          continue;
+        }
+
+        sectionSidebarItems.push({
+          uuid: item.uuid,
+          type: "element",
+          name: item.title.label,
+          items: null,
+        });
+        break;
+      }
+    }
+  }
+
+  return sectionSidebarItems.length > 0 ? sectionSidebarItems : null;
 }
 
 /**
