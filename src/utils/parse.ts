@@ -1231,12 +1231,16 @@ export function parseTree(tree: OchreTree): Tree {
  * @param set - Raw set data in OCHRE format
  * @returns Parsed Set object
  */
-export function parseSet<T extends DataCategory>(set: OchreSet): Set<T> {
+export function parseSet<T extends DataCategory>(
+  set: OchreSet,
+  itemCategory?: T,
+): Set<T> {
   if (typeof set.items === "string") {
     throw new TypeError("Invalid OCHRE data: Set has no items");
   }
 
-  const itemCategory = getItemCategory(Object.keys(set.items));
+  const parsedItemCategory =
+    itemCategory ?? getItemCategory(Object.keys(set.items));
 
   let items:
     | Array<Resource>
@@ -1247,7 +1251,7 @@ export function parseSet<T extends DataCategory>(set: OchreSet): Set<T> {
     | Array<Person>
     | Array<PropertyValue> = [];
 
-  switch (itemCategory) {
+  switch (parsedItemCategory) {
     case "resource": {
       if (!("resource" in set.items)) {
         throw new Error("Invalid OCHRE data: Set has no resources");
@@ -1329,7 +1333,7 @@ export function parseSet<T extends DataCategory>(set: OchreSet): Set<T> {
   return {
     uuid: set.uuid,
     category: "set",
-    itemCategory: itemCategory as T,
+    itemCategory: itemCategory!,
     publicationDateTime:
       set.publicationDateTime ? new Date(set.publicationDateTime) : null,
     date: set.date != null ? new Date(set.date) : null,

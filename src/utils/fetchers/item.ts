@@ -1,7 +1,6 @@
 import type {
   Bibliography,
   Concept,
-  Data,
   DataCategory,
   Metadata,
   Period,
@@ -64,6 +63,7 @@ import { fetchByUuid } from "./uuid.js";
 export async function fetchItem<T extends DataCategory, U extends DataCategory>(
   uuid: string,
   category?: T,
+  setCategory?: U,
 ): Promise<
   | {
       error: null;
@@ -100,7 +100,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
 
     const categoryKey = getItemCategory(Object.keys(data.ochre));
 
-    let item: Data<T>["item"];
+    let item;
 
     switch (categoryKey) {
       case "resource": {
@@ -170,7 +170,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
         if (!("set" in data.ochre)) {
           throw new Error("Invalid OCHRE data: API response missing 'set' key");
         }
-        item = parseSet<T>(data.ochre.set);
+        item = parseSet<U>(data.ochre.set, setCategory);
         break;
       }
       case "tree": {
