@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.3
+
+### Patch Changes
+
+- e79255a: feat: enhance parseSet and fetchItem functions to support optional item categories
+
 ## 0.7.2
 
 ### Patch Changes
