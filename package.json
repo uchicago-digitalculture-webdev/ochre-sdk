@@ -59,8 +59,8 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.13.0",
-    "@arethetypeswrong/cli": "^0.18.0",
-    "@changesets/cli": "^2.29.3",
+    "@arethetypeswrong/cli": "^0.18.1",
+    "@changesets/cli": "^2.29.4",
     "@total-typescript/ts-reset": "^0.6.1",
     "@types/node": "^22.15.17",
     "eslint": "^9.26.0",
