@@ -587,7 +587,7 @@ export type WebElementComponent =
   | {
       component: "entries";
       entriesId: string;
-      variant: "blog-page" | "item-page";
+      variant: "entry" | "item";
       isSearchable: boolean;
     }
   | {

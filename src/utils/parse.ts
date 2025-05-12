@@ -1979,8 +1979,8 @@ async function parseWebElementProperties(
       let variant = getPropertyValueByLabel(
         componentProperty.properties,
         "variant",
-      );
-      variant ??= "blog-page";
+      ) as "entry" | "item" | null;
+      variant ??= "entry";
 
       let isSearchable = false;
       const isSearchableProperty = getPropertyValueByLabel(
