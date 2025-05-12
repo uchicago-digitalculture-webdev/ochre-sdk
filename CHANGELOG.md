@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.4
+
+### Patch Changes
+
+- 8b41409: feat: replace blog component with entries component and update parsing logic
+
 ## 0.7.3
 
 ### Patch Changes
