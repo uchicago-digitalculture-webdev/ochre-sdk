@@ -1822,17 +1822,6 @@ async function parseWebElementProperties(
 
       break;
     }
-    case "blog": {
-      const blogLink = links.find((link) => link.category === "tree");
-      if (!blogLink) {
-        throw new Error(
-          `Blog link not found for the following component: “${componentName}”`,
-        );
-      }
-
-      properties.blogId = blogLink.uuid;
-      break;
-    }
     case "button": {
       let variant = getPropertyValueByLabel(
         componentProperty.properties,
@@ -1945,6 +1934,34 @@ async function parseWebElementProperties(
 
       properties.height = height;
       properties.width = width;
+      break;
+    }
+    case "entries": {
+      const entriesLink = links.find((link) => link.category === "tree");
+      if (!entriesLink) {
+        throw new Error(
+          `Entries link not found for the following component: “${componentName}”`,
+        );
+      }
+
+      let variant = getPropertyValueByLabel(
+        componentProperty.properties,
+        "variant",
+      );
+      variant ??= "blog-page";
+
+      let isSearchable = false;
+      const isSearchableProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "is-searchable",
+      );
+      if (isSearchableProperty !== null) {
+        isSearchable = isSearchableProperty === "Yes";
+      }
+
+      properties.entriesId = entriesLink.uuid;
+      properties.variant = variant;
+      properties.isSearchable = isSearchable;
       break;
     }
     case "filter-categories": {

@@ -572,7 +572,12 @@ export type WebElementComponent =
       bibliographies: Array<Bibliography>;
       layout: "long" | "short";
     }
-  | { component: "blog"; blogId: string }
+  | {
+      component: "entries";
+      entriesId: string;
+      variant: "blog-page" | "item-page";
+      isSearchable: boolean;
+    }
   | {
       component: "button";
       variant: "default" | "transparent";
