@@ -517,7 +517,18 @@ export type OchrePerson = {
   type?: string;
   date?: string; // YYYY-MM-DD
   identification?: OchreIdentification;
+  n?: number;
+  context?: OchreContext;
+  availability?: OchreLicense;
+  address?: {
+    country?: string;
+    city?: string;
+    state?: string;
+  };
+  coordinates?: OchreCoordinates;
   content?: FakeString | null;
+  events?: { event: OchreEvent | Array<OchreEvent> };
+  properties?: { property: OchreProperty | Array<OchreProperty> };
 };
 
 /**
@@ -538,6 +549,7 @@ export type OchreObservation = {
 export type OchreCoordinates = {
   latitude: number;
   longitude: number;
+  elevation?: number;
   coordinatesArray?: string;
   coord?: {
     coordLatitude: number;
@@ -558,6 +570,7 @@ export type OchreEvent = {
     uuid: string;
     content: FakeString;
   };
+  comment?: FakeString;
   label: OchreStringContent;
 };
 

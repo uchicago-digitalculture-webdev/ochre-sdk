@@ -291,10 +291,40 @@ export function parsePerson(person: OchrePerson): Person {
         new Date(person.publicationDateTime)
       : null,
     type: person.type ?? null,
+    number: person.n ?? null,
+    context: person.context ? parseContext(person.context) : null,
     date: person.date != null ? new Date(person.date) : null,
     identification:
       person.identification ? parseIdentification(person.identification) : null,
+    availability:
+      person.availability ? parseLicense(person.availability) : null,
+    address:
+      person.address ?
+        {
+          country: person.address.country ?? null,
+          city: person.address.city ?? null,
+          state: person.address.state ?? null,
+        }
+      : null,
+    coordinates:
+      person.coordinates ? parseCoordinates(person.coordinates) : null,
     content: person.content != null ? parseFakeString(person.content) : null,
+    events:
+      person.events ?
+        parseEvents(
+          Array.isArray(person.events.event) ?
+            person.events.event
+          : [person.events.event],
+        )
+      : [],
+    properties:
+      person.properties ?
+        parseProperties(
+          Array.isArray(person.properties.property) ?
+            person.properties.property
+          : [person.properties.property],
+        )
+      : [],
   };
 }
 
@@ -1051,7 +1081,7 @@ export function parsePropertyValue(
   return {
     uuid: propertyValue.uuid,
     category: "propertyValue",
-    n: propertyValue.n,
+    number: propertyValue.n,
     publicationDateTime:
       propertyValue.publicationDateTime ?
         new Date(propertyValue.publicationDateTime)

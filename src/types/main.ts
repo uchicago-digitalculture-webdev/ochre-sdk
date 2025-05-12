@@ -105,9 +105,20 @@ export type Person = {
   category: "person";
   publicationDateTime: Date | null;
   type: string | null;
+  number: number | null;
+  context: Context | null;
+  availability: License | null;
   date: Date | null;
   identification: Identification | null;
+  address: {
+    country: string | null;
+    city: string | null;
+    state: string | null;
+  } | null;
+  coordinates: Coordinates | null;
   content: string | null;
+  events: Array<Event>;
+  properties: Array<Property>;
 };
 
 /**
@@ -383,7 +394,7 @@ export type Period = {
 export type PropertyValue = {
   uuid: string;
   category: "propertyValue";
-  n: number;
+  number: number;
   publicationDateTime: Date | null;
   context: Context | null;
   availability: License | null;
