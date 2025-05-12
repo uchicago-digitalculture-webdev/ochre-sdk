@@ -412,6 +412,7 @@ export type PropertyValueContentType =
 export type PropertyValueContent = {
   content: string | number | boolean | Date | null;
   booleanValue: boolean | null;
+  isUncertain: boolean;
   type: PropertyValueContentType;
   category: string;
   uuid: string | null;

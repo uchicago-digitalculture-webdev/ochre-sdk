@@ -272,6 +272,7 @@ export type OchrePropertyValueContent = {
   slug?: FakeString;
   unit?: string;
   booleanValue?: boolean;
+  isUncertain?: boolean;
   content?: FakeString | OchreStringItem | Array<OchreStringItem>;
 };
 

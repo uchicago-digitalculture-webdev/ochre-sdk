@@ -693,6 +693,7 @@ export function parseProperty(
       const returnValue: PropertyValueContent = {
         content,
         booleanValue,
+        isUncertain: false,
         type: "string",
         category: "value",
         uuid: null,
@@ -749,6 +750,7 @@ export function parseProperty(
       const returnValue: PropertyValueContent = {
         content,
         booleanValue,
+        isUncertain: value.isUncertain ?? false,
         type: parsedType,
         category: value.category ?? "value",
         uuid: value.uuid ?? null,
