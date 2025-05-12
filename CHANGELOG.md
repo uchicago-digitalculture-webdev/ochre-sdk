@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.6
+
+### Patch Changes
+
+- d9e92b7: feat: enhance OchrePerson and Person types with additional properties and update parsing logic
+
 ## 0.7.5
 
 ### Patch Changes
