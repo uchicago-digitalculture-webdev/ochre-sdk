@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.5
+
+### Patch Changes
+
+- b95d627: feat: add isUncertain property to PropertyValueContent and OchrePropertyValueContent types
+
 ## 0.7.4
 
 ### Patch Changes
