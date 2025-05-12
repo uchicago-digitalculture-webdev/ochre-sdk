@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.7
+
+### Patch Changes
+
+- 2569fc7: fix: update variant type for `"entries"` component
+
 ## 0.7.6
 
 ### Patch Changes
