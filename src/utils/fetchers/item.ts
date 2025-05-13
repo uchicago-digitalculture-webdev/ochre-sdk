@@ -63,7 +63,7 @@ import { fetchByUuid } from "./uuid.js";
 export async function fetchItem<T extends DataCategory, U extends DataCategory>(
   uuid: string,
   category?: T,
-  setCategory?: U,
+  setCategory?: T extends "set" ? U : never,
 ): Promise<
   | {
       error: null;
