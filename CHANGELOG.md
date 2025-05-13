@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.9
+
+### Patch Changes
+
+- 927b75f: refactor: restructure collectionOptions in Website
+
 ## 0.7.8
 
 ### Patch Changes
