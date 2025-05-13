@@ -435,6 +435,7 @@ export type PropertyValueContent = {
  * Represents a property with label, values and nested properties
  */
 export type Property = {
+  uuid: string;
   label: string;
   values: Array<PropertyValueContent>;
   comment: string | null;

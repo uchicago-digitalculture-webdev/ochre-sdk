@@ -796,6 +796,7 @@ export function parseProperty(
   });
 
   return {
+    uuid: property.label.uuid,
     label: parseStringContent(property.label, language)
       .replace(/\s*\.{3}$/, "")
       .trim(),
