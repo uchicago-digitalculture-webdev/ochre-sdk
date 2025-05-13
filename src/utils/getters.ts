@@ -5,11 +5,11 @@ import type { Property } from "../types/main.js";
  */
 type PropertyOptions = {
   /** Whether to recursively search through nested properties */
-  searchNestedProperties: boolean;
+  includeNestedProperties: boolean;
 };
 
 const DEFAULT_OPTIONS: PropertyOptions = {
-  searchNestedProperties: false,
+  includeNestedProperties: false,
 };
 
 /**
@@ -17,12 +17,12 @@ const DEFAULT_OPTIONS: PropertyOptions = {
  *
  * @param properties - Array of properties to search through
  * @param label - The label to search for
- * @param options - Search options, including whether to search nested properties
+ * @param options - Search options, including whether to include nested properties
  * @returns The matching Property object, or null if not found
  *
  * @example
  * ```ts
- * const property = getPropertyByLabel(properties, "author", { searchNestedProperties: true });
+ * const property = getPropertyByLabel(properties, "author", { includeNestedProperties: true });
  * if (property) {
  *   console.log(property.values);
  * }
@@ -33,17 +33,17 @@ export function getPropertyByLabel(
   label: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Property | null {
-  const { searchNestedProperties } = options;
+  const { includeNestedProperties } = options;
   const property = properties.find((property) => property.label === label);
   if (property) {
     return property;
   }
 
-  if (searchNestedProperties) {
+  if (includeNestedProperties) {
     for (const property of properties) {
       if (property.properties.length > 0) {
         const nestedResult = getPropertyByLabel(property.properties, label, {
-          searchNestedProperties,
+          includeNestedProperties,
         });
         if (nestedResult) {
           return nestedResult;
@@ -60,7 +60,7 @@ export function getPropertyByLabel(
  *
  * @param properties - Array of properties to search through
  * @param label - The label to search for
- * @param options - Search options, including whether to search nested properties
+ * @param options - Search options, including whether to include nested properties
  * @returns Array of property values as strings, or null if property not found
  *
  * @example
@@ -78,20 +78,20 @@ export function getPropertyValuesByLabel(
   label: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Array<string | number | boolean | Date | null> | null {
-  const { searchNestedProperties } = options;
+  const { includeNestedProperties } = options;
 
   const property = properties.find((property) => property.label === label);
   if (property) {
     return property.values.map((value) => value.content);
   }
 
-  if (searchNestedProperties) {
+  if (includeNestedProperties) {
     for (const property of properties) {
       if (property.properties.length > 0) {
         const nestedResult = getPropertyValuesByLabel(
           property.properties,
           label,
-          { searchNestedProperties },
+          { includeNestedProperties },
         );
         if (nestedResult) {
           return nestedResult;
@@ -108,7 +108,7 @@ export function getPropertyValuesByLabel(
  *
  * @param properties - Array of properties to search through
  * @param label - The label to search for
- * @param options - Search options, including whether to search nested properties
+ * @param options - Search options, including whether to include nested properties
  * @returns The first property value as string, or null if property not found
  *
  * @example
@@ -124,21 +124,21 @@ export function getPropertyValueByLabel(
   label: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): string | number | boolean | Date | null {
-  const { searchNestedProperties } = options;
+  const { includeNestedProperties } = options;
   const values = getPropertyValuesByLabel(properties, label, {
-    searchNestedProperties,
+    includeNestedProperties,
   });
   if (values !== null && values.length > 0) {
     return values[0]!;
   }
 
-  if (searchNestedProperties) {
+  if (includeNestedProperties) {
     for (const property of properties) {
       if (property.properties.length > 0) {
         const nestedResult = getPropertyValueByLabel(
           property.properties,
           label,
-          { searchNestedProperties },
+          { includeNestedProperties },
         );
         if (nestedResult !== null) {
           return nestedResult;
@@ -151,39 +151,47 @@ export function getPropertyValueByLabel(
 }
 
 /**
- * Gets all unique property labels from an array of properties
+ * Gets all unique properties from an array of properties
  *
- * @param properties - Array of properties to get labels from
- * @param options - Search options, including whether to include nested property labels
- * @returns Array of unique property labels
+ * @param properties - Array of properties to get unique properties from
+ * @param options - Search options, including whether to include nested properties
+ * @returns Array of unique properties
  *
  * @example
  * ```ts
- * const labels = getAllPropertyLabels(properties, { searchNestedProperties: true });
- * console.log(`Available properties: ${labels.join(", ")}`);
+ * const properties = getAllUniqueProperties(properties, { includeNestedProperties: true });
+ * console.log(`Available properties: ${properties.map((p) => p.label).join(", ")}`);
  * ```
  */
-export function getAllPropertyLabels(
+export function getUniqueProperties(
   properties: Array<Property>,
   options: PropertyOptions = DEFAULT_OPTIONS,
-): Array<string> {
-  const { searchNestedProperties } = options;
-  const labels = new Set<string>();
+): Array<Property> {
+  const { includeNestedProperties } = options;
+  const uniqueProperties = new Array<Property>();
 
   for (const property of properties) {
-    labels.add(property.label);
+    if (uniqueProperties.some((p) => p.uuid === property.uuid)) {
+      continue;
+    }
 
-    if (property.properties.length > 0 && searchNestedProperties) {
-      const nestedLabels = getAllPropertyLabels(property.properties, {
-        searchNestedProperties: true,
+    uniqueProperties.push(property);
+
+    if (property.properties.length > 0 && includeNestedProperties) {
+      const nestedProperties = getUniqueProperties(property.properties, {
+        includeNestedProperties: true,
       });
-      for (const label of nestedLabels) {
-        labels.add(label);
+      for (const property of nestedProperties) {
+        if (uniqueProperties.some((p) => p.uuid === property.uuid)) {
+          continue;
+        }
+
+        uniqueProperties.push(property);
       }
     }
   }
 
-  return [...labels];
+  return uniqueProperties;
 }
 
 /**
@@ -193,7 +201,7 @@ export function getAllPropertyLabels(
  * @param filter - Filter criteria containing label and value to match
  * @param filter.label - The label to filter by
  * @param filter.value - The value to filter by
- * @param options - Search options, including whether to search nested properties
+ * @param options - Search options, including whether to include nested properties
  * @returns True if the property matches the filter criteria, false otherwise
  *
  * @example
@@ -212,7 +220,7 @@ export function filterProperties(
   filter: { label: string; value: string | number | boolean | Date },
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): boolean {
-  const { searchNestedProperties } = options;
+  const { includeNestedProperties } = options;
 
   const isAllFields = filter.label.toLocaleLowerCase("en-US") === "all fields";
 
@@ -263,9 +271,9 @@ export function filterProperties(
       return false;
     });
 
-    if (!isFound && searchNestedProperties) {
+    if (!isFound && includeNestedProperties) {
       isFound = property.properties.some((property) =>
-        filterProperties(property, filter, { searchNestedProperties: true }),
+        filterProperties(property, filter, { includeNestedProperties: true }),
       );
     }
 
