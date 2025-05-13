@@ -3074,15 +3074,6 @@ export async function parseWebsite(
     : [websiteTree.properties.property],
   );
 
-  let collectionOptions: Website["collectionOptions"] | null = null;
-  if (websiteTree.searchOptions) {
-    collectionOptions = {
-      metadataUuids: [...(websiteTree.searchOptions.metadata?.option ?? [])],
-      searchUuids: [...(websiteTree.searchOptions.filters?.option ?? [])],
-      labelUuids: [...(websiteTree.searchOptions.labels?.option ?? [])],
-    };
-  }
-
   if (
     typeof websiteTree.items === "string" ||
     !("resource" in websiteTree.items)
@@ -3257,6 +3248,27 @@ export async function parseWebsite(
       mobileLayout: sidebarMobileLayout,
       cssStyles: sidebarCssStyles,
       cssStylesMobile: sidebarCssStylesMobile,
+    };
+  }
+
+  let collectionOptions: Website["collectionOptions"] | null = null;
+  if (websiteTree.searchOptions) {
+    const collectionUuids = [];
+    for (const page of pages) {
+      for (const item of page.items) {
+        if (item.type === "element" && item.component === "collection") {
+          collectionUuids.push(item.collectionId);
+        }
+      }
+    }
+
+    collectionOptions = {
+      uuids: collectionUuids,
+      properties: {
+        metadataUuids: [...(websiteTree.searchOptions.metadata?.option ?? [])],
+        searchUuids: [...(websiteTree.searchOptions.filters?.option ?? [])],
+        labelUuids: [...(websiteTree.searchOptions.labels?.option ?? [])],
+      },
     };
   }
 

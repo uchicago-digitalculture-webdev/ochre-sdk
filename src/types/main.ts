@@ -500,9 +500,12 @@ export type Website = {
   } | null;
   properties: WebsiteProperties;
   collectionOptions: {
-    metadataUuids: Array<string>;
-    searchUuids: Array<string>;
-    labelUuids: Array<string>;
+    uuids: Array<string>;
+    properties: {
+      metadataUuids: Array<string>;
+      searchUuids: Array<string>;
+      labelUuids: Array<string>;
+    };
   } | null;
 };
 
