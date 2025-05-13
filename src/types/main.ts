@@ -499,6 +499,11 @@ export type Website = {
     cssStylesMobile: Array<Style>;
   } | null;
   properties: WebsiteProperties;
+  collectionOptions: {
+    metadataUuids: Array<string>;
+    searchUuids: Array<string>;
+    labelUuids: Array<string>;
+  } | null;
 };
 
 /**
@@ -524,7 +529,6 @@ export type WebsiteProperties = {
   isFooterDisplayed: boolean;
   isSidebarDisplayed: boolean;
   supportsThemeToggle: boolean;
-  searchCollectionUuid: string | null;
   logoUrl: string | null;
 };
 

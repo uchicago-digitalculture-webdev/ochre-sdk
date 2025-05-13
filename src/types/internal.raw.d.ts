@@ -150,6 +150,17 @@ export type OchreTree = {
   identification: OchreIdentification;
   date?: string; // YYYY-MM-DD
   creators?: { creator: OchrePerson | Array<OchrePerson> };
+  searchOptions?: {
+    metadata?: {
+      option: string | Array<string>; // UUIDs
+    };
+    filters?: {
+      option: string | Array<string>; // UUIDs
+    };
+    labels?: {
+      option: string | Array<string>; // UUIDs
+    };
+  };
   items:
     | string
     | {

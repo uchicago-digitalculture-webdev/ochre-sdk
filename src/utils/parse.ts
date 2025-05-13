@@ -2976,7 +2976,6 @@ function parseWebsiteProperties(
   let isHeaderProjectDisplayed = true;
   let isFooterDisplayed = true;
   let isSidebarDisplayed = false;
-  let searchCollectionUuid: string | null = null;
   let supportsThemeToggle = true;
 
   const headerProperty = websiteProperties.find(
@@ -3028,13 +3027,6 @@ function parseWebsiteProperties(
     isSidebarDisplayed = sidebarProperty.content === "Yes";
   }
 
-  const collectionSearchProperty = websiteProperties.find(
-    (property) => property.label === "search-collection",
-  )?.values[0];
-  if (collectionSearchProperty) {
-    searchCollectionUuid = collectionSearchProperty.uuid;
-  }
-
   const supportsThemeToggleProperty = websiteProperties.find(
     (property) => property.label === "supports-theme-toggle",
   )?.values[0];
@@ -3060,7 +3052,6 @@ function parseWebsiteProperties(
     isFooterDisplayed,
     isSidebarDisplayed,
     supportsThemeToggle,
-    searchCollectionUuid,
     logoUrl:
       logoUuid !== null ?
         `https://ochre.lib.uchicago.edu/ochre?uuid=${logoUuid}&load`
@@ -3082,6 +3073,15 @@ export async function parseWebsite(
       websiteTree.properties.property
     : [websiteTree.properties.property],
   );
+
+  let collectionOptions: Website["collectionOptions"] | null = null;
+  if (websiteTree.searchOptions) {
+    collectionOptions = {
+      metadataUuids: [...(websiteTree.searchOptions.metadata?.option ?? [])],
+      searchUuids: [...(websiteTree.searchOptions.filters?.option ?? [])],
+      labelUuids: [...(websiteTree.searchOptions.labels?.option ?? [])],
+    };
+  }
 
   if (
     typeof websiteTree.items === "string" ||
@@ -3283,5 +3283,6 @@ export async function parseWebsite(
     pages,
     sidebar,
     properties,
+    collectionOptions,
   };
 }
