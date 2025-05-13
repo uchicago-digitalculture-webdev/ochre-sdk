@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.10
+
+### Patch Changes
+
+- 1f66c56: feat: add uuid property to Property type and update parsing logic to include uuid
+
 ## 0.7.9
 
 ### Patch Changes
