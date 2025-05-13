@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.11
+
+### Patch Changes
+
+- 69e2605: refactor: rename searchNestedProperties to includeNestedProperties in PropertyOptions and update related functions
+
 ## 0.7.10
 
 ### Patch Changes
