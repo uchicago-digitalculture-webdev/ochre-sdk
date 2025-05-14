@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.12
+
+### Patch Changes
+
+- d1b4532: feat: introduce OchreTreeCollectionOption type and update collectionOptions structure in internal.raw.d.ts; modify parseWebsite function to utilize new collectionOptions
+
 ## 0.7.11
 
 ### Patch Changes
