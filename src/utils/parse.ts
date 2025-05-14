@@ -66,6 +66,7 @@ import type {
   Website,
   WebsiteProperties,
 } from "../types/main.js";
+import { randomUUID } from "node:crypto";
 import {
   componentSchema,
   propertyValueContentTypeSchema,
@@ -878,7 +879,8 @@ export function parseImageMap(imageMap: OchreImageMap): ImageMap {
     Array.isArray(imageMap.area) ? imageMap.area : [imageMap.area];
   for (const area of imageMapAreasToParse) {
     returnImageMap.area.push({
-      uuid: area.uuid,
+      uuid: randomUUID(),
+      itemUuid: area.uuid,
       publicationDateTime:
         area.publicationDateTime != null ?
           new Date(area.publicationDateTime)

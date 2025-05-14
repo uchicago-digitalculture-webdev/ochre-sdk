@@ -172,6 +172,7 @@ export type Link = {
  */
 export type ImageMapArea = {
   uuid: string;
+  itemUuid: string;
   publicationDateTime: Date | null;
   type: string;
   title: string;
