@@ -28,8 +28,8 @@
     "access": "public"
   },
   "scripts": {
-    "dev": "tsup src/index.ts --watch",
-    "build": "tsup",
+    "dev": "tsdown src/index.ts --watch",
+    "build": "tsdown",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --check .",
@@ -67,7 +67,7 @@
     "eslint-plugin-unused-imports": "^4.1.4",
     "prettier": "^3.5.3",
     "terser": "^5.39.1",
-    "tsup": "^8.4.0",
+    "tsdown": "^0.11.9",
     "typescript": "^5.8.3",
     "vitest": "^3.1.3"
   },
