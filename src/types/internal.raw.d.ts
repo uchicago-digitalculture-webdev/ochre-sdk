@@ -138,6 +138,11 @@ export type OchreMetadata = {
   description: OchreStringContent;
 };
 
+type OchreTreeCollectionOption = {
+  type: "set" | "variable";
+  content: string; // UUID
+};
+
 /**
  * Raw tree structure corresponding to the parsed Tree type
  */
@@ -150,15 +155,15 @@ export type OchreTree = {
   identification: OchreIdentification;
   date?: string; // YYYY-MM-DD
   creators?: { creator: OchrePerson | Array<OchrePerson> };
-  searchOptions?: {
-    metadata?: {
-      option: string | Array<string>; // UUIDs
+  collectionOptions?: {
+    metadataUuids: {
+      uuid?: OchreTreeCollectionOption | Array<OchreTreeCollectionOption>;
     };
-    filters?: {
-      option: string | Array<string>; // UUIDs
+    searchUuids: {
+      uuid?: OchreTreeCollectionOption | Array<OchreTreeCollectionOption>;
     };
-    labels?: {
-      option: string | Array<string>; // UUIDs
+    labelUuids: {
+      uuid?: OchreTreeCollectionOption | Array<OchreTreeCollectionOption>;
     };
   };
   items:

@@ -3253,7 +3253,7 @@ export async function parseWebsite(
   }
 
   let collectionOptions: Website["collectionOptions"] | null = null;
-  if (websiteTree.searchOptions) {
+  if (websiteTree.collectionOptions) {
     const collectionUuids = [];
     for (const page of pages) {
       for (const item of page.items) {
@@ -3266,9 +3266,27 @@ export async function parseWebsite(
     collectionOptions = {
       uuids: collectionUuids,
       properties: {
-        metadataUuids: [...(websiteTree.searchOptions.metadata?.option ?? [])],
-        searchUuids: [...(websiteTree.searchOptions.filters?.option ?? [])],
-        labelUuids: [...(websiteTree.searchOptions.labels?.option ?? [])],
+        metadataUuids:
+          websiteTree.collectionOptions.metadataUuids.uuid ?
+            (Array.isArray(websiteTree.collectionOptions.metadataUuids.uuid) ?
+              websiteTree.collectionOptions.metadataUuids.uuid
+            : [websiteTree.collectionOptions.metadataUuids.uuid]
+            ).map((uuid) => uuid.content)
+          : [],
+        searchUuids:
+          websiteTree.collectionOptions.searchUuids.uuid ?
+            (Array.isArray(websiteTree.collectionOptions.searchUuids.uuid) ?
+              websiteTree.collectionOptions.searchUuids.uuid
+            : [websiteTree.collectionOptions.searchUuids.uuid]
+            ).map((uuid) => uuid.content)
+          : [],
+        labelUuids:
+          websiteTree.collectionOptions.labelUuids.uuid ?
+            (Array.isArray(websiteTree.collectionOptions.labelUuids.uuid) ?
+              websiteTree.collectionOptions.labelUuids.uuid
+            : [websiteTree.collectionOptions.labelUuids.uuid]
+            ).map((uuid) => uuid.content)
+          : [],
       },
     };
   }
