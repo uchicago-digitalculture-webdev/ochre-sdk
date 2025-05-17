@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.14
+
+### Patch Changes
+
+- 21364b8: revert: add itemUuid to ImageMapArea type and update parseImageMap function to generate uuid using randomUUID
+
 ## 0.7.13
 
 ### Patch Changes
