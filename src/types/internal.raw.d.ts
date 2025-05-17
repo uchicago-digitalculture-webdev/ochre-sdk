@@ -563,17 +563,15 @@ export type OchreObservation = {
  * Raw coordinates structure corresponding to the parsed Coordinates type
  */
 export type OchreCoordinates = {
-  latitude: number;
-  longitude: number;
-  elevation?: number;
   coordinatesArray?: string;
   coord?: {
-    coordLatitude: number;
-    coordLongitude: number;
+    uuid: string;
     coordType: string;
     coordLabel: FakeString;
+    coordLatitude: number;
+    coordLongitude: number;
+    altitude?: number;
     arrayString: string;
-    uuid: string;
   };
 };
 

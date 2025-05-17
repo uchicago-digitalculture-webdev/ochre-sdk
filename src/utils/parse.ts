@@ -66,7 +66,6 @@ import type {
   Website,
   WebsiteProperties,
 } from "../types/main.js";
-import { randomUUID } from "node:crypto";
 import {
   componentSchema,
   propertyValueContentTypeSchema,
@@ -594,7 +593,7 @@ export function parseNotes(
  */
 export function parseCoordinates(
   coordinates: OchreCoordinates | string,
-): Coordinates {
+): Coordinates | null {
   if (typeof coordinates === "string") {
     const [latitude, longitude] = coordinates.split(", ");
     return {
@@ -605,14 +604,15 @@ export function parseCoordinates(
     };
   }
 
+  if (coordinates.coord == null) {
+    return null;
+  }
+
   return {
-    latitude: coordinates.latitude,
-    longitude: coordinates.longitude,
-    type: coordinates.coord?.coordType ?? null,
-    label:
-      coordinates.coord?.coordLabel != null ?
-        parseFakeString(coordinates.coord.coordLabel)
-      : null,
+    latitude: coordinates.coord.coordLatitude,
+    longitude: coordinates.coord.coordLongitude,
+    type: coordinates.coord.coordType,
+    label: parseFakeString(coordinates.coord.coordLabel),
   };
 }
 
@@ -879,8 +879,7 @@ export function parseImageMap(imageMap: OchreImageMap): ImageMap {
     Array.isArray(imageMap.area) ? imageMap.area : [imageMap.area];
   for (const area of imageMapAreasToParse) {
     returnImageMap.area.push({
-      uuid: randomUUID(),
-      itemUuid: area.uuid,
+      uuid: area.uuid,
       publicationDateTime:
         area.publicationDateTime != null ?
           new Date(area.publicationDateTime)

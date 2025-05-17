@@ -161,19 +161,7 @@ function parseWhitespace(contentString: string, whitespace: string): string {
  * ```
  */
 export function parseFakeString(string: FakeString): string {
-  let returnString = "";
-
-  if (typeof string === "string") {
-    returnString = string;
-  } else if (typeof string === "number") {
-    returnString = string.toString();
-  } else if (typeof string === "boolean") {
-    returnString = string ? "Yes" : "No";
-  }
-
-  return returnString
-    .replaceAll("&#39;", "'")
-    .replaceAll(/^(\d+)\./gm, String.raw`$1\.`);
+  return String(string).replaceAll("&#39;", "'");
 }
 
 /**
@@ -186,10 +174,7 @@ export function parseStringItem(item: OchreStringItem): string {
   let returnString = "";
 
   switch (typeof item.string) {
-    case "string": {
-      returnString = item.string;
-      break;
-    }
+    case "string":
     case "number":
     case "boolean": {
       returnString = parseFakeString(item.string);
@@ -231,9 +216,7 @@ export function parseStringItem(item: OchreStringItem): string {
     }
   }
 
-  return returnString
-    .replaceAll("&#39;", "'")
-    .replaceAll(/^(\d+)\./gm, String.raw`$1\.`);
+  return returnString;
 }
 
 /**
@@ -418,9 +401,7 @@ export function parseStringDocumentItem(
       returnString = parseWhitespace(parseEmail(returnString), item.whitespace);
     }
 
-    return returnString
-      .replaceAll("&#39;", "'")
-      .replaceAll(/^(\d+)\./gm, String.raw`$1\.`);
+    return returnString.replaceAll("&#39;", "'");
   } else {
     returnString = parseFakeString(item.content);
 
@@ -433,7 +414,7 @@ export function parseStringDocumentItem(
     }
   }
 
-  return returnString.replaceAll(/^(\d+)\./gm, String.raw`$1\.`);
+  return returnString;
 }
 
 /**
@@ -476,7 +457,7 @@ export function parseStringContent(
       }
     }
     default: {
-      return String(content.content).replaceAll(/^(\d+)\./gm, String.raw`$1\.`);
+      return String(content.content);
     }
   }
 }
