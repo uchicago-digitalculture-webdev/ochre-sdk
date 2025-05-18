@@ -285,7 +285,6 @@ export type SpatialUnit = {
   uuid: string;
   category: "spatialUnit";
   publicationDateTime: Date | null;
-  type: string;
   number: number;
   context: Context | null;
   license: License | null;

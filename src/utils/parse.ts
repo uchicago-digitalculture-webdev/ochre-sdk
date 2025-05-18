@@ -1545,7 +1545,6 @@ export function parseSpatialUnit(spatialUnit: OchreSpatialUnit): SpatialUnit {
       spatialUnit.publicationDateTime != null ?
         new Date(spatialUnit.publicationDateTime)
       : null,
-    type: spatialUnit.type,
     number: spatialUnit.n,
     context:
       "context" in spatialUnit && spatialUnit.context ?

@@ -247,7 +247,6 @@ export type OchreResource = {
 export type OchreSpatialUnit = {
   uuid: string;
   publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
-  type: string;
   n: number;
   availability?: OchreLicense;
   context?: OchreContext;
