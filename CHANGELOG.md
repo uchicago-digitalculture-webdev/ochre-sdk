@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.15
+
+### Patch Changes
+
+- 4fb0f67: refactor: remove 'type' property from OchreSpatialUnit and SpatialUnit types
+
 ## 0.7.14
 
 ### Patch Changes
