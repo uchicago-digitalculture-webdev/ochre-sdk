@@ -62,7 +62,6 @@
     "@changesets/cli": "^2.29.4",
     "@types/node": "^22.15.19",
     "eslint": "^9.27.0",
-    "eslint-plugin-unused-imports": "^4.1.4",
     "prettier": "^3.5.3",
     "terser": "^5.39.2",
     "tsdown": "^0.11.12",

@@ -1,11 +1,7 @@
 import antfu from "@antfu/eslint-config";
-import pluginUnused from "eslint-plugin-unused-imports";
 
 export default antfu({
   stylistic: false,
-  plugins: {
-    "unused-imports": pluginUnused,
-  },
   markdown: false,
   typescript: {
     parserOptions: {
@@ -46,26 +42,29 @@ export default antfu({
       ],
       "ts/prefer-includes": "warn",
       "ts/prefer-optional-chain": "warn",
+      "ts/await-thenable": "error",
     },
   },
   unicorn: {
     allRecommended: true,
+    overrides: {
+      "unicorn/filename-case": [
+        "error",
+        {
+          case: "kebabCase",
+          ignore: ["README.md", "CONTRIBUTING.md", "CHANGELOG.md", "LICENSE"],
+        },
+      ],
+      "unicorn/better-regex": "error",
+      "unicorn/prevent-abbreviations": "off",
+      "unicorn/no-nested-ternary": "off",
+      "unicorn/no-null": "off",
+      "unicorn/no-negated-condition": "off",
+      "unicorn/no-thenable": "off",
+      "unicorn/prefer-ternary": "off",
+    },
   },
   rules: {
-    "unicorn/filename-case": [
-      "error",
-      {
-        case: "kebabCase",
-        ignore: ["README.md", "CONTRIBUTING.md", "CHANGELOG.md", "LICENSE"],
-      },
-    ],
-    "unicorn/better-regex": "error",
-    "unicorn/prevent-abbreviations": "off",
-    "unicorn/no-nested-ternary": "off",
-    "unicorn/no-null": "off",
-    "unicorn/no-negated-condition": "off",
-    "unicorn/no-thenable": "off",
-    "unicorn/prefer-ternary": "off",
     "no-console": ["warn"],
     "antfu/no-top-level-await": ["off"],
     "node/prefer-global/process": ["off"],
