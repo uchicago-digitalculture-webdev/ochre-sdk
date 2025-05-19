@@ -5,10 +5,7 @@ import type { Language } from "iso-639-3";
  */
 export type Data<T extends DataCategory> = {
   uuid: string;
-  belongsTo: {
-    uuid: string;
-    abbreviation: string;
-  };
+  belongsTo: { uuid: string; abbreviation: string };
   publicationDateTime: Date;
   metadata: Metadata;
   item:
@@ -37,10 +34,7 @@ export type DataCategory =
 /**
  * Basic identification information used across multiple types
  */
-export type Identification = {
-  label: string;
-  abbreviation: string;
-};
+export type Identification = { label: string; abbreviation: string };
 
 /**
  * Metadata information for items including project, publisher and language details
@@ -84,18 +78,12 @@ export type ContextNode = {
 /**
  * Contains the full context information including nodes and display path
  */
-export type Context = {
-  nodes: Array<ContextNode>;
-  displayPath: string;
-};
+export type Context = { nodes: Array<ContextNode>; displayPath: string };
 
 /**
  * License information for content items
  */
-export type License = {
-  content: string;
-  url: string;
-};
+export type License = { content: string; url: string };
 
 /**
  * Represents a person (author, creator, etc.) with their identification and metadata
@@ -124,11 +112,7 @@ export type Person = {
 /**
  * Represents a note with number, title and content
  */
-export type Note = {
-  number: number;
-  title: string | null;
-  content: string;
-};
+export type Note = { number: number; title: string | null; content: string };
 
 /**
  * Represents an image with its metadata and content
@@ -216,10 +200,7 @@ export type Observation = {
 export type Event = {
   date: Date | null;
   label: string;
-  agent: {
-    uuid: string;
-    content: string;
-  } | null;
+  agent: { uuid: string; content: string } | null;
 };
 
 /**
@@ -234,19 +215,12 @@ export type Interpretation = {
 /**
  * Represents a document with content and footnotes
  */
-export type Document = {
-  content: string;
-  footnotes: Array<Footnote>;
-};
+export type Document = { content: string; footnotes: Array<Footnote> };
 
 /**
  * Represents a footnote in a document
  */
-export type Footnote = {
-  uuid: string;
-  label: string;
-  content: string;
-};
+export type Footnote = { uuid: string; label: string; content: string };
 
 /**
  * Represents a resource item with associated metadata, content and relationships
@@ -354,14 +328,8 @@ export type Bibliography = {
     short: string | null;
     long: string | null;
   };
-  publicationInfo: {
-    publishers: Array<Person>;
-    startDate: Date | null;
-  };
-  entryInfo: {
-    startIssue: string;
-    startVolume: string;
-  } | null;
+  publicationInfo: { publishers: Array<Person>; startDate: Date | null };
+  entryInfo: { startIssue: string; startVolume: string } | null;
   source: {
     resource: Pick<
       Resource,
@@ -483,10 +451,7 @@ export type Website = {
   uuid: string;
   publicationDateTime: Date | null;
   identification: Identification;
-  project: {
-    name: string;
-    website: string | null;
-  };
+  project: { name: string; website: string | null };
   creators: Array<Person>;
   license: License | null;
   pages: Array<Webpage>;
@@ -581,10 +546,7 @@ export type WebElement = {
  * Union type of all possible web element components
  */
 export type WebElementComponent =
-  | {
-      component: "annotated-document";
-      document: Document;
-    }
+  | { component: "annotated-document"; document: Document }
   | { component: "annotated-image"; imageUuid: string; isSearchable: boolean }
   | {
       component: "bibliography";
@@ -615,10 +577,7 @@ export type WebElementComponent =
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
     }
   | { component: "empty-space"; height: string | null; width: string | null }
-  | {
-      component: "filter-categories";
-      filterId: string;
-    }
+  | { component: "filter-categories"; filterId: string }
   | {
       component: "iframe";
       href: string;
@@ -640,9 +599,7 @@ export type WebElementComponent =
       altTextSource: "name" | "abbreviation" | "description";
       isTransparentBackground: boolean;
       isCover: boolean;
-      carouselOptions: {
-        secondsPerImage: number;
-      } | null;
+      carouselOptions: { secondsPerImage: number } | null;
     }
   | { component: "image-gallery"; galleryId: string; isSearchable: boolean }
   | { component: "n-columns"; columns: Array<WebElement> }
@@ -672,10 +629,7 @@ export type WebImage = {
 /**
  * Represents a CSS style with label and value
  */
-export type Style = {
-  label: string;
-  value: string;
-};
+export type Style = { label: string; value: string };
 
 /**
  * Represents a block of vertical or horizontal content alignment

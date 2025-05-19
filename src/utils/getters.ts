@@ -8,9 +8,7 @@ type PropertyOptions = {
   includeNestedProperties: boolean;
 };
 
-const DEFAULT_OPTIONS: PropertyOptions = {
-  includeNestedProperties: false,
-};
+const DEFAULT_OPTIONS: PropertyOptions = { includeNestedProperties: false };
 
 /**
  * Finds a property by its label in an array of properties

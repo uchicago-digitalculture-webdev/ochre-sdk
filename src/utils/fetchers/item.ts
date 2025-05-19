@@ -68,10 +68,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
   | {
       error: null;
       metadata: Metadata;
-      belongsTo: {
-        uuid: string;
-        abbreviation: string;
-      };
+      belongsTo: { uuid: string; abbreviation: string };
       item: T extends "resource" ? Resource
       : T extends "spatialUnit" ? SpatialUnit
       : T extends "concept" ? Concept

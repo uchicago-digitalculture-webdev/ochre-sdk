@@ -1,6 +1,4 @@
 /** @type {import('prettier').Config} */
-const config = {
-  experimentalTernaries: true,
-};
+const config = { objectWrap: "collapse", experimentalTernaries: true };
 
 export default config;

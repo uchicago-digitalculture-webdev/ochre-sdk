@@ -166,9 +166,7 @@ export type OchreTree = {
   };
   items:
     | string
-    | {
-        resource: OchreResource | Array<OchreResource>;
-      }
+    | { resource: OchreResource | Array<OchreResource> }
     | { spatialUnit: OchreSpatialUnit | Array<OchreSpatialUnit> }
     | { concept: OchreConcept | Array<OchreConcept> }
     | { period: OchrePeriod | Array<OchrePeriod> }
@@ -224,9 +222,7 @@ export type OchreResource = {
   creators?: { creator: OchrePerson | Array<OchrePerson> };
   notes?: { note: OchreNote | Array<OchreNote> };
   document?:
-    | {
-        content: OchreStringRichText | Array<OchreStringRichText>;
-      }
+    | { content: OchreStringRichText | Array<OchreStringRichText> }
     | object;
   imagemap?: OchreImageMap;
   periods?: { period: OchrePeriod | Array<OchrePeriod> };
@@ -390,51 +386,27 @@ export type OchreBibliography = {
   identification?: OchreIdentification;
   project?: { identification: OchreIdentification };
   context?: OchreContext;
-  sourceDocument?: {
-    uuid: string;
-    content: FakeString;
-  };
+  sourceDocument?: { uuid: string; content: FakeString };
   publicationInfo?: {
     publishers?: { publishers: { person: OchrePerson | Array<OchrePerson> } };
-    startDate?: {
-      month: number;
-      year: number;
-      day: number;
-    };
+    startDate?: { month: number; year: number; day: number };
   };
-  entryInfo?: {
-    startIssue: FakeString;
-    startVolume: FakeString;
-  };
+  entryInfo?: { startIssue: FakeString; startVolume: FakeString };
   citationFormat?: string;
   citationFormatSpan?:
-    | {
-        span: {
-          content: FakeString;
-        };
-      }
-    | {
-        "default:span": {
-          content: FakeString;
-        };
-      };
+    | { span: { content: FakeString } }
+    | { "default:span": { content: FakeString } };
   referenceFormatDiv?:
     | {
         div: {
-          div: {
-            class: string;
-            content: FakeString;
-          };
+          div: { class: string; content: FakeString };
           style: string;
           class: string;
         };
       }
     | {
         "default:div": {
-          "default:div": {
-            class: string;
-            content: FakeString;
-          };
+          "default:div": { class: string; content: FakeString };
           style: string;
           class: string;
         };
@@ -533,11 +505,7 @@ export type OchrePerson = {
   n?: number;
   context?: OchreContext;
   availability?: OchreLicense;
-  address?: {
-    country?: string;
-    city?: string;
-    state?: string;
-  };
+  address?: { country?: string; city?: string; state?: string };
   coordinates?: OchreCoordinates;
   content?: FakeString | null;
   events?: { event: OchreEvent | Array<OchreEvent> };
@@ -577,10 +545,7 @@ export type OchreCoordinates = {
  */
 export type OchreEvent = {
   dateTime?: string; // YYYY-MM-DD
-  agent?: {
-    uuid: string;
-    content: FakeString;
-  };
+  agent?: { uuid: string; content: FakeString };
   comment?: FakeString;
   label: OchreStringContent;
 };

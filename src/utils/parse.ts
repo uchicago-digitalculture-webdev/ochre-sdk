@@ -114,10 +114,7 @@ export function parseIdentification(
   } catch (error) {
     console.error(error);
 
-    return {
-      label: "",
-      abbreviation: "",
-    };
+    return { label: "", abbreviation: "" };
   }
 }
 
@@ -149,10 +146,7 @@ export function parseLanguages(
  * @returns Parsed Metadata object
  */
 export function parseMetadata(metadata: OchreMetadata): Metadata {
-  let identification: Identification = {
-    label: "",
-    abbreviation: "",
-  };
+  let identification: Identification = { label: "", abbreviation: "" };
   if (metadata.item) {
     if (metadata.item.label || metadata.item.abbreviation) {
       let label = "";
@@ -270,10 +264,7 @@ export function parseLicense(license: OchreLicense): License | null {
     return null;
   }
 
-  return {
-    content: license.license.content,
-    url: license.license.target,
-  };
+  return { content: license.license.content, url: license.license.target };
 }
 
 /**
@@ -535,11 +526,7 @@ export function parseNotes(
         continue;
       }
 
-      returnNotes.push({
-        number: -1,
-        title: null,
-        content: note,
-      });
+      returnNotes.push({ number: -1, title: null, content: note });
       continue;
     }
 
@@ -1768,9 +1755,7 @@ async function parseWebElementProperties(
     componentProperty.values[0]!.content,
   );
 
-  const properties: Record<string, unknown> = {
-    component: componentName,
-  };
+  const properties: Record<string, unknown> = { component: componentName };
 
   const links =
     elementResource.links ?
@@ -2150,9 +2135,7 @@ async function parseWebElementProperties(
         isCover = isCoverProperty === "Yes";
       }
 
-      let carouselOptions: {
-        secondsPerImage: number;
-      } | null = null;
+      let carouselOptions: { secondsPerImage: number } | null = null;
       if (images.length > 1) {
         const variantProperty = getPropertyByLabel(
           componentProperty.properties,
@@ -2178,9 +2161,7 @@ async function parseWebElementProperties(
           }
         }
 
-        carouselOptions = {
-          secondsPerImage,
-        };
+        carouselOptions = { secondsPerImage };
       }
 
       properties.images = images;
@@ -2947,11 +2928,7 @@ function parseWebsiteProperties(
   )?.values[0]?.content;
   privacy ??= "public";
 
-  const result = websiteSchema.safeParse({
-    type,
-    status,
-    privacy,
-  });
+  const result = websiteSchema.safeParse({ type, status, privacy });
   if (!result.success) {
     throw new Error(`Invalid website properties: ${result.error.message}`);
   }
