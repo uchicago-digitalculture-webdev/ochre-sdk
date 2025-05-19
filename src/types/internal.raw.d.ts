@@ -1,5 +1,3 @@
-import type { Language } from "iso-639-3";
-
 /**
  * Raw string value that can be a string, number, or boolean
  */
@@ -32,8 +30,8 @@ export type OchreStringItem = {
     | FakeString
     | OchreStringItemContent
     | Array<FakeString | OchreStringItemContent>;
-  lang?: Language["iso6393"]; // 3 character code (zxx = "a.k.a.")
-  languages?: string; // 3 character codes, semicolon separated
+  lang?: string; // ISO 639-3 3 character code (zxx = "a.k.a.")
+  languages?: string; // ISO 639-3 3 character codes, semicolon separated
 };
 
 /**
@@ -49,7 +47,7 @@ export type OchreStringContent = {
 export type OchreStringRichTextItemContent = {
   content: FakeString;
   title?: FakeString;
-  lang?: Language["iso6393"]; // 3 character code (zxx = "a.k.a.")
+  lang?: string; // ISO 639-3 3 character code (zxx = "a.k.a.")
   whitespace?: string; // "newline" | "trailing" | "leading" (space separated)
   rend?: string; // "bold" | "italic" | "underline"  (space separated)
 };
@@ -86,7 +84,7 @@ export type OchreStringRichTextItem =
 export type OchreStringRichText = {
   string: FakeString | OchreStringRichTextItem | Array<OchreStringRichTextItem>;
   title?: FakeString;
-  lang?: Language["iso6393"]; // 3 character code (zxx = "a.k.a.")
+  lang?: string; // ISO 639-3 3 character code (zxx = "a.k.a.")
 };
 
 /**
@@ -99,7 +97,7 @@ export type OchreData = {
     belongsTo: FakeString;
     publicationDateTime: string; // YYYY-MM-DDThh:mm:ssZ
     metadata: OchreMetadata;
-    languages?: string; // 3 character codes, semicolon separated
+    languages?: string; // ISO 639-3 3 character codes, semicolon separated
   } & (
     | { tree: OchreTree }
     | { set: OchreSet }
