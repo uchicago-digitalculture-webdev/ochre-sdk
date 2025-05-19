@@ -5,13 +5,13 @@ import type {
   WebElementComponent,
   WebsiteProperties,
 } from "./types/main.js";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 /**
  * Schema for validating UUIDs
  * @internal
  */
-export const uuidSchema = z.string().uuid({ message: "Invalid UUID provided" });
+export const uuidSchema = z.uuid({ message: "Invalid UUID provided" });
 
 /**
  * Schema for validating website properties
@@ -113,7 +113,7 @@ export const propertyValueContentTypeSchema = z.enum([
  */
 export const gallerySchema = z
   .object({
-    uuid: z.string().uuid({ message: "Invalid UUID" }),
+    uuid: z.uuid({ message: "Invalid UUID" }),
     filter: z.string().optional(),
     page: z.number().positive({ message: "Page must be positive" }),
     perPage: z.number().positive({ message: "Per page must be positive" }),
@@ -158,4 +158,4 @@ export const whitespaceSchema = z
  * Schema for validating email addresses
  * @internal
  */
-export const emailSchema = z.string().email({ message: "Invalid email" });
+export const emailSchema = z.email({ message: "Invalid email" });
