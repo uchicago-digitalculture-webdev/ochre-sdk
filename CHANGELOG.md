@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.18
+
+### Patch Changes
+
+- 96ff50d: feat: add footnotes and UUID metadata fetchers with corresponding types
+
 ## 0.7.17
 
 ### Patch Changes
