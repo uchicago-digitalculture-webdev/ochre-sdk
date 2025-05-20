@@ -1,5 +1,3 @@
-import type { Language } from "iso-639-3";
-
 /**
  * Represents the core data structure containing item information and metadata
  */
@@ -51,7 +49,7 @@ export type Metadata = {
   } | null;
   dataset: string;
   publisher: string;
-  languages: Array<Language["iso6393"]>;
+  languages: Array<string>;
   identifier: string;
   description: string;
 };
@@ -188,7 +186,7 @@ export type Coordinates = {
 export type Observation = {
   number: number;
   date: Date | null;
-  observers: Array<string>;
+  observers: Array<string> | Array<Person>;
   notes: Array<Note>;
   links: Array<Link>;
   properties: Array<Property>;
@@ -387,11 +385,20 @@ export type PropertyValueContentType =
 /**
  * Represents a property value with type information
  */
-export type PropertyValueContent = {
-  content: string | number | boolean | Date | null;
-  booleanValue: boolean | null;
+export type PropertyValueContent<T extends PropertyValueContentType> = {
+  content: T extends "string" ? string
+  : T extends "IDREF" ? string
+  : T extends "integer" ? number
+  : T extends "decimal" ? number
+  : T extends "boolean" ? boolean
+  : T extends "date" ? Date
+  : T extends "dateTime" ? Date
+  : T extends "time" ? Date
+  : // : T extends "coordinate" ? Coordinates
+    null;
+  booleanLabel: T extends "boolean" ? string | null : null;
   isUncertain: boolean;
-  type: PropertyValueContentType;
+  type: T;
   category: string;
   uuid: string | null;
   publicationDateTime: Date | null;
@@ -401,10 +408,12 @@ export type PropertyValueContent = {
 /**
  * Represents a property with label, values and nested properties
  */
-export type Property = {
+export type Property<
+  T extends PropertyValueContentType = PropertyValueContentType,
+> = {
   uuid: string;
   label: string;
-  values: Array<PropertyValueContent>;
+  values: Array<PropertyValueContent<T>>;
   comment: string | null;
   properties: Array<Property>;
 };

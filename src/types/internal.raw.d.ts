@@ -518,7 +518,7 @@ export type OchrePerson = {
 export type OchreObservation = {
   observationNo: number;
   date?: string; // YYYY-MM-DD
-  observers?: FakeString;
+  observers?: OchrePerson | Array<OchrePerson>;
   notes?: { note: OchreNote | Array<OchreNote> };
   links?: OchreLink | Array<OchreLink>;
   properties?: { property: OchreProperty | Array<OchreProperty> };

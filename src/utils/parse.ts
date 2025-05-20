@@ -615,9 +615,19 @@ export function parseObservation(observation: OchreObservation): Observation {
     date: observation.date != null ? new Date(observation.date) : null,
     observers:
       observation.observers != null ?
-        parseFakeString(observation.observers)
-          .split(";")
-          .map((observer) => observer.trim())
+        (
+          typeof observation.observers === "string" ||
+          typeof observation.observers === "number" ||
+          typeof observation.observers === "boolean"
+        ) ?
+          parseFakeString(observation.observers)
+            .split(";")
+            .map((observer) => observer.trim())
+        : parsePersons(
+            Array.isArray(observation.observers) ?
+              observation.observers
+            : [observation.observers],
+          )
       : [],
     notes:
       observation.notes ?
@@ -699,8 +709,8 @@ export function parseProperty(
     : [];
 
   const values = valuesToParse.map((value) => {
-    let content: string | number | boolean | Date | null = null;
-    let booleanValue = null;
+    let content: string | number | boolean | Date | Coordinates | null = null;
+    let booleanLabel: string | null = null;
 
     if (
       typeof value === "string" ||
@@ -708,9 +718,9 @@ export function parseProperty(
       typeof value === "boolean"
     ) {
       content = parseFakeString(value);
-      const returnValue: PropertyValueContent = {
+      const returnValue: PropertyValueContent<"string"> = {
         content,
-        booleanValue,
+        booleanLabel,
         isUncertain: false,
         type: "string",
         category: "value",
@@ -721,36 +731,6 @@ export function parseProperty(
 
       return returnValue;
     } else {
-      switch (value.type) {
-        case "integer":
-        case "decimal": {
-          content = Number(value.content);
-          break;
-        }
-        case "dateTime": {
-          content =
-            value.content ?
-              typeof value.content === "string" ?
-                new Date(value.content)
-              : new Date(parseStringContent({ content: value.content }))
-            : null;
-          break;
-        }
-        default: {
-          if ("slug" in value && value.slug != null) {
-            content = parseFakeString(value.slug);
-          } else if (value.content != null) {
-            content = parseStringContent({ content: value.content });
-          }
-
-          if (value.type === "boolean") {
-            booleanValue = value.booleanValue ?? null;
-          }
-
-          break;
-        }
-      }
-
       let parsedType: PropertyValueContentType = "string";
       if (value.type != null) {
         const { data, error } = propertyValueContentTypeSchema.safeParse(
@@ -765,9 +745,49 @@ export function parseProperty(
         parsedType = data;
       }
 
-      const returnValue: PropertyValueContent = {
+      switch (parsedType) {
+        case "integer":
+        case "decimal": {
+          content = Number(value.content);
+          break;
+        }
+        case "date":
+        case "dateTime": {
+          content =
+            value.content ?
+              typeof value.content === "string" ?
+                new Date(value.content)
+              : new Date(parseStringContent({ content: value.content }))
+            : null;
+          break;
+        }
+        case "coordinate": {
+          content = null;
+          break;
+        }
+        case "boolean": {
+          if (value.content != null) {
+            booleanLabel = parseStringContent({ content: value.content });
+          }
+
+          content = value.booleanValue ?? null;
+
+          break;
+        }
+        default: {
+          if ("slug" in value && value.slug != null) {
+            content = parseFakeString(value.slug);
+          } else if (value.content != null) {
+            content = parseStringContent({ content: value.content });
+          }
+
+          break;
+        }
+      }
+
+      const returnValue: PropertyValueContent<typeof parsedType> = {
         content,
-        booleanValue,
+        booleanLabel,
         isUncertain: value.isUncertain ?? false,
         type: parsedType,
         category: value.category ?? "value",
@@ -1807,7 +1827,7 @@ async function parseWebElementProperties(
         getPropertyValueByLabel(
           componentProperty.properties,
           "is-searchable",
-        ) === "Yes";
+        ) === true;
 
       properties.imageUuid = imageLinks[0]!.uuid;
       properties.isSearchable = isSearchable;
@@ -1914,7 +1934,7 @@ async function parseWebElementProperties(
         "show-count",
       );
       if (showCountProperty !== null) {
-        showCount = showCountProperty === "Yes";
+        showCount = showCountProperty === true;
       }
 
       let isSearchable = false;
@@ -1923,7 +1943,7 @@ async function parseWebElementProperties(
         "is-searchable",
       );
       if (isSearchableProperty !== null) {
-        isSearchable = isSearchableProperty === "Yes";
+        isSearchable = isSearchableProperty === true;
       }
 
       let layout = getPropertyValueByLabel(
@@ -1974,7 +1994,7 @@ async function parseWebElementProperties(
         "is-searchable",
       );
       if (isSearchableProperty !== null) {
-        isSearchable = isSearchableProperty === "Yes";
+        isSearchable = isSearchableProperty === true;
       }
 
       properties.entriesId = entriesLink.uuid;
@@ -2087,7 +2107,7 @@ async function parseWebElementProperties(
         "is-full-width",
       );
       if (isFullWidthProperty !== null) {
-        isFullWidth = isFullWidthProperty === "Yes";
+        isFullWidth = isFullWidthProperty === true;
       }
 
       let isFullHeight = true;
@@ -2096,7 +2116,7 @@ async function parseWebElementProperties(
         "is-full-height",
       );
       if (isFullHeightProperty !== null) {
-        isFullHeight = isFullHeightProperty === "Yes";
+        isFullHeight = isFullHeightProperty === true;
       }
 
       let imageQuality = getPropertyValueByLabel(
@@ -2123,7 +2143,7 @@ async function parseWebElementProperties(
         "is-transparent",
       );
       if (isTransparentBackgroundProperty !== null) {
-        isTransparentBackground = isTransparentBackgroundProperty === "Yes";
+        isTransparentBackground = isTransparentBackgroundProperty === true;
       }
 
       let isCover = false;
@@ -2132,7 +2152,7 @@ async function parseWebElementProperties(
         "is-cover",
       );
       if (isCoverProperty !== null) {
-        isCover = isCoverProperty === "Yes";
+        isCover = isCoverProperty === true;
       }
 
       let carouselOptions: { secondsPerImage: number } | null = null;
@@ -2193,7 +2213,7 @@ async function parseWebElementProperties(
         getPropertyValueByLabel(
           componentProperty.properties,
           "is-searchable",
-        ) === "Yes";
+        ) === true;
 
       properties.galleryId = galleryLink.uuid;
       properties.isSearchable = isSearchable;
@@ -2299,10 +2319,10 @@ async function parseWebElementProperties(
         componentProperty.properties,
         "chapters-displayed",
       );
-      isChaptersDislayed ??= "Yes";
+      isChaptersDislayed ??= true;
 
       properties.videoId = videoLink.uuid;
-      properties.isChaptersDislayed = isChaptersDislayed === "Yes";
+      properties.isChaptersDislayed = isChaptersDislayed === true;
       break;
     }
     default: {
@@ -2365,7 +2385,7 @@ async function parseWebElement(
     (property) => property.label === "section-sidebar-displayed",
   );
   const isDisplayedInBlockSectionSidebar =
-    blockSectionSidebarProperty?.values[0]?.booleanValue === true;
+    blockSectionSidebarProperty?.values[0]?.content === true;
 
   const elementResourceProperties =
     elementResource.properties?.property ?
@@ -2573,7 +2593,7 @@ async function parseWebpage(
       (property) => property.label === "header",
     )?.values[0];
     if (headerProperty) {
-      displayedInHeader = headerProperty.content === "Yes";
+      displayedInHeader = headerProperty.content === true;
     }
 
     const widthProperty = webpageSubProperties.find(
@@ -2594,7 +2614,7 @@ async function parseWebpage(
       (property) => property.label === "sidebar-visible",
     )?.values[0];
     if (isSidebarDisplayedProperty) {
-      isSidebarDisplayed = isSidebarDisplayedProperty.content === "Yes";
+      isSidebarDisplayed = isSidebarDisplayedProperty.content === true;
     }
   }
 
@@ -2960,7 +2980,7 @@ function parseWebsiteProperties(
     (property) => property.label === "navbar-visible",
   )?.values[0];
   if (headerProperty) {
-    isHeaderDisplayed = headerProperty.content === "Yes";
+    isHeaderDisplayed = headerProperty.content === true;
   }
 
   const headerVariantProperty = websiteProperties.find(
@@ -2988,28 +3008,28 @@ function parseWebsiteProperties(
   )?.values[0];
   if (isHeaderProjectDisplayedProperty) {
     isHeaderProjectDisplayed =
-      isHeaderProjectDisplayedProperty.content === "Yes";
+      isHeaderProjectDisplayedProperty.content === true;
   }
 
   const footerProperty = websiteProperties.find(
     (property) => property.label === "footer-visible",
   )?.values[0];
   if (footerProperty) {
-    isFooterDisplayed = footerProperty.content === "Yes";
+    isFooterDisplayed = footerProperty.content === true;
   }
 
   const sidebarProperty = websiteProperties.find(
     (property) => property.label === "sidebar-visible",
   )?.values[0];
   if (sidebarProperty) {
-    isSidebarDisplayed = sidebarProperty.content === "Yes";
+    isSidebarDisplayed = sidebarProperty.content === true;
   }
 
   const supportsThemeToggleProperty = websiteProperties.find(
     (property) => property.label === "supports-theme-toggle",
   )?.values[0];
   if (supportsThemeToggleProperty) {
-    supportsThemeToggle = supportsThemeToggleProperty.content === "Yes";
+    supportsThemeToggle = supportsThemeToggleProperty.content === true;
   }
 
   const {
