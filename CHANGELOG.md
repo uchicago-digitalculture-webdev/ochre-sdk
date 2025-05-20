@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.16
+
+### Patch Changes
+
+- 132a2c2: refactor: update types for observations and properties to support multiple observers and content types
+
 ## 0.7.15
 
 ### Patch Changes
