@@ -255,7 +255,7 @@ export function filterProperties(
           return false;
         }
 
-        return value.booleanValue === filter.value;
+        return value.content === filter.value;
       }
 
       if (value.content instanceof Date) {
