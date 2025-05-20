@@ -54,7 +54,7 @@
     "dist"
   ],
   "dependencies": {
-    "zod": "^3.25.6"
+    "zod": "^3.25.7"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.13.1",

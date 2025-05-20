@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       zod:
-        specifier: ^3.25.6
-        version: 3.25.6
+        specifier: ^3.25.7
+        version: 3.25.7
     devDependencies:
       '@antfu/eslint-config':
         specifier: ^4.13.1
@@ -2562,8 +2562,8 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
-  zod@3.25.6:
-    resolution: {integrity: sha512-kA1wikWvfsP+z3L6mzUJJRQz1Y28BR0Bu/MTWeYbfaFJ8c+OLOt1Bb8d4V3Mk1480H+poPYG6BjS/I4kJ1U8WA==}
+  zod@3.25.7:
+    resolution: {integrity: sha512-YGdT1cVRmKkOg6Sq7vY7IkxdphySKnXhaUmFI4r4FcuFVNgpCb9tZfNwXbT6BPjD5oz0nubFsoo9pIqKrDcCvg==}
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -5303,6 +5303,6 @@ snapshots:
 
   yocto-queue@0.1.0: {}
 
-  zod@3.25.6: {}
+  zod@3.25.7: {}
 
   zwitch@2.0.4: {}
