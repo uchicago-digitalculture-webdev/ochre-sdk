@@ -591,3 +591,55 @@ export type GalleryResponse = {
       }
     | [];
 };
+
+/**
+ * Raw footnote response structure
+ */
+export type FootnotesResponse = {
+  result:
+    | {
+        footnote:
+          | { uuid: string; document: OchreStringRichText }
+          | Array<{ uuid: string; document: OchreStringRichText }>;
+      }
+    | [];
+};
+
+/**
+ * Raw UUID metadata response structure
+ */
+export type UuidMetadataResponse = {
+  result: {
+    item: {
+      label: string | number | boolean;
+      type:
+        | "image"
+        | "resource"
+        | "tree"
+        | "internalDocument"
+        | "iiif"
+        | "timeline";
+      category?: string;
+      maxLength?: number;
+    };
+    project: { identification: OchreIdentification };
+  };
+};
+
+/**
+ * Raw UUID metadata structure
+ */
+export type OchreUuidMetadata = {
+  item: {
+    uuid: string;
+    name: string;
+    type:
+      | "image"
+      | "resource"
+      | "tree"
+      | "internalDocument"
+      | "iiif"
+      | "timeline";
+  };
+  project: { name: string; website: string | null };
+} | null;
