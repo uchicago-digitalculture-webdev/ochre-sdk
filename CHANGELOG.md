@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.17
+
+### Patch Changes
+
+- 0cec14f: feat: add functions to retrieve properties and their values by UUID
+
 ## 0.7.16
 
 ### Patch Changes
