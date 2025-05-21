@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.21
+
+### Patch Changes
+
+- cf98cda: refactor: simplify website properties parsing by providing default values for type and status
+
 ## 0.7.20
 
 ### Patch Changes
