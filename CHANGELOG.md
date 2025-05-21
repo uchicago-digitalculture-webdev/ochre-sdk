@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.22
+
+### Patch Changes
+
+- 8c4a85d: feat: add temporary UUID overrides for DIGS 30005 class in item fetcher
+
 ## 0.7.21
 
 ### Patch Changes
