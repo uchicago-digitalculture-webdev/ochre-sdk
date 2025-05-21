@@ -582,10 +582,10 @@ export function parseCoordinates(
   coordinates: OchreCoordinates | string,
 ): Coordinates | null {
   if (typeof coordinates === "string") {
-    const [latitude, longitude] = coordinates.split(", ");
+    const [longitude, latitude] = coordinates.split(", ");
     return {
-      latitude: Number(latitude),
       longitude: Number(longitude),
+      latitude: Number(latitude),
       type: null,
       label: null,
     };
