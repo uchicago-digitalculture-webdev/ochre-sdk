@@ -454,6 +454,14 @@ export type Gallery = {
 };
 
 /**
+ * Represents a metadata object given a UUID
+ */
+export type UuidMetadata = {
+  item: { uuid: string; name: string; type: string };
+  project: { name: string; website: string | null };
+} | null;
+
+/**
  * Represents a website with its properties and elements
  */
 export type Website = {

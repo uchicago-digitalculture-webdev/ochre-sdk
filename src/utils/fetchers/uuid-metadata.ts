@@ -1,10 +1,7 @@
-import type {
-  OchreUuidMetadata,
-  UuidMetadataResponse,
-} from "../../types/internal.raw.js";
+import type { UuidMetadataResponse } from "../../types/internal.raw.js";
+import type { UuidMetadata } from "../../types/main.js";
 import { uuidSchema } from "../../schemas.js";
 import { parseIdentification } from "../parse.js";
-import { parseFakeString } from "../string.js";
 
 /**
  * Fetches raw OCHRE metadata by UUID from the OCHRE API
@@ -24,7 +21,7 @@ import { parseFakeString } from "../string.js";
  */
 export async function fetchByUuidMetadata(
   uuid: string,
-): Promise<{ item: OchreUuidMetadata | null; error: string | null }> {
+): Promise<{ item: UuidMetadata | null; error: string | null }> {
   try {
     const parsedUuid = uuidSchema.parse(uuid);
 
@@ -45,10 +42,10 @@ export async function fetchByUuidMetadata(
       website: data.result.project.identification.website ?? null,
     };
 
-    const uuidMetadata: OchreUuidMetadata = {
+    const uuidMetadata: UuidMetadata = {
       item: {
         uuid,
-        name: parseFakeString(data.result.item.label),
+        name: parseIdentification(data.result.item.identification).label,
         type: data.result.item.type,
       },
       project: {

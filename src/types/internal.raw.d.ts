@@ -611,35 +611,11 @@ export type FootnotesResponse = {
 export type UuidMetadataResponse = {
   result: {
     item: {
-      label: string | number | boolean;
-      type:
-        | "image"
-        | "resource"
-        | "tree"
-        | "internalDocument"
-        | "iiif"
-        | "timeline";
+      identification: OchreIdentification;
+      type: string;
       category?: string;
       maxLength?: number;
     };
     project: { identification: OchreIdentification };
   };
 };
-
-/**
- * Raw UUID metadata structure
- */
-export type OchreUuidMetadata = {
-  item: {
-    uuid: string;
-    name: string;
-    type:
-      | "image"
-      | "resource"
-      | "tree"
-      | "internalDocument"
-      | "iiif"
-      | "timeline";
-  };
-  project: { name: string; website: string | null };
-} | null;
