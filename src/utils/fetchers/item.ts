@@ -116,6 +116,28 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
           );
         }
         item = parseSpatialUnit(data.ochre.spatialUnit);
+        const OVERRIDE_UUIDS = [
+          "334e740f-c991-4dc3-9a27-ba08911d3d45",
+          "8824bf5e-152c-48af-b198-ef6888cc530f",
+          "1f36b6b1-ecb7-4eda-a0f2-52c3eeb2070d",
+          "d5635e2d-a37a-4be1-abae-2033d8d1147d",
+          "6365ac51-7a30-4368-984b-562871bcd7ee",
+          "18346ffc-d2f0-4423-a34c-2b956ec295ad",
+          "e91444e9-7f49-43af-9373-f707a07d346b",
+          "d45be510-be84-457a-a0f1-5782ecfc8f07",
+          "629586e8-d0f2-4954-a0cc-7b7bac655b5c",
+          "e2209e2c-dcc1-48b6-860e-94b079de8e09",
+          "cbd87c4c-3365-4145-b91e-08646f9d513c",
+        ];
+
+        // NOTE: This is a temporary override for the DIGS 30005 class
+        if (OVERRIDE_UUIDS.includes(uuid)) {
+          const { observations, ...rest } = item as SpatialUnit;
+          item = {
+            ...rest,
+            properties: observations[0]?.properties ?? [],
+          } as SpatialUnit;
+        }
         break;
       }
       case "concept": {
