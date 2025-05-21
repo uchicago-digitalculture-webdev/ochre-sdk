@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.19
+
+### Patch Changes
+
+- 5ca7c1e: fix: correct latitude and longitude assignment in parseCoordinates function
+
 ## 0.7.18
 
 ### Patch Changes
