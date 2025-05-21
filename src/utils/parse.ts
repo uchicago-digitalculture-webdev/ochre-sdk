@@ -2930,18 +2930,13 @@ function parseWebsiteProperties(
     throw new Error("Presentation property not found");
   }
 
-  const type = websiteProperties.find((property) => property.label === "webUI")
+  let type = websiteProperties.find((property) => property.label === "webUI")
     ?.values[0]?.content;
-  if (type == null) {
-    throw new Error("Website type not found");
-  }
+  type ??= "traditional";
 
-  const status = websiteProperties.find(
-    (property) => property.label === "status",
-  )?.values[0]?.content;
-  if (status == null) {
-    throw new Error("Website status not found");
-  }
+  let status = websiteProperties.find((property) => property.label === "status")
+    ?.values[0]?.content;
+  status ??= "development";
 
   let privacy = websiteProperties.find(
     (property) => property.label === "privacy",
