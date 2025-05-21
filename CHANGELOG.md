@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.7.20
+
+### Patch Changes
+
+- 548e7c5: refactor: update UUID metadata types and fetcher to improve structure and clarity
+
 ## 0.7.19
 
 ### Patch Changes
