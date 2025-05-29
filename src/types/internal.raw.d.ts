@@ -247,8 +247,8 @@ export type OchreSpatialUnit = {
   identification: OchreIdentification;
   image?: OchreImage;
   description?: OchreStringContent | FakeString;
-  coordinate?: string; // "latitude, longitude"
   coordinates?: OchreCoordinates;
+  mapData?: { geoJSON: { multiPolygon: string; EPSG: number } };
   events?: { event: OchreEvent | Array<OchreEvent> };
   observations?: { observation: OchreObservation | Array<OchreObservation> };
   observation?: OchreObservation;
@@ -525,19 +525,40 @@ export type OchreObservation = {
 };
 
 /**
+ * Raw coordinates item structure corresponding to the parsed CoordinatesItem type
+ */
+export type OchreCoordinatesItem =
+  | {
+      type: "point";
+      source?:
+        | { context: "self"; label: OchreStringContent & { uuid: string } }
+        | {
+            context: "inherited";
+            item: { label: OchreStringContent & { uuid: string } };
+            label: OchreStringContent & { uuid: string };
+          };
+      latitude: number;
+      longitude: number;
+      altitude?: number;
+    }
+  | {
+      type: "plane";
+      source?:
+        | { context: "self"; label: OchreStringContent & { uuid: string } }
+        | {
+            context: "inherited";
+            item: { label: OchreStringContent & { uuid: string } };
+            label: OchreStringContent & { uuid: string };
+          };
+      minimum: { latitude: number; longitude: number };
+      maximum: { latitude: number; longitude: number };
+    };
+
+/**
  * Raw coordinates structure corresponding to the parsed Coordinates type
  */
 export type OchreCoordinates = {
-  coordinatesArray?: string;
-  coord?: {
-    uuid: string;
-    coordType: string;
-    coordLabel: FakeString;
-    coordLatitude: number;
-    coordLongitude: number;
-    altitude?: number;
-    arrayString: string;
-  };
+  coord: OchreCoordinatesItem | Array<OchreCoordinatesItem>;
 };
 
 /**

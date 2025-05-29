@@ -33,6 +33,7 @@ import type {
   Context,
   ContextItem,
   Coordinates,
+  CoordinatesItem,
   DataCategory,
   Document,
   Event,
@@ -297,8 +298,7 @@ export function parsePerson(person: OchrePerson): Person {
           state: person.address.state ?? null,
         }
       : null,
-    coordinates:
-      person.coordinates ? parseCoordinates(person.coordinates) : null,
+    coordinates: parseCoordinates(person.coordinates),
     content: person.content != null ? parseFakeString(person.content) : null,
     events:
       person.events ?
@@ -579,28 +579,68 @@ export function parseNotes(
  * @returns Parsed Coordinates object
  */
 export function parseCoordinates(
-  coordinates: OchreCoordinates | string,
-): Coordinates | null {
-  if (typeof coordinates === "string") {
-    const [longitude, latitude] = coordinates.split(", ");
-    return {
-      longitude: Number(longitude),
-      latitude: Number(latitude),
-      type: null,
-      label: null,
-    };
+  coordinates: OchreCoordinates | undefined,
+): Coordinates {
+  if (coordinates == null) {
+    return [];
   }
 
-  if (coordinates.coord == null) {
-    return null;
+  const returnCoordinates: Array<CoordinatesItem> = [];
+
+  const coordsToParse =
+    Array.isArray(coordinates.coord) ? coordinates.coord : [coordinates.coord];
+
+  for (const coord of coordsToParse) {
+    const source: CoordinatesItem["source"] =
+      "source" in coord && coord.source ?
+        coord.source.context === "self" ?
+          {
+            context: "self",
+            uuid: coord.source.label.uuid,
+            label: parseStringContent(coord.source.label),
+          }
+        : {
+            context: "inherited",
+            uuid: coord.source.label.uuid,
+            item: {
+              uuid: coord.source.item.label.uuid,
+              label: parseStringContent(coord.source.item.label),
+            },
+            label: parseStringContent(coord.source.label),
+          }
+      : null;
+
+    switch (coord.type) {
+      case "point": {
+        returnCoordinates.push({
+          type: coord.type,
+          latitude: coord.latitude,
+          longitude: coord.longitude,
+          altitude: coord.altitude ?? null,
+          source,
+        });
+        break;
+      }
+      case "plane": {
+        returnCoordinates.push({
+          type: coord.type,
+
+          minimum: {
+            latitude: coord.minimum.latitude,
+            longitude: coord.minimum.longitude,
+          },
+          maximum: {
+            latitude: coord.maximum.latitude,
+            longitude: coord.maximum.longitude,
+          },
+          source,
+        });
+        break;
+      }
+    }
   }
 
-  return {
-    latitude: coordinates.coord.coordLatitude,
-    longitude: coordinates.coord.coordLongitude,
-    type: coordinates.coord.coordType,
-    label: parseFakeString(coordinates.coord.coordLabel),
-  };
+  return returnCoordinates;
 }
 
 /**
@@ -1573,10 +1613,8 @@ export function parseSpatialUnit(spatialUnit: OchreSpatialUnit): SpatialUnit {
           parseFakeString(spatialUnit.description as FakeString)
         : parseStringContent(spatialUnit.description as OchreStringContent)
       : "",
-    coordinates:
-      spatialUnit.coordinates ? parseCoordinates(spatialUnit.coordinates)
-      : spatialUnit.coordinate ? parseCoordinates(spatialUnit.coordinate)
-      : null,
+    coordinates: parseCoordinates(spatialUnit.coordinates),
+    mapData: spatialUnit.mapData ?? null,
     observations:
       "observations" in spatialUnit && spatialUnit.observations ?
         parseObservations(

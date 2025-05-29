@@ -101,7 +101,7 @@ export type Person = {
     city: string | null;
     state: string | null;
   } | null;
-  coordinates: Coordinates | null;
+  coordinates: Coordinates;
   content: string | null;
   events: Array<Event>;
   properties: Array<Property>;
@@ -171,14 +171,43 @@ export type ImageMap = {
 };
 
 /**
+ * Geographic coordinates item with optional type and label
+ */
+export type CoordinatesItem =
+  | {
+      type: "point";
+      latitude: number;
+      longitude: number;
+      altitude: number | null;
+      source:
+        | { context: "self"; uuid: string; label: string }
+        | {
+            context: "inherited";
+            item: { uuid: string; label: string };
+            uuid: string;
+            label: string;
+          }
+        | null;
+    }
+  | {
+      type: "plane";
+      minimum: { latitude: number; longitude: number };
+      maximum: { latitude: number; longitude: number };
+      source:
+        | { context: "self"; uuid: string; label: string }
+        | {
+            context: "inherited";
+            item: { uuid: string; label: string };
+            uuid: string;
+            label: string;
+          }
+        | null;
+    };
+
+/**
  * Geographic coordinates with optional type and label
  */
-export type Coordinates = {
-  latitude: number;
-  longitude: number;
-  type: string | null;
-  label: string | null;
-};
+export type Coordinates = Array<CoordinatesItem>;
 
 /**
  * Represents an observation with notes, links and properties
@@ -263,7 +292,8 @@ export type SpatialUnit = {
   identification: Identification;
   image: Image | null;
   description: string | null;
-  coordinates: Coordinates | null;
+  coordinates: Coordinates;
+  mapData: { geoJSON: { multiPolygon: string; EPSG: number } } | null;
   observations: Array<Observation>;
   events: Array<Event>;
   properties: Array<Property>;
@@ -394,8 +424,7 @@ export type PropertyValueContent<T extends PropertyValueContentType> = {
   : T extends "date" ? Date
   : T extends "dateTime" ? Date
   : T extends "time" ? Date
-  : // : T extends "coordinate" ? Coordinates
-    null;
+  : null;
   booleanLabel: T extends "boolean" ? string | null : null;
   isUncertain: boolean;
   type: T;
