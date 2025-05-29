@@ -54,17 +54,17 @@
     "dist"
   ],
   "dependencies": {
-    "zod": "^3.25.12"
+    "zod": "^3.25.36"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^4.13.1",
+    "@antfu/eslint-config": "^4.13.2",
     "@arethetypeswrong/cli": "^0.18.1",
     "@changesets/cli": "^2.29.4",
-    "@types/node": "^22.15.21",
+    "@types/node": "^22.15.24",
     "eslint": "^9.27.0",
     "prettier": "^3.5.3",
-    "terser": "^5.39.2",
-    "tsdown": "^0.11.12",
+    "terser": "^5.40.0",
+    "tsdown": "^0.12.4",
     "typescript": "^5.8.3",
     "vitest": "^3.1.4"
   },
