@@ -1,5 +1,15 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.0
+
+### Minor Changes
+
+- c7f93d6: feat: enhance geographic coordinate types and parsing logic
+
+  - Updated `OchreSpatialUnit` and `SpatialUnit` types to include `mapData` and ensure `coordinates` are always defined.
+  - Introduced `CoordinatesItem` type to better represent point and plane coordinates.
+  - Refactored `parseCoordinates` function to handle new coordinate structures and return an array of `CoordinatesItem`.
+
 ## 0.7.22
 
 ### Patch Changes
