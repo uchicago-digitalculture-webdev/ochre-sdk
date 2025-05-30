@@ -11,7 +11,7 @@ import { z } from "zod/v4";
  * Schema for validating UUIDs
  * @internal
  */
-export const uuidSchema = z.uuid({ message: "Invalid UUID provided" });
+export const uuidSchema = z.uuid({ error: "Invalid UUID provided" });
 
 /**
  * Schema for validating website properties
@@ -29,19 +29,19 @@ export const websiteSchema = z.object({
       "oak",
       "palm",
     ] as const satisfies ReadonlyArray<WebsiteProperties["type"]>,
-    { message: "Invalid website type" },
+    { error: "Invalid website type" },
   ),
   status: z.enum(
     ["development", "preview", "production"] as const satisfies ReadonlyArray<
       WebsiteProperties["status"]
     >,
-    { message: "Invalid website status" },
+    { error: "Invalid website status" },
   ),
   privacy: z.enum(
     ["public", "password", "private"] as const satisfies ReadonlyArray<
       WebsiteProperties["privacy"]
     >,
-    { message: "Invalid website privacy" },
+    { error: "Invalid website privacy" },
   ),
 });
 
@@ -63,6 +63,7 @@ export const componentSchema = z.enum(
     "iiif-viewer",
     "image",
     "image-gallery",
+    "map",
     "n-columns",
     "n-rows",
     "network-graph",
@@ -72,7 +73,7 @@ export const componentSchema = z.enum(
     "timeline",
     "video",
   ] as const satisfies ReadonlyArray<WebElementComponent["component"]>,
-  { message: "Invalid component" },
+  { error: "Invalid component" },
 );
 
 /**
@@ -113,10 +114,10 @@ export const propertyValueContentTypeSchema = z.enum([
  */
 export const gallerySchema = z
   .object({
-    uuid: z.uuid({ message: "Invalid UUID" }),
+    uuid: z.uuid({ error: "Invalid UUID" }),
     filter: z.string().optional(),
-    page: z.number().positive({ message: "Page must be positive" }),
-    perPage: z.number().positive({ message: "Per page must be positive" }),
+    page: z.number().positive({ error: "Page must be positive" }),
+    perPage: z.number().positive({ error: "Per page must be positive" }),
   })
   .strict();
 
@@ -158,4 +159,4 @@ export const whitespaceSchema = z
  * Schema for validating email addresses
  * @internal
  */
-export const emailSchema = z.email({ message: "Invalid email" });
+export const emailSchema = z.email({ error: "Invalid email" });
