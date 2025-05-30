@@ -648,6 +648,15 @@ export type WebElementComponent =
       carouselOptions: { secondsPerImage: number } | null;
     }
   | { component: "image-gallery"; galleryId: string; isSearchable: boolean }
+  | {
+      component: "map";
+      mapId: string;
+      customBasemap: string | null;
+      isControlsDisplayed: boolean;
+      isInteractive: boolean;
+      isClustered: boolean;
+      isUsingPins: boolean;
+    }
   | { component: "n-columns"; columns: Array<WebElement> }
   | { component: "n-rows"; rows: Array<WebElement> }
   | { component: "network-graph" }

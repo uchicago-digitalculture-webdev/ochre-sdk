@@ -2257,6 +2257,69 @@ async function parseWebElementProperties(
       properties.isSearchable = isSearchable;
       break;
     }
+    case "map": {
+      const mapLink = links.find(
+        (link) => link.category === "set" || link.category === "tree",
+      );
+      if (!mapLink) {
+        throw new Error(
+          `Map link not found for the following component: “${componentName}”`,
+        );
+      }
+
+      let isInteractive = true;
+      const isInteractiveProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "is-interactive",
+      );
+      if (isInteractiveProperty !== null) {
+        isInteractive = isInteractiveProperty === true;
+      }
+
+      let isClustered = false;
+      const isClusteredProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "is-clustered",
+      );
+      if (isClusteredProperty !== null) {
+        isClustered = isClusteredProperty === true;
+      }
+
+      let isUsingPins = false;
+      const isUsingPinsProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "is-using-pins",
+      );
+      if (isUsingPinsProperty !== null) {
+        isUsingPins = isUsingPinsProperty === true;
+      }
+
+      let customBasemap: string | null = null;
+      const customBasemapProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "custom-basemap",
+      );
+      if (customBasemapProperty !== null) {
+        customBasemap = customBasemapProperty as string;
+      }
+
+      let isControlsDisplayed = false;
+      const isControlsDisplayedProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "controls-displayed",
+      );
+      if (isControlsDisplayedProperty !== null) {
+        isControlsDisplayed = isControlsDisplayedProperty === true;
+      }
+
+      properties.mapId = mapLink.uuid;
+      properties.isInteractive = isInteractive;
+      properties.isClustered = isClustered;
+      properties.isUsingPins = isUsingPins;
+      properties.customBasemap = customBasemap;
+      properties.isControlsDisplayed = isControlsDisplayed;
+      break;
+    }
     case "n-columns": {
       const subElements =
         elementResource.resource ?
