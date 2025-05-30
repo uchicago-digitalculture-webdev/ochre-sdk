@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.2
+
+### Patch Changes
+
+- f8b57d6: feat: add coordinates support to resource types and parsing
+
 ## 0.8.1
 
 ### Patch Changes
