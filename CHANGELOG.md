@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.4
+
+### Patch Changes
+
+- 622600e: feat: add customFetch parameter to fetch functions for enhanced flexibility in network requests
+- 622600e: feat: extend CoordinatesItem and OchreCoordinatesItem types to support related context with value field
+
 ## 0.8.3
 
 ### Patch Changes
