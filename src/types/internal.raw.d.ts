@@ -217,6 +217,7 @@ export type OchreResource = {
   identification: OchreIdentification;
   href?: string;
   description?: OchreStringContent | FakeString;
+  coordinates?: OchreCoordinates;
   date?: string; // YYYY-MM-DD
   image?: OchreImage;
   creators?: { creator: OchrePerson | Array<OchrePerson> };

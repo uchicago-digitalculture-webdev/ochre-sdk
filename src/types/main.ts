@@ -267,6 +267,7 @@ export type Resource = {
   creators: Array<Person>;
   notes: Array<Note>;
   description: string;
+  coordinates: Coordinates;
   document: Document | null;
   href: string | null;
   imageMap: ImageMap | null;

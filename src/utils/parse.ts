@@ -1502,6 +1502,8 @@ export function parseResource(resource: OchreResource): Resource {
           parseFakeString(resource.description as FakeString)
         : parseStringContent(resource.description as OchreStringContent)
       : "",
+    coordinates:
+      resource.coordinates ? parseCoordinates(resource.coordinates) : [],
     document:
       resource.document && "content" in resource.document ?
         parseDocument(resource.document.content)
