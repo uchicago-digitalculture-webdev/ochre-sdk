@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.1
+
+### Patch Changes
+
+- b3a1d54: feat: add map component support in WebElement and parsing logic
+
 ## 0.8.0
 
 ### Minor Changes
