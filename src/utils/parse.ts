@@ -298,8 +298,26 @@ export function parsePerson(person: OchrePerson): Person {
           state: person.address.state ?? null,
         }
       : null,
+    description:
+      person.description ?
+        (
+          typeof person.description === "string" ||
+          typeof person.description === "number" ||
+          typeof person.description === "boolean"
+        ) ?
+          parseFakeString(person.description)
+        : parseStringContent(person.description)
+      : null,
     coordinates: parseCoordinates(person.coordinates),
     content: person.content != null ? parseFakeString(person.content) : null,
+    notes:
+      person.notes ?
+        parseNotes(
+          Array.isArray(person.notes.note) ?
+            person.notes.note
+          : [person.notes.note],
+        )
+      : [],
     events:
       person.events ?
         parseEvents(
@@ -1153,12 +1171,12 @@ export function parsePropertyValue(
     description:
       propertyValue.description ?
         (
-          ["string", "number", "boolean"].includes(
-            typeof propertyValue.description,
-          )
+          typeof propertyValue.description === "string" ||
+          typeof propertyValue.description === "number" ||
+          typeof propertyValue.description === "boolean"
         ) ?
-          parseFakeString(propertyValue.description as FakeString)
-        : parseStringContent(propertyValue.description as OchreStringContent)
+          parseFakeString(propertyValue.description)
+        : parseStringContent(propertyValue.description)
       : "",
     notes:
       propertyValue.notes ?

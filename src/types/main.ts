@@ -101,8 +101,10 @@ export type Person = {
     city: string | null;
     state: string | null;
   } | null;
+  description: string | null;
   coordinates: Coordinates;
   content: string | null;
+  notes: Array<Note>;
   events: Array<Event>;
   properties: Array<Property>;
 };

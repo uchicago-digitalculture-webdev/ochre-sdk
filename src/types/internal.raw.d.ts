@@ -507,8 +507,10 @@ export type OchrePerson = {
   context?: OchreContext;
   availability?: OchreLicense;
   address?: { country?: string; city?: string; state?: string };
+  description?: OchreStringContent | FakeString;
   coordinates?: OchreCoordinates;
   content?: FakeString | null;
+  notes?: { note: OchreNote | Array<OchreNote> };
   events?: { event: OchreEvent | Array<OchreEvent> };
   properties?: { property: OchreProperty | Array<OchreProperty> };
 };
