@@ -21,11 +21,15 @@ import { uuidSchema } from "../../schemas.js";
  */
 export async function fetchByUuid(
   uuid: string,
+  customFetch?: (
+    input: string | URL | globalThis.Request,
+    init?: RequestInit,
+  ) => Promise<Response>,
 ): Promise<[null, OchreData] | [string, null]> {
   try {
     const parsedUuid = uuidSchema.parse(uuid);
 
-    const response = await fetch(
+    const response = await (customFetch ?? fetch)(
       `https://ochre.lib.uchicago.edu/ochre?uuid=${parsedUuid}&format=json&lang="*"`,
     );
     if (!response.ok) {

@@ -33,9 +33,13 @@ import { parseIdentification, parseWebsite } from "../parse.js";
  */
 export async function fetchWebsite(
   abbreviation: string,
+  customFetch?: (
+    input: string | URL | globalThis.Request,
+    init?: RequestInit,
+  ) => Promise<Response>,
 ): Promise<Website | null> {
   try {
-    const response = await fetch(
+    const response = await (customFetch ?? fetch)(
       `https://ochre.lib.uchicago.edu/ochre?xquery=for $q in input()/ochre[tree[@type='lesson'][identification/abbreviation='${abbreviation.toLocaleLowerCase("en-US")}']] return $q&format=json`,
     );
     if (!response.ok) {

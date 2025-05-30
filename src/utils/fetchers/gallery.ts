@@ -34,6 +34,10 @@ export async function fetchGallery(
   filter: string,
   page: number,
   perPage: number,
+  customFetch?: (
+    input: string | URL | globalThis.Request,
+    init?: RequestInit,
+  ) => Promise<Response>,
 ): Promise<
   { item: Gallery | null; error: null } | { item: null; error: string }
 > {
@@ -45,7 +49,7 @@ export async function fetchGallery(
       perPage: parsedPerPage,
     } = gallerySchema.parse({ uuid, filter, page, perPage });
 
-    const response = await fetch(
+    const response = await (customFetch ?? fetch)(
       `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(`
         for $q in input()/ochre[@uuid='${parsedUuid}']
         let $filtered := $q//items/resource[contains(lower-case(identification/label), lower-case('${parsedFilter}'))]

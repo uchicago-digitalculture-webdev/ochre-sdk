@@ -21,11 +21,15 @@ import { parseIdentification } from "../parse.js";
  */
 export async function fetchByUuidMetadata(
   uuid: string,
+  customFetch?: (
+    input: string | URL | globalThis.Request,
+    init?: RequestInit,
+  ) => Promise<Response>,
 ): Promise<{ item: UuidMetadata | null; error: string | null }> {
   try {
     const parsedUuid = uuidSchema.parse(uuid);
 
-    const response = await fetch(
+    const response = await (customFetch ?? fetch)(
       `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(`for $q in input()/ochre[@uuid='${parsedUuid}']/metadata return ($q/item, $q/project)`)}&format=json`,
     );
     if (!response.ok) {

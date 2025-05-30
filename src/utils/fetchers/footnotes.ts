@@ -20,12 +20,16 @@ import { parseStringDocumentItem } from "../string.js";
  */
 export async function fetchFootnotes(
   uuid: string,
+  customFetch?: (
+    input: string | URL | globalThis.Request,
+    init?: RequestInit,
+  ) => Promise<Response>,
 ): Promise<
   | { items: Array<Footnote> | null; error: null }
   | { items: null; error: string }
 > {
   try {
-    const response = await fetch(
+    const response = await (customFetch ?? fetch)(
       `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(`
         for $q in input()/ochre[@uuid='${uuid}']/resource/document/content//string[@annotation][links][properties/property/value/@uuid="b254b5a4-d91f-4954-8bbc-658faefc626c"]/links/child::node(), $r in input()/ochre[@uuid=$q/@uuid]
           return <footnote> {$r/resource/document} { $r/@uuid} </footnote>`)}
