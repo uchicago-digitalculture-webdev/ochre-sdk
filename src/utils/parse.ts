@@ -617,6 +617,13 @@ export function parseCoordinates(
             uuid: coord.source.label.uuid,
             label: parseStringContent(coord.source.label),
           }
+        : coord.source.context === "related" ?
+          {
+            context: "related",
+            uuid: coord.source.label.uuid,
+            label: parseStringContent(coord.source.label),
+            value: parseStringContent(coord.source.value),
+          }
         : {
             context: "inherited",
             uuid: coord.source.label.uuid,

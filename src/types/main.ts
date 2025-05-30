@@ -183,6 +183,7 @@ export type CoordinatesItem =
       altitude: number | null;
       source:
         | { context: "self"; uuid: string; label: string }
+        | { context: "related"; uuid: string; label: string; value: string }
         | {
             context: "inherited";
             item: { uuid: string; label: string };
@@ -197,6 +198,7 @@ export type CoordinatesItem =
       maximum: { latitude: number; longitude: number };
       source:
         | { context: "self"; uuid: string; label: string }
+        | { context: "related"; uuid: string; label: string; value: string }
         | {
             context: "inherited";
             item: { uuid: string; label: string };

@@ -536,6 +536,11 @@ export type OchreCoordinatesItem =
       source?:
         | { context: "self"; label: OchreStringContent & { uuid: string } }
         | {
+            context: "related";
+            label: OchreStringContent & { uuid: string };
+            value: OchreStringContent & { uuid: string };
+          }
+        | {
             context: "inherited";
             item: { label: OchreStringContent & { uuid: string } };
             label: OchreStringContent & { uuid: string };
@@ -548,6 +553,11 @@ export type OchreCoordinatesItem =
       type: "plane";
       source?:
         | { context: "self"; label: OchreStringContent & { uuid: string } }
+        | {
+            context: "related";
+            label: OchreStringContent & { uuid: string };
+            value: OchreStringContent & { uuid: string };
+          }
         | {
             context: "inherited";
             item: { label: OchreStringContent & { uuid: string } };
