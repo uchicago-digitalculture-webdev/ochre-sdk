@@ -54,13 +54,13 @@
     "dist"
   ],
   "dependencies": {
-    "zod": "^3.25.36"
+    "zod": "^3.25.41"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.13.2",
     "@arethetypeswrong/cli": "^0.18.1",
     "@changesets/cli": "^2.29.4",
-    "@types/node": "^22.15.24",
+    "@types/node": "^22.15.26",
     "eslint": "^9.27.0",
     "prettier": "^3.5.3",
     "terser": "^5.40.0",
