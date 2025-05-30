@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.3
+
+### Patch Changes
+
+- db104ca: feat: enhance OchrePerson and Person types with description and notes fields
+
 ## 0.8.2
 
 ### Patch Changes
