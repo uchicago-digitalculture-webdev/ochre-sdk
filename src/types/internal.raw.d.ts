@@ -141,6 +141,17 @@ type OchreTreeCollectionOption = {
   content: string; // UUID
 };
 
+export type FlattenContextItem = {
+  level: string; // "variableUuid,valueUuid"
+};
+
+/**
+ * Flattening context structure for website-wide item properties
+ */
+export type FlattenContext = {
+  context: FlattenContextItem | Array<FlattenContextItem>;
+};
+
 /**
  * Raw tree structure corresponding to the parsed Tree type
  */
@@ -153,16 +164,20 @@ export type OchreTree = {
   identification: OchreIdentification;
   date?: string; // YYYY-MM-DD
   creators?: { creator: OchrePerson | Array<OchrePerson> };
-  collectionOptions?: {
-    metadataUuids: {
-      uuid?: OchreTreeCollectionOption | Array<OchreTreeCollectionOption>;
-    };
-    searchUuids: {
-      uuid?: OchreTreeCollectionOption | Array<OchreTreeCollectionOption>;
-    };
-    labelUuids: {
-      uuid?: OchreTreeCollectionOption | Array<OchreTreeCollectionOption>;
-    };
+  websiteOptions?: {
+    collectionUuids:
+      | { uuid: OchreTreeCollectionOption | Array<OchreTreeCollectionOption> }
+      | object;
+    metadataUuids:
+      | { uuid: OchreTreeCollectionOption | Array<OchreTreeCollectionOption> }
+      | object;
+    searchUuids:
+      | { uuid: OchreTreeCollectionOption | Array<OchreTreeCollectionOption> }
+      | object;
+    labelUuids:
+      | { uuid: OchreTreeCollectionOption | Array<OchreTreeCollectionOption> }
+      | object;
+    flattenContexts: FlattenContext | Array<FlattenContext> | object;
   };
   items:
     | string

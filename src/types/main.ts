@@ -515,13 +515,14 @@ export type Website = {
     cssStylesMobile: Array<Style>;
   } | null;
   properties: WebsiteProperties;
-  collectionOptions: {
-    uuids: Array<string>;
+  globalOptions: {
+    collectionUuids: Array<string>;
     properties: {
       metadataUuids: Array<string>;
       searchUuids: Array<string>;
       labelUuids: Array<string>;
     };
+    flattenContexts: Array<Array<Array<string>>>;
   } | null;
 };
 

@@ -1,5 +1,6 @@
 import type {
   FakeString,
+  FlattenContext,
   OchreBibliography,
   OchreConcept,
   OchreContext,
@@ -3372,42 +3373,53 @@ export async function parseWebsite(
     };
   }
 
-  let collectionOptions: Website["collectionOptions"] | null = null;
-  if (websiteTree.collectionOptions) {
-    const collectionUuids = [];
-    for (const page of pages) {
-      for (const item of page.items) {
-        if (item.type === "element" && item.component === "collection") {
-          collectionUuids.push(item.collectionId);
-        }
-      }
-    }
+  let globalOptions: Website["globalOptions"] | null = null;
+  if (websiteTree.websiteOptions) {
+    const flattenContextsRaw =
+      "context" in websiteTree.websiteOptions.flattenContexts ?
+        [websiteTree.websiteOptions.flattenContexts]
+      : Array.isArray(websiteTree.websiteOptions.flattenContexts) ?
+        (websiteTree.websiteOptions.flattenContexts as Array<FlattenContext>)
+      : [];
 
-    collectionOptions = {
-      uuids: collectionUuids,
+    const flattenContexts = flattenContextsRaw.map((flattenContext) => {
+      return Array.isArray(flattenContext.context) ?
+          flattenContext.context.map((context) => context.level.split(","))
+        : [flattenContext.context.level.split(",")];
+    });
+
+    globalOptions = {
+      collectionUuids:
+        "uuid" in websiteTree.websiteOptions.collectionUuids ?
+          (Array.isArray(websiteTree.websiteOptions.collectionUuids.uuid) ?
+            websiteTree.websiteOptions.collectionUuids.uuid
+          : [websiteTree.websiteOptions.collectionUuids.uuid]
+          ).map((uuid) => uuid.content)
+        : [],
       properties: {
         metadataUuids:
-          websiteTree.collectionOptions.metadataUuids.uuid ?
-            (Array.isArray(websiteTree.collectionOptions.metadataUuids.uuid) ?
-              websiteTree.collectionOptions.metadataUuids.uuid
-            : [websiteTree.collectionOptions.metadataUuids.uuid]
+          "uuid" in websiteTree.websiteOptions.metadataUuids ?
+            (Array.isArray(websiteTree.websiteOptions.metadataUuids.uuid) ?
+              websiteTree.websiteOptions.metadataUuids.uuid
+            : [websiteTree.websiteOptions.metadataUuids.uuid]
             ).map((uuid) => uuid.content)
           : [],
         searchUuids:
-          websiteTree.collectionOptions.searchUuids.uuid ?
-            (Array.isArray(websiteTree.collectionOptions.searchUuids.uuid) ?
-              websiteTree.collectionOptions.searchUuids.uuid
-            : [websiteTree.collectionOptions.searchUuids.uuid]
+          "uuid" in websiteTree.websiteOptions.searchUuids ?
+            (Array.isArray(websiteTree.websiteOptions.searchUuids.uuid) ?
+              websiteTree.websiteOptions.searchUuids.uuid
+            : [websiteTree.websiteOptions.searchUuids.uuid]
             ).map((uuid) => uuid.content)
           : [],
         labelUuids:
-          websiteTree.collectionOptions.labelUuids.uuid ?
-            (Array.isArray(websiteTree.collectionOptions.labelUuids.uuid) ?
-              websiteTree.collectionOptions.labelUuids.uuid
-            : [websiteTree.collectionOptions.labelUuids.uuid]
+          "uuid" in websiteTree.websiteOptions.labelUuids ?
+            (Array.isArray(websiteTree.websiteOptions.labelUuids.uuid) ?
+              websiteTree.websiteOptions.labelUuids.uuid
+            : [websiteTree.websiteOptions.labelUuids.uuid]
             ).map((uuid) => uuid.content)
           : [],
       },
+      flattenContexts,
     };
   }
 
@@ -3434,6 +3446,6 @@ export async function parseWebsite(
     pages,
     sidebar,
     properties,
-    collectionOptions,
+    globalOptions,
   };
 }
