@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.5
+
+### Patch Changes
+
+- f7c3e9c: feat: refactor website options structure to include flatten contexts and update collection options handling
+
 ## 0.8.4
 
 ### Patch Changes
