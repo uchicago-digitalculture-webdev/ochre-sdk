@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.6
+
+### Patch Changes
+
+- 05261d3: fix: properly parse flattenContexts structure
+
 ## 0.8.5
 
 ### Patch Changes
