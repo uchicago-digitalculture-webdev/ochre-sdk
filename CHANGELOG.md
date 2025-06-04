@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.7
+
+### Patch Changes
+
+- 07de104: refactor: update fetchWebsite return type to handle errors and improve destructuring in tests
+
 ## 0.8.6
 
 ### Patch Changes
