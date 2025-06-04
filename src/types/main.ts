@@ -522,7 +522,9 @@ export type Website = {
       searchUuids: Array<string>;
       labelUuids: Array<string>;
     };
-    flattenContexts: Array<Array<Array<string>>>;
+    flattenContexts: Array<{
+      context: Array<{ variableUuid: string; valueUuid: string }>;
+    }>;
   } | null;
 };
 

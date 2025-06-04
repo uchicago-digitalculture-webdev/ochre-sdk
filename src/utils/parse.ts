@@ -3382,11 +3382,38 @@ export async function parseWebsite(
         (websiteTree.websiteOptions.flattenContexts as Array<FlattenContext>)
       : [];
 
-    const flattenContexts = flattenContextsRaw.map((flattenContext) => {
-      return Array.isArray(flattenContext.context) ?
-          flattenContext.context.map((context) => context.level.split(","))
-        : [flattenContext.context.level.split(",")];
-    });
+    const flattenContexts: NonNullable<
+      Website["globalOptions"]
+    >["flattenContexts"] = flattenContextsRaw.map((flattenContext) => ({
+      context:
+        Array.isArray(flattenContext.context) ?
+          flattenContext.context.flatMap((context) =>
+            Array.isArray(context.level) ?
+              context.level.map((level) => ({
+                variableUuid: level.split(",")[0]!,
+                valueUuid: level.split(",")[1]!,
+              }))
+            : [
+                {
+                  variableUuid: context.level.split(",")[0]!,
+                  valueUuid: context.level.split(",")[1]!,
+                },
+              ],
+          )
+        : [
+            ...(Array.isArray(flattenContext.context.level) ?
+              flattenContext.context.level.map((level) => ({
+                variableUuid: level.split(",")[0]!,
+                valueUuid: level.split(",")[1]!,
+              }))
+            : [
+                {
+                  variableUuid: flattenContext.context.level.split(",")[0]!,
+                  valueUuid: flattenContext.context.level.split(",")[1]!,
+                },
+              ]),
+          ],
+    }));
 
     globalOptions = {
       collectionUuids:

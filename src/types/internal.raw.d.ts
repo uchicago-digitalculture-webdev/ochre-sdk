@@ -142,7 +142,7 @@ type OchreTreeCollectionOption = {
 };
 
 export type FlattenContextItem = {
-  level: string; // "variableUuid,valueUuid"
+  level: string | Array<string>; // "variableUuid,valueUuid"
 };
 
 /**
