@@ -35,38 +35,48 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write --list-different .",
     "check-types": "tsc --noEmit",
-    "check-exports": "attw --pack .",
     "test": "vitest run",
-    "ci": "pnpm run build && pnpm run lint && pnpm run format && pnpm run check-types && pnpm run check-exports && pnpm run test",
-    "changeset": "changeset add",
-    "release": "changeset version && changeset publish"
+    "prepare": "simple-git-hooks",
+    "release": "bumpp && pnpm publish"
   },
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.js"
     }
   },
   "files": [
     "dist"
   ],
   "dependencies": {
-    "zod": "^3.25.41"
+    "fast-xml-parser": "^5.2.3",
+    "valibot": "^1.1.0",
+    "zod": "^3.25.51"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^4.13.2",
-    "@arethetypeswrong/cli": "^0.18.1",
-    "@changesets/cli": "^2.29.4",
-    "@types/node": "^22.15.26",
-    "eslint": "^9.27.0",
+    "@antfu/eslint-config": "^4.13.3",
+    "@types/node": "^22.15.29",
+    "bumpp": "^10.1.1",
+    "eslint": "^9.28.0",
+    "lint-staged": "^16.1.0",
     "prettier": "^3.5.3",
-    "terser": "^5.40.0",
-    "tsdown": "^0.12.4",
+    "simple-git-hooks": "^2.13.0",
+    "tsdown": "^0.12.7",
     "typescript": "^5.8.3",
-    "vitest": "^3.1.4"
+    "vitest": "^3.2.2"
   },
-  "packageManager": "pnpm@10.11.0"
+  "packageManager": "pnpm@10.11.1",
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged"
+  },
+  "lint-staged": {
+    "*": [
+      "pnpm run lint:fix",
+      "pnpm run format:fix",
+      "pnpm run check-types",
+      "pnpm run test"
+    ]
+  }
 }
