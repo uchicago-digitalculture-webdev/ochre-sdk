@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.9
+
+### Patch Changes
+
+- 32b4248: feat: add fileFormat property to Link and OchreLinkItem types and update parseLink function to handle it
+
 ## 0.8.8
 
 ### Patch Changes
