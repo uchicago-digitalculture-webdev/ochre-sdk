@@ -1,5 +1,6 @@
 # PNPM
 pnpm-lock.yaml
+pnpm-workspace.yaml
 
 # Node Modules
 node_modules
