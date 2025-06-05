@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.8
+
+### Patch Changes
+
+- 072265f: refactor: rename 'format' to 'fileFormat' in Resource type
+
 ## 0.8.7
 
 ### Patch Changes
