@@ -1490,7 +1490,7 @@ export function parseResource(resource: OchreResource): Resource {
       : null,
     type: resource.type,
     number: resource.n,
-    format: resource.format ?? null,
+    fileFormat: resource.fileFormat ?? null,
     context:
       "context" in resource && resource.context ?
         parseContext(resource.context)

@@ -274,9 +274,9 @@ export type Resource = {
   coordinates: Coordinates;
   document: Document | null;
   href: string | null;
+  fileFormat: string | null;
   imageMap: ImageMap | null;
   periods: Array<Period>;
-  format: string | null;
   links: Array<Link>;
   reverseLinks: Array<Link>;
   properties: Array<Property>;

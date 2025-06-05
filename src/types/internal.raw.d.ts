@@ -225,7 +225,6 @@ export type OchreResource = {
   type: string;
   n: number;
   slug?: string;
-  format?: string;
   context?: OchreContext;
   availability?: OchreLicense;
   copyright?: FakeString;
@@ -240,6 +239,7 @@ export type OchreResource = {
   document?:
     | { content: OchreStringRichText | Array<OchreStringRichText> }
     | object;
+  fileFormat?: string;
   imagemap?: OchreImageMap;
   periods?: { period: OchrePeriod | Array<OchrePeriod> };
   links?: OchreLink | Array<OchreLink>;
