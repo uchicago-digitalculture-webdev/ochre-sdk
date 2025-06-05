@@ -400,6 +400,10 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
           : null
         : null,
       href: "href" in link && link.href != null ? link.href : null,
+      fileFormat:
+        "fileFormat" in link && link.fileFormat != null ?
+          link.fileFormat
+        : null,
       uuid: link.uuid,
       type: link.type ?? null,
       identification:

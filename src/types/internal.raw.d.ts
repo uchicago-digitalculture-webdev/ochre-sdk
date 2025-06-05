@@ -359,6 +359,7 @@ export type OchreLinkItem = {
   height?: number;
   width?: number;
   href?: string;
+  fileFormat?: string;
   isPrimary?: boolean;
 };
 

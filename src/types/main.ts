@@ -140,6 +140,7 @@ export type Link = {
   identification: Identification | null;
   content: string | null;
   href: string | null;
+  fileFormat: string | null;
   image: {
     isInline: boolean;
     isPrimary: boolean;
