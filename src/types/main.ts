@@ -572,6 +572,7 @@ export type WebpageProperties = {
   variant: "default" | "no-background";
   backgroundImageUrl: string | null;
   isSidebarDisplayed: boolean;
+  isBreadcrumbsDisplayed: boolean;
   cssStyles: Array<Style>;
   cssStylesMobile: Array<Style>;
 };

@@ -2731,6 +2731,7 @@ async function parseWebpage(
   let width: "default" | "full" | "large" | "narrow" = "default";
   let variant: "default" | "no-background" = "default";
   let isSidebarDisplayed = true;
+  let isBreadcrumbsDisplayed = false;
 
   const webpageSubProperties = webpageProperties.find(
     (property) =>
@@ -2765,6 +2766,13 @@ async function parseWebpage(
     )?.values[0];
     if (isSidebarDisplayedProperty) {
       isSidebarDisplayed = isSidebarDisplayedProperty.content === true;
+    }
+
+    const isBreadcrumbsDisplayedProperty = webpageSubProperties.find(
+      (property) => property.label === "breadcrumbs-visible",
+    )?.values[0];
+    if (isBreadcrumbsDisplayedProperty) {
+      isBreadcrumbsDisplayed = isBreadcrumbsDisplayedProperty.content === true;
     }
   }
 
@@ -2811,6 +2819,7 @@ async function parseWebpage(
           `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`
         : null,
       isSidebarDisplayed,
+      isBreadcrumbsDisplayed,
       cssStyles,
       cssStylesMobile,
     },
