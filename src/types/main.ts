@@ -665,6 +665,7 @@ export type WebElementComponent =
       isInteractive: boolean;
       isClustered: boolean;
       isUsingPins: boolean;
+      isFullHeight: boolean;
     }
   | { component: "n-columns"; columns: Array<WebElement> }
   | { component: "n-rows"; rows: Array<WebElement> }

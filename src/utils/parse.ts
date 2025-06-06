@@ -2344,12 +2344,22 @@ async function parseWebElementProperties(
         isControlsDisplayed = isControlsDisplayedProperty === true;
       }
 
+      let isFullHeight = false;
+      const isFullHeightProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "is-full-height",
+      );
+      if (isFullHeightProperty !== null) {
+        isFullHeight = isFullHeightProperty === true;
+      }
+
       properties.mapId = mapLink.uuid;
       properties.isInteractive = isInteractive;
       properties.isClustered = isClustered;
       properties.isUsingPins = isUsingPins;
       properties.customBasemap = customBasemap;
       properties.isControlsDisplayed = isControlsDisplayed;
+      properties.isFullHeight = isFullHeight;
       break;
     }
     case "n-columns": {
