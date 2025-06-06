@@ -1,5 +1,5 @@
 import type { FootnotesResponse } from "../../types/internal.raw.js";
-import type { Footnote } from "@digitalculture/ochre-sdk";
+import type { Footnote } from "../../types/main.js";
 import { parseStringDocumentItem } from "../string.js";
 
 /**
