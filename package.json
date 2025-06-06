@@ -52,12 +52,11 @@
   ],
   "dependencies": {
     "fast-xml-parser": "^5.2.3",
-    "valibot": "^1.1.0",
-    "zod": "^3.25.51"
+    "valibot": "^1.1.0"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.13.3",
-    "@types/node": "^22.15.29",
+    "@types/node": "^22.15.30",
     "bumpp": "^10.1.1",
     "eslint": "^9.28.0",
     "lint-staged": "^16.1.0",
