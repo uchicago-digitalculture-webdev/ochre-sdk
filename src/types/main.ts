@@ -627,6 +627,7 @@ export type WebElementComponent =
       collectionId: string;
       variant: "full" | "highlights";
       itemVariant: "default" | "card";
+      paginationVariant: "default" | "numeric";
       isSearchable: boolean;
       showCount: boolean;
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";

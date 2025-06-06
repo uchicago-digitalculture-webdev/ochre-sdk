@@ -1998,6 +1998,12 @@ async function parseWebElementProperties(
       );
       itemVariant ??= "default";
 
+      let paginationVariant = getPropertyValueByLabel(
+        componentProperty.properties,
+        "pagination-variant",
+      );
+      paginationVariant ??= "default";
+
       let showCount = false;
       const showCountProperty = getPropertyValueByLabel(
         componentProperty.properties,
@@ -2025,6 +2031,7 @@ async function parseWebElementProperties(
       properties.collectionId = collectionLink.uuid;
       properties.variant = variant;
       properties.itemVariant = itemVariant;
+      properties.paginationVariant = paginationVariant;
       properties.isSearchable = isSearchable;
       properties.showCount = showCount;
       properties.layout = layout;
