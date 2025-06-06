@@ -1,26 +1,11 @@
-import type { XMLData as XMLDataType } from "../../types/xml.types.js";
+import type { XMLData } from "../../types/xml.types.js";
 import { writeFileSync } from "node:fs";
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import { uuidSchema } from "../../schemas.js";
-import { XMLData } from "../../types/xml.raw.js";
+import { XMLData as XMLDataSchema } from "../../types/xml.raw.js";
 import { XML_ARRAY_TAGS } from "../constants.js";
-
-function logIssues(
-  issues: ReturnType<typeof v.safeParse>["issues"],
-  depth = 0,
-) {
-  if (issues == null) {
-    return;
-  }
-
-  for (const issue of issues) {
-    console.error("\t".repeat(depth), issue.message);
-    if (issue.issues != null && issue.issues.length > 0) {
-      logIssues(issue.issues, depth + 1);
-    }
-  }
-}
+import { logIssues } from "../helpers.js";
 
 /**
  * Fetches raw OCHRE data by UUID from the OCHRE API
@@ -50,9 +35,9 @@ export async function fetchByUuid(
       init?: RequestInit,
     ) => Promise<Response>;
   },
-): Promise<[null, XMLDataType] | [string, null]> {
+): Promise<[null, XMLData] | [string, null]> {
   try {
-    const parsedUuid = uuidSchema.parse(uuid);
+    const parsedUuid = v.parse(uuidSchema, uuid);
 
     const response = await (options?.fetch ?? fetch)(
       `https://ochre.lib.uchicago.edu/ochre?uuid=${parsedUuid}&xsl=none&lang="*"`,
@@ -98,7 +83,7 @@ export async function fetchByUuid(
     const data = parser.parse(dataRaw) as unknown;
     writeFileSync("data.json", JSON.stringify(data, null, 2));
 
-    const { success, issues, output } = v.safeParse(XMLData, data);
+    const { success, issues, output } = v.safeParse(XMLDataSchema, data);
     if (!success) {
       logIssues(issues);
       throw new Error("Failed to parse OCHRE data");

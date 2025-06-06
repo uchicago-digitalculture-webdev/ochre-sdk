@@ -1,55 +1,16 @@
-import type { RenderOption, WhitespaceOption } from "./types/internal.raw.js";
-import type {
-  DataCategory,
-  PropertyValueContentType,
-  WebElementComponent,
-  WebsiteProperties,
-} from "./types/main.js";
-import { z } from "zod/v4";
+import * as v from "valibot";
 
 /**
  * Schema for validating UUIDs
  * @internal
  */
-export const uuidSchema = z.uuid({ error: "Invalid UUID provided" });
-
-/**
- * Schema for validating website properties
- * @internal
- */
-export const websiteSchema = z.object({
-  type: z.enum(
-    [
-      "traditional",
-      "digital-collection",
-      "plum",
-      "cedar",
-      "elm",
-      "maple",
-      "oak",
-      "palm",
-    ] as const satisfies ReadonlyArray<WebsiteProperties["type"]>,
-    { error: "Invalid website type" },
-  ),
-  status: z.enum(
-    ["development", "preview", "production"] as const satisfies ReadonlyArray<
-      WebsiteProperties["status"]
-    >,
-    { error: "Invalid website status" },
-  ),
-  privacy: z.enum(
-    ["public", "password", "private"] as const satisfies ReadonlyArray<
-      WebsiteProperties["privacy"]
-    >,
-    { error: "Invalid website privacy" },
-  ),
-});
+export const uuidSchema = v.pipe(v.string(), v.uuid("Invalid UUID provided"));
 
 /**
  * Valid component types for web elements
  * @internal
  */
-export const componentSchema = z.enum(
+export const componentSchema = v.picklist(
   [
     "annotated-document",
     "annotated-image",
@@ -72,91 +33,49 @@ export const componentSchema = z.enum(
     "text",
     "timeline",
     "video",
-  ] as const satisfies ReadonlyArray<WebElementComponent["component"]>,
-  { error: "Invalid component" },
+  ],
+  "Invalid component",
 );
-
-/**
- * Schema for validating data categories
- * @internal
- */
-export const categorySchema = z.enum([
-  "resource",
-  "spatialUnit",
-  "concept",
-  "period",
-  "bibliography",
-  "person",
-  "propertyValue",
-  "set",
-  "tree",
-] as const satisfies ReadonlyArray<DataCategory>);
-
-/**
- * Schema for validating property value content types
- * @internal
- */
-export const propertyValueContentTypeSchema = z.enum([
-  "string",
-  "integer",
-  "decimal",
-  "boolean",
-  "date",
-  "dateTime",
-  "time",
-  "coordinate",
-  "IDREF",
-] as const satisfies ReadonlyArray<PropertyValueContentType>);
 
 /**
  * Schema for validating gallery parameters
  * @internal
  */
-export const gallerySchema = z
-  .object({
-    uuid: z.uuid({ error: "Invalid UUID" }),
-    filter: z.string().optional(),
-    page: z.number().positive({ error: "Page must be positive" }),
-    perPage: z.number().positive({ error: "Per page must be positive" }),
-  })
-  .strict();
+export const gallerySchema = v.object({
+  uuid: v.pipe(v.string(), v.uuid("Invalid UUID")),
+  filter: v.optional(v.string()),
+  page: v.pipe(
+    v.number("Page must be positive"),
+    v.check((n) => n > 0, "Page must be positive"),
+  ),
+  perPage: v.pipe(
+    v.number("Per page must be positive"),
+    v.check((n) => n > 0, "Per page must be positive"),
+  ),
+});
 
 /**
  * Schema for validating and parsing render options
  * @internal
  */
-export const renderOptionsSchema = z
-  .string()
-  .transform((str) => str.split(" "))
-  .pipe(
-    z.array(
-      z.enum([
-        "bold",
-        "italic",
-        "underline",
-      ] as const satisfies ReadonlyArray<RenderOption>),
-    ),
-  );
+export const renderOptionsSchema = v.pipe(
+  v.string(),
+  v.transform((str) => str.split(" ")),
+  v.array(v.picklist(["bold", "italic", "underline"])),
+);
 
 /**
  * Schema for validating and parsing whitespace options
  * @internal
  */
-export const whitespaceSchema = z
-  .string()
-  .transform((str) => str.split(" "))
-  .pipe(
-    z.array(
-      z.enum([
-        "newline",
-        "trailing",
-        "leading",
-      ] as const satisfies ReadonlyArray<WhitespaceOption>),
-    ),
-  );
+export const whitespaceSchema = v.pipe(
+  v.string(),
+  v.transform((str) => str.split(" ")),
+  v.array(v.picklist(["newline", "trailing", "leading"])),
+);
 
 /**
  * Schema for validating email addresses
  * @internal
  */
-export const emailSchema = z.email({ error: "Invalid email" });
+export const emailSchema = v.pipe(v.string(), v.email("Invalid email address"));

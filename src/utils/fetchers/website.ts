@@ -1,69 +1,90 @@
-import type { OchreData } from "../../types/internal.raw.d.ts";
-import type { Website } from "../../types/main.js";
-import { parseIdentification, parseWebsite } from "../parse.js";
+import type { XMLWebsiteData } from "../../types/xml.types.js";
+import { writeFileSync } from "node:fs";
+import { XMLParser } from "fast-xml-parser";
+import * as v from "valibot";
+import { XMLWebsiteData as XMLWebsiteDataSchema } from "../../types/xml.raw.js";
+import { XML_ARRAY_TAGS } from "../constants.js";
+import { logIssues } from "../helpers.js";
 
 /**
- * Fetches and parses a website configuration from the OCHRE API
+ * Fetches raw OCHRE website data by abbreviation from the OCHRE API
  *
- * @param abbreviation - The abbreviation identifier for the website
- * @returns The parsed website configuration or null if the fetch/parse fails
+ * @param abbreviation - The abbreviation of the OCHRE item to fetch
+ * @param options - Optional options object
+ * @param options.fetch - Custom fetch function to use instead of the default fetch
+ * @returns A tuple containing either [null, OchreData] on success or [error message, null] on failure
  *
  * @example
  * ```ts
- * const website = await fetchWebsite("guerrilla-television");
- * if (website === null) {
- *   console.error("Failed to fetch website");
+ * const [error, data] = await fetchWebsite("idalion");
+ * if (error !== null) {
+ *   console.error(`Failed to fetch: ${error}`);
  *   return;
  * }
- * console.log(`Fetched website: ${website.identification.label}`);
- * console.log(`Contains ${website.pages.length.toLocaleString()} pages`);
+ * // Process data...
  * ```
- *
- * @remarks
- * The returned website configuration includes:
- * - Website metadata and identification
- * - Page structure and content
- * - Layout and styling properties
- * - Navigation configuration
- * - Sidebar elements
- * - Project information
- * - Creator details
- *
- * The abbreviation is case-insensitive and should match the website's configured abbreviation in OCHRE.
  */
 export async function fetchWebsite(
   abbreviation: string,
-  customFetch?: (
-    input: string | URL | globalThis.Request,
-    init?: RequestInit,
-  ) => Promise<Response>,
-): Promise<[null, Website] | [string, null]> {
+  options?: {
+    fetch?: (
+      input: string | URL | globalThis.Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+  },
+): Promise<[null, XMLWebsiteData] | [string, null]> {
   try {
-    const response = await (customFetch ?? fetch)(
-      `https://ochre.lib.uchicago.edu/ochre?xquery=for $q in input()/ochre[tree[@type='lesson'][identification/abbreviation='${abbreviation.toLocaleLowerCase("en-US")}']] return $q&format=json`,
+    const response = await (options?.fetch ?? fetch)(
+      `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(`for $q in input()/ochre[tree[@type='lesson'][identification/abbreviation='${abbreviation.toLocaleLowerCase("en-US")}']] return $q`)}&xsl=none&lang="*"`,
     );
     if (!response.ok) {
-      throw new Error("Failed to fetch website");
+      throw new Error("Failed to fetch OCHRE website data");
     }
 
-    const data = (await response.json()) as { result: OchreData | [] };
+    const dataRaw = await response.text();
 
-    if (!("ochre" in data.result) || !("tree" in data.result.ochre)) {
-      throw new Error("Failed to fetch website");
+    const parser = new XMLParser({
+      alwaysCreateTextNode: true,
+      ignoreAttributes: false,
+      removeNSPrefix: true,
+      ignorePiTags: true,
+      trimValues: false,
+      parseTagValue: false,
+      parseAttributeValue: false,
+      attributeNamePrefix: "",
+      textNodeName: "text",
+      stopNodes: ["*.referenceFormatDiv", "*.citationFormatSpan"],
+      htmlEntities: true,
+      isArray(tagName, jPath, isLeafNode, isAttribute) {
+        if (isAttribute) {
+          return false;
+        }
+
+        if (XML_ARRAY_TAGS.includes(tagName)) {
+          return true;
+        }
+
+        return false;
+      },
+      attributeValueProcessor: (attrName, attrValue) => {
+        if (attrValue.startsWith("xs:")) {
+          return attrValue.replace("xs:", "");
+        }
+
+        return null;
+      },
+    });
+
+    const data = parser.parse(dataRaw) as unknown;
+    writeFileSync("data.json", JSON.stringify(data, null, 2));
+
+    const { success, issues, output } = v.safeParse(XMLWebsiteDataSchema, data);
+    if (!success) {
+      logIssues(issues);
+      throw new Error("Failed to parse OCHRE website data");
     }
 
-    const projectIdentification =
-      data.result.ochre.metadata.project?.identification ?
-        parseIdentification(data.result.ochre.metadata.project.identification)
-      : null;
-
-    const website = await parseWebsite(
-      data.result.ochre.tree,
-      projectIdentification?.label ?? "",
-      data.result.ochre.metadata.project?.identification.website ?? null,
-    );
-
-    return [null, website];
+    return [null, output];
   } catch (error) {
     console.error(error);
     return [error instanceof Error ? error.message : "Unknown error", null];

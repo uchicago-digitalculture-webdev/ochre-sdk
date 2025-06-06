@@ -1,33 +1,23 @@
-import type { DataCategory } from "../types/main.js";
-import { categorySchema } from "../schemas.js";
+import type * as v from "valibot";
 
 /**
- * Get the category of an item from the OCHRE API response
- * @param keys - The keys of the OCHRE API response
- * @returns The category of the item
+ * Logs Valibot validation issues to the console
+ * @param issues - The validation issues to log
+ * @param depth - The depth of the issues
  * @internal
  */
-export function getItemCategory(keys: ReadonlyArray<string>): DataCategory {
-  const categoryFound = keys.find(
-    (key) => categorySchema.safeParse(key).success,
-  );
-  if (!categoryFound) {
-    const unknownKey = keys.find(
-      (key) =>
-        ![
-          "uuid",
-          "uuidBelongsTo",
-          "belongsTo",
-          "publicationDateTime",
-          "metadata",
-          "languages",
-        ].includes(key),
-    );
-
-    throw new Error(`Invalid OCHRE data; found unexpected "${unknownKey}" key`);
+export function logIssues(
+  issues: ReturnType<typeof v.safeParse>["issues"],
+  depth = 0,
+) {
+  if (issues == null) {
+    return;
   }
 
-  const categoryKey = categorySchema.parse(categoryFound);
-
-  return categoryKey;
+  for (const issue of issues) {
+    console.error("\t".repeat(depth), issue.message);
+    if (issue.issues != null && issue.issues.length > 0) {
+      logIssues(issue.issues, depth + 1);
+    }
+  }
 }
