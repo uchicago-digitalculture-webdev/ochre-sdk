@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.11
+
+### Patch Changes
+
+- 449d98f: feat: add paginationVariant to collection component
+
 ## 0.8.10
 
 ### Patch Changes
