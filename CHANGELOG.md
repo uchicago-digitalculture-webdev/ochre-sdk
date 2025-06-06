@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.10
+
+### Patch Changes
+
+- 59f3945: feat: add isFullHeight property to WebElementComponent type and update parseWebElementProperties function to handle it
+
 ## 0.8.9
 
 ### Patch Changes
