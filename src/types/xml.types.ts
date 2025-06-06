@@ -26,7 +26,7 @@ export type XMLString = {
   string:
     | Array<XMLText>
     | Array<{
-        links: Array<XMLLink>;
+        links: XMLDataItem;
         properties?: { property: Array<XMLProperty> };
         string?: Array<XMLText>;
         annotation: string;
@@ -136,21 +136,6 @@ export type XMLImage = {
   widthPreview?: XMLNumber;
 };
 
-export type XMLLink = Record<
-  string,
-  Array<{
-    uuid: string;
-    publicationDateTime?: string;
-    identification?: XMLIdentification;
-    type?: string;
-    rend?: "inline";
-    content?: string;
-    isPrimary?: XMLBoolean;
-    image?: XMLImage;
-    href?: string;
-  }>
->;
-
 export type XMLImageMapArea = {
   uuid: string;
   publicationDateTime: string;
@@ -187,7 +172,7 @@ export type XMLProperty = {
       category?: string;
       slug?: string;
       unit?: string;
-      booleanValue?: string;
+      booleanValue?: XMLBoolean;
       isUncertain?: "true";
     }
   >;
@@ -200,7 +185,6 @@ export type XMLBaseItem = {
   publicationDateTime?: string;
   date?: string;
   availability?: { license: XMLLicense };
-  project?: { identification: XMLIdentification };
   identification: XMLIdentification;
   context?: XMLContext;
   creators?: { creator: Array<XMLPerson> };
@@ -210,8 +194,7 @@ export type XMLBaseItem = {
 
 export type XMLBibliography = XMLBaseItem & {
   type?: string;
-  project?: { identification: XMLIdentification };
-  ZoteroID?: string;
+  zoteroId?: string;
   sourceDocument?: { uuid: string; text: string };
   publicationInfo?: {
     publishers?: { publisher: Array<XMLPerson> };
@@ -231,11 +214,10 @@ export type XMLBibliography = XMLBaseItem & {
   };
   authors?: { person: Array<XMLPerson> };
   periods?: { period: Array<XMLPeriod> };
-  links?: Array<XMLLink>;
+  links?: XMLDataItem;
   notes?: XMLNote;
   properties?: { property: Array<XMLProperty> };
-  citedBibliography?: { reference: Array<XMLBibliography> };
-  bibliography?: Array<XMLBibliography>;
+  bibliographies?: { bibliography: Array<XMLBibliography> };
 };
 
 export type XMLInterpretation = {
@@ -243,10 +225,10 @@ export type XMLInterpretation = {
   date?: string;
   observers?: { observer: Array<XMLPerson> };
   periods?: { period: Array<XMLPeriod> };
-  links?: Array<XMLLink>;
+  links?: XMLDataItem;
   notes?: XMLNote;
   properties?: { property: Array<XMLProperty> };
-  citedBibliography?: { reference: Array<XMLBibliography> };
+  bibliographies?: { bibliography: Array<XMLBibliography> };
 };
 
 export type XMLConcept = XMLBaseItem & {
@@ -260,10 +242,10 @@ export type XMLObservation = {
   date?: string;
   observers?: { observer: Array<XMLPerson> };
   periods?: { period: Array<XMLPeriod> };
-  links?: Array<XMLLink>;
+  links?: XMLDataItem;
   notes?: XMLNote;
   properties?: { property: Array<XMLProperty> };
-  citedBibliography?: { reference: Array<XMLBibliography> };
+  bibliographies?: { bibliography: Array<XMLBibliography> };
 };
 
 export type XMLSpatialUnit = XMLBaseItem & {
@@ -271,46 +253,46 @@ export type XMLSpatialUnit = XMLBaseItem & {
   coordinates?: XMLCoordinates;
   mapData?: { geoJSON: { multiPolygon: string; EPSG: XMLNumber } };
   observations?: { observation: Array<XMLObservation> };
-  citedBibliography?: { reference: Array<XMLBibliography> };
+  bibliographies?: { bibliography: Array<XMLBibliography> };
   spatialUnit?: Array<XMLSpatialUnit>;
 };
 
 export type XMLPeriod = XMLBaseItem & {
   type?: string;
   coordinates?: XMLCoordinates;
-  links?: Array<XMLLink>;
+  links?: XMLDataItem;
   notes?: XMLNote;
   properties?: { property: Array<XMLProperty> };
-  citedBibliography?: { reference: Array<XMLBibliography> };
+  bibliographies?: { bibliography: Array<XMLBibliography> };
   period?: Array<XMLPeriod>;
 };
 
 export type XMLPerson = XMLBaseItem &
-  XMLContent & {
+  Partial<XMLContent> & {
     type?: string;
     address?: { country?: string; city?: string; state?: string };
     coordinates?: XMLCoordinates;
     periods?: { period: Array<XMLPeriod> };
-    links?: Array<XMLLink>;
+    links?: XMLDataItem;
     notes?: XMLNote;
     properties?: { property: Array<XMLProperty> };
-    citedBibliography?: { reference: Array<XMLBibliography> };
+    bibliographies?: { bibliography: Array<XMLBibliography> };
   };
 
 export type XMLPropertyValue = XMLBaseItem & {
   coordinates?: XMLCoordinates;
-  links?: Array<XMLLink>;
+  links?: XMLDataItem;
   notes?: XMLNote;
   properties?: { property: Array<XMLProperty> };
-  citedBibliography?: { reference: Array<XMLBibliography> };
+  bibliographies?: { bibliography: Array<XMLBibliography> };
 };
 
 export type XMLPropertyVariable = XMLBaseItem & {
   type?: string;
   coordinates?: XMLCoordinates;
-  links?: Array<XMLLink>;
+  links?: XMLDataItem;
   notes?: XMLNote;
-  citedBibliography?: { reference: Array<XMLBibliography> };
+  bibliographies?: { bibliography: Array<XMLBibliography> };
 };
 
 export type XMLResource = XMLBaseItem & {
@@ -323,11 +305,11 @@ export type XMLResource = XMLBaseItem & {
   document?: XMLContent;
   coordinates?: XMLCoordinates;
   periods?: { period: Array<XMLPeriod> };
-  links?: Array<XMLLink>;
+  links?: XMLDataItem;
   reverseLinks?: Array<XMLDataItem>;
   notes?: XMLNote;
   properties?: { property: Array<XMLProperty> };
-  citedBibliography?: { reference: Array<XMLBibliography> };
+  bibliographies?: { bibliography: Array<XMLBibliography> };
   resource?: Array<XMLResource>;
 };
 
@@ -345,7 +327,7 @@ export type XMLHeading = {
 
 export type XMLTree = XMLBaseItem & {
   date?: string;
-  links?: Array<XMLLink>;
+  links?: XMLDataItem;
   notes?: XMLNote;
   properties?: { property: Array<XMLProperty> };
   items?: { heading?: Array<XMLHeading> } & (
@@ -365,7 +347,7 @@ export type XMLSet = XMLBaseItem & {
   type?: string;
   suppressBlanks?: XMLBoolean;
   tabularStructure?: XMLBoolean;
-  links?: Array<XMLLink>;
+  links?: XMLDataItem;
   notes?: XMLNote;
   properties?: { property: Array<XMLProperty> };
   items?: {
@@ -403,4 +385,18 @@ export type XMLData = {
     metadata: XMLMetadata;
     languages?: string;
   } & XMLDataItem;
+};
+
+export type XMLWebsiteData = {
+  result: {
+    ochre: {
+      uuid: string;
+      belongsTo: string;
+      uuidBelongsTo: string;
+      publicationDateTime: string;
+      metadata: XMLMetadata;
+      languages?: string;
+      tree: Array<XMLTree>;
+    };
+  };
 };
