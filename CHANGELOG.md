@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.12
+
+### Patch Changes
+
+- ae3b40c: feat: add isBreadcrumbsDisplayed property to Webpage properties
+
 ## 0.8.11
 
 ### Patch Changes
