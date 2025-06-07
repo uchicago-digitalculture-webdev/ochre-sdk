@@ -2,7 +2,7 @@ import type { UuidMetadataResponse } from "../../types/internal.raw.js";
 import type { UuidMetadata } from "../../types/website.js";
 import * as v from "valibot";
 import { uuidSchema } from "../../schemas.js";
-import { parseIdentification } from "../parse/old.js";
+import { parseIdentification } from "../parsers/old.js";
 
 /**
  * Fetches raw OCHRE metadata by UUID from the OCHRE API

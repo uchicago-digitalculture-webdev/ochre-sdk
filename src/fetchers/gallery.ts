@@ -2,7 +2,7 @@ import type { GalleryResponse } from "../../types/internal.raw.d.ts";
 import type { Gallery } from "../../types/website.js";
 import * as v from "valibot";
 import { gallerySchema } from "../../schemas.js";
-import { parseIdentification, parseResources } from "../parse/old.js";
+import { parseIdentification, parseResources } from "../parsers/old.js";
 
 /**
  * Fetches and parses a gallery from the OCHRE API
