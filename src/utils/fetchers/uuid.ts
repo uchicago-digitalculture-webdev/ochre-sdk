@@ -1,10 +1,9 @@
-import type { XMLData } from "../../types/xml.types.js";
-import { writeFileSync } from "node:fs";
+import type { XMLData } from "../../types/xml/types.js";
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import { uuidSchema } from "../../schemas.js";
-import { XMLData as XMLDataSchema } from "../../types/xml.raw.js";
-import { XML_ARRAY_TAGS } from "../constants.js";
+import { XMLData as XMLDataSchema } from "../../types/xml/schemas.js";
+import { XML_PARSER_OPTIONS } from "../constants.js";
 import { logIssues } from "../helpers.js";
 
 /**
@@ -35,7 +34,7 @@ export async function fetchByUuid(
       init?: RequestInit,
     ) => Promise<Response>;
   },
-): Promise<[null, XMLData] | [string, null]> {
+): Promise<{ data: XMLData; error: null } | { data: null; error: string }> {
   try {
     const parsedUuid = v.parse(uuidSchema, uuid);
 
@@ -48,40 +47,9 @@ export async function fetchByUuid(
 
     const dataRaw = await response.text();
 
-    const parser = new XMLParser({
-      alwaysCreateTextNode: true,
-      ignoreAttributes: false,
-      removeNSPrefix: true,
-      ignorePiTags: true,
-      trimValues: false,
-      parseTagValue: false,
-      parseAttributeValue: false,
-      attributeNamePrefix: "",
-      textNodeName: "text",
-      stopNodes: ["*.referenceFormatDiv", "*.citationFormatSpan"],
-      htmlEntities: true,
-      isArray(tagName, jPath, isLeafNode, isAttribute) {
-        if (isAttribute) {
-          return false;
-        }
-
-        if (XML_ARRAY_TAGS.includes(tagName)) {
-          return true;
-        }
-
-        return false;
-      },
-      attributeValueProcessor: (attrName, attrValue) => {
-        if (attrValue.startsWith("xs:")) {
-          return attrValue.replace("xs:", "");
-        }
-
-        return null;
-      },
-    });
+    const parser = new XMLParser(XML_PARSER_OPTIONS);
 
     const data = parser.parse(dataRaw) as unknown;
-    writeFileSync("data.json", JSON.stringify(data, null, 2));
 
     const { success, issues, output } = v.safeParse(XMLDataSchema, data);
     if (!success) {
@@ -89,9 +57,12 @@ export async function fetchByUuid(
       throw new Error("Failed to parse OCHRE data");
     }
 
-    return [null, output];
+    return { data: output, error: null };
   } catch (error) {
     console.error(error);
-    return [error instanceof Error ? error.message : "Unknown error", null];
+    return {
+      data: null,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
