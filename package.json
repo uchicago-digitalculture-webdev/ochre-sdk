@@ -51,6 +51,7 @@
     "dist"
   ],
   "dependencies": {
+    "date-fns": "^4.1.0",
     "fast-xml-parser": "^5.2.4",
     "valibot": "^1.1.0"
   },
