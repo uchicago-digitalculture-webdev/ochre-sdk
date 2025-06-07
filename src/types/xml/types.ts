@@ -15,7 +15,7 @@ export type XMLHeadingDataCategory = Exclude<
   "tree" | "bibliography" | "spatialUnit" | "concept" | "period"
 >;
 
-export type XMLNonRecursiveDataCategory = Exclude<
+export type XMLRecursiveDataCategory = Exclude<
   XMLDataCategory,
   "tree" | "person" | "propertyValue" | "propertyVariable" | "set"
 >;
@@ -82,7 +82,7 @@ export type XMLContextItem = {
   project: XMLContextValue;
   tree: Array<XMLContextValue>;
   displayPath: string;
-} & Partial<Record<XMLNonRecursiveDataCategory, Array<XMLContextValue>>>;
+} & Partial<Record<XMLRecursiveDataCategory, Array<XMLContextValue>>>;
 
 export type XMLContext = Array<{
   context: Array<XMLContextItem>;

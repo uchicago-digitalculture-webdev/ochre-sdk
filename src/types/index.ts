@@ -45,10 +45,12 @@ export type HeadingDataCategory = Exclude<
 /**
  * Represents the category of items that are non-recursive
  */
-export type NonRecursiveDataCategory = Exclude<
+export type RecursiveDataCategory = Exclude<
   DataCategory,
   "tree" | "person" | "propertyValue" | "propertyVariable" | "set"
 >;
+
+export type ContainerDataCategory = Extract<DataCategory, "tree" | "set">;
 
 /**
  * Metadata information for items including project, publisher and language details
@@ -218,7 +220,9 @@ export type Item<
   creators: Array<Person>;
   description: string | null;
   events: Array<Event>;
-  items: Array<Item<T, U>>;
+  items: T extends RecursiveDataCategory | ContainerDataCategory ?
+    Array<Item<T, U>>
+  : never;
 };
 
 /**
@@ -232,7 +236,7 @@ export type Tree<T extends ItemsDataCategory> = Prettify<
     links: Array<Link>;
     notes: Array<Note>;
     properties: Array<Property>;
-    citedBibliographies: Array<Bibliography>;
+    bibliographies: Array<Bibliography>;
   }
 >;
 
@@ -262,8 +266,6 @@ export type Set<T extends ItemsDataCategory> = Prettify<
 export type Bibliography = Prettify<
   Item<"bibliography"> & {
     type: string | null;
-    zoteroId: string | null;
-    projectIdentification: Identification | null;
     citationFormat: string | null;
     referenceFormat: string | null;
     publicationInfo: {
@@ -271,14 +273,17 @@ export type Bibliography = Prettify<
       startDate: Date | null;
     } | null;
     entryInfo: { startIssue: string; startVolume: string } | null;
-    source: DataItem | null;
+    source: Item<ItemsDataCategory> | null;
     authors: Array<Person>;
     periods: Array<Period>;
     links: Array<Link>;
     notes: Array<Note>;
     properties: Array<Property>;
-    citedBibliographies: Array<Bibliography>;
-  }
+    bibliographies: Array<Bibliography>;
+  } & (
+      | { type: "zotero"; zoteroId: string; uuid: string | null }
+      | { type: string }
+    )
 >;
 
 /**
@@ -301,7 +306,7 @@ export type Interpretation = {
   links: Array<Link>;
   notes: Array<Note>;
   properties: Array<Property>;
-  citedBibliographies: Array<Bibliography>;
+  bibliographies: Array<Bibliography>;
 };
 
 /**
@@ -313,7 +318,7 @@ export type SpatialUnit = Prettify<
     coordinates: Array<Coordinates>;
     mapData: { geoJSON: { multiPolygon: string; EPSG: number } } | null;
     observations: Array<Observation>;
-    citedBibliographies: Array<Bibliography>;
+    bibliographies: Array<Bibliography>;
   }
 >;
 
@@ -328,7 +333,7 @@ export type Observation = {
   links: Array<Link>;
   notes: Array<Note>;
   properties: Array<Property>;
-  citedBibliographies: Array<Bibliography>;
+  bibliographies: Array<Bibliography>;
 };
 
 /**
@@ -341,7 +346,7 @@ export type Period = Prettify<
     links: Array<Link>;
     notes: Array<Note>;
     properties: Array<Property>;
-    citedBibliographies: Array<Bibliography>;
+    bibliographies: Array<Bibliography>;
   }
 >;
 
@@ -374,7 +379,7 @@ export type PropertyValue = Prettify<
     links: Array<Link>;
     notes: Array<Note>;
     properties: Array<Property>;
-    citedBibliographies: Array<Bibliography>;
+    bibliographies: Array<Bibliography>;
   }
 >;
 
@@ -387,7 +392,7 @@ export type PropertyVariable = Prettify<
     coordinates: Array<Coordinates>;
     links: Array<Link>;
     notes: Array<Note>;
-    citedBibliographies: Array<Bibliography>;
+    bibliographies: Array<Bibliography>;
   }
 >;
 
@@ -403,7 +408,7 @@ export type Resource = Prettify<
     height: number | null;
     width: number | null;
     image: Image | null;
-    document: Document | null;
+    document: string | null;
     imageMap: ImageMap | null;
     coordinates: Array<Coordinates>;
     periods: Array<Period>;
@@ -411,7 +416,7 @@ export type Resource = Prettify<
     reverseLinks: Array<Link>;
     notes: Array<Note>;
     properties: Array<Property>;
-    citedBibliographies: Array<Bibliography>;
+    bibliographies: Array<Bibliography>;
   }
 >;
 
@@ -447,11 +452,6 @@ export type ImageMap = {
   width: number;
   height: number;
 };
-
-/**
- * Represents a document with content and footnotes
- */
-export type Document = { content: string; footnotes: Array<Footnote> };
 
 /**
  * Represents a footnote in a document
