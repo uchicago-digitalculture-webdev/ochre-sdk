@@ -1,4 +1,4 @@
-type Prettify<T> = { [K in keyof T]: T[K] } & {};
+import type { Prettify } from "./utils.js";
 
 /**
  * Represents the core data structure containing item information and metadata
@@ -52,6 +52,8 @@ export type RecursiveDataCategory = Exclude<
 
 export type ContainerDataCategory = Extract<DataCategory, "tree" | "set">;
 
+export type MultilingualText = Record<string, string>;
+
 /**
  * Metadata information for items including project, publisher and language details
  */
@@ -75,7 +77,10 @@ export type Metadata = {
 /**
  * Basic identification information used across multiple types
  */
-export type Identification = { label: string; abbreviation: string | null };
+export type Identification = {
+  label: MultilingualText;
+  abbreviation: MultilingualText | null;
+};
 
 /**
  * Represents a single item in a context hierarchy with its metadata
@@ -118,6 +123,21 @@ export type Event = {
   agent: Person | null;
 };
 
+export type CoordinatesSource =
+  | { context: "self"; uuid: string; label: MultilingualText }
+  | {
+      context: "related";
+      uuid: string;
+      label: MultilingualText;
+      value: MultilingualText;
+    }
+  | {
+      context: "inherited";
+      item: { uuid: string; label: MultilingualText };
+      uuid: string;
+      label: MultilingualText;
+    };
+
 /**
  * Geographic coordinates item with optional type and label
  */
@@ -127,31 +147,13 @@ export type Coordinates =
       latitude: number;
       longitude: number;
       altitude: number | null;
-      source:
-        | { context: "self"; uuid: string; label: string }
-        | { context: "related"; uuid: string; label: string; value: string }
-        | {
-            context: "inherited";
-            item: { uuid: string; label: string };
-            uuid: string;
-            label: string;
-          }
-        | null;
+      source: CoordinatesSource | null;
     }
   | {
       type: "plane";
       minimum: { latitude: number; longitude: number };
       maximum: { latitude: number; longitude: number };
-      source:
-        | { context: "self"; uuid: string; label: string }
-        | { context: "related"; uuid: string; label: string; value: string }
-        | {
-            context: "inherited";
-            item: { uuid: string; label: string };
-            uuid: string;
-            label: string;
-          }
-        | null;
+      source: CoordinatesSource | null;
     };
 
 /**
@@ -190,7 +192,7 @@ export type Link = Prettify<
 export type Note = {
   number: number;
   title: string | null;
-  content: string;
+  content: MultilingualText;
   authors: Array<Person>;
 };
 
@@ -215,7 +217,7 @@ type BaseItem<T extends DataCategory> = {
   license: License | null;
   identification: Identification;
   creators: Array<Person>;
-  description: string | null;
+  description: MultilingualText | null;
   events: Array<Event>;
   items: T extends RecursiveDataCategory ? Array<Item<T>> : never;
 };
@@ -374,7 +376,7 @@ export type Person = Prettify<
       state: string | null;
     } | null;
     coordinates: Array<Coordinates>;
-    content: string | null;
+    content: MultilingualText | null;
     periods: Array<Period>;
     links: Array<Link>;
     notes: Array<Note>;
@@ -420,7 +422,7 @@ export type Resource = Prettify<
     height: number | null;
     width: number | null;
     image: Image | null;
-    document: string | null;
+    document: MultilingualText | null;
     imageMap: ImageMap | null;
     coordinates: Array<Coordinates>;
     periods: Array<Period>;
@@ -440,7 +442,6 @@ export type Image = {
   identification: Identification | null;
   url: string | null;
   htmlPrefix: string | null;
-  content: string | null;
   width: number | null;
   height: number | null;
 };
@@ -495,7 +496,7 @@ export type PropertyValueContent<T extends PropertyValueContentType> = {
       : T extends "date" | "dateTime" | "time" ? Date
       : string)
     | null;
-  label: string | null;
+  label: MultilingualText | null;
   isUncertain: boolean;
   category: string | null;
   type: string | null;

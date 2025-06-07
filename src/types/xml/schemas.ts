@@ -415,7 +415,6 @@ const XMLImage: v.GenericSchema<XMLImageType> = v.object(
     htmlImgSrcPrefix: v.optional(
       v.string("XMLImage: htmlImgSrcPrefix is string and optional"),
     ),
-    content: v.optional(v.string("XMLImage: content is string and optional")),
     height: v.optional(XMLNumber, "XMLImage: height is optional"),
     width: v.optional(XMLNumber, "XMLImage: width is optional"),
   },

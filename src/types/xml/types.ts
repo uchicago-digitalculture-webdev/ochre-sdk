@@ -129,7 +129,6 @@ export type XMLImage = {
   identification?: XMLIdentification;
   href?: string;
   htmlImgSrcPrefix?: string;
-  content?: string;
   height?: XMLNumber;
   width?: XMLNumber;
 };
