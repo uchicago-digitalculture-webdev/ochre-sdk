@@ -1,5 +1,23 @@
 # OCHRE SDK
 
+## 0.8.12
+
+### Patch Changes
+
+- ae3b40c: feat: add isBreadcrumbsDisplayed property to Webpage properties
+
+## 0.8.11
+
+### Patch Changes
+
+- 449d98f: feat: add paginationVariant to collection component
+
+## 0.8.10
+
+### Patch Changes
+
+- 59f3945: feat: add isFullHeight property to WebElementComponent type and update parseWebElementProperties function to handle it
+
 ## 0.8.9
 
 ### Patch Changes
