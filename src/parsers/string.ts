@@ -1,10 +1,5 @@
-import type {
-  FakeString,
-  OchreStringContent,
-  OchreStringItem,
-  OchreStringRichTextItem,
-} from "../types/internal.raw.js";
-import type { Footnote } from "../types/index.js";
+import type { XMLContent, XMLText } from "../types/xml/types.js";
+import * as v from "valibot";
 import {
   emailSchema,
   renderOptionsSchema,
@@ -12,34 +7,14 @@ import {
 } from "../schemas.js";
 
 /**
- * Finds a string item in an array by language code
- *
- * @param content - Array of string items to search
- * @param language - Language code to search for
- * @returns Matching string item or null if not found
- * @internal
- */
-function getStringItemByLanguage(
-  content: Array<OchreStringItem>,
-  language: string,
-): OchreStringItem | null {
-  const stringItemToFind = content.find((item) => item.lang === language);
-  return stringItemToFind ?? null;
-}
-
-/**
  * Parses email addresses in a string into HTML links
  *
  * @param string - Input string to parse
  * @returns String with emails converted to HTML links
  *
- * @example
- * ```ts
- * const parsed = parseEmail("Contact us at info@example.com");
- * // Returns: "Contact us at <ExternalLink href="mailto:info@example.com">info@example.com</ExternalLink>"
- * ```
+ * @internal
  */
-export function parseEmail(string: string): string {
+function parseEmail(string: string): string {
   const splitString = string.split(" ");
   const returnSplitString: Array<string> = [];
 
@@ -53,8 +28,8 @@ export function parseEmail(string: string): string {
     const before = string.slice(0, index);
     const after = string.slice(index + cleanString.length);
 
-    const isEmail = emailSchema.safeParse(cleanString).success;
-    if (isEmail) {
+    const { success } = v.safeParse(emailSchema, cleanString);
+    if (success) {
       returnSplitString.push(
         before,
         `${before}<ExternalLink href="mailto:${cleanString}">${cleanString}</ExternalLink>${after}`,
@@ -73,34 +48,38 @@ export function parseEmail(string: string): string {
  *
  * @param contentString - The string content to render
  * @param renderString - Space-separated string of render options
+ * @param options - Options for parsing
+ * @param options.isRichText - Whether to parse as rich text
  * @returns String with markdown formatting applied
  * @internal
  */
 function parseRenderOptions(
   contentString: string,
   renderString: string,
+  options: { isRichText: boolean },
 ): string {
   let returnString = contentString;
 
-  const result = renderOptionsSchema.safeParse(renderString);
-  if (!result.success) {
-    console.warn(`Invalid render options string provided: “${renderString}”`);
-
-    return contentString;
+  const { success, output } = v.safeParse(renderOptionsSchema, renderString);
+  if (!success) {
+    throw new Error(
+      `Invalid render options string provided: “${renderString}”`,
+    );
   }
 
-  for (const option of result.data) {
+  for (const option of output) {
     switch (option) {
       case "bold": {
-        returnString = `**${returnString}**`;
+        returnString =
+          options.isRichText ? `**${returnString}**` : returnString;
         break;
       }
       case "italic": {
-        returnString = `*${returnString}*`;
+        returnString = options.isRichText ? `*${returnString}*` : returnString;
         break;
       }
       case "underline": {
-        returnString = `_${returnString}_`;
+        returnString = options.isRichText ? `_${returnString}_` : returnString;
         break;
       }
     }
@@ -110,35 +89,36 @@ function parseRenderOptions(
 }
 
 /**
- * Applies whitespace options to a string (newline, trailing, leading)
+ * Applies whitespace options to a string (newline)
  *
  * @param contentString - The string content to modify
  * @param whitespace - Space-separated string of whitespace options
+ * @param options - Options for parsing
+ * @param options.isRichText - Whether to parse as rich text
  * @returns String with whitespace modifications applied
+ *
  * @internal
  */
-function parseWhitespace(contentString: string, whitespace: string): string {
+function parseWhitespace(
+  contentString: string,
+  whitespace: string,
+  options: { isRichText: boolean },
+): string {
   let returnString = contentString;
 
-  const result = whitespaceSchema.safeParse(whitespace);
-  if (!result.success) {
-    console.warn(`Invalid whitespace string provided: “${whitespace}”`);
-
-    return contentString;
+  const { success, output } = v.safeParse(whitespaceSchema, whitespace);
+  if (!success) {
+    throw new Error(`Invalid whitespace string provided: “${whitespace}”`);
   }
 
-  for (const option of result.data) {
+  for (const option of output) {
     switch (option) {
       case "newline": {
-        returnString = `<br />\n${returnString}`;
+        returnString =
+          options.isRichText ? `<br />\n${returnString}` : `\n${returnString}`;
         break;
       }
-      case "trailing": {
-        returnString = `${returnString} `;
-        break;
-      }
-      case "leading": {
-        returnString = ` ${returnString}`;
+      default: {
         break;
       }
     }
@@ -148,70 +128,100 @@ function parseWhitespace(contentString: string, whitespace: string): string {
 }
 
 /**
- * Converts a FakeString (string|number|boolean) to a proper string
+ * Parses XML text into a formatted string with whitespace and rendering options
  *
- * @param string - FakeString value to convert
- * @returns Converted string value
+ * @param item - XML text item to parse
+ * @param options - Options for parsing
+ * @param options.isRichText - Whether to parse as rich text
+ * @param options.parseEmail - Whether to parse email addresses
+ * @returns Formatted string with whitespace and rendering options
  *
- * @example
- * ```ts
- * parseFakeString(true); // Returns "Yes"
- * parseFakeString(123); // Returns "123"
- * parseFakeString("test"); // Returns "test"
- * ```
+ * @internal
  */
-export function parseFakeString(string: FakeString): string {
-  return String(string).replaceAll("&#39;", "'");
+export function parseXMLText(
+  item: XMLText,
+  options?: { isRichText?: boolean; parseEmail?: boolean },
+): string {
+  let returnString = item.text ?? "";
+
+  if (item.whitespace != null) {
+    returnString = parseWhitespace(returnString, item.whitespace, {
+      isRichText: options?.isRichText ?? false,
+    });
+  }
+
+  if (item.rend != null) {
+    returnString = parseRenderOptions(returnString, item.rend, {
+      isRichText: options?.isRichText ?? false,
+    });
+  }
+
+  return options?.parseEmail ? parseEmail(returnString) : returnString;
 }
 
 /**
- * Parses an OchreStringItem into a formatted string
+ * Creates an MDX component based on the variant
  *
- * @param item - OchreStringItem to parse
- * @returns Formatted string with applied rendering and whitespace
+ * @param variant - The variant of the component
+ * @param properties - The properties of the component
+ * @param properties.uuid - The UUID of the component
+ * @param properties.href - The href of the component
+ * @param properties.height - The height of the component
+ * @param properties.width - The width of the component
+ * @param properties.content - The content of the component
+ * @param properties.text - The text of the component
+ * @returns The MDX component as a string
+ *
+ * @internal
  */
-export function parseStringItem(item: OchreStringItem): string {
+function createMDXComponent(
+  variant:
+    | "inlineImage"
+    | "internalLink"
+    | "externalLink"
+    | "documentLink"
+    | "tooltipSpan",
+  properties: {
+    uuid: string;
+    text: string;
+    content?: string;
+    href?: string;
+    height?: string;
+    width?: string;
+  },
+): string {
+  const { uuid, href, height, width, content, text } = properties;
   let returnString = "";
 
-  switch (typeof item.string) {
-    case "string":
-    case "number":
-    case "boolean": {
-      returnString = parseFakeString(item.string);
+  switch (variant) {
+    case "inlineImage": {
+      returnString = `<InlineImage uuid="${uuid}" ${
+        content !== "" ? `content="${content}"` : ""
+      } height={${height ?? "null"}} width={${width ?? "null"}} />`;
       break;
     }
-    case "object": {
-      const stringItems =
-        Array.isArray(item.string) ? item.string : [item.string];
-
-      for (const stringItem of stringItems) {
-        if (
-          typeof stringItem === "string" ||
-          typeof stringItem === "number" ||
-          typeof stringItem === "boolean"
-        ) {
-          returnString += parseFakeString(stringItem);
-        } else {
-          const renderedText =
-            stringItem.rend != null ?
-              parseRenderOptions(
-                parseFakeString(stringItem.content),
-                stringItem.rend,
-              )
-            : parseFakeString(stringItem.content);
-
-          const whitespacedText =
-            stringItem.whitespace != null ?
-              parseWhitespace(renderedText, stringItem.whitespace)
-            : renderedText;
-
-          returnString += whitespacedText;
-        }
-      }
+    case "internalLink": {
+      returnString = `<InternalLink uuid="${uuid}"${
+        content !== "" ? ` content="${content}"` : ""
+      }>${text}</InternalLink>`;
       break;
     }
-    default: {
-      returnString = "";
+    case "externalLink": {
+      returnString = `<ExternalLink href="${href}"${
+        content !== "" ? ` content="${content}"` : ""
+      }>${text}</ExternalLink>`;
+      break;
+    }
+    case "documentLink": {
+      returnString = `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${uuid}&load"${
+        content !== "" ? ` content="${content}"` : ""
+      }>${text}</ExternalLink>`;
+      break;
+    }
+    case "tooltipSpan": {
+      returnString = `<TooltipSpan${
+        content !== "" ? ` content="${content}"` : ""
+      }>${text}</TooltipSpan>`;
       break;
     }
   }
@@ -222,242 +232,131 @@ export function parseStringItem(item: OchreStringItem): string {
 /**
  * Parses rich text content into a formatted string with links and annotations
  *
- * @param item - Rich text item to parse
- * @param footnotes - Optional array to collect footnotes during parsing
+ * @param item - XML-based rich text item to parse
+ * @param options - Options for parsing
+ * @param options.language - Language of the content
+ * @param options.isRichText - Whether to parse as rich text
  * @returns Formatted string with HTML/markdown elements
+ *
+ * @internal
  */
-export function parseStringDocumentItem(
-  item: OchreStringRichTextItem,
-  footnotes?: Array<Footnote>,
+export function parseXMLContent(
+  item: XMLContent,
+  { language, isRichText }: { language: string; isRichText: boolean },
 ): string {
-  if (
-    typeof item === "string" ||
-    typeof item === "number" ||
-    typeof item === "boolean"
-  ) {
-    return parseEmail(parseFakeString(item));
-  }
-
-  if ("whitespace" in item && !("content" in item) && !("string" in item)) {
-    if (item.whitespace === "newline") {
-      // newline in markdown
-      return "  \n";
-    } else {
-      return "";
-    }
-  }
-
-  if ("links" in item) {
-    let itemString = "";
-    if (typeof item.string === "object") {
-      itemString = parseStringContent(item.string);
-    } else {
-      itemString = parseFakeString(item.string)
-        .replaceAll("<", String.raw`\<`)
-        .replaceAll("{", String.raw`\{`);
-    }
-
-    const itemLinks = Array.isArray(item.links) ? item.links : [item.links];
-    for (const link of itemLinks) {
-      if ("resource" in link) {
-        const linkResource =
-          Array.isArray(link.resource) ? link.resource[0]! : link.resource;
-
-        let linkContent: string | null = null;
-        if (linkResource.content != null) {
-          linkContent = parseFakeString(linkResource.content)
-            .replaceAll("<", String.raw`\<`)
-            .replaceAll("{", String.raw`\{`);
-        }
-
-        switch (linkResource.type) {
-          case "image": {
-            if (linkResource.rend === "inline") {
-              return `<InlineImage uuid="${linkResource.uuid}" ${
-                linkContent !== null ? `content="${linkContent}"` : ""
-              } height={${linkResource.height?.toString() ?? "null"}} width={${linkResource.width?.toString() ?? "null"}} />`;
-            } else if (linkResource.publicationDateTime != null) {
-              return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkResource.uuid}" type="image"${
-                linkContent !== null ? ` content="${linkContent}"` : ""
-              }>${itemString}</ExternalLink>`;
-            } else {
-              return `<TooltipSpan type="image" ${
-                linkContent !== null ? `content="${linkContent}"` : ""
-              }>${itemString}</TooltipSpan>`;
-            }
-          }
-          case "internalDocument": {
-            const isFootnote = linkContent
-              ?.toLocaleLowerCase("en-US")
-              .includes("footnote");
-
-            if (isFootnote) {
-              if (footnotes) {
-                footnotes.push({
-                  uuid: linkResource.uuid,
-                  label: itemString,
-                  content: "",
-                });
-              }
-
-              return ` <Footnote uuid="${linkResource.uuid}"${
-                itemString ? ` label="${itemString}"` : ""
-              }${linkContent !== null ? ` content="${linkContent}"` : ""} />`;
-            } else {
-              return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkResource.uuid}" type="internalDocument" ${
-                linkContent !== null ? `content="${linkContent}"` : ""
-              }>${itemString}</ExternalLink>`;
-            }
-          }
-          case "externalDocument": {
-            if (linkResource.publicationDateTime != null) {
-              return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkResource.uuid}" type="externalDocument" ${
-                linkContent !== null ? `content="${linkContent}"` : ""
-              }>${itemString}</ExternalLink>`;
-            } else {
-              return `<TooltipSpan type="externalDocument" ${
-                linkContent !== null ? `content="${linkContent}"` : ""
-              }>${itemString}</TooltipSpan>`;
-            }
-          }
-          case "webpage": {
-            return `<ExternalLink href="${linkResource.href}" type="webpage" ${
-              linkContent !== null ? `content="${linkContent}"` : ""
-            }>${itemString}</ExternalLink>`;
-          }
-          default: {
-            return "";
-          }
-        }
-      } else if ("concept" in link) {
-        const linkConcept =
-          Array.isArray(link.concept) ? link.concept[0]! : link.concept;
-
-        if (linkConcept.publicationDateTime != null) {
-          return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkConcept.uuid}" type="concept">${itemString}</ExternalLink>`;
-        } else {
-          return `<TooltipSpan type="concept">${itemString}</TooltipSpan>`;
-        }
-      } else if ("set" in link) {
-        const linkSet = Array.isArray(link.set) ? link.set[0]! : link.set;
-
-        if (linkSet.publicationDateTime != null) {
-          return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkSet.uuid}" type="set">${itemString}</ExternalLink>`;
-        } else {
-          return `<TooltipSpan type="set">${itemString}</TooltipSpan>`;
-        }
-      } else if ("person" in link) {
-        const linkPerson =
-          Array.isArray(link.person) ? link.person[0]! : link.person;
-
-        const linkContent =
-          linkPerson.identification ?
-            (
-              ["string", "number", "boolean"].includes(
-                typeof linkPerson.identification.label,
-              )
-            ) ?
-              parseFakeString(linkPerson.identification.label as FakeString)
-            : parseStringContent(
-                linkPerson.identification.label as OchreStringContent,
-              )
-          : null;
-
-        if (linkPerson.publicationDateTime != null) {
-          return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkPerson.uuid}" type="${linkPerson.type ?? "person"}" ${
-            linkContent !== null ? `content="${linkContent}"` : ""
-          }>${itemString}</ExternalLink>`;
-        } else {
-          return `<TooltipSpan type="${linkPerson.type ?? "person"}" ${
-            linkContent !== null ? `content="${linkContent}"` : ""
-          }>${itemString}</TooltipSpan>`;
-        }
-      } else if ("bibliography" in link) {
-        const linkBibliography =
-          Array.isArray(link.bibliography) ?
-            link.bibliography[0]!
-          : link.bibliography;
-
-        if (linkBibliography.publicationDateTime != null) {
-          return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkBibliography.uuid}" type="${linkBibliography.type ?? "bibliography"}">${itemString}</ExternalLink>`;
-        } else {
-          return `<TooltipSpan type="bibliography">${itemString}</TooltipSpan>`;
-        }
-      }
-    }
-  }
-
   let returnString = "";
 
-  if ("string" in item) {
-    const stringItems =
-      Array.isArray(item.string) ? item.string : [item.string];
+  const languageStringItems = item.content.find(
+    (content) => content.lang === language,
+  )?.string;
+  if (languageStringItems == null) {
+    throw new Error(`Language content not found for language: “${language}”`);
+  }
 
-    for (const stringItem of stringItems) {
-      returnString += parseStringDocumentItem(stringItem, footnotes);
-    }
+  for (const stringItem of languageStringItems) {
+    if ("text" in stringItem && stringItem.text != null) {
+      returnString += parseXMLText(stringItem, {
+        isRichText,
+        parseEmail: true,
+      });
+    } else if ("whitespace" in stringItem && stringItem.whitespace != null) {
+      returnString += parseWhitespace(returnString, stringItem.whitespace, {
+        isRichText,
+      });
+    } else if ("string" in stringItem) {
+      for (const innerStringItem of stringItem.string) {
+        if ("text" in innerStringItem && innerStringItem.text != null) {
+          returnString += parseXMLText(innerStringItem, {
+            isRichText,
+            parseEmail: true,
+          });
+        } else if (
+          "string" in innerStringItem &&
+          innerStringItem.string != null
+        ) {
+          let linkString = "";
+          for (const innerInnerStringItem of innerStringItem.string) {
+            if (innerInnerStringItem.text != null) {
+              linkString += parseXMLText(innerInnerStringItem, {
+                isRichText,
+                parseEmail: false,
+              });
+            }
+          }
 
-    if ("whitespace" in item && item.whitespace != null) {
-      returnString = parseWhitespace(parseEmail(returnString), item.whitespace);
-    }
+          const links = Object.values(innerStringItem.links).flat();
 
-    return returnString.replaceAll("&#39;", "'");
-  } else {
-    returnString = parseFakeString(item.content);
+          for (const link of links) {
+            const linkContent =
+              "content" in link.identification.label ?
+                parseXMLContent(link.identification.label, {
+                  language,
+                  isRichText,
+                })
+              : parseXMLText(link.identification.label, {
+                  isRichText,
+                  parseEmail: false,
+                });
 
-    if (item.rend != null) {
-      returnString = parseRenderOptions(parseEmail(returnString), item.rend);
-    }
-
-    if (item.whitespace != null) {
-      returnString = parseWhitespace(parseEmail(returnString), item.whitespace);
+            if ("type" in link && link.type != null) {
+              switch (link.type) {
+                case "image": {
+                  if ("rend" in link && link.rend != null) {
+                    returnString += createMDXComponent("inlineImage", {
+                      uuid: link.uuid,
+                      href: link.href,
+                      height: link.height,
+                      width: link.width,
+                      content: linkContent,
+                      text: linkString,
+                    });
+                  } else {
+                    returnString += createMDXComponent("internalLink", {
+                      uuid: link.uuid,
+                      text: linkString,
+                      content: linkContent,
+                    });
+                  }
+                  break;
+                }
+                case "externalDocument": {
+                  returnString += createMDXComponent("documentLink", {
+                    uuid: link.uuid,
+                    text: linkString,
+                    content: linkContent,
+                  });
+                  break;
+                }
+                case "webpage": {
+                  returnString += createMDXComponent("externalLink", {
+                    uuid: link.uuid,
+                    href: "href" in link && link.href != null ? link.href : "#",
+                    text: linkString,
+                    content: linkContent,
+                  });
+                  break;
+                }
+              }
+            } else {
+              if (link.publicationDateTime != null) {
+                returnString += createMDXComponent("internalLink", {
+                  uuid: link.uuid,
+                  text: linkString,
+                  content: linkContent,
+                });
+              } else {
+                returnString += createMDXComponent("tooltipSpan", {
+                  uuid: link.uuid,
+                  text: linkString,
+                  content: linkContent,
+                });
+              }
+            }
+          }
+        }
+      }
     }
   }
 
   return returnString;
-}
-
-/**
- * Parses raw string content into a formatted string
- *
- * @param content - Raw string content to parse
- * @param language - Optional language code for content selection (defaults to "eng")
- * @returns Parsed and formatted string
- */
-export function parseStringContent(
-  content: OchreStringContent,
-  language = "eng",
-): string {
-  switch (typeof content.content) {
-    case "string":
-    case "number":
-    case "boolean": {
-      return parseFakeString(content.content);
-    }
-    case "object": {
-      if (Array.isArray(content.content)) {
-        const stringItem = getStringItemByLanguage(content.content, language);
-
-        if (stringItem) {
-          return parseStringItem(stringItem);
-        } else {
-          const returnStringItem = content.content[0];
-          if (!returnStringItem) {
-            throw new Error(
-              `No string item found for language “${language}” in the following content:\n${JSON.stringify(
-                content.content,
-              )}.`,
-            );
-          }
-
-          return parseStringItem(returnStringItem);
-        }
-      } else {
-        return parseStringItem(content.content);
-      }
-    }
-    default: {
-      return String(content.content);
-    }
-  }
 }
