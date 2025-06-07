@@ -32,7 +32,7 @@ export type DataCategory =
 /**
  * Represents the category of items in a Set or Tree
  */
-export type ItemsDataCategory = Exclude<DataCategory, "tree" | "set">;
+export type ItemsDataCategory = Exclude<DataCategory, "tree">;
 
 /**
  * Represents the category of items in a heading
@@ -200,16 +200,13 @@ export type Note = {
 export type Heading<T extends HeadingDataCategory> = {
   name: string;
   headings: Array<Heading<T>>;
-  items: Array<Item<T>>;
+  items: Array<BaseItem<T>>;
 };
 
 /**
  * Represents a generic item in OCHRE
  */
-export type Item<
-  T extends DataCategory,
-  U extends T extends "tree" | "set" ? ItemsDataCategory : never = never,
-> = {
+type BaseItem<T extends DataCategory> = {
   uuid: string;
   category: T;
   publicationDateTime: Date;
@@ -220,19 +217,34 @@ export type Item<
   creators: Array<Person>;
   description: string | null;
   events: Array<Event>;
-  items: T extends RecursiveDataCategory | ContainerDataCategory ?
-    Array<Item<T, U>>
-  : never;
+  items: T extends RecursiveDataCategory ? Array<Item<T>> : never;
 };
+
+export type Item<
+  T extends DataCategory,
+  U extends T extends "tree" | "set" ? ItemsDataCategory : never = never,
+> = BaseItem<T> &
+  (T extends "tree" ? Tree<U>
+  : T extends "set" ? Set<U>
+  : T extends "bibliography" ? Bibliography
+  : T extends "concept" ? Concept
+  : T extends "spatialUnit" ? SpatialUnit
+  : T extends "period" ? Period
+  : T extends "person" ? Person
+  : T extends "propertyValue" ? PropertyValue
+  : T extends "propertyVariable" ? PropertyVariable
+  : T extends "resource" ? Resource
+  : never);
 
 /**
  * Represents a Tree item in OCHRE
  */
 export type Tree<T extends ItemsDataCategory> = Prettify<
-  Item<"tree"> & {
+  BaseItem<"tree"> & {
     type: string;
     itemsCategory: T;
-    items: Array<Item<T>>;
+    items: T extends HeadingDataCategory ? Array<Heading<T> | Item<T>>
+    : Array<Item<T>>;
     links: Array<Link>;
     notes: Array<Note>;
     properties: Array<Property>;
@@ -244,14 +256,14 @@ export type Tree<T extends ItemsDataCategory> = Prettify<
  * Represents a Set item in OCHRE
  */
 export type Set<T extends ItemsDataCategory> = Prettify<
-  Item<"set"> & {
+  BaseItem<"set"> & {
     itemsCategory: T;
     isTabularStructure: boolean;
     isSuppressingBlanks: boolean;
     items: Array<
-      Partial<Item<T>> & {
+      Partial<BaseItem<T>> & {
         identification: Identification;
-        properties?: Array<Property>;
+        properties: Array<Property>;
       }
     >;
     links: Array<Link>;
@@ -264,7 +276,7 @@ export type Set<T extends ItemsDataCategory> = Prettify<
  * Represents a Bibliography item in OCHRE
  */
 export type Bibliography = Prettify<
-  Item<"bibliography"> & {
+  BaseItem<"bibliography"> & {
     type: string | null;
     citationFormat: string | null;
     referenceFormat: string | null;
@@ -273,7 +285,7 @@ export type Bibliography = Prettify<
       startDate: Date | null;
     } | null;
     entryInfo: { startIssue: string; startVolume: string } | null;
-    source: Item<ItemsDataCategory> | null;
+    source: BaseItem<ItemsDataCategory> | null;
     authors: Array<Person>;
     periods: Array<Period>;
     links: Array<Link>;
@@ -290,7 +302,7 @@ export type Bibliography = Prettify<
  * Represents a Concept item in OCHRE
  */
 export type Concept = Prettify<
-  Item<"concept"> & {
+  BaseItem<"concept"> & {
     interpretations: Array<Interpretation>;
     coordinates: Array<Coordinates>;
   }
@@ -313,7 +325,7 @@ export type Interpretation = {
  * Represents a Spatial Unit item in OCHRE
  */
 export type SpatialUnit = Prettify<
-  Item<"spatialUnit"> & {
+  BaseItem<"spatialUnit"> & {
     image: Image | null;
     coordinates: Array<Coordinates>;
     mapData: { geoJSON: { multiPolygon: string; EPSG: number } } | null;
@@ -340,7 +352,7 @@ export type Observation = {
  * Represents a Period item in OCHRE
  */
 export type Period = Prettify<
-  Item<"period"> & {
+  BaseItem<"period"> & {
     type: string | null;
     coordinates: Array<Coordinates>;
     links: Array<Link>;
@@ -354,7 +366,7 @@ export type Period = Prettify<
  * Represents a Person/Organization item in OCHRE
  */
 export type Person = Prettify<
-  Item<"person"> & {
+  BaseItem<"person"> & {
     type: string;
     address: {
       country: string | null;
@@ -374,7 +386,7 @@ export type Person = Prettify<
  * Represents a Property Value item in OCHRE
  */
 export type PropertyValue = Prettify<
-  Item<"propertyValue"> & {
+  BaseItem<"propertyValue"> & {
     coordinates: Array<Coordinates>;
     links: Array<Link>;
     notes: Array<Note>;
@@ -387,7 +399,7 @@ export type PropertyValue = Prettify<
  * Represents a Property Variable item in OCHRE
  */
 export type PropertyVariable = Prettify<
-  Item<"propertyVariable"> & {
+  BaseItem<"propertyVariable"> & {
     type: string | null;
     coordinates: Array<Coordinates>;
     links: Array<Link>;
@@ -400,7 +412,7 @@ export type PropertyVariable = Prettify<
  * Represents a Resource item in OCHRE
  */
 export type Resource = Prettify<
-  Item<"resource"> & {
+  BaseItem<"resource"> & {
     type: string;
     href: string | null;
     fileFormat: string | null;
