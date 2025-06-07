@@ -1,4 +1,4 @@
-import type { Property } from "../types/main.js";
+import type { Property } from "./types/index.js";
 
 /**
  * Options for property search operations
@@ -32,7 +32,7 @@ export function getPropertyByUuid(
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Property | null {
   const { includeNestedProperties } = options;
-  const property = properties.find((property) => property.uuid === uuid);
+  const property = properties.find((property) => property.label.uuid === uuid);
   if (property) {
     return property;
   }
@@ -78,7 +78,7 @@ export function getPropertyValuesByUuid(
 ): Array<string | number | boolean | Date | null> | null {
   const { includeNestedProperties } = options;
 
-  const property = properties.find((property) => property.uuid === uuid);
+  const property = properties.find((property) => property.label.uuid === uuid);
   if (property) {
     return property.values.map((value) => value.content);
   }
@@ -168,7 +168,7 @@ export function getPropertyByLabel(
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Property | null {
   const { includeNestedProperties } = options;
-  const property = properties.find((property) => property.label === label);
+  const property = properties.find((property) => property.label.name === label);
   if (property) {
     return property;
   }
@@ -214,7 +214,7 @@ export function getPropertyValuesByLabel(
 ): Array<string | number | boolean | Date | null> | null {
   const { includeNestedProperties } = options;
 
-  const property = properties.find((property) => property.label === label);
+  const property = properties.find((property) => property.label.name === label);
   if (property) {
     return property.values.map((value) => value.content);
   }
@@ -305,7 +305,7 @@ export function getUniqueProperties(
   const uniqueProperties = new Array<Property>();
 
   for (const property of properties) {
-    if (uniqueProperties.some((p) => p.uuid === property.uuid)) {
+    if (uniqueProperties.some((p) => p.label.uuid === property.label.uuid)) {
       continue;
     }
 
@@ -316,7 +316,9 @@ export function getUniqueProperties(
         includeNestedProperties: true,
       });
       for (const property of nestedProperties) {
-        if (uniqueProperties.some((p) => p.uuid === property.uuid)) {
+        if (
+          uniqueProperties.some((p) => p.label.uuid === property.label.uuid)
+        ) {
           continue;
         }
 
@@ -349,11 +351,11 @@ export function getUniquePropertyLabels(
   const uniquePropertyLabels = new Array<string>();
 
   for (const property of properties) {
-    if (uniquePropertyLabels.includes(property.label)) {
+    if (uniquePropertyLabels.includes(property.label.name)) {
       continue;
     }
 
-    uniquePropertyLabels.push(property.label);
+    uniquePropertyLabels.push(property.label.name);
 
     if (property.properties.length > 0 && includeNestedProperties) {
       const nestedProperties = getUniquePropertyLabels(property.properties, {
@@ -404,7 +406,7 @@ export function filterProperties(
 
   if (
     isAllFields ||
-    property.label.toLocaleLowerCase("en-US") ===
+    property.label.name.toLocaleLowerCase("en-US") ===
       filter.label.toLocaleLowerCase("en-US")
   ) {
     let isFound = property.values.some((value) => {

@@ -1,7 +1,8 @@
 import type { GalleryResponse } from "../../types/internal.raw.d.ts";
-import type { Gallery } from "../../types/main.js";
+import type { Gallery } from "../../types/website.js";
+import * as v from "valibot";
 import { gallerySchema } from "../../schemas.js";
-import { parseIdentification, parseResources } from "../parse.js";
+import { parseIdentification, parseResources } from "../parse/old.js";
 
 /**
  * Fetches and parses a gallery from the OCHRE API
@@ -10,6 +11,8 @@ import { parseIdentification, parseResources } from "../parse.js";
  * @param filter - The filter to apply to the gallery
  * @param page - The page number to fetch
  * @param perPage - The number of items per page
+ * @param options - Optional options object
+ * @param options.fetch - Custom fetch function to use instead of the default fetch
  * @returns The parsed gallery or null if the fetch/parse fails
  *
  * @example
@@ -34,22 +37,22 @@ export async function fetchGallery(
   filter: string,
   page: number,
   perPage: number,
-  customFetch?: (
-    input: string | URL | globalThis.Request,
-    init?: RequestInit,
-  ) => Promise<Response>,
-): Promise<
-  { item: Gallery | null; error: null } | { item: null; error: string }
-> {
+  options?: {
+    fetch?: (
+      input: string | URL | globalThis.Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+  },
+): Promise<{ data: Gallery; error: null } | { data: null; error: string }> {
   try {
     const {
       uuid: parsedUuid,
       filter: parsedFilter,
       page: parsedPage,
       perPage: parsedPerPage,
-    } = gallerySchema.parse({ uuid, filter, page, perPage });
+    } = v.parse(gallerySchema, { uuid, filter, page, perPage });
 
-    const response = await (customFetch ?? fetch)(
+    const response = await (options?.fetch ?? fetch)(
       `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(`
         for $q in input()/ochre[@uuid='${parsedUuid}']
         let $filtered := $q//items/resource[contains(lower-case(identification/label), lower-case('${parsedFilter}'))]
@@ -59,7 +62,7 @@ export async function fetchGallery(
           {$q/metadata/item}
           {$filtered[position() >= ${((parsedPage - 1) * parsedPerPage + 1).toString()} and position() < ${(parsedPage * parsedPerPage + 1).toString()}]}
         </gallery>
-      `)}&format=json`,
+      `)}&xsl=none&lang="*"`,
     );
     if (!response.ok) {
       throw new Error("Error fetching gallery items, please try again later.");
@@ -91,11 +94,11 @@ export async function fetchGallery(
       maxLength: data.result.gallery.maxLength,
     };
 
-    return { item: gallery, error: null };
+    return { data: gallery, error: null };
   } catch (error) {
     console.error(error);
     return {
-      item: null,
+      data: null,
       error: error instanceof Error ? error.message : "Failed to fetch gallery",
     };
   }

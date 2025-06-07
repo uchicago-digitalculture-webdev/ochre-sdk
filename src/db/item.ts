@@ -2,6 +2,7 @@ import type {
   Bibliography,
   Concept,
   DataCategory,
+  ItemsDataCategory,
   Metadata,
   Period,
   Person,
@@ -10,7 +11,7 @@ import type {
   Set,
   SpatialUnit,
   Tree,
-} from "../../types/main.js";
+} from "../../types/index.js";
 import { getItemCategory } from "../helpers.js";
 import {
   parseBibliography,
@@ -23,7 +24,7 @@ import {
   parseSet,
   parseSpatialUnit,
   parseTree,
-} from "../parse.js";
+} from "../parse/old.js";
 import { parseFakeString } from "../string.js";
 import { fetchByUuid } from "./uuid.js";
 
@@ -31,6 +32,10 @@ import { fetchByUuid } from "./uuid.js";
  * Fetches and parses an OCHRE item from the OCHRE API
  *
  * @param uuid - The UUID of the OCHRE item to fetch
+ * @param category - The category of the OCHRE item to fetch
+ * @param itemsCategory - The category of the OCHRE items to fetch
+ * @param options - Optional options object
+ * @param options.fetch - Custom fetch function to use instead of the default fetch
  * @returns Object containing the parsed OCHRE item and its metadata, or null if the fetch/parse fails
  *
  * @example
@@ -60,41 +65,43 @@ import { fetchByUuid } from "./uuid.js";
  *
  * If the fetch/parse fails, the returned object will have an `error` property.
  */
-export async function fetchItem<T extends DataCategory, U extends DataCategory>(
+export async function fetchItem<
+  T extends DataCategory,
+  U extends T extends "set" | "tree" ? ItemsDataCategory : never,
+>(
   uuid: string,
   category?: T,
-  setCategory?: T extends "set" ? U : never,
-  customFetch?: (
-    input: string | URL | globalThis.Request,
-    init?: RequestInit,
-  ) => Promise<Response>,
+  itemsCategory?: T extends "set" | "tree" ? U : never,
+  options?: {
+    fetch?: (
+      input: string | URL | globalThis.Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+  },
 ): Promise<
   | {
       error: null;
-      metadata: Metadata;
-      belongsTo: { uuid: string; abbreviation: string };
-      item: T extends "resource" ? Resource
-      : T extends "spatialUnit" ? SpatialUnit
-      : T extends "concept" ? Concept
-      : T extends "period" ? Period
-      : T extends "bibliography" ? Bibliography
-      : T extends "person" ? Person
-      : T extends "propertyValue" ? PropertyValue
-      : T extends "set" ? Set<U>
-      : T extends "tree" ? Tree
-      : never;
-      category: T;
+      data: {
+        metadata: Metadata;
+        belongsTo: { uuid: string; abbreviation: string };
+        item: T extends "resource" ? Resource
+        : T extends "spatialUnit" ? SpatialUnit
+        : T extends "concept" ? Concept
+        : T extends "period" ? Period
+        : T extends "bibliography" ? Bibliography
+        : T extends "person" ? Person
+        : T extends "propertyValue" ? PropertyValue
+        : T extends "set" ? Set<U>
+        : T extends "tree" ? Tree<U>
+        : never;
+        category: T;
+        itemsCategory: U;
+      };
     }
-  | {
-      error: string;
-      metadata: never;
-      belongsTo: never;
-      item: never;
-      category: never;
-    }
+  | { error: string; data: null }
 > {
   try {
-    const [error, data] = await fetchByUuid(uuid, customFetch);
+    const [error, data] = await fetchByUuid(uuid, options);
     if (error !== null) {
       throw new Error(error);
     }
@@ -171,7 +178,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
         if (!("set" in data.ochre)) {
           throw new Error("Invalid OCHRE data: API response missing 'set' key");
         }
-        item = parseSet<U>(data.ochre.set, setCategory);
+        item = parseSet<U>(data.ochre.set, itemsCategory);
         break;
       }
       case "tree": {
@@ -180,7 +187,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
             "Invalid OCHRE data: API response missing 'tree' key",
           );
         }
-        item = parseTree(data.ochre.tree);
+        item = parseTree<U>(data.ochre.tree, itemsCategory);
         break;
       }
       default: {
@@ -195,26 +202,28 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
     };
 
     return {
-      error: null as never,
-      metadata,
-      belongsTo,
-      item: item as T extends "resource" ? Resource
-      : T extends "spatialUnit" ? SpatialUnit
-      : T extends "concept" ? Concept
-      : T extends "period" ? Period
-      : T extends "bibliography" ? Bibliography
-      : T extends "person" ? Person
-      : T extends "propertyValue" ? PropertyValue
-      : never,
-      category: category!,
+      error: null,
+      data: {
+        metadata,
+        belongsTo,
+        item: item as T extends "resource" ? Resource
+        : T extends "spatialUnit" ? SpatialUnit
+        : T extends "concept" ? Concept
+        : T extends "period" ? Period
+        : T extends "bibliography" ? Bibliography
+        : T extends "person" ? Person
+        : T extends "propertyValue" ? PropertyValue
+        : T extends "set" ? Set<U>
+        : T extends "tree" ? Tree<U>
+        : never,
+        category: category!,
+        itemsCategory: itemsCategory!,
+      },
     };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unknown error",
-      metadata: undefined as never,
-      belongsTo: undefined as never,
-      item: undefined as never,
-      category: undefined as never,
+      data: null,
     };
   }
 }

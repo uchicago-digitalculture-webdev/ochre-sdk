@@ -4,7 +4,7 @@ import type {
   OchreStringItem,
   OchreStringRichTextItem,
 } from "../types/internal.raw.js";
-import type { Footnote } from "../types/main.js";
+import type { Footnote } from "../types/index.js";
 import {
   emailSchema,
   renderOptionsSchema,

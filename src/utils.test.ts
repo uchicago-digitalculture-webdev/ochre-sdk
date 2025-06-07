@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
-import { fetchItem } from "./utils/fetchers/item.js";
-import { fetchWebsite } from "./utils/fetchers/website.js";
+import { fetchItem } from "./utils/db/item.js";
+import { fetchWebsite } from "./utils/db/website.js";
 
 const [
   [_, ospama],

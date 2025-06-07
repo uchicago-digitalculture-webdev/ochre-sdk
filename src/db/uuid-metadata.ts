@@ -1,12 +1,15 @@
 import type { UuidMetadataResponse } from "../../types/internal.raw.js";
-import type { UuidMetadata } from "../../types/main.js";
+import type { UuidMetadata } from "../../types/website.js";
+import * as v from "valibot";
 import { uuidSchema } from "../../schemas.js";
-import { parseIdentification } from "../parse.js";
+import { parseIdentification } from "../parse/old.js";
 
 /**
  * Fetches raw OCHRE metadata by UUID from the OCHRE API
  *
  * @param uuid - The UUID of the OCHRE item to fetch
+ * @param options - Optional options object
+ * @param options.fetch - Custom fetch function to use instead of the default fetch
  * @returns An object containing the OCHRE metadata or an error message
  *
  * @example
@@ -21,16 +24,20 @@ import { parseIdentification } from "../parse.js";
  */
 export async function fetchByUuidMetadata(
   uuid: string,
-  customFetch?: (
-    input: string | URL | globalThis.Request,
-    init?: RequestInit,
-  ) => Promise<Response>,
-): Promise<{ item: UuidMetadata | null; error: string | null }> {
+  options?: {
+    fetch?: (
+      input: string | URL | globalThis.Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+  },
+): Promise<
+  { data: UuidMetadata; error: null } | { data: null; error: string }
+> {
   try {
-    const parsedUuid = uuidSchema.parse(uuid);
+    const parsedUuid = v.parse(uuidSchema, uuid);
 
-    const response = await (customFetch ?? fetch)(
-      `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(`for $q in input()/ochre[@uuid='${parsedUuid}']/metadata return ($q/item, $q/project)`)}&format=json`,
+    const response = await (options?.fetch ?? fetch)(
+      `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(`for $q in input()/ochre[@uuid='${parsedUuid}']/metadata return ($q/item, $q/project)`)}&xsl=none&lang="*"`,
     );
     if (!response.ok) {
       throw new Error("Failed to fetch metadata");
@@ -58,10 +65,10 @@ export async function fetchByUuidMetadata(
       },
     };
 
-    return { item: uuidMetadata, error: null };
+    return { data: uuidMetadata, error: null };
   } catch (error) {
     return {
-      item: null,
+      data: null,
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }
