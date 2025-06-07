@@ -34,7 +34,7 @@ import type {
   XMLText as XMLTextType,
   XMLTree as XMLTreeType,
   XMLWebsiteData as XMLWebsiteDataType,
-} from "./xml.types.js";
+} from "./types.js";
 import * as v from "valibot";
 
 // Custom datetime validation for format "YYYY-MM-DD HH:mm:ss" or "YYYY-MM-DDTHH:mm:ss"
