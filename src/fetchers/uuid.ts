@@ -1,10 +1,10 @@
-import type { XMLData } from "../../types/xml/types.js";
+import type { XMLData } from "../types/xml/types.js";
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
-import { uuidSchema } from "../../schemas.js";
-import { XMLData as XMLDataSchema } from "../../types/xml/schemas.js";
 import { XML_PARSER_OPTIONS } from "../constants.js";
-import { logIssues } from "../helpers.js";
+import { uuidSchema } from "../schemas.js";
+import { XMLData as XMLDataSchema } from "../types/xml/schemas.js";
+import { logIssues } from "../utils.js";
 
 /**
  * Fetches raw OCHRE data by UUID from the OCHRE API

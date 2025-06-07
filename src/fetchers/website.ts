@@ -1,9 +1,9 @@
-import type { XMLWebsiteData } from "../../types/xml/types.js";
+import type { XMLWebsiteData } from "../types/xml/types.js";
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
-import { XMLWebsiteData as XMLWebsiteDataSchema } from "../../types/xml/schemas.js";
 import { XML_PARSER_OPTIONS } from "../constants.js";
-import { logIssues } from "../helpers.js";
+import { XMLWebsiteData as XMLWebsiteDataSchema } from "../types/xml/schemas.js";
+import { logIssues } from "../utils.js";
 
 /**
  * Fetches raw OCHRE website data by abbreviation from the OCHRE API
