@@ -3,15 +3,28 @@ import type {
   DataCategory,
   Identification,
   ItemsDataCategory,
+  MultilingualText,
 } from "../types/index.js";
 import type { XMLData, XMLIdentification } from "../types/xml/types.js";
 import { parseISO } from "date-fns";
 import { parseXMLContent, parseXMLText } from "./string.js";
 
+/**
+ * Parses the data from the XML data
+ * @param rawData - The raw XML data
+ * @returns The parsed data
+ *
+ * @internal
+ */
 export function parseData<
   T extends DataCategory,
   U extends T extends "tree" | "set" ? ItemsDataCategory : never = never,
 >(rawData: XMLData): Data<T, U> {
+  const languages = rawData.ochre.metadata.language?.map((language) => ({
+    name: parseXMLText(language),
+    isDefault: language.default === "true",
+  })) ?? [{ name: "en", isDefault: true }];
+
   const returnData: Data<T, U> = {
     uuid: rawData.ochre.uuid,
     belongsTo: {
@@ -30,6 +43,7 @@ export function parseData<
         : {
             identification: parseIdentification(
               rawData.ochre.metadata.project.identification,
+              languages,
             ),
             website:
               rawData.ochre.metadata.project.identification.website == null ?
@@ -44,6 +58,7 @@ export function parseData<
         : {
             identification: parseIdentification(
               rawData.ochre.metadata.item.identification,
+              languages,
             ),
             category: rawData.ochre.metadata.item.category,
             type: rawData.ochre.metadata.item.type,
@@ -52,11 +67,7 @@ export function parseData<
                 Number(rawData.ochre.metadata.item.maxLength)
               : null,
           },
-      languages:
-        rawData.ochre.metadata.language?.map((language) => ({
-          name: parseXMLText(language),
-          isDefault: language.default === "true",
-        })) ?? [],
+      languages,
     },
     items: [],
   };
@@ -70,24 +81,41 @@ export function parseData<
 //   return rawItem;
 // }
 
+/**
+ * Parses the identification of an item or project
+ * @param rawIdentification - The raw identification from the XML data
+ * @param languages - The languages of the item or project
+ * @returns The parsed identification
+ *
+ * @internal
+ */
 function parseIdentification(
   rawIdentification: XMLIdentification,
+  languages: Array<{ name: string; isDefault: boolean }>,
 ): Identification {
-  return {
-    label:
+  const label: MultilingualText = {};
+  const abbreviation: MultilingualText | null =
+    rawIdentification.abbreviation == null ? null : {};
+
+  for (const language of languages) {
+    label[language.name] =
       "content" in rawIdentification.label ?
         parseXMLContent(rawIdentification.label, {
-          language: "en",
+          language: language.name,
           isRichText: false,
         })
-      : parseXMLText(rawIdentification.label),
-    abbreviation:
-      rawIdentification.abbreviation == null ? null
-      : "content" in rawIdentification.abbreviation ?
-        parseXMLContent(rawIdentification.abbreviation, {
-          language: "en",
-          isRichText: false,
-        })
-      : parseXMLText(rawIdentification.abbreviation),
-  };
+      : parseXMLText(rawIdentification.label);
+
+    if (rawIdentification.abbreviation != null) {
+      abbreviation![language.name] =
+        "content" in rawIdentification.abbreviation! ?
+          parseXMLContent(rawIdentification.abbreviation, {
+            language: language.name,
+            isRichText: false,
+          })
+        : parseXMLText(rawIdentification.abbreviation!);
+    }
+  }
+
+  return { label, abbreviation };
 }
