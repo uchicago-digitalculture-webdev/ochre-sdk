@@ -418,8 +418,6 @@ const XMLImage: v.GenericSchema<XMLImageType> = v.object(
     content: v.optional(v.string("XMLImage: content is string and optional")),
     height: v.optional(XMLNumber, "XMLImage: height is optional"),
     width: v.optional(XMLNumber, "XMLImage: width is optional"),
-    heightPreview: v.optional(XMLNumber, "XMLImage: heightPreview is optional"),
-    widthPreview: v.optional(XMLNumber, "XMLImage: widthPreview is optional"),
   },
   "XMLImage: Shape error",
 );
@@ -512,11 +510,11 @@ const XMLProperty: v.GenericSchema<XMLPropertyType> = v.lazy(() =>
                 "XMLProperty: publicationDateTime is not a valid datetime",
               ),
             ),
-            type: v.optional(
-              v.string("XMLProperty: type is string and optional"),
-            ),
             category: v.optional(
               v.string("XMLProperty: category is string and optional"),
+            ),
+            type: v.optional(
+              v.string("XMLProperty: type is string and optional"),
             ),
             slug: v.optional(
               v.string("XMLProperty: slug is string and optional"),
@@ -524,7 +522,12 @@ const XMLProperty: v.GenericSchema<XMLPropertyType> = v.lazy(() =>
             unit: v.optional(
               v.string("XMLProperty: unit is string and optional"),
             ),
-            booleanValue: v.optional(XMLBoolean),
+            dataType: v.optional(
+              v.string("XMLProperty: dataType is string and optional"),
+            ),
+            rawValue: v.optional(
+              v.string("XMLProperty: rawValue is string and optional"),
+            ),
             isUncertain: v.optional(
               v.literal("true", "XMLProperty: isUncertain is true"),
             ),
@@ -722,33 +725,7 @@ const XMLBibliography: v.GenericSchema<XMLBibliographyType> = v.object(
     citationFormat: v.optional(XMLText),
     citationFormatSpan: v.optional(XMLText),
     referenceFormatDiv: v.optional(XMLText),
-    source: v.optional(
-      v.object(
-        {
-          resource: v.object(
-            {
-              uuid: v.pipe(
-                v.string(
-                  "XMLBibliography: resource uuid is string and required",
-                ),
-                v.uuid("XMLBibliography: resource uuid is not a valid UUID"),
-              ),
-              type: v.string(
-                "XMLBibliography: resource type is string and required",
-              ),
-              publicationDateTime: v.optional(
-                customDateTime(
-                  "XMLBibliography: resource publicationDateTime is not a valid datetime",
-                ),
-              ),
-              identification: XMLIdentification,
-            },
-            "XMLBibliography: source is object with resource",
-          ),
-        },
-        "XMLBibliography: source is object with resource",
-      ),
-    ),
+    source: v.optional(v.lazy(() => XMLDataItem)),
     authors: v.optional(v.object({ person: v.array(v.lazy(() => XMLPerson)) })),
     periods: v.optional(v.object({ period: v.array(v.lazy(() => XMLPeriod)) })),
     links: v.optional(v.lazy(() => XMLDataItem)),
@@ -931,6 +908,9 @@ const XMLResource: v.GenericSchema<XMLResourceType> = v.object(
     fileFormat: v.optional(
       v.string("XMLResource: fileFormat is string and optional"),
     ),
+    fileSize: v.optional(XMLNumber),
+    height: v.optional(XMLNumber),
+    width: v.optional(XMLNumber),
     image: v.optional(XMLImage),
     imagemap: v.optional(XMLImageMap),
     document: v.optional(XMLContent),

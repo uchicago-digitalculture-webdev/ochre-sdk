@@ -132,8 +132,6 @@ export type XMLImage = {
   content?: string;
   height?: XMLNumber;
   width?: XMLNumber;
-  heightPreview?: XMLNumber;
-  widthPreview?: XMLNumber;
 };
 
 export type XMLImageMapArea = {
@@ -168,11 +166,12 @@ export type XMLProperty = {
     Partial<XMLContent> & {
       uuid?: string;
       publicationDateTime?: string;
-      type?: string;
       category?: string;
+      type?: string;
       slug?: string;
       unit?: string;
-      booleanValue?: XMLBoolean;
+      dataType?: string;
+      rawValue?: string;
       isUncertain?: "true";
     }
   >;
@@ -204,14 +203,7 @@ export type XMLBibliography = XMLBaseItem & {
   citationFormat?: XMLText;
   citationFormatSpan?: XMLText;
   referenceFormatDiv?: XMLText;
-  source?: {
-    resource?: {
-      uuid: string;
-      type: string;
-      publicationDateTime?: string;
-      identification: XMLIdentification;
-    };
-  };
+  source?: XMLDataItem;
   authors?: { person: Array<XMLPerson> };
   periods?: { period: Array<XMLPeriod> };
   links?: XMLDataItem;
@@ -300,6 +292,9 @@ export type XMLResource = XMLBaseItem & {
   date?: string;
   href?: string;
   fileFormat?: string;
+  fileSize?: XMLNumber;
+  height?: XMLNumber;
+  width?: XMLNumber;
   image?: XMLImage;
   imagemap?: XMLImageMap;
   document?: XMLContent;
