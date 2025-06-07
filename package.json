@@ -51,11 +51,11 @@
     "dist"
   ],
   "dependencies": {
-    "fast-xml-parser": "^5.2.3",
+    "fast-xml-parser": "^5.2.4",
     "valibot": "^1.1.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^4.13.3",
+    "@antfu/eslint-config": "^4.14.1",
     "@types/node": "^22.15.30",
     "bumpp": "^10.1.1",
     "eslint": "^9.28.0",
