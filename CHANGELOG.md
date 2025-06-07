@@ -1,4 +1,4 @@
-# @digitalculture/ochre-sdk
+# OCHRE SDK
 
 ## 0.8.9
 

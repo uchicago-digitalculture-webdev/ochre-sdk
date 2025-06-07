@@ -1,23 +1,23 @@
 # OCHRE SDK
 
-This is the OCHRE JavaScript/TypeScript SDK for interacting with OCHRE (Online Cultural and Historical Research Environment) data.
+This is the OCHRE Node.js SDK for interacting with OCHRE ([Online Cultural and Historical Research Environment](https://ochre.uchicago.edu/)) data.
 
 ## Installation
 
 ```bash
-pnpm add @digitalculture/ochre-sdk
+pnpm add ochre-sdk
 ```
 
 or
 
 ```bash
-npm install @digitalculture/ochre-sdk
+npm install ochre-sdk
 ```
 
 or
 
 ```bash
-bun add @digitalculture/ochre-sdk
+bun add ochre-sdk
 ```
 
 ## Start development server
@@ -33,7 +33,7 @@ pnpm run dev
 From the root directory of the project, run the following command:
 
 ```bash
-pnpm run ci
+pnpm run build
 ```
 
 ## Release new version to NPM
