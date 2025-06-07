@@ -26,7 +26,18 @@ export type XMLString = {
   string:
     | Array<XMLText>
     | Array<{
-        links: XMLDataItem;
+        links: {
+          tree?: Array<XMLTree>;
+          bibliography?: Array<XMLBibliography>;
+          concept?: Array<XMLConcept>;
+          spatialUnit?: Array<XMLSpatialUnit>;
+          period?: Array<XMLPeriod>;
+          person?: Array<XMLPerson>;
+          propertyValue?: Array<XMLPropertyValue>;
+          propertyVariable?: Array<XMLPropertyVariable>;
+          resource?: Array<XMLResource>;
+          set?: Array<XMLSet>;
+        };
         properties?: { property: Array<XMLProperty> };
         string?: Array<XMLText>;
         annotation: string;
@@ -38,7 +49,6 @@ export type XMLString = {
 export type XMLContent = {
   content: Array<{
     string: Array<XMLText | XMLString | { whitespace: string }>;
-    title?: string;
     lang: string;
   }>;
 };
@@ -152,6 +162,7 @@ export type XMLNote = {
   note: Array<
     | (XMLContent & {
         noteNo: XMLNumber;
+        title?: string;
         authors?: { author: Array<XMLPerson> };
       })
     | XMLText
@@ -292,6 +303,7 @@ export type XMLResource = XMLBaseItem & {
   href?: string;
   fileFormat?: string;
   fileSize?: XMLNumber;
+  rend?: "inline";
   height?: XMLNumber;
   width?: XMLNumber;
   image?: XMLImage;

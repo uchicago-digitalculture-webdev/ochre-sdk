@@ -62,9 +62,7 @@ export type Metadata = {
   description: string;
   publisher: string;
   identifier: string;
-  project: {
-    identification: Identification & { website: string | null };
-  } | null;
+  project: { identification: Identification; website: string | null } | null;
   item: {
     identification: Identification;
     category: string;
@@ -419,6 +417,7 @@ export type Resource = Prettify<
     href: string | null;
     fileFormat: string | null;
     fileSize: number | null;
+    isInline: boolean;
     height: number | null;
     width: number | null;
     image: Image | null;

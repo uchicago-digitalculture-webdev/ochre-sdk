@@ -908,6 +908,7 @@ const XMLResource: v.GenericSchema<XMLResourceType> = v.object(
       v.string("XMLResource: fileFormat is string and optional"),
     ),
     fileSize: v.optional(XMLNumber),
+    rend: v.optional(v.literal("inline", "XMLResource: rend is inline")),
     height: v.optional(XMLNumber),
     width: v.optional(XMLNumber),
     image: v.optional(XMLImage),
