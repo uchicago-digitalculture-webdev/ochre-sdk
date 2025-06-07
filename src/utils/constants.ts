@@ -1,3 +1,5 @@
+import type { X2jOptions } from "fast-xml-parser";
+
 export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
   "string",
   "content",
@@ -28,6 +30,38 @@ export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
   "footnote",
   "language",
 ];
+
+export const XML_PARSER_OPTIONS: X2jOptions = {
+  alwaysCreateTextNode: true,
+  ignoreAttributes: false,
+  removeNSPrefix: true,
+  ignorePiTags: true,
+  trimValues: false,
+  parseTagValue: false,
+  parseAttributeValue: false,
+  attributeNamePrefix: "",
+  textNodeName: "text",
+  stopNodes: ["*.referenceFormatDiv", "*.citationFormatSpan"],
+  htmlEntities: true,
+  isArray(tagName, jPath, isLeafNode, isAttribute) {
+    if (isAttribute) {
+      return false;
+    }
+
+    if (XML_ARRAY_TAGS.includes(tagName)) {
+      return true;
+    }
+
+    return false;
+  },
+  attributeValueProcessor: (attrName, attrValue) => {
+    if (attrValue.startsWith("xs:")) {
+      return attrValue.replace("xs:", "");
+    }
+
+    return null;
+  },
+};
 
 export const PRESENTATION_ITEM_UUID = "f1c131b6-1498-48a4-95bf-a9edae9fd518";
 export const WEBSITE_UUID = "0e500a69-13c3-44e8-82ac-806fbdeaddfd";
