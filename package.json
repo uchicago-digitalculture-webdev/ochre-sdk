@@ -52,7 +52,7 @@
   ],
   "dependencies": {
     "date-fns": "^4.1.0",
-    "fast-xml-parser": "^5.2.4",
+    "fast-xml-parser": "^5.2.5",
     "valibot": "^1.1.0"
   },
   "devDependencies": {
@@ -67,7 +67,7 @@
     "typescript": "^5.8.3",
     "vitest": "^3.2.2"
   },
-  "packageManager": "pnpm@10.11.1",
+  "packageManager": "pnpm@10.12.1",
   "simple-git-hooks": {
     "pre-commit": "npx lint-staged"
   },
