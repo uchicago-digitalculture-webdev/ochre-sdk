@@ -11,16 +11,16 @@ import { logIssues } from "../utils.js";
  * @param abbreviation - The abbreviation of the OCHRE item to fetch
  * @param options - Optional options object
  * @param options.fetch - Custom fetch function to use instead of the default fetch
- * @returns A tuple containing either [null, OchreData] on success or [error message, null] on failure
+ * @returns An object containing the parsed data or an error message
  *
  * @example
  * ```ts
- * const [error, data] = await fetchWebsite("idalion");
+ * const { data, error } = await fetchWebsite("idalion");
  * if (error !== null) {
  *   console.error(`Failed to fetch: ${error}`);
  *   return;
  * }
- * // Process data...
+ * // Use data...
  * ```
  */
 export async function fetchWebsite(
