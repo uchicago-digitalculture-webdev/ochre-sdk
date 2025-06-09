@@ -7,6 +7,16 @@ import * as v from "valibot";
 export const uuidSchema = v.pipe(v.string(), v.uuid("Invalid UUID provided"));
 
 /**
+ * Schema for validating language codes
+ * @internal
+ */
+export const iso639_3Schema = v.pipe(
+  v.string("Language code must be a string"),
+  v.length(3, "Language code must be exactly 3 characters"),
+  v.regex(/^[a-z]{3}$/, "Language code must be exactly 3 lowercase letters"),
+);
+
+/**
  * Valid component types for web elements
  * @internal
  */

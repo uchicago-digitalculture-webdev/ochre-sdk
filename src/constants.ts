@@ -63,6 +63,8 @@ export const XML_PARSER_OPTIONS: X2jOptions = {
   },
 };
 
+export const DEFAULT_LANGUAGE = "en" as const;
+
 export const PRESENTATION_ITEM_UUID = "f1c131b6-1498-48a4-95bf-a9edae9fd518";
 export const WEBSITE_UUID = "0e500a69-13c3-44e8-82ac-806fbdeaddfd";
 export const WEBPAGE_UUID = "a6a82c55-44da-469c-a205-de2276a8e3d2";

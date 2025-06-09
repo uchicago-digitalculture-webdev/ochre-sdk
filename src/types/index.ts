@@ -4,14 +4,15 @@ import type { Prettify } from "./utils.js";
  * Represents the core data structure containing item information and metadata
  */
 export type Data<
-  T extends DataCategory,
+  T extends DataCategory | undefined = undefined,
   U extends T extends "tree" | "set" ? ItemsDataCategory : never = never,
+  V extends ReadonlyArray<string> | undefined = undefined,
 > = {
   uuid: string;
   belongsTo: { uuid: string; abbreviation: string };
   publicationDateTime: Date;
-  metadata: Metadata;
-  items: Array<Item<T, U>>;
+  metadata: Metadata<V>;
+  items: Array<Item<T, U, V>>;
 };
 
 /**
@@ -50,35 +51,50 @@ export type RecursiveDataCategory = Exclude<
   "tree" | "person" | "propertyValue" | "propertyVariable" | "set"
 >;
 
+/**
+ * Represents the category of items that are in containers (tree or set)
+ */
 export type ContainerDataCategory = Extract<DataCategory, "tree" | "set">;
 
-export type MultilingualText = Record<string, string>;
+/**
+ * Represents a multilingual text with a language code as the key and the text as the value
+ */
+export type MultilingualText<
+  V extends ReadonlyArray<string> | undefined = undefined,
+> =
+  V extends undefined ? Prettify<Partial<Record<"en" | (string & {}), string>>>
+  : Record<NonNullable<V>[number], string>;
 
 /**
- * Metadata information for items including project, publisher and language details
+ * Metadata information for items including project, item, publisher, and language details
  */
-export type Metadata = {
-  dataset: string;
-  description: string;
-  publisher: string;
-  identifier: string;
-  project: { identification: Identification; website: string | null } | null;
-  item: {
-    identification: Identification;
-    category: string;
-    type: string;
-    maxLength: number | null;
-  } | null;
-  languages: Array<{ name: string; isDefault: boolean }>;
-};
+export type Metadata<V extends ReadonlyArray<string> | undefined = undefined> =
+  {
+    dataset: string;
+    description: string;
+    publisher: string;
+    identifier: string;
+    project: {
+      identification: Identification<V>;
+      website: string | null;
+    } | null;
+    item: {
+      identification: Identification<V>;
+      category: string;
+      type: string;
+      maxLength: number | null;
+    } | null;
+    defaultLanguage: V extends undefined ? Readonly<string>
+    : Readonly<NonNullable<V>[number]>;
+    languages: V extends undefined ? ReadonlyArray<string> : V;
+  };
 
 /**
  * Basic identification information used across multiple types
  */
-export type Identification = {
-  label: MultilingualText;
-  abbreviation: MultilingualText | null;
-};
+export type Identification<
+  V extends ReadonlyArray<string> | undefined = undefined,
+> = { label: MultilingualText<V>; abbreviation: MultilingualText<V> | null };
 
 /**
  * Represents a single item in a context hierarchy with its metadata
@@ -114,184 +130,205 @@ export type License = { content: string; target: string };
 /**
  * Represents an event with date, label and optional agent
  */
-export type Event = {
+export type Event<V extends ReadonlyArray<string> | undefined = undefined> = {
   date: Date | null;
   label: string;
   comment: string | null;
-  agent: Person | null;
+  agent: Person<V> | null;
 };
 
-export type CoordinatesSource =
-  | { context: "self"; uuid: string; label: MultilingualText }
+export type CoordinatesSource<
+  V extends ReadonlyArray<string> | undefined = undefined,
+> =
+  | { context: "self"; uuid: string; label: MultilingualText<V> }
   | {
       context: "related";
       uuid: string;
-      label: MultilingualText;
-      value: MultilingualText;
+      label: MultilingualText<V>;
+      value: MultilingualText<V>;
     }
   | {
       context: "inherited";
-      item: { uuid: string; label: MultilingualText };
+      item: { uuid: string; label: MultilingualText<V> };
       uuid: string;
-      label: MultilingualText;
+      label: MultilingualText<V>;
     };
 
 /**
  * Geographic coordinates item with optional type and label
  */
-export type Coordinates =
+export type Coordinates<
+  V extends ReadonlyArray<string> | undefined = undefined,
+> =
   | {
       type: "point";
       latitude: number;
       longitude: number;
       altitude: number | null;
-      source: CoordinatesSource | null;
+      source: CoordinatesSource<V> | null;
     }
   | {
       type: "plane";
       minimum: { latitude: number; longitude: number };
       maximum: { latitude: number; longitude: number };
-      source: CoordinatesSource | null;
+      source: CoordinatesSource<V> | null;
     };
 
 /**
  * Represents a link to another item
  */
-export type Link = Prettify<
-  {
-    uuid: string;
-    publicationDateTime: Date | null;
-    identification: Identification | null;
-    type: string | null;
-  } & (
-    | {
-        category: "resource";
-        content: string | null;
-        href: string | null;
-        fileFormat: string | null;
-        fileSize: number | null;
-        height: number | null;
-        width: number | null;
-        image: {
-          href: string | null;
-          htmlImgSrcPrefix: string | null;
+export type Link<V extends ReadonlyArray<string> | undefined = undefined> =
+  Prettify<
+    {
+      uuid: string;
+      publicationDateTime: Date | null;
+      identification: Identification<V> | null;
+      type: string | null;
+    } & (
+      | {
+          category: "resource";
           content: string | null;
-          height: number;
-          width: number;
-        } | null;
-      }
-    | { category: Exclude<DataCategory, "resource"> }
-  )
->;
+          href: string | null;
+          fileFormat: string | null;
+          fileSize: number | null;
+          height: number | null;
+          width: number | null;
+          image: {
+            href: string | null;
+            htmlImgSrcPrefix: string | null;
+            content: string | null;
+            height: number;
+            width: number;
+          } | null;
+        }
+      | { category: Exclude<DataCategory, "resource"> }
+    )
+  >;
 
 /**
  * Represents the note of an item in OCHRE
  */
-export type Note = {
+export type Note<V extends ReadonlyArray<string> | undefined = undefined> = {
   number: number;
   title: string | null;
-  content: MultilingualText;
-  authors: Array<Person>;
+  content: MultilingualText<V>;
+  authors: Array<Person<V>>;
 };
 
 /**
  * Represents a heading under a Tree
  */
-export type Heading<T extends HeadingDataCategory> = {
+export type Heading<
+  T extends HeadingDataCategory,
+  V extends ReadonlyArray<string> | undefined = undefined,
+> = {
   name: string;
-  headings: Array<Heading<T>>;
-  items: Array<BaseItem<T>>;
+  headings: Array<Heading<T, V>>;
+  items: Array<Item<T, never, V>>;
 };
 
 /**
  * Represents a generic item in OCHRE
  */
-type BaseItem<T extends DataCategory> = {
+export type BaseItem<
+  T extends DataCategory | undefined = undefined,
+  V extends ReadonlyArray<string> | undefined = undefined,
+> = {
   uuid: string;
   category: T;
-  publicationDateTime: Date;
+  publicationDateTime: Date | null;
   context: T extends "tree" ? never : Context<DataCategory>;
   date: Date | null;
   license: License | null;
-  identification: Identification;
-  creators: Array<Person>;
-  description: MultilingualText | null;
-  events: Array<Event>;
-  items: T extends RecursiveDataCategory ? Array<Item<T>> : never;
+  identification: Identification<V>;
+  creators: Array<Person<V>>;
+  description: MultilingualText<V> | null;
+  events: Array<Event<V>>;
+  items: T extends RecursiveDataCategory ? Array<Item<T, never, V>> : never;
 };
 
 export type Item<
-  T extends DataCategory,
+  T extends DataCategory | undefined = undefined,
   U extends T extends "tree" | "set" ? ItemsDataCategory : never = never,
-> = BaseItem<T> &
-  (T extends "tree" ? Tree<U>
-  : T extends "set" ? Set<U>
-  : T extends "bibliography" ? Bibliography
-  : T extends "concept" ? Concept
-  : T extends "spatialUnit" ? SpatialUnit
-  : T extends "period" ? Period
-  : T extends "person" ? Person
-  : T extends "propertyValue" ? PropertyValue
-  : T extends "propertyVariable" ? PropertyVariable
-  : T extends "resource" ? Resource
+  V extends ReadonlyArray<string> | undefined = undefined,
+> = BaseItem<T, V> &
+  (T extends "tree" ? Tree<U, V>
+  : T extends "set" ? Set<U, V>
+  : T extends "bibliography" ? Bibliography<V>
+  : T extends "concept" ? Concept<V>
+  : T extends "spatialUnit" ? SpatialUnit<V>
+  : T extends "period" ? Period<V>
+  : T extends "person" ? Person<V>
+  : T extends "propertyValue" ? PropertyValue<V>
+  : T extends "propertyVariable" ? PropertyVariable<V>
+  : T extends "resource" ? Resource<V>
   : never);
 
 /**
  * Represents a Tree item in OCHRE
  */
-export type Tree<T extends ItemsDataCategory> = Prettify<
-  BaseItem<"tree"> & {
+export type Tree<
+  T extends ItemsDataCategory,
+  V extends ReadonlyArray<string> | undefined = undefined,
+> = Prettify<
+  BaseItem<"tree", V> & {
     type: string;
     itemsCategory: T;
-    items: T extends HeadingDataCategory ? Array<Heading<T> | Item<T>>
-    : Array<Item<T>>;
-    links: Array<Link>;
-    notes: Array<Note>;
-    properties: Array<Property>;
-    bibliographies: Array<Bibliography>;
+    items: T extends HeadingDataCategory ?
+      Array<Heading<T, V> | Item<T, never, V>>
+    : Array<Item<T, never, V>>;
+    links: Array<Link<V>>;
+    notes: Array<Note<V>>;
+    properties: Array<Property<V>>;
+    bibliographies: Array<Bibliography<V>>;
   }
 >;
 
 /**
  * Represents a Set item in OCHRE
  */
-export type Set<T extends ItemsDataCategory> = Prettify<
-  BaseItem<"set"> & {
+export type Set<
+  T extends ItemsDataCategory,
+  V extends ReadonlyArray<string> | undefined = undefined,
+> = Prettify<
+  BaseItem<"set", V> & {
     itemsCategory: T;
     isTabularStructure: boolean;
     isSuppressingBlanks: boolean;
     items: Array<
-      Partial<BaseItem<T>> & {
-        identification: Identification;
-        properties: Array<Property>;
+      Partial<BaseItem<T, V>> & {
+        identification: Identification<V>;
+        properties: Array<Property<V>>;
       }
     >;
-    links: Array<Link>;
-    notes: Array<Note>;
-    properties: Array<Property>;
+    links: Array<Link<V>>;
+    notes: Array<Note<V>>;
+    properties: Array<Property<V>>;
   }
 >;
 
 /**
  * Represents a Bibliography item in OCHRE
  */
-export type Bibliography = Prettify<
-  BaseItem<"bibliography"> & {
+export type Bibliography<
+  V extends ReadonlyArray<string> | undefined = undefined,
+> = Prettify<
+  BaseItem<"bibliography", V> & {
     type: string | null;
     citationFormat: string | null;
     referenceFormat: string | null;
     publicationInfo: {
-      publishers: Array<Person>;
+      publishers: Array<Person<V>>;
       startDate: Date | null;
     } | null;
     entryInfo: { startIssue: string; startVolume: string } | null;
-    source: BaseItem<ItemsDataCategory> | null;
-    authors: Array<Person>;
-    periods: Array<Period>;
-    links: Array<Link>;
-    notes: Array<Note>;
-    properties: Array<Property>;
-    bibliographies: Array<Bibliography>;
+    source: BaseItem<ItemsDataCategory, V> | null;
+    authors: Array<Person<V>>;
+    periods: Array<Period<V>>;
+    links: Array<Link<V>>;
+    notes: Array<Note<V>>;
+    properties: Array<Property<V>>;
+    bibliographies: Array<Bibliography<V>>;
   } & (
       | { type: "zotero"; zoteroId: string; uuid: string | null }
       | { type: string }
@@ -301,144 +338,158 @@ export type Bibliography = Prettify<
 /**
  * Represents a Concept item in OCHRE
  */
-export type Concept = Prettify<
-  BaseItem<"concept"> & {
-    interpretations: Array<Interpretation>;
-    coordinates: Array<Coordinates>;
-  }
->;
+export type Concept<V extends ReadonlyArray<string> | undefined = undefined> =
+  Prettify<
+    BaseItem<"concept", V> & {
+      interpretations: Array<Interpretation<V>>;
+      coordinates: Array<Coordinates<V>>;
+    }
+  >;
 
 /**
  * Represents an interpretation of a Concept
  */
-export type Interpretation = {
+export type Interpretation<
+  V extends ReadonlyArray<string> | undefined = undefined,
+> = {
   number: number;
   date: Date | null;
-  periods: Array<Period>;
-  links: Array<Link>;
-  notes: Array<Note>;
-  properties: Array<Property>;
-  bibliographies: Array<Bibliography>;
+  periods: Array<Period<V>>;
+  links: Array<Link<V>>;
+  notes: Array<Note<V>>;
+  properties: Array<Property<V>>;
+  bibliographies: Array<Bibliography<V>>;
 };
 
 /**
  * Represents a Spatial Unit item in OCHRE
  */
-export type SpatialUnit = Prettify<
-  BaseItem<"spatialUnit"> & {
-    image: Image | null;
-    coordinates: Array<Coordinates>;
+export type SpatialUnit<
+  V extends ReadonlyArray<string> | undefined = undefined,
+> = Prettify<
+  BaseItem<"spatialUnit", V> & {
+    image: Image<V> | null;
+    coordinates: Array<Coordinates<V>>;
     mapData: { geoJSON: { multiPolygon: string; EPSG: number } } | null;
-    observations: Array<Observation>;
-    bibliographies: Array<Bibliography>;
+    observations: Array<Observation<V>>;
+    bibliographies: Array<Bibliography<V>>;
   }
 >;
 
 /**
  * Represents an observation of a Spatial Unit in OCHRE
  */
-export type Observation = {
+export type Observation<
+  V extends ReadonlyArray<string> | undefined = undefined,
+> = {
   number: number;
   date: Date | null;
-  observers: Array<string> | Array<Person>;
-  periods: Array<Period>;
-  links: Array<Link>;
-  notes: Array<Note>;
-  properties: Array<Property>;
-  bibliographies: Array<Bibliography>;
+  observers: Array<string> | Array<Person<V>>;
+  periods: Array<Period<V>>;
+  links: Array<Link<V>>;
+  notes: Array<Note<V>>;
+  properties: Array<Property<V>>;
+  bibliographies: Array<Bibliography<V>>;
 };
 
 /**
  * Represents a Period item in OCHRE
  */
-export type Period = Prettify<
-  BaseItem<"period"> & {
-    type: string | null;
-    coordinates: Array<Coordinates>;
-    links: Array<Link>;
-    notes: Array<Note>;
-    properties: Array<Property>;
-    bibliographies: Array<Bibliography>;
-  }
->;
+export type Period<V extends ReadonlyArray<string> | undefined = undefined> =
+  Prettify<
+    BaseItem<"period", V> & {
+      type: string | null;
+      coordinates: Array<Coordinates<V>>;
+      links: Array<Link<V>>;
+      notes: Array<Note<V>>;
+      properties: Array<Property<V>>;
+      bibliographies: Array<Bibliography<V>>;
+    }
+  >;
 
 /**
  * Represents a Person/Organization item in OCHRE
  */
-export type Person = Prettify<
-  BaseItem<"person"> & {
-    type: string;
-    address: {
-      country: string | null;
-      city: string | null;
-      state: string | null;
-    } | null;
-    coordinates: Array<Coordinates>;
-    content: MultilingualText | null;
-    periods: Array<Period>;
-    links: Array<Link>;
-    notes: Array<Note>;
-    properties: Array<Property>;
-  }
->;
+export type Person<V extends ReadonlyArray<string> | undefined = undefined> =
+  Prettify<
+    BaseItem<"person", V> & {
+      type: string;
+      address: {
+        country: string | null;
+        city: string | null;
+        state: string | null;
+      } | null;
+      coordinates: Array<Coordinates<V>>;
+      content: MultilingualText<V> | null;
+      periods: Array<Period<V>>;
+      links: Array<Link<V>>;
+      notes: Array<Note<V>>;
+      properties: Array<Property<V>>;
+    }
+  >;
 
 /**
  * Represents a Property Value item in OCHRE
  */
-export type PropertyValue = Prettify<
-  BaseItem<"propertyValue"> & {
-    coordinates: Array<Coordinates>;
-    links: Array<Link>;
-    notes: Array<Note>;
-    properties: Array<Property>;
-    bibliographies: Array<Bibliography>;
+export type PropertyValue<
+  V extends ReadonlyArray<string> | undefined = undefined,
+> = Prettify<
+  BaseItem<"propertyValue", V> & {
+    coordinates: Array<Coordinates<V>>;
+    links: Array<Link<V>>;
+    notes: Array<Note<V>>;
+    properties: Array<Property<V>>;
+    bibliographies: Array<Bibliography<V>>;
   }
 >;
 
 /**
  * Represents a Property Variable item in OCHRE
  */
-export type PropertyVariable = Prettify<
-  BaseItem<"propertyVariable"> & {
+export type PropertyVariable<
+  V extends ReadonlyArray<string> | undefined = undefined,
+> = Prettify<
+  BaseItem<"propertyVariable", V> & {
     type: string | null;
-    coordinates: Array<Coordinates>;
-    links: Array<Link>;
-    notes: Array<Note>;
-    bibliographies: Array<Bibliography>;
+    coordinates: Array<Coordinates<V>>;
+    links: Array<Link<V>>;
+    notes: Array<Note<V>>;
+    bibliographies: Array<Bibliography<V>>;
   }
 >;
 
 /**
  * Represents a Resource item in OCHRE
  */
-export type Resource = Prettify<
-  BaseItem<"resource"> & {
-    type: string;
-    href: string | null;
-    fileFormat: string | null;
-    fileSize: number | null;
-    isInline: boolean;
-    height: number | null;
-    width: number | null;
-    image: Image | null;
-    document: MultilingualText | null;
-    imageMap: ImageMap | null;
-    coordinates: Array<Coordinates>;
-    periods: Array<Period>;
-    links: Array<Link>;
-    reverseLinks: Array<Link>;
-    notes: Array<Note>;
-    properties: Array<Property>;
-    bibliographies: Array<Bibliography>;
-  }
->;
+export type Resource<V extends ReadonlyArray<string> | undefined = undefined> =
+  Prettify<
+    BaseItem<"resource", V> & {
+      type: string;
+      href: string | null;
+      fileFormat: string | null;
+      fileSize: number | null;
+      isInline: boolean;
+      height: number | null;
+      width: number | null;
+      image: Image<V> | null;
+      document: MultilingualText<V> | null;
+      imageMap: ImageMap | null;
+      coordinates: Array<Coordinates<V>>;
+      periods: Array<Period<V>>;
+      links: Array<Link<V>>;
+      reverseLinks: Array<Link<V>>;
+      notes: Array<Note<V>>;
+      properties: Array<Property<V>>;
+      bibliographies: Array<Bibliography<V>>;
+    }
+  >;
 
 /**
  * Represents the image of an item in OCHRE
  */
-export type Image = {
+export type Image<V extends ReadonlyArray<string> | undefined = undefined> = {
   publicationDateTime: Date | null;
-  identification: Identification | null;
+  identification: Identification<V> | null;
   url: string | null;
   htmlPrefix: string | null;
   width: number | null;
@@ -466,11 +517,6 @@ export type ImageMap = {
 };
 
 /**
- * Represents a footnote in a document
- */
-export type Footnote = { uuid: string; label: string; content: string };
-
-/**
  * Represents the content type of a property value
  */
 export type PropertyValueContentType =
@@ -487,31 +533,32 @@ export type PropertyValueContentType =
 /**
  * Represents a property value with type information
  */
-export type PropertyValueContent<T extends PropertyValueContentType> = {
-  dataType: T;
-  content:
-    | (T extends "integer" | "decimal" ? number
-      : T extends "boolean" ? boolean
-      : T extends "date" | "dateTime" | "time" ? Date
-      : string)
-    | null;
-  label: MultilingualText | null;
-  isUncertain: boolean;
-  category: string | null;
-  type: string | null;
-  uuid: string | null;
-  publicationDateTime: Date | null;
-  unit: string | null;
-};
+export type PropertyValueContent<
+  V extends ReadonlyArray<string> | undefined = undefined,
+> = Prettify<
+  {
+    label: MultilingualText<V> | null;
+    isUncertain: boolean;
+    category: string | null;
+    type: string | null;
+    uuid: string | null;
+    publicationDateTime: Date | null;
+    unit: string | null;
+  } & (
+    | { dataType: "string" | "coordinate" | "IDREF"; content: string }
+    | { dataType: "integer" | "decimal"; content: number }
+    | { dataType: "boolean"; content: boolean }
+    | { dataType: "date" | "dateTime" | "time"; content: Date }
+  )
+>;
 
 /**
  * Represents a property with label, values and nested properties
  */
-export type Property<
-  T extends PropertyValueContentType = PropertyValueContentType,
-> = {
-  label: { uuid: string; name: string };
-  values: Array<PropertyValueContent<T>>;
-  comment: string | null;
-  properties: Array<Property>;
-};
+export type Property<V extends ReadonlyArray<string> | undefined = undefined> =
+  {
+    label: { uuid: string; name: string };
+    values: Array<PropertyValueContent<V>>;
+    comment: string | null;
+    properties: Array<Property<V>>;
+  };
