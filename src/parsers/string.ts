@@ -1,3 +1,4 @@
+import type { MultilingualText } from "../types/index.js";
 import type { XMLContent, XMLText } from "../types/xml/types.js";
 import * as v from "valibot";
 import {
@@ -140,23 +141,23 @@ function parseWhitespace(
  */
 export function parseXMLText(
   item: XMLText,
-  options?: { isRichText?: boolean; parseEmail?: boolean },
+  options: { isRichText: boolean; parseEmail: boolean },
 ): string {
   let returnString = item.text ?? "";
 
   if (item.whitespace != null) {
     returnString = parseWhitespace(returnString, item.whitespace, {
-      isRichText: options?.isRichText ?? false,
+      isRichText: options.isRichText,
     });
   }
 
   if (item.rend != null) {
     returnString = parseRenderOptions(returnString, item.rend, {
-      isRichText: options?.isRichText ?? false,
+      isRichText: options.isRichText,
     });
   }
 
-  return options?.parseEmail ? parseEmail(returnString) : returnString;
+  return options.parseEmail ? parseEmail(returnString) : returnString;
 }
 
 /**
@@ -234,7 +235,7 @@ function createMDXComponent(
  *
  * @param item - XML-based rich text item to parse
  * @param options - Options for parsing
- * @param options.language - Language of the content
+ * @param options.languages - Languages of the content
  * @param options.isRichText - Whether to parse as rich text
  * @returns Formatted string with HTML/markdown elements
  *
@@ -242,114 +243,141 @@ function createMDXComponent(
  */
 export function parseXMLContent(
   item: XMLContent,
-  { language, isRichText }: { language: string; isRichText: boolean },
-): string {
-  let returnString = "";
+  options: { languages: ReadonlyArray<string>; isRichText: boolean },
+): MultilingualText {
+  const { languages, isRichText } = options;
 
-  const languageStringItems = item.content.find(
-    (content) => content.lang === language,
-  )?.string;
-  if (languageStringItems == null) {
-    throw new Error(`Language content not found for language: “${language}”`);
+  const returnString: MultilingualText = {};
+
+  const languageStringItems = item.content.filter((content) =>
+    languages.includes(content.lang),
+  );
+  if (languageStringItems.length === 0) {
+    throw new Error(`Language content not found for languages: “${languages}”`);
   }
 
-  for (const stringItem of languageStringItems) {
-    if ("text" in stringItem && stringItem.text != null) {
-      returnString += parseXMLText(stringItem, {
-        isRichText,
-        parseEmail: true,
-      });
-    } else if ("whitespace" in stringItem && stringItem.whitespace != null) {
-      returnString += parseWhitespace(returnString, stringItem.whitespace, {
-        isRichText,
-      });
-    } else if ("string" in stringItem) {
-      for (const innerStringItem of stringItem.string) {
-        if ("text" in innerStringItem && innerStringItem.text != null) {
-          returnString += parseXMLText(innerStringItem, {
-            isRichText,
-            parseEmail: true,
-          });
-        } else if (
-          "string" in innerStringItem &&
-          innerStringItem.string != null
-        ) {
-          let linkString = "";
-          for (const innerInnerStringItem of innerStringItem.string) {
-            if (innerInnerStringItem.text != null) {
-              linkString += parseXMLText(innerInnerStringItem, {
-                isRichText,
-                parseEmail: false,
-              });
-            }
-          }
-
-          const links = Object.values(innerStringItem.links).flat();
-
-          for (const link of links) {
-            const linkContent =
-              "content" in link.identification.label ?
-                parseXMLContent(link.identification.label, {
-                  language,
-                  isRichText,
-                })
-              : parseXMLText(link.identification.label, {
+  for (const stringItems of languageStringItems) {
+    for (const stringItem of stringItems.string) {
+      if ("text" in stringItem && stringItem.text != null) {
+        returnString[stringItems.lang] += parseXMLText(stringItem, {
+          isRichText,
+          parseEmail: true,
+        });
+      } else if ("whitespace" in stringItem && stringItem.whitespace != null) {
+        returnString[stringItems.lang] += parseWhitespace(
+          returnString[stringItems.lang]!,
+          stringItem.whitespace,
+          { isRichText },
+        );
+      } else if ("string" in stringItem) {
+        for (const innerStringItem of stringItem.string) {
+          if ("text" in innerStringItem && innerStringItem.text != null) {
+            returnString[stringItems.lang] += parseXMLText(innerStringItem, {
+              isRichText,
+              parseEmail: true,
+            });
+          } else if (
+            "string" in innerStringItem &&
+            innerStringItem.string != null
+          ) {
+            let linkString = "";
+            for (const innerInnerStringItem of innerStringItem.string) {
+              if (innerInnerStringItem.text != null) {
+                linkString += parseXMLText(innerInnerStringItem, {
                   isRichText,
                   parseEmail: false,
                 });
-
-            if ("type" in link && link.type != null) {
-              switch (link.type) {
-                case "image": {
-                  if ("rend" in link && link.rend != null) {
-                    returnString += createMDXComponent("inlineImage", {
-                      uuid: link.uuid,
-                      href: link.href,
-                      height: link.height,
-                      width: link.width,
-                      content: linkContent,
-                      text: linkString,
-                    });
-                  } else {
-                    returnString += createMDXComponent("internalLink", {
-                      uuid: link.uuid,
-                      text: linkString,
-                      content: linkContent,
-                    });
-                  }
-                  break;
-                }
-                case "externalDocument": {
-                  returnString += createMDXComponent("documentLink", {
-                    uuid: link.uuid,
-                    text: linkString,
-                    content: linkContent,
-                  });
-                  break;
-                }
-                case "webpage": {
-                  returnString += createMDXComponent("externalLink", {
-                    uuid: link.uuid,
-                    href: "href" in link && link.href != null ? link.href : "#",
-                    text: linkString,
-                    content: linkContent,
-                  });
-                  break;
-                }
               }
-            } else {
-              if (link.publicationDateTime != null) {
-                returnString += createMDXComponent("internalLink", {
-                  uuid: link.uuid,
-                  text: linkString,
-                  content: linkContent,
-                });
+            }
+
+            const links = Object.values(innerStringItem.links).flat();
+
+            for (const link of links) {
+              const linkContent =
+                "content" in link.identification.label ?
+                  parseXMLContent(link.identification.label, {
+                    languages,
+                    isRichText,
+                  })
+                : {
+                    [stringItems.lang]: parseXMLText(
+                      link.identification.label,
+                      { isRichText, parseEmail: false },
+                    ),
+                  };
+
+              if ("type" in link && link.type != null) {
+                switch (link.type) {
+                  case "image": {
+                    if ("rend" in link && link.rend != null) {
+                      returnString[stringItems.lang] += createMDXComponent(
+                        "inlineImage",
+                        {
+                          uuid: link.uuid,
+                          href: link.href,
+                          height: link.height,
+                          width: link.width,
+                          content: linkContent[stringItems.lang],
+                          text: linkString,
+                        },
+                      );
+                    } else {
+                      returnString[stringItems.lang] += createMDXComponent(
+                        "internalLink",
+                        {
+                          uuid: link.uuid,
+                          text: linkString,
+                          content: linkContent[stringItems.lang],
+                        },
+                      );
+                    }
+                    break;
+                  }
+                  case "externalDocument": {
+                    returnString[stringItems.lang] += createMDXComponent(
+                      "documentLink",
+                      {
+                        uuid: link.uuid,
+                        text: linkString,
+                        content: linkContent[stringItems.lang],
+                      },
+                    );
+                    break;
+                  }
+                  case "webpage": {
+                    returnString[stringItems.lang] += createMDXComponent(
+                      "externalLink",
+                      {
+                        uuid: link.uuid,
+                        href:
+                          "href" in link && link.href != null ? link.href : "#",
+                        text: linkString,
+                        content: linkContent[stringItems.lang],
+                      },
+                    );
+                    break;
+                  }
+                }
               } else {
-                returnString += createMDXComponent("tooltipSpan", {
-                  uuid: link.uuid,
-                  text: linkString,
-                  content: linkContent,
-                });
+                if (link.publicationDateTime != null) {
+                  returnString[stringItems.lang] += createMDXComponent(
+                    "internalLink",
+                    {
+                      uuid: link.uuid,
+                      text: linkString,
+                      content: linkContent[stringItems.lang],
+                    },
+                  );
+                } else {
+                  returnString[stringItems.lang] += createMDXComponent(
+                    "tooltipSpan",
+                    {
+                      uuid: link.uuid,
+                      text: linkString,
+                      content: linkContent[stringItems.lang],
+                    },
+                  );
+                }
               }
             }
           }
