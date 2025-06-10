@@ -564,6 +564,7 @@ export type WebsiteProperties = {
   isFooterDisplayed: boolean;
   isSidebarDisplayed: boolean;
   supportsThemeToggle: boolean;
+  defaultTheme: "light" | "dark" | null;
   logoUrl: string | null;
 };
 

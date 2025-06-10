@@ -3157,6 +3157,7 @@ function parseWebsiteProperties(
   let isFooterDisplayed = true;
   let isSidebarDisplayed = false;
   let supportsThemeToggle = true;
+  let defaultTheme: "light" | "dark" | null = null;
 
   const headerProperty = websiteProperties.find(
     (property) => property.label === "navbar-visible",
@@ -3214,6 +3215,13 @@ function parseWebsiteProperties(
     supportsThemeToggle = supportsThemeToggleProperty.content === true;
   }
 
+  const defaultThemeProperty = websiteProperties.find(
+    (property) => property.label === "default-theme",
+  )?.values[0];
+  if (defaultThemeProperty) {
+    defaultTheme = defaultThemeProperty.content as "light" | "dark";
+  }
+
   const {
     type: validatedType,
     status: validatedStatus,
@@ -3232,6 +3240,7 @@ function parseWebsiteProperties(
     isFooterDisplayed,
     isSidebarDisplayed,
     supportsThemeToggle,
+    defaultTheme,
     logoUrl:
       logoUuid !== null ?
         `https://ochre.lib.uchicago.edu/ochre?uuid=${logoUuid}&load`
