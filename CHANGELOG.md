@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.13
+
+### Patch Changes
+
+- 50d3158: refactor: update type definitions and parsing logic for Ochre data structures
+
 ## 0.8.12
 
 ### Patch Changes
