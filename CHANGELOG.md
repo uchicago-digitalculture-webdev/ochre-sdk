@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.17
+
+### Patch Changes
+
+- 32f245c: feat: add audio-player component
+
 ## 0.8.16
 
 ### Patch Changes
