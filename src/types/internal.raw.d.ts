@@ -165,19 +165,14 @@ export type OchreTree = {
   date?: string; // YYYY-MM-DD
   creators?: { creator: OchrePerson | Array<OchrePerson> };
   websiteOptions?: {
-    collectionUuids:
-      | { uuid: OchreTreeCollectionOption | Array<OchreTreeCollectionOption> }
-      | object;
-    metadataUuids:
-      | { uuid: OchreTreeCollectionOption | Array<OchreTreeCollectionOption> }
-      | object;
-    searchUuids:
-      | { uuid: OchreTreeCollectionOption | Array<OchreTreeCollectionOption> }
-      | object;
-    labelUuids:
-      | { uuid: OchreTreeCollectionOption | Array<OchreTreeCollectionOption> }
-      | object;
-    flattenContexts: FlattenContext | Array<FlattenContext> | object;
+    collectionUuids?: {
+      uuid: OchreTreeCollectionOption | Array<OchreTreeCollectionOption>;
+    };
+    flattenContexts?: FlattenContext | Array<FlattenContext>;
+    suppressContexts?: FlattenContext | Array<FlattenContext>;
+    searchContexts?: FlattenContext | Array<FlattenContext>;
+    activeContexts?: FlattenContext | Array<FlattenContext>;
+    labelContexts?: FlattenContext | Array<FlattenContext>;
   };
   items:
     | string
@@ -245,8 +240,8 @@ export type OchreResource = {
   links?: OchreLink | Array<OchreLink>;
   reverseLinks?: OchreLink | Array<OchreLink>;
   properties?: { property: OchreProperty | Array<OchreProperty> };
-  citedBibliography?: {
-    reference: OchreBibliography | Array<OchreBibliography>;
+  bibliographies?: {
+    bibliography: OchreBibliography | Array<OchreBibliography>;
   };
   resource?: OchreResource | Array<OchreResource>;
 };
@@ -292,12 +287,13 @@ export type OchreConcept = {
 export type OchrePropertyValueContent = {
   uuid?: string;
   publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
-  type?: string;
+  dataType?: string;
   category?: string;
+  type?: string;
   slug?: FakeString;
   unit?: string;
-  booleanValue?: boolean;
   isUncertain?: boolean;
+  rawValue?: FakeString;
   content?: FakeString | OchreStringItem | Array<OchreStringItem>;
 };
 
@@ -373,7 +369,6 @@ export type OchreLink =
   | { set: OchreLinkItem | Array<OchreLinkItem> }
   | { tree: OchreLinkItem | Array<OchreLinkItem> }
   | { person: OchreLinkItem | Array<OchreLinkItem> }
-  | { epigraphicUnit: OchreLinkItem | Array<OchreLinkItem> }
   | { bibliography: OchreBibliography | Array<OchreBibliography> }
   | { propertyValue: OchreLinkItem | Array<OchreLinkItem> };
 
@@ -396,7 +391,8 @@ export type OchreImage = {
  * Raw bibliography structure corresponding to the parsed Bibliography type
  */
 export type OchreBibliography = {
-  uuid: string;
+  uuid?: string;
+  zoteroId?: string;
   publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
   type?: string;
   n?: number;
@@ -409,6 +405,7 @@ export type OchreBibliography = {
     startDate?: { month: number; year: number; day: number };
   };
   entryInfo?: { startIssue: FakeString; startVolume: FakeString };
+  citationDetails?: string;
   citationFormat?: string;
   citationFormatSpan?:
     | { span: { content: FakeString } }

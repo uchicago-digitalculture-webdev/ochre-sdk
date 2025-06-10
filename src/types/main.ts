@@ -133,7 +133,7 @@ export type Image = {
  * Represents a link to another item with optional image and bibliographic references
  */
 export type Link = {
-  uuid: string;
+  uuid: string | null;
   publicationDateTime: Date | null;
   type: string | null;
   category: string | null;
@@ -281,7 +281,7 @@ export type Resource = {
   links: Array<Link>;
   reverseLinks: Array<Link>;
   properties: Array<Property>;
-  citedBibliographies: Array<Bibliography>;
+  bibliographies: Array<Bibliography>;
   resources: Array<Resource>;
 };
 
@@ -349,7 +349,8 @@ export type Set<T extends DataCategory> = {
  * Represents a bibliography entry with citation and publication information
  */
 export type Bibliography = {
-  uuid: string;
+  uuid: string | null;
+  zoteroId: string | null;
   category: "bibliography";
   publicationDateTime: Date | null;
   type: string | null;
@@ -358,6 +359,7 @@ export type Bibliography = {
   projectIdentification: Identification | null;
   context: Context | null;
   citation: {
+    details: string | null;
     format: string | null;
     short: string | null;
     long: string | null;
@@ -422,22 +424,23 @@ export type PropertyValueContentType =
  * Represents a property value with type information
  */
 export type PropertyValueContent<T extends PropertyValueContentType> = {
-  content: T extends "string" ? string
-  : T extends "IDREF" ? string
-  : T extends "integer" ? number
-  : T extends "decimal" ? number
-  : T extends "boolean" ? boolean
-  : T extends "date" ? Date
-  : T extends "dateTime" ? Date
-  : T extends "time" ? Date
-  : null;
-  booleanLabel: T extends "boolean" ? string | null : null;
+  content:
+    | (T extends "integer" ? number
+      : T extends "decimal" ? number
+      : T extends "time" ? number
+      : T extends "boolean" ? boolean
+      : T extends "date" ? Date
+      : T extends "dateTime" ? Date
+      : string)
+    | null;
+  dataType: T;
+  label: string | null;
   isUncertain: boolean;
-  type: T;
-  category: string;
+  unit: string | null;
+  category: string | null;
+  type: string | null;
   uuid: string | null;
   publicationDateTime: Date | null;
-  unit: string | null;
 };
 
 /**
@@ -518,15 +521,24 @@ export type Website = {
   properties: WebsiteProperties;
   globalOptions: {
     collectionUuids: Array<string>;
-    properties: {
-      metadataUuids: Array<string>;
-      searchUuids: Array<string>;
-      labelUuids: Array<string>;
+    contexts: {
+      flatten: Array<{
+        context: Array<{ variableUuid: string; valueUuid: string | null }>;
+      }>;
+      suppress: Array<{
+        context: Array<{ variableUuid: string; valueUuid: string | null }>;
+      }>;
+      search: Array<{
+        context: Array<{ variableUuid: string; valueUuid: string | null }>;
+      }>;
+      active: Array<{
+        context: Array<{ variableUuid: string; valueUuid: string | null }>;
+      }>;
+      label: Array<{
+        context: Array<{ variableUuid: string; valueUuid: string | null }>;
+      }>;
     };
-    flattenContexts: Array<{
-      context: Array<{ variableUuid: string; valueUuid: string }>;
-    }>;
-  } | null;
+  };
 };
 
 /**

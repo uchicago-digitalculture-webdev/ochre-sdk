@@ -368,7 +368,6 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
     : "tree" in linkRaw ? linkRaw.tree
     : "person" in linkRaw ? linkRaw.person
     : "bibliography" in linkRaw ? linkRaw.bibliography
-    : "epigraphicUnit" in linkRaw ? linkRaw.epigraphicUnit
     : "propertyValue" in linkRaw ? linkRaw.propertyValue
     : null;
   if (!links) {
@@ -390,7 +389,6 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
         : "person" in linkRaw ? "person"
         : "tree" in linkRaw ? "tree"
         : "bibliography" in linkRaw ? "bibliography"
-        : "epigraphicUnit" in linkRaw ? "epigraphicUnit"
         : "propertyValue" in linkRaw ? "propertyValue"
         : null,
       content:
@@ -404,7 +402,7 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
         "fileFormat" in link && link.fileFormat != null ?
           link.fileFormat
         : null,
-      uuid: link.uuid,
+      uuid: link.uuid ?? null,
       type: link.type ?? null,
       identification:
         link.identification ? parseIdentification(link.identification) : null,
@@ -779,8 +777,8 @@ export function parseProperty(
     : [];
 
   const values = valuesToParse.map((value) => {
-    let content: string | number | boolean | Date | Coordinates | null = null;
-    let booleanLabel: string | null = null;
+    let content: string | number | boolean | Date | null = null;
+    let label: string | null = null;
 
     if (
       typeof value === "string" ||
@@ -790,10 +788,11 @@ export function parseProperty(
       content = parseFakeString(value);
       const returnValue: PropertyValueContent<"string"> = {
         content,
-        booleanLabel,
+        label: null,
+        dataType: "string",
         isUncertain: false,
-        type: "string",
         category: "value",
+        type: null,
         uuid: null,
         publicationDateTime: null,
         unit: null,
@@ -802,13 +801,13 @@ export function parseProperty(
       return returnValue;
     } else {
       let parsedType: PropertyValueContentType = "string";
-      if (value.type != null) {
+      if (value.dataType != null) {
         const { data, error } = propertyValueContentTypeSchema.safeParse(
-          value.type,
+          value.dataType,
         );
         if (error) {
           throw new Error(
-            `Invalid property value content type: "${value.type}"`,
+            `Invalid property value content type: "${value.dataType}"`,
           );
         }
 
@@ -818,37 +817,63 @@ export function parseProperty(
       switch (parsedType) {
         case "integer":
         case "decimal": {
-          content = Number(value.content);
+          if (value.rawValue != null) {
+            content = Number(value.rawValue);
+            label =
+              value.content ?
+                parseStringContent({ content: value.content })
+              : null;
+          } else {
+            content = Number(value.content);
+            label = null;
+          }
           break;
         }
         case "date":
         case "dateTime": {
-          content =
-            value.content ?
-              typeof value.content === "string" ?
-                new Date(value.content)
-              : new Date(parseStringContent({ content: value.content }))
-            : null;
-          break;
-        }
-        case "coordinate": {
-          content = null;
+          if (value.rawValue != null) {
+            content = new Date(parseFakeString(value.rawValue));
+            label =
+              value.content ?
+                parseStringContent({ content: value.content })
+              : null;
+          } else {
+            content =
+              value.content ?
+                typeof value.content === "string" ?
+                  new Date(value.content)
+                : new Date(parseStringContent({ content: value.content }))
+              : null;
+          }
           break;
         }
         case "boolean": {
-          if (value.content != null) {
-            booleanLabel = parseStringContent({ content: value.content });
+          if (value.rawValue != null) {
+            content = value.rawValue === "true";
+            label =
+              value.content ?
+                parseStringContent({ content: value.content })
+              : null;
+          } else {
+            content = value.content != null;
+            label = null;
           }
-
-          content = value.booleanValue ?? null;
-
           break;
         }
         default: {
           if ("slug" in value && value.slug != null) {
             content = parseFakeString(value.slug);
           } else if (value.content != null) {
-            content = parseStringContent({ content: value.content });
+            if (value.rawValue != null) {
+              content = parseFakeString(value.rawValue);
+              label =
+                value.content ?
+                  parseStringContent({ content: value.content })
+                : null;
+            } else {
+              content = parseStringContent({ content: value.content });
+              label = null;
+            }
           }
 
           break;
@@ -857,10 +882,11 @@ export function parseProperty(
 
       const returnValue: PropertyValueContent<typeof parsedType> = {
         content,
-        booleanLabel,
+        dataType: parsedType,
         isUncertain: value.isUncertain ?? false,
-        type: parsedType,
-        category: value.category ?? "value",
+        label,
+        category: value.category ?? null,
+        type: value.type ?? null,
         uuid: value.uuid ?? null,
         publicationDateTime:
           value.publicationDateTime != null ?
@@ -1032,7 +1058,8 @@ export function parseBibliography(
   }
 
   return {
-    uuid: bibliography.uuid,
+    uuid: bibliography.uuid ?? null,
+    zoteroId: bibliography.zoteroId ?? null,
     category: "bibliography",
     publicationDateTime:
       bibliography.publicationDateTime != null ?
@@ -1050,6 +1077,7 @@ export function parseBibliography(
       : null,
     context: bibliography.context ? parseContext(bibliography.context) : null,
     citation: {
+      details: bibliography.citationDetails ?? null,
       format: bibliography.citationFormat ?? null,
       short:
         bibliography.citationFormatSpan ?
@@ -1570,12 +1598,12 @@ export function parseResource(resource: OchreResource): Resource {
           : [resource.properties.property],
         )
       : [],
-    citedBibliographies:
-      resource.citedBibliography ?
+    bibliographies:
+      resource.bibliographies ?
         parseBibliographies(
-          Array.isArray(resource.citedBibliography.reference) ?
-            resource.citedBibliography.reference
-          : [resource.citedBibliography.reference],
+          Array.isArray(resource.bibliographies.bibliography) ?
+            resource.bibliographies.bibliography
+          : [resource.bibliographies.bibliography],
         )
       : [],
     resources:
@@ -1865,7 +1893,7 @@ async function parseWebElementProperties(
     : null;
   if (document === null) {
     const documentLink = links.find((link) => link.type === "internalDocument");
-    if (documentLink) {
+    if (documentLink?.uuid != null) {
       const { item, error } = await fetchItem(documentLink.uuid, "resource");
       if (error !== null) {
         throw new Error("Failed to fetch OCHRE data");
@@ -3211,6 +3239,55 @@ function parseWebsiteProperties(
   };
 }
 
+function parseContexts(
+  contexts: Array<FlattenContext>,
+): Array<{
+  context: Array<{ variableUuid: string; valueUuid: string | null }>;
+}> {
+  return contexts.map((context) => ({
+    context:
+      Array.isArray(context.context) ?
+        context.context.flatMap((context) =>
+          Array.isArray(context.level) ?
+            context.level.map((level) => ({
+              variableUuid: level.split(",")[0] ?? "",
+              valueUuid:
+                level.split(",")[1]?.trim() === "null" ?
+                  null
+                : (level.split(",")[1]?.trim() ?? null),
+            }))
+          : [
+              {
+                variableUuid: context.level.split(",")[0] ?? "",
+                valueUuid:
+                  context.level.split(",")[1]?.trim() === "null" ?
+                    null
+                  : (context.level.split(",")[1]?.trim() ?? null),
+              },
+            ],
+        )
+      : [
+          ...(Array.isArray(context.context.level) ?
+            context.context.level.map((level) => ({
+              variableUuid: level.split(",")[0] ?? "",
+              valueUuid:
+                level.split(",")[1]?.trim() === "null" ?
+                  null
+                : (level.split(",")[1]?.trim() ?? null),
+            }))
+          : [
+              {
+                variableUuid: context.context.level.split(",")[0] ?? "",
+                valueUuid:
+                  context.context.level.split(",")[1]?.trim() === "null" ?
+                    null
+                  : (context.context.level.split(",")[1]?.trim() ?? null),
+              },
+            ]),
+        ],
+  }));
+}
+
 export async function parseWebsite(
   websiteTree: OchreTree,
   projectName: FakeString,
@@ -3403,80 +3480,57 @@ export async function parseWebsite(
     };
   }
 
-  let globalOptions: Website["globalOptions"] | null = null;
+  let globalOptions: Website["globalOptions"] = {
+    collectionUuids: [],
+    contexts: { flatten: [], search: [], active: [], label: [], suppress: [] },
+  };
   if (websiteTree.websiteOptions) {
     const flattenContextsRaw =
-      "context" in websiteTree.websiteOptions.flattenContexts ?
-        [websiteTree.websiteOptions.flattenContexts]
-      : Array.isArray(websiteTree.websiteOptions.flattenContexts) ?
-        (websiteTree.websiteOptions.flattenContexts as Array<FlattenContext>)
+      websiteTree.websiteOptions.flattenContexts != null ?
+        Array.isArray(websiteTree.websiteOptions.flattenContexts) ?
+          websiteTree.websiteOptions.flattenContexts
+        : [websiteTree.websiteOptions.flattenContexts]
       : [];
-
-    const flattenContexts: NonNullable<
-      Website["globalOptions"]
-    >["flattenContexts"] = flattenContextsRaw.map((flattenContext) => ({
-      context:
-        Array.isArray(flattenContext.context) ?
-          flattenContext.context.flatMap((context) =>
-            Array.isArray(context.level) ?
-              context.level.map((level) => ({
-                variableUuid: level.split(",")[0]!,
-                valueUuid: level.split(",")[1]!,
-              }))
-            : [
-                {
-                  variableUuid: context.level.split(",")[0]!,
-                  valueUuid: context.level.split(",")[1]!,
-                },
-              ],
-          )
-        : [
-            ...(Array.isArray(flattenContext.context.level) ?
-              flattenContext.context.level.map((level) => ({
-                variableUuid: level.split(",")[0]!,
-                valueUuid: level.split(",")[1]!,
-              }))
-            : [
-                {
-                  variableUuid: flattenContext.context.level.split(",")[0]!,
-                  valueUuid: flattenContext.context.level.split(",")[1]!,
-                },
-              ]),
-          ],
-    }));
+    const suppressContextsRaw =
+      websiteTree.websiteOptions.suppressContexts != null ?
+        Array.isArray(websiteTree.websiteOptions.suppressContexts) ?
+          websiteTree.websiteOptions.suppressContexts
+        : [websiteTree.websiteOptions.suppressContexts]
+      : [];
+    const searchContextsRaw =
+      websiteTree.websiteOptions.searchContexts != null ?
+        Array.isArray(websiteTree.websiteOptions.searchContexts) ?
+          websiteTree.websiteOptions.searchContexts
+        : [websiteTree.websiteOptions.searchContexts]
+      : [];
+    const activeContextsRaw =
+      websiteTree.websiteOptions.activeContexts != null ?
+        Array.isArray(websiteTree.websiteOptions.activeContexts) ?
+          websiteTree.websiteOptions.activeContexts
+        : [websiteTree.websiteOptions.activeContexts]
+      : [];
+    const labelContextsRaw =
+      websiteTree.websiteOptions.labelContexts != null ?
+        Array.isArray(websiteTree.websiteOptions.labelContexts) ?
+          websiteTree.websiteOptions.labelContexts
+        : [websiteTree.websiteOptions.labelContexts]
+      : [];
 
     globalOptions = {
       collectionUuids:
-        "uuid" in websiteTree.websiteOptions.collectionUuids ?
+        websiteTree.websiteOptions.collectionUuids != null ?
           (Array.isArray(websiteTree.websiteOptions.collectionUuids.uuid) ?
             websiteTree.websiteOptions.collectionUuids.uuid
           : [websiteTree.websiteOptions.collectionUuids.uuid]
           ).map((uuid) => uuid.content)
         : [],
-      properties: {
-        metadataUuids:
-          "uuid" in websiteTree.websiteOptions.metadataUuids ?
-            (Array.isArray(websiteTree.websiteOptions.metadataUuids.uuid) ?
-              websiteTree.websiteOptions.metadataUuids.uuid
-            : [websiteTree.websiteOptions.metadataUuids.uuid]
-            ).map((uuid) => uuid.content)
-          : [],
-        searchUuids:
-          "uuid" in websiteTree.websiteOptions.searchUuids ?
-            (Array.isArray(websiteTree.websiteOptions.searchUuids.uuid) ?
-              websiteTree.websiteOptions.searchUuids.uuid
-            : [websiteTree.websiteOptions.searchUuids.uuid]
-            ).map((uuid) => uuid.content)
-          : [],
-        labelUuids:
-          "uuid" in websiteTree.websiteOptions.labelUuids ?
-            (Array.isArray(websiteTree.websiteOptions.labelUuids.uuid) ?
-              websiteTree.websiteOptions.labelUuids.uuid
-            : [websiteTree.websiteOptions.labelUuids.uuid]
-            ).map((uuid) => uuid.content)
-          : [],
+      contexts: {
+        flatten: parseContexts(flattenContextsRaw),
+        search: parseContexts(searchContextsRaw),
+        active: parseContexts(activeContextsRaw),
+        label: parseContexts(labelContextsRaw),
+        suppress: parseContexts(suppressContextsRaw),
       },
-      flattenContexts,
     };
   }
 

@@ -277,12 +277,12 @@ export function parseStringDocumentItem(
                 linkContent !== null ? `content="${linkContent}"` : ""
               } height={${linkResource.height?.toString() ?? "null"}} width={${linkResource.width?.toString() ?? "null"}} />`;
             } else if (linkResource.publicationDateTime != null) {
-              return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkResource.uuid}" type="image"${
+              return `<InternalLink uuid="${linkResource.uuid}"${
                 linkContent !== null ? ` content="${linkContent}"` : ""
-              }>${itemString}</ExternalLink>`;
+              }>${itemString}</InternalLink>`;
             } else {
-              return `<TooltipSpan type="image" ${
-                linkContent !== null ? `content="${linkContent}"` : ""
+              return `<TooltipSpan${
+                linkContent !== null ? ` content="${linkContent}"` : ""
               }>${itemString}</TooltipSpan>`;
             }
           }
@@ -304,24 +304,24 @@ export function parseStringDocumentItem(
                 itemString ? ` label="${itemString}"` : ""
               }${linkContent !== null ? ` content="${linkContent}"` : ""} />`;
             } else {
-              return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkResource.uuid}" type="internalDocument" ${
-                linkContent !== null ? `content="${linkContent}"` : ""
-              }>${itemString}</ExternalLink>`;
+              return `<InternalLink uuid="${linkResource.uuid}"${
+                linkContent !== null ? ` content="${linkContent}"` : ""
+              }>${itemString}</InternalLink>`;
             }
           }
           case "externalDocument": {
             if (linkResource.publicationDateTime != null) {
-              return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkResource.uuid}" type="externalDocument" ${
+              return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkResource.uuid}&load" ${
                 linkContent !== null ? `content="${linkContent}"` : ""
               }>${itemString}</ExternalLink>`;
             } else {
-              return `<TooltipSpan type="externalDocument" ${
-                linkContent !== null ? `content="${linkContent}"` : ""
+              return `<TooltipSpan${
+                linkContent !== null ? ` content="${linkContent}"` : ""
               }>${itemString}</TooltipSpan>`;
             }
           }
           case "webpage": {
-            return `<ExternalLink href="${linkResource.href}" type="webpage" ${
+            return `<ExternalLink href="${linkResource.href}" ${
               linkContent !== null ? `content="${linkContent}"` : ""
             }>${itemString}</ExternalLink>`;
           }
@@ -334,17 +334,17 @@ export function parseStringDocumentItem(
           Array.isArray(link.concept) ? link.concept[0]! : link.concept;
 
         if (linkConcept.publicationDateTime != null) {
-          return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkConcept.uuid}" type="concept">${itemString}</ExternalLink>`;
+          return `<InternalLink uuid="${linkConcept.uuid}">${itemString}</InternalLink>`;
         } else {
-          return `<TooltipSpan type="concept">${itemString}</TooltipSpan>`;
+          return `<TooltipSpan>${itemString}</TooltipSpan>`;
         }
       } else if ("set" in link) {
         const linkSet = Array.isArray(link.set) ? link.set[0]! : link.set;
 
         if (linkSet.publicationDateTime != null) {
-          return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkSet.uuid}" type="set">${itemString}</ExternalLink>`;
+          return `<InternalLink uuid="${linkSet.uuid}">${itemString}</InternalLink>`;
         } else {
-          return `<TooltipSpan type="set">${itemString}</TooltipSpan>`;
+          return `<TooltipSpan>${itemString}</TooltipSpan>`;
         }
       } else if ("person" in link) {
         const linkPerson =
@@ -364,12 +364,12 @@ export function parseStringDocumentItem(
           : null;
 
         if (linkPerson.publicationDateTime != null) {
-          return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkPerson.uuid}" type="${linkPerson.type ?? "person"}" ${
-            linkContent !== null ? `content="${linkContent}"` : ""
-          }>${itemString}</ExternalLink>`;
+          return `<InternalLink uuid="${linkPerson.uuid}"${
+            linkContent !== null ? ` content="${linkContent}"` : ""
+          }>${itemString}</InternalLink>`;
         } else {
-          return `<TooltipSpan type="${linkPerson.type ?? "person"}" ${
-            linkContent !== null ? `content="${linkContent}"` : ""
+          return `<TooltipSpan${
+            linkContent !== null ? ` content="${linkContent}"` : ""
           }>${itemString}</TooltipSpan>`;
         }
       } else if ("bibliography" in link) {
@@ -379,9 +379,9 @@ export function parseStringDocumentItem(
           : link.bibliography;
 
         if (linkBibliography.publicationDateTime != null) {
-          return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkBibliography.uuid}" type="${linkBibliography.type ?? "bibliography"}">${itemString}</ExternalLink>`;
+          return `<InternalLink uuid="${linkBibliography.uuid}">${itemString}</InternalLink>`;
         } else {
-          return `<TooltipSpan type="bibliography">${itemString}</TooltipSpan>`;
+          return `<TooltipSpan>${itemString}</TooltipSpan>`;
         }
       }
     }
