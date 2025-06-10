@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.14
+
+### Patch Changes
+
+- fbbbd14: fix: string parsing fixes
+
 ## 0.8.13
 
 ### Patch Changes
