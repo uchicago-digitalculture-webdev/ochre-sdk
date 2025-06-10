@@ -438,13 +438,13 @@ export function filterProperties(
         return value.content === filter.value;
       }
 
-      if (value.content instanceof Date) {
-        if (!(filter.value instanceof Date)) {
-          return false;
-        }
+      // if (value.content instanceof Date) {
+      //   if (!(filter.value instanceof Date)) {
+      //     return false;
+      //   }
 
-        return value.content.getTime() === filter.value.getTime();
-      }
+      //   return value.content.getTime() === filter.value.getTime();
+      // }
 
       return false;
     });
