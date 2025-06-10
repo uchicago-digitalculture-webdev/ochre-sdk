@@ -53,6 +53,7 @@ export const componentSchema = z.enum(
   [
     "annotated-document",
     "annotated-image",
+    "audio-player",
     "bibliography",
     "button",
     "collection",

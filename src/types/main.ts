@@ -618,6 +618,14 @@ export type WebElementComponent =
   | { component: "annotated-document"; document: Document }
   | { component: "annotated-image"; imageUuid: string; isSearchable: boolean }
   | {
+      component: "audio-player";
+      audioUuid: string;
+      isSpeedControlsDisplayed: boolean;
+      isVolumeControlsDisplayed: boolean;
+      isSeekBarDisplayed: boolean;
+      isDownloadButtonDisplayed: boolean;
+    }
+  | {
       component: "bibliography";
       bibliographies: Array<Bibliography>;
       layout: "long" | "short";

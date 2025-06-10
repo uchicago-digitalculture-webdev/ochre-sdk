@@ -1931,6 +1931,57 @@ async function parseWebElementProperties(
       properties.isSearchable = isSearchable;
       break;
     }
+    case "audio-player": {
+      const audioLink = links.find((link) => link.type === "audio");
+      if (!audioLink) {
+        throw new Error(
+          `Audio link not found for the following component: “${componentName}”`,
+        );
+      }
+
+      let isSpeedControlsDisplayed = false;
+      const isSpeedControlsDisplayedProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "speed-controls-displayed",
+      );
+      if (isSpeedControlsDisplayedProperty !== null) {
+        isSpeedControlsDisplayed = isSpeedControlsDisplayedProperty === true;
+      }
+
+      let isVolumeControlsDisplayed = false;
+      const isVolumeControlsDisplayedProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "volume-controls-displayed",
+      );
+      if (isVolumeControlsDisplayedProperty !== null) {
+        isVolumeControlsDisplayed = isVolumeControlsDisplayedProperty === true;
+      }
+
+      let isSeekBarDisplayed = false;
+      const isSeekBarDisplayedProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "seek-bar-displayed",
+      );
+      if (isSeekBarDisplayedProperty !== null) {
+        isSeekBarDisplayed = isSeekBarDisplayedProperty === true;
+      }
+
+      let isDownloadButtonDisplayed = false;
+      const isDownloadButtonDisplayedProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "download-button-displayed",
+      );
+      if (isDownloadButtonDisplayedProperty !== null) {
+        isDownloadButtonDisplayed = isDownloadButtonDisplayedProperty === true;
+      }
+
+      properties.audioUuid = audioLink.uuid;
+      properties.isSpeedControlsDisplayed = isSpeedControlsDisplayed;
+      properties.isVolumeControlsDisplayed = isVolumeControlsDisplayed;
+      properties.isSeekBarDisplayed = isSeekBarDisplayed;
+      properties.isDownloadButtonDisplayed = isDownloadButtonDisplayed;
+      break;
+    }
     case "bibliography": {
       const bibliographyLink = links.find(
         (link) => link.category === "bibliography",
