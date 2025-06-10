@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.16
+
+### Patch Changes
+
+- b32ef69: fix: fix parsing boolean values
+
 ## 0.8.15
 
 ### Patch Changes
