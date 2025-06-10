@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.15
+
+### Patch Changes
+
+- e07a46b: - feat: add defaultTheme property to website properties
+  - refactor: revert date and dateTime handling in type definitions and parsing logic to be string type instead of Date
+
 ## 0.8.14
 
 ### Patch Changes
