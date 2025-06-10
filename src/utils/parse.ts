@@ -1,6 +1,5 @@
 import type {
   FakeString,
-  FlattenContext,
   OchreBibliography,
   OchreConcept,
   OchreContext,
@@ -12,6 +11,7 @@ import type {
   OchreImageMap,
   OchreInterpretation,
   OchreLanguage,
+  OchreLevelContext,
   OchreLicense,
   OchreLink,
   OchreMetadata,
@@ -41,6 +41,8 @@ import type {
   Image,
   ImageMap,
   Interpretation,
+  LevelContext,
+  LevelContextItem,
   License,
   Link,
   Metadata,
@@ -1255,7 +1257,15 @@ export function parsePropertyValues(
  * @param tree - Raw tree data in OCHRE format
  * @returns Parsed Tree object or null if invalid
  */
-export function parseTree(tree: OchreTree): Tree {
+export function parseTree<T extends DataCategory, U extends DataCategory>(
+  tree: OchreTree,
+  itemCategory?: T,
+  itemSubCategory?: U,
+): Tree<T, U> {
+  if (typeof tree.items === "string") {
+    throw new TypeError("Invalid OCHRE data: Tree has no items");
+  }
+
   let creators: Array<Person> = [];
   if (tree.creators) {
     creators = parsePersons(
@@ -1270,65 +1280,118 @@ export function parseTree(tree: OchreTree): Tree {
     date = new Date(tree.date);
   }
 
-  let resources: Array<Resource> = [];
-  let spatialUnits: Array<SpatialUnit> = [];
-  let concepts: Array<Concept> = [];
-  let periods: Array<Period> = [];
-  let bibliographies: Array<Bibliography> = [];
-  let persons: Array<Person> = [];
-  let propertyValues: Array<PropertyValue> = [];
+  const parsedItemCategory =
+    itemCategory ?? getItemCategory(Object.keys(tree.items));
 
-  if (typeof tree.items !== "string" && "resource" in tree.items) {
-    resources = parseResources(
-      Array.isArray(tree.items.resource) ?
-        tree.items.resource
-      : [tree.items.resource],
-    ) as Array<Resource>;
-  }
-  if (typeof tree.items !== "string" && "spatialUnit" in tree.items) {
-    spatialUnits = parseSpatialUnits(
-      Array.isArray(tree.items.spatialUnit) ?
-        tree.items.spatialUnit
-      : [tree.items.spatialUnit],
-    ) as Array<SpatialUnit>;
-  }
-  if (typeof tree.items !== "string" && "concept" in tree.items) {
-    concepts = parseConcepts(
-      Array.isArray(tree.items.concept) ?
-        tree.items.concept
-      : [tree.items.concept],
-    ) as Array<Concept>;
-  }
-  if (typeof tree.items !== "string" && "period" in tree.items) {
-    periods = parsePeriods(
-      Array.isArray(tree.items.period) ?
-        tree.items.period
-      : [tree.items.period],
-    );
-  }
-  if (typeof tree.items !== "string" && "bibliography" in tree.items) {
-    bibliographies = parseBibliographies(
-      Array.isArray(tree.items.bibliography) ?
-        tree.items.bibliography
-      : [tree.items.bibliography],
-    );
-  }
-  if (typeof tree.items !== "string" && "person" in tree.items) {
-    persons = parsePersons(
-      Array.isArray(tree.items.person) ?
-        tree.items.person
-      : [tree.items.person],
-    );
-  }
-  if (typeof tree.items !== "string" && "propertyValue" in tree.items) {
-    propertyValues = parsePropertyValues(
-      Array.isArray(tree.items.propertyValue) ?
-        tree.items.propertyValue
-      : [tree.items.propertyValue],
-    );
+  let items:
+    | Array<Resource>
+    | Array<SpatialUnit>
+    | Array<Concept>
+    | Array<Period>
+    | Array<Bibliography>
+    | Array<Person>
+    | Array<PropertyValue>
+    | Array<Set<U>> = [];
+
+  switch (parsedItemCategory) {
+    case "resource": {
+      if (!("resource" in tree.items)) {
+        throw new Error("Invalid OCHRE data: Tree has no resources");
+      }
+      items = parseResources(
+        Array.isArray(tree.items.resource) ?
+          tree.items.resource
+        : [tree.items.resource],
+      );
+      break;
+    }
+    case "spatialUnit": {
+      if (!("spatialUnit" in tree.items)) {
+        throw new Error("Invalid OCHRE data: Tree has no spatial units");
+      }
+      items = parseSpatialUnits(
+        Array.isArray(tree.items.spatialUnit) ?
+          tree.items.spatialUnit
+        : [tree.items.spatialUnit],
+      );
+      break;
+    }
+    case "concept": {
+      if (!("concept" in tree.items)) {
+        throw new Error("Invalid OCHRE data: Tree has no concepts");
+      }
+      items = parseConcepts(
+        Array.isArray(tree.items.concept) ?
+          tree.items.concept
+        : [tree.items.concept],
+      );
+      break;
+    }
+    case "period": {
+      if (!("period" in tree.items)) {
+        throw new Error("Invalid OCHRE data: Tree has no periods");
+      }
+      items = parsePeriods(
+        Array.isArray(tree.items.period) ?
+          tree.items.period
+        : [tree.items.period],
+      );
+      break;
+    }
+    case "bibliography": {
+      if (!("bibliography" in tree.items)) {
+        throw new Error("Invalid OCHRE data: Tree has no bibliographies");
+      }
+      items = parseBibliographies(
+        Array.isArray(tree.items.bibliography) ?
+          tree.items.bibliography
+        : [tree.items.bibliography],
+      );
+      break;
+    }
+    case "person": {
+      if (!("person" in tree.items)) {
+        throw new Error("Invalid OCHRE data: Tree has no persons");
+      }
+      items = parsePersons(
+        Array.isArray(tree.items.person) ?
+          tree.items.person
+        : [tree.items.person],
+      );
+      break;
+    }
+    case "propertyValue": {
+      if (!("propertyValue" in tree.items)) {
+        throw new Error("Invalid OCHRE data: Tree has no property values");
+      }
+      items = parsePropertyValues(
+        Array.isArray(tree.items.propertyValue) ?
+          tree.items.propertyValue
+        : [tree.items.propertyValue],
+      );
+      break;
+    }
+    case "set": {
+      if (!("set" in tree.items)) {
+        throw new Error("Invalid OCHRE data: Tree has no sets");
+      }
+
+      const setItems: Array<Set<U>> = [];
+      for (const item of Array.isArray(tree.items.set) ?
+        tree.items.set
+      : [tree.items.set]) {
+        setItems.push(parseSet<U>(item, itemSubCategory));
+      }
+
+      items = setItems;
+      break;
+    }
+    default: {
+      throw new Error("Invalid OCHRE data: Tree has no items or is malformed");
+    }
   }
 
-  const returnTree: Tree = {
+  const returnTree: Tree<T, U> = {
     uuid: tree.uuid,
     category: "tree",
     publicationDateTime: new Date(tree.publicationDateTime),
@@ -1338,15 +1401,15 @@ export function parseTree(tree: OchreTree): Tree {
     date,
     type: tree.type,
     number: tree.n,
-    items: {
-      resources,
-      spatialUnits,
-      concepts,
-      periods,
-      bibliographies,
-      persons,
-      propertyValues,
-    },
+    items: items as T extends "resource" ? Array<Resource>
+    : T extends "spatialUnit" ? Array<SpatialUnit>
+    : T extends "concept" ? Array<Concept>
+    : T extends "period" ? Array<Period>
+    : T extends "bibliography" ? Array<Bibliography>
+    : T extends "person" ? Array<Person>
+    : T extends "propertyValue" ? Array<PropertyValue>
+    : T extends "set" ? Array<Set<U>>
+    : never,
     properties:
       tree.properties ?
         parseProperties(
@@ -3287,52 +3350,34 @@ function parseWebsiteProperties(
 }
 
 function parseContexts(
-  contexts: Array<FlattenContext>,
-): Array<{
-  context: Array<{ variableUuid: string; valueUuid: string | null }>;
-}> {
-  return contexts.map((context) => ({
-    context:
-      Array.isArray(context.context) ?
-        context.context.flatMap((context) =>
-          Array.isArray(context.level) ?
-            context.level.map((level) => ({
-              variableUuid: level.split(",")[0] ?? "",
-              valueUuid:
-                level.split(",")[1]?.trim() === "null" ?
-                  null
-                : (level.split(",")[1]?.trim() ?? null),
-            }))
-          : [
-              {
-                variableUuid: context.level.split(",")[0] ?? "",
-                valueUuid:
-                  context.level.split(",")[1]?.trim() === "null" ?
-                    null
-                  : (context.level.split(",")[1]?.trim() ?? null),
-              },
-            ],
-        )
-      : [
-          ...(Array.isArray(context.context.level) ?
-            context.context.level.map((level) => ({
-              variableUuid: level.split(",")[0] ?? "",
-              valueUuid:
-                level.split(",")[1]?.trim() === "null" ?
-                  null
-                : (level.split(",")[1]?.trim() ?? null),
-            }))
-          : [
-              {
-                variableUuid: context.context.level.split(",")[0] ?? "",
-                valueUuid:
-                  context.context.level.split(",")[1]?.trim() === "null" ?
-                    null
-                  : (context.context.level.split(",")[1]?.trim() ?? null),
-              },
-            ]),
-        ],
-  }));
+  contexts: Array<OchreLevelContext>,
+): Array<LevelContext> {
+  const contextsParsed: Array<LevelContext> = [];
+  for (const mainContext of contexts) {
+    const contextItemsToParse =
+      Array.isArray(mainContext.context) ?
+        mainContext.context
+      : [mainContext.context];
+
+    for (const contextItemToParse of contextItemsToParse) {
+      const levelsToParse =
+        Array.isArray(contextItemToParse.level) ?
+          contextItemToParse.level
+        : [contextItemToParse.level];
+
+      const levels: Array<LevelContextItem> = levelsToParse.map((level) => {
+        const [variableUuid, valueUuid] = level.split(", ");
+        return {
+          variableUuid: variableUuid!,
+          valueUuid: valueUuid === "null" ? null : valueUuid!,
+        };
+      });
+
+      contextsParsed.push({ context: levels });
+    }
+  }
+
+  return contextsParsed;
 }
 
 export async function parseWebsite(

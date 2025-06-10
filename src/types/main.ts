@@ -1,13 +1,13 @@
 /**
  * Represents the core data structure containing item information and metadata
  */
-export type Data<T extends DataCategory> = {
+export type Data<T extends DataCategory, U extends DataCategory> = {
   uuid: string;
   belongsTo: { uuid: string; abbreviation: string };
   publicationDateTime: Date;
   metadata: Metadata;
   item:
-    | Tree
+    | Tree<T, U>
     | Set<T>
     | Resource
     | SpatialUnit
@@ -449,7 +449,7 @@ export type Property<
 /**
  * Represents a tree structure containing resources, spatial units and concepts
  */
-export type Tree = {
+export type Tree<T extends DataCategory, U extends DataCategory> = {
   uuid: string;
   category: "tree";
   publicationDateTime: Date | null;
@@ -459,16 +459,16 @@ export type Tree = {
   license: License | null;
   identification: Identification;
   creators: Array<Person>;
-  items: {
-    resources: Array<Resource>;
-    spatialUnits: Array<SpatialUnit>;
-    concepts: Array<Concept>;
-    periods: Array<Period>;
-    bibliographies: Array<Bibliography>;
-    persons: Array<Person>;
-    propertyValues: Array<PropertyValue>;
-  };
   properties: Array<Property>;
+  items: T extends "resource" ? Array<Resource>
+  : T extends "spatialUnit" ? Array<SpatialUnit>
+  : T extends "concept" ? Array<Concept>
+  : T extends "period" ? Array<Period>
+  : T extends "bibliography" ? Array<Bibliography>
+  : T extends "person" ? Array<Person>
+  : T extends "propertyValue" ? Array<PropertyValue>
+  : T extends "set" ? Array<Set<U>>
+  : never;
 };
 
 /**
@@ -488,6 +488,18 @@ export type UuidMetadata = {
   item: { uuid: string; name: string; type: string };
   project: { name: string; website: string | null };
 } | null;
+
+/**
+ * Represents a level context item with a variable and value
+ */
+export type LevelContextItem = {
+  variableUuid: string;
+  valueUuid: string | null;
+};
+/**
+ * Represents a level context with a context item
+ */
+export type LevelContext = { context: Array<LevelContextItem> };
 
 /**
  * Represents a website with its properties and elements
@@ -512,21 +524,11 @@ export type Website = {
   globalOptions: {
     collectionUuids: Array<string>;
     contexts: {
-      flatten: Array<{
-        context: Array<{ variableUuid: string; valueUuid: string | null }>;
-      }>;
-      suppress: Array<{
-        context: Array<{ variableUuid: string; valueUuid: string | null }>;
-      }>;
-      search: Array<{
-        context: Array<{ variableUuid: string; valueUuid: string | null }>;
-      }>;
-      active: Array<{
-        context: Array<{ variableUuid: string; valueUuid: string | null }>;
-      }>;
-      label: Array<{
-        context: Array<{ variableUuid: string; valueUuid: string | null }>;
-      }>;
+      flatten: Array<LevelContext>;
+      suppress: Array<LevelContext>;
+      search: Array<LevelContext>;
+      active: Array<LevelContext>;
+      label: Array<LevelContext>;
     };
   };
 };
