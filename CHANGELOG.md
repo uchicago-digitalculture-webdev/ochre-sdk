@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.19
+
+### Patch Changes
+
+- 3af7513: fix: reimplement globalOptions context parsing
+
 ## 0.8.18
 
 ### Patch Changes
