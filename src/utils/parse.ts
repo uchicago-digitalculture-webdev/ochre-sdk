@@ -829,24 +829,24 @@ export function parseProperty(
           }
           break;
         }
-        case "date":
-        case "dateTime": {
-          if (value.rawValue != null) {
-            content = new Date(parseFakeString(value.rawValue));
-            label =
-              value.content ?
-                parseStringContent({ content: value.content })
-              : null;
-          } else {
-            content =
-              value.content ?
-                typeof value.content === "string" ?
-                  new Date(value.content)
-                : new Date(parseStringContent({ content: value.content }))
-              : null;
-          }
-          break;
-        }
+        // case "date":
+        // case "dateTime": {
+        //   if (value.rawValue != null) {
+        //     content = new Date(parseFakeString(value.rawValue));
+        //     label =
+        //       value.content ?
+        //         parseStringContent({ content: value.content })
+        //       : null;
+        //   } else {
+        //     content =
+        //       value.content ?
+        //         typeof value.content === "string" ?
+        //           new Date(value.content)
+        //         : new Date(parseStringContent({ content: value.content }))
+        //       : null;
+        //   }
+        //   break;
+        // }
         case "boolean": {
           if (value.rawValue != null) {
             content = value.rawValue === "true";

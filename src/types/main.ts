@@ -429,9 +429,9 @@ export type PropertyValueContent<T extends PropertyValueContentType> = {
       : T extends "decimal" ? number
       : T extends "time" ? number
       : T extends "boolean" ? boolean
-      : T extends "date" ? Date
-      : T extends "dateTime" ? Date
-      : string)
+      : // : T extends "date" ? Date
+        // : T extends "dateTime" ? Date
+        string)
     | null;
   dataType: T;
   label: string | null;
