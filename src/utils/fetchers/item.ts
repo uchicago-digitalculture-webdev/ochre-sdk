@@ -81,7 +81,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
       : T extends "person" ? Person
       : T extends "propertyValue" ? PropertyValue
       : T extends "set" ? Set<U>
-      : T extends "tree" ? Tree
+      : T extends "tree" ? Tree<T, U>
       : never;
       category: T;
     }
