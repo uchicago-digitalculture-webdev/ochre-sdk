@@ -277,9 +277,7 @@ export function parseStringDocumentItem(
                 linkContent !== null ? `content="${linkContent}"` : ""
               } height={${linkResource.height?.toString() ?? "null"}} width={${linkResource.width?.toString() ?? "null"}} />`;
             } else if (linkResource.publicationDateTime != null) {
-              return `<InternalLink uuid="${linkResource.uuid}"${
-                linkContent !== null ? ` content="${linkContent}"` : ""
-              }>${itemString}</InternalLink>`;
+              return `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
             } else {
               return `<TooltipSpan${
                 linkContent !== null ? ` content="${linkContent}"` : ""
@@ -304,9 +302,7 @@ export function parseStringDocumentItem(
                 itemString ? ` label="${itemString}"` : ""
               }${linkContent !== null ? ` content="${linkContent}"` : ""} />`;
             } else {
-              return `<InternalLink uuid="${linkResource.uuid}"${
-                linkContent !== null ? ` content="${linkContent}"` : ""
-              }>${itemString}</InternalLink>`;
+              return `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
             }
           }
           case "externalDocument": {
@@ -364,9 +360,7 @@ export function parseStringDocumentItem(
           : null;
 
         if (linkPerson.publicationDateTime != null) {
-          return `<InternalLink uuid="${linkPerson.uuid}"${
-            linkContent !== null ? ` content="${linkContent}"` : ""
-          }>${itemString}</InternalLink>`;
+          return `<InternalLink uuid="${linkPerson.uuid}">${itemString}</InternalLink>`;
         } else {
           return `<TooltipSpan${
             linkContent !== null ? ` content="${linkContent}"` : ""
