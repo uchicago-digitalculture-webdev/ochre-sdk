@@ -855,7 +855,7 @@ export function parseProperty(
                 parseStringContent({ content: value.content })
               : null;
           } else {
-            content = value.content != null;
+            content = value.content === true;
             label = null;
           }
           break;
