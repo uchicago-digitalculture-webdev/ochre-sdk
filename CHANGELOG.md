@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.18
+
+### Patch Changes
+
+- 2f5de6a: refactor: remove deprecated footnotes handling and update related types and parsing logic
+
 ## 0.8.17
 
 ### Patch Changes
