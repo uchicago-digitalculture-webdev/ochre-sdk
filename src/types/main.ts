@@ -245,16 +245,6 @@ export type Interpretation = {
 };
 
 /**
- * Represents a document with content and footnotes
- */
-export type Document = { content: string; footnotes: Array<Footnote> };
-
-/**
- * Represents a footnote in a document
- */
-export type Footnote = { uuid: string; label: string; content: string };
-
-/**
  * Represents a resource item with associated metadata, content and relationships
  */
 export type Resource = {
@@ -273,7 +263,7 @@ export type Resource = {
   notes: Array<Note>;
   description: string;
   coordinates: Coordinates;
-  document: Document | null;
+  document: string | null;
   href: string | null;
   fileFormat: string | null;
   imageMap: ImageMap | null;
@@ -615,7 +605,7 @@ export type WebElement = {
  * Union type of all possible web element components
  */
 export type WebElementComponent =
-  | { component: "annotated-document"; document: Document }
+  | { component: "annotated-document"; documentId: string }
   | { component: "annotated-image"; imageUuid: string; isSearchable: boolean }
   | {
       component: "audio-player";

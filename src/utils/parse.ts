@@ -36,9 +36,7 @@ import type {
   Coordinates,
   CoordinatesItem,
   DataCategory,
-  Document,
   Event,
-  Footnote,
   Identification,
   Image,
   ImageMap,
@@ -83,7 +81,6 @@ import {
   parseStringContent,
   parseStringDocumentItem,
 } from "../utils/string.js";
-import { fetchItem } from "./fetchers/item.js";
 import { getItemCategory } from "./helpers.js";
 
 /**
@@ -470,9 +467,8 @@ export function parseLinks(links: Array<OchreLink>): Array<Link> {
 export function parseDocument(
   document: OchreStringRichText | Array<OchreStringRichText>,
   language = "eng",
-): Document {
+): string {
   let returnString = "";
-  const footnotes: Array<Footnote> = [];
   const documentWithLanguage =
     Array.isArray(document) ?
       document.find((doc) => doc.lang === language)!
@@ -491,11 +487,11 @@ export function parseDocument(
       : [documentWithLanguage.string];
 
     for (const item of documentItems) {
-      returnString += parseStringDocumentItem(item, footnotes);
+      returnString += parseStringDocumentItem(item);
     }
   }
 
-  return { content: returnString, footnotes };
+  return returnString;
 }
 
 /**
@@ -577,7 +573,7 @@ export function parseNotes(
     ) {
       content = parseEmail(parseFakeString(noteWithLanguage.string));
     } else {
-      content = parseEmail(parseDocument(noteWithLanguage).content);
+      content = parseEmail(parseDocument(noteWithLanguage));
     }
 
     returnNotes.push({
@@ -1887,31 +1883,18 @@ async function parseWebElementProperties(
     (link) => link.type === "image" || link.type === "IIIF",
   );
 
-  let document: Document | null =
-    elementResource.document && "content" in elementResource.document ?
-      parseDocument(elementResource.document.content)
-    : null;
-  if (document === null) {
-    const documentLink = links.find((link) => link.type === "internalDocument");
-    if (documentLink?.uuid != null) {
-      const { item, error } = await fetchItem(documentLink.uuid, "resource");
-      if (error !== null) {
-        throw new Error("Failed to fetch OCHRE data");
-      }
-
-      document = item.document;
-    }
-  }
-
   switch (componentName) {
     case "annotated-document": {
-      if (!document) {
+      const documentLink = links.find(
+        (link) => link.type === "internalDocument",
+      );
+      if (!documentLink) {
         throw new Error(
-          `Document not found for the following component: “${componentName}”`,
+          `Document link not found for the following component: “${componentName}”`,
         );
       }
 
-      properties.document = document;
+      properties.documentId = documentLink.uuid;
       break;
     }
     case "annotated-image": {
@@ -2503,9 +2486,13 @@ async function parseWebElementProperties(
       break;
     }
     case "text": {
-      if (!document) {
+      const content =
+        elementResource.document && "content" in elementResource.document ?
+          parseDocument(elementResource.document.content as OchreStringRichText)
+        : null;
+      if (!content) {
         throw new Error(
-          `Document not found for the following component: “${componentName}”`,
+          `Content not found for the following component: “${componentName}”`,
         );
       }
 
@@ -2522,7 +2509,7 @@ async function parseWebElementProperties(
 
       properties.variant = variant;
       properties.heading = heading;
-      properties.content = document.content;
+      properties.content = content;
       break;
     }
     case "timeline": {

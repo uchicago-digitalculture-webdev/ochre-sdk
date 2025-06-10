@@ -4,7 +4,6 @@ import type {
   OchreStringItem,
   OchreStringRichTextItem,
 } from "../types/internal.raw.js";
-import type { Footnote } from "../types/main.js";
 import {
   emailSchema,
   renderOptionsSchema,
@@ -223,13 +222,9 @@ export function parseStringItem(item: OchreStringItem): string {
  * Parses rich text content into a formatted string with links and annotations
  *
  * @param item - Rich text item to parse
- * @param footnotes - Optional array to collect footnotes during parsing
  * @returns Formatted string with HTML/markdown elements
  */
-export function parseStringDocumentItem(
-  item: OchreStringRichTextItem,
-  footnotes?: Array<Footnote>,
-): string {
+export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
   if (
     typeof item === "string" ||
     typeof item === "number" ||
@@ -285,25 +280,7 @@ export function parseStringDocumentItem(
             }
           }
           case "internalDocument": {
-            const isFootnote = linkContent
-              ?.toLocaleLowerCase("en-US")
-              .includes("footnote");
-
-            if (isFootnote) {
-              if (footnotes) {
-                footnotes.push({
-                  uuid: linkResource.uuid,
-                  label: itemString,
-                  content: "",
-                });
-              }
-
-              return ` <Footnote uuid="${linkResource.uuid}"${
-                itemString ? ` label="${itemString}"` : ""
-              }${linkContent !== null ? ` content="${linkContent}"` : ""} />`;
-            } else {
-              return `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
-            }
+            return `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
           }
           case "externalDocument": {
             if (linkResource.publicationDateTime != null) {
@@ -388,7 +365,7 @@ export function parseStringDocumentItem(
       Array.isArray(item.string) ? item.string : [item.string];
 
     for (const stringItem of stringItems) {
-      returnString += parseStringDocumentItem(stringItem, footnotes);
+      returnString += parseStringDocumentItem(stringItem);
     }
 
     if ("whitespace" in item && item.whitespace != null) {

@@ -640,19 +640,6 @@ export type GalleryResponse = {
 };
 
 /**
- * Raw footnote response structure
- */
-export type FootnotesResponse = {
-  result:
-    | {
-        footnote:
-          | { uuid: string; document: OchreStringRichText }
-          | Array<{ uuid: string; document: OchreStringRichText }>;
-      }
-    | [];
-};
-
-/**
  * Raw UUID metadata response structure
  */
 export type UuidMetadataResponse = {
