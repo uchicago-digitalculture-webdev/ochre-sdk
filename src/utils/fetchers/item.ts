@@ -180,7 +180,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
             "Invalid OCHRE data: API response missing 'tree' key",
           );
         }
-        item = parseTree(data.ochre.tree);
+        item = parseTree<T, U>(data.ochre.tree, category, setCategory);
         break;
       }
       default: {
