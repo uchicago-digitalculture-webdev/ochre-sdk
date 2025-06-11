@@ -611,7 +611,7 @@ export type WebElementComponent =
   | { component: "annotated-image"; imageUuid: string; isSearchable: boolean }
   | {
       component: "audio-player";
-      audioUuid: string;
+      audioId: string;
       isSpeedControlsDisplayed: boolean;
       isVolumeControlsDisplayed: boolean;
       isSeekBarDisplayed: boolean;

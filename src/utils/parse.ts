@@ -2021,7 +2021,7 @@ async function parseWebElementProperties(
         isDownloadButtonDisplayed = isDownloadButtonDisplayedProperty === true;
       }
 
-      properties.audioUuid = audioLink.uuid;
+      properties.audioId = audioLink.uuid;
       properties.isSpeedControlsDisplayed = isSpeedControlsDisplayed;
       properties.isVolumeControlsDisplayed = isVolumeControlsDisplayed;
       properties.isSeekBarDisplayed = isSeekBarDisplayed;
