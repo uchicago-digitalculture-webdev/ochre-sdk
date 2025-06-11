@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.20
+
+### Patch Changes
+
+- 6037262: - fix: rename audioUuid to audioId
+  - fix: update parseTree function to include category and setCategory parameters
+
 ## 0.8.19
 
 ### Patch Changes
