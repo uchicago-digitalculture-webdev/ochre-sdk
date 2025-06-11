@@ -615,7 +615,6 @@ export type WebElementComponent =
       isSpeedControlsDisplayed: boolean;
       isVolumeControlsDisplayed: boolean;
       isSeekBarDisplayed: boolean;
-      isDownloadButtonDisplayed: boolean;
     }
   | {
       component: "bibliography";

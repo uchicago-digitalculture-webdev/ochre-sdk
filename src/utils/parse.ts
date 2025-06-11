@@ -2012,20 +2012,10 @@ async function parseWebElementProperties(
         isSeekBarDisplayed = isSeekBarDisplayedProperty === true;
       }
 
-      let isDownloadButtonDisplayed = false;
-      const isDownloadButtonDisplayedProperty = getPropertyValueByLabel(
-        componentProperty.properties,
-        "download-button-displayed",
-      );
-      if (isDownloadButtonDisplayedProperty !== null) {
-        isDownloadButtonDisplayed = isDownloadButtonDisplayedProperty === true;
-      }
-
       properties.audioId = audioLink.uuid;
       properties.isSpeedControlsDisplayed = isSpeedControlsDisplayed;
       properties.isVolumeControlsDisplayed = isVolumeControlsDisplayed;
       properties.isSeekBarDisplayed = isSeekBarDisplayed;
-      properties.isDownloadButtonDisplayed = isDownloadButtonDisplayed;
       break;
     }
     case "bibliography": {
