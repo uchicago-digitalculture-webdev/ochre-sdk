@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.21
+
+### Patch Changes
+
+- e853ced: refactor: remove isDownloadButtonDisplayed property from audio-player
+
 ## 0.8.20
 
 ### Patch Changes
