@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.23
+
+### Patch Changes
+
+- 6322768: fix: fix minor tree parsing bug
+
 ## 0.8.22
 
 ### Patch Changes
