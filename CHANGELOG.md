@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.22
+
+### Patch Changes
+
+- e6f4658: feat: add support for text annotations, fix curly bracket rendering in MDX
+
 ## 0.8.21
 
 ### Patch Changes
