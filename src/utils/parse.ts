@@ -1281,7 +1281,7 @@ export function parseTree<T extends DataCategory, U extends DataCategory>(
   }
 
   const parsedItemCategory =
-    itemCategory ?? getItemCategory(Object.keys(tree.items));
+    itemSubCategory ?? getItemCategory(Object.keys(tree.items));
 
   let items:
     | Array<Resource>
