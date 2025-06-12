@@ -10,6 +10,9 @@ import {
   whitespaceSchema,
 } from "../schemas.js";
 
+const PRESENTATION_ITEM_UUID = "f1c131b6-1498-48a4-95bf-a9edae9fd518";
+const ANNOTATION_UUID = "b9ca2732-78f4-416e-b77f-dae7647e68a9";
+
 /**
  * Finds a string item in an array by language code
  *
@@ -105,7 +108,10 @@ function parseRenderOptions(
     }
   }
 
-  return returnString.replaceAll("&#39;", "'");
+  return returnString
+    .replaceAll("&#39;", "'")
+    .replaceAll("{", String.raw`\{`)
+    .replaceAll("}", String.raw`\}`);
 }
 
 /**
@@ -143,7 +149,10 @@ function parseWhitespace(contentString: string, whitespace: string): string {
     }
   }
 
-  return returnString.replaceAll("&#39;", "'");
+  return returnString
+    .replaceAll("&#39;", "'")
+    .replaceAll("{", String.raw`\{`)
+    .replaceAll("}", String.raw`\}`);
 }
 
 /**
@@ -160,7 +169,10 @@ function parseWhitespace(contentString: string, whitespace: string): string {
  * ```
  */
 export function parseFakeString(string: FakeString): string {
-  return String(string).replaceAll("&#39;", "'");
+  return String(string)
+    .replaceAll("&#39;", "'")
+    .replaceAll("{", String.raw`\{`)
+    .replaceAll("}", String.raw`\}`);
 }
 
 /**
@@ -280,7 +292,39 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
             }
           }
           case "internalDocument": {
-            return `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+            if ("properties" in item && item.properties != null) {
+              const itemProperty =
+                Array.isArray(item.properties.property) ?
+                  item.properties.property[0]
+                : item.properties.property;
+              if (itemProperty != null) {
+                const itemPropertyLabelUuid = itemProperty.label.uuid;
+                const itemPropertyValueUuid =
+                  (
+                    typeof itemProperty.value === "object" &&
+                    "uuid" in itemProperty.value &&
+                    itemProperty.value.uuid != null
+                  ) ?
+                    itemProperty.value.uuid
+                  : null;
+                if (
+                  itemPropertyLabelUuid === PRESENTATION_ITEM_UUID &&
+                  itemPropertyValueUuid === ANNOTATION_UUID
+                ) {
+                  return `<Annotation uuid="${linkResource.uuid}">${itemString}</Annotation>`;
+                }
+
+                return `<InternalLink uuid="${linkResource.uuid}" properties="${itemPropertyLabelUuid}"${
+                  itemPropertyValueUuid !== null ?
+                    ` value="${itemPropertyValueUuid}"`
+                  : ""
+                }>${itemString}</InternalLink>`;
+              } else {
+                return `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+              }
+            } else {
+              return `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+            }
           }
           case "externalDocument": {
             if (linkResource.publicationDateTime != null) {
@@ -372,7 +416,10 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
       returnString = parseWhitespace(parseEmail(returnString), item.whitespace);
     }
 
-    return returnString.replaceAll("&#39;", "'");
+    return returnString
+      .replaceAll("&#39;", "'")
+      .replaceAll("{", String.raw`\{`)
+      .replaceAll("}", String.raw`\}`);
   } else {
     returnString = parseFakeString(item.content);
 
