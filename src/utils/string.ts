@@ -108,10 +108,7 @@ function parseRenderOptions(
     }
   }
 
-  return returnString
-    .replaceAll("&#39;", "'")
-    .replaceAll("{", String.raw`\{`)
-    .replaceAll("}", String.raw`\}`);
+  return returnString.replaceAll("&#39;", "'");
 }
 
 /**
@@ -149,10 +146,7 @@ function parseWhitespace(contentString: string, whitespace: string): string {
     }
   }
 
-  return returnString
-    .replaceAll("&#39;", "'")
-    .replaceAll("{", String.raw`\{`)
-    .replaceAll("}", String.raw`\}`);
+  return returnString.replaceAll("&#39;", "'");
 }
 
 /**
