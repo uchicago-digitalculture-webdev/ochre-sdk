@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.25
+
+### Patch Changes
+
+- 14b679c: feat: add fileSize property to resource and link types
+
 ## 0.8.24
 
 ### Patch Changes
