@@ -416,10 +416,7 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
       returnString = parseWhitespace(parseEmail(returnString), item.whitespace);
     }
 
-    return returnString
-      .replaceAll("&#39;", "'")
-      .replaceAll("{", String.raw`\{`)
-      .replaceAll("}", String.raw`\}`);
+    return returnString.replaceAll("&#39;", "'");
   } else {
     returnString = parseFakeString(item.content);
 
