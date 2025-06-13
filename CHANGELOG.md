@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.26
+
+### Patch Changes
+
+- 0bdeea3: fix: simplify string parsing by removing unnecessary replacements
+
 ## 0.8.25
 
 ### Patch Changes
