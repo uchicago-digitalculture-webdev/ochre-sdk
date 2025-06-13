@@ -19,7 +19,7 @@ export type WhitespaceOption = "newline" | "trailing" | "leading";
 export type OchreStringItemContent = {
   rend?: string; // "bold" | "italic" | "underline" (space separated)
   whitespace?: string; // "newline" | "trailing" | "leading" (space separated)
-  content: FakeString;
+  content?: FakeString;
 };
 
 /**

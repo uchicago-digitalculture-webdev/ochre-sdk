@@ -198,7 +198,8 @@ export function parseStringItem(item: OchreStringItem): string {
           returnString += parseFakeString(stringItem);
         } else {
           const renderedText =
-            stringItem.rend != null ?
+            stringItem.content == null ? ""
+            : stringItem.rend != null ?
               parseRenderOptions(
                 parseFakeString(stringItem.content),
                 stringItem.rend,
