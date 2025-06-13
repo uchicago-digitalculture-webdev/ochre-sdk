@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.24
+
+### Patch Changes
+
+- 784fbd8: refactor: update context properties in OchreTree and Website types
+
 ## 0.8.23
 
 ### Patch Changes
