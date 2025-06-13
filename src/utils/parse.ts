@@ -3564,7 +3564,14 @@ export async function parseWebsite(
 
   let globalOptions: Website["globalOptions"] = {
     collectionUuids: [],
-    contexts: { flatten: [], search: [], active: [], label: [], suppress: [] },
+    contexts: {
+      flatten: [],
+      search: [],
+      detail: [],
+      download: [],
+      label: [],
+      suppress: [],
+    },
   };
   if (websiteTree.websiteOptions) {
     const flattenContextsRaw =
@@ -3585,11 +3592,17 @@ export async function parseWebsite(
           websiteTree.websiteOptions.searchContexts
         : [websiteTree.websiteOptions.searchContexts]
       : [];
-    const activeContextsRaw =
-      websiteTree.websiteOptions.activeContexts != null ?
-        Array.isArray(websiteTree.websiteOptions.activeContexts) ?
-          websiteTree.websiteOptions.activeContexts
-        : [websiteTree.websiteOptions.activeContexts]
+    const detailContextsRaw =
+      websiteTree.websiteOptions.detailContexts != null ?
+        Array.isArray(websiteTree.websiteOptions.detailContexts) ?
+          websiteTree.websiteOptions.detailContexts
+        : [websiteTree.websiteOptions.detailContexts]
+      : [];
+    const downloadContextsRaw =
+      websiteTree.websiteOptions.downloadContexts != null ?
+        Array.isArray(websiteTree.websiteOptions.downloadContexts) ?
+          websiteTree.websiteOptions.downloadContexts
+        : [websiteTree.websiteOptions.downloadContexts]
       : [];
     const labelContextsRaw =
       websiteTree.websiteOptions.labelContexts != null ?
@@ -3609,7 +3622,8 @@ export async function parseWebsite(
       contexts: {
         flatten: parseContexts(flattenContextsRaw),
         search: parseContexts(searchContextsRaw),
-        active: parseContexts(activeContextsRaw),
+        detail: parseContexts(detailContextsRaw),
+        download: parseContexts(downloadContextsRaw),
         label: parseContexts(labelContextsRaw),
         suppress: parseContexts(suppressContextsRaw),
       },
