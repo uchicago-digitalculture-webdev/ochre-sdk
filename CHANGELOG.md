@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.28
+
+### Patch Changes
+
+- 0d1bcd3: fix: make content optional in OchreStringItemContent type and adjust string parsing logic accordingly
+
 ## 0.8.27
 
 ### Patch Changes
