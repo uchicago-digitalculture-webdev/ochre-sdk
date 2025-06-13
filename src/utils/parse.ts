@@ -401,6 +401,8 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
         "fileFormat" in link && link.fileFormat != null ?
           link.fileFormat
         : null,
+      fileSize:
+        "fileSize" in link && link.fileSize != null ? link.fileSize : null,
       uuid: link.uuid ?? null,
       type: link.type ?? null,
       identification:
@@ -1582,6 +1584,7 @@ export function parseResource(resource: OchreResource): Resource {
     type: resource.type,
     number: resource.n,
     fileFormat: resource.fileFormat ?? null,
+    fileSize: resource.fileSize ?? null,
     context:
       "context" in resource && resource.context ?
         parseContext(resource.context)

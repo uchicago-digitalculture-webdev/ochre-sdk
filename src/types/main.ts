@@ -141,6 +141,7 @@ export type Link = {
   content: string | null;
   href: string | null;
   fileFormat: string | null;
+  fileSize: number | null;
   image: {
     isInline: boolean;
     isPrimary: boolean;
@@ -266,6 +267,7 @@ export type Resource = {
   document: string | null;
   href: string | null;
   fileFormat: string | null;
+  fileSize: number | null;
   imageMap: ImageMap | null;
   periods: Array<Period>;
   links: Array<Link>;

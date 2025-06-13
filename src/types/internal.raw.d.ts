@@ -238,6 +238,7 @@ export type OchreResource = {
     | { content: OchreStringRichText | Array<OchreStringRichText> }
     | object;
   fileFormat?: string;
+  fileSize?: number;
   imagemap?: OchreImageMap;
   periods?: { period: OchrePeriod | Array<OchrePeriod> };
   links?: OchreLink | Array<OchreLink>;
@@ -359,6 +360,7 @@ export type OchreLinkItem = {
   width?: number;
   href?: string;
   fileFormat?: string;
+  fileSize?: number;
   isPrimary?: boolean;
 };
 
