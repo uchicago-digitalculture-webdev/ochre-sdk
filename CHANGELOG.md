@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.29
+
+### Patch Changes
+
+- 28dc493: feat: extend shape options in ImageMapArea types and update parsing logic to accommodate new shape "circle"
+
 ## 0.8.28
 
 ### Patch Changes
