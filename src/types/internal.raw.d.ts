@@ -471,7 +471,7 @@ export type OchreImageMapArea = {
   publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
   type: string;
   title: FakeString;
-  shape: "rect" | "poly";
+  shape: "rect" | "circle" | "poly";
   coords: string; // comma separated list of numbers
 };
 

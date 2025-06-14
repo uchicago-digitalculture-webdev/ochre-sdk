@@ -989,7 +989,10 @@ export function parseImageMap(imageMap: OchreImageMap): ImageMap {
         : null,
       type: area.type,
       title: parseFakeString(area.title),
-      shape: area.shape === "rect" ? "rectangle" : "polygon",
+      shape:
+        area.shape === "rect" ? "rectangle"
+        : area.shape === "circle" ? "circle"
+        : "polygon",
       coords: area.coords.split(",").map((coord) => Number.parseInt(coord)),
     });
   }

@@ -161,7 +161,7 @@ export type ImageMapArea = {
   publicationDateTime: Date | null;
   type: string;
   title: string;
-  shape: "rectangle" | "polygon";
+  shape: "rectangle" | "circle" | "polygon";
   coords: Array<number>;
 };
 
