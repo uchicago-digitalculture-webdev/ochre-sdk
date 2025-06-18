@@ -816,7 +816,8 @@ export function parseProperty(
 
       switch (parsedType) {
         case "integer":
-        case "decimal": {
+        case "decimal":
+        case "time": {
           if (value.rawValue != null) {
             content = Number(value.rawValue);
             label =
