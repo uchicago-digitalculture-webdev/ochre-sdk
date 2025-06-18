@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.30
+
+### Patch Changes
+
+- 91304f4: fix: parse "time" type property values as number
+
 ## 0.8.29
 
 ### Patch Changes
