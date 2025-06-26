@@ -1,4 +1,3 @@
-import type { MultilingualText } from "../types/index.js";
 import type { XMLContent, XMLText } from "../types/xml/types.js";
 import * as v from "valibot";
 import {
@@ -6,6 +5,7 @@ import {
   renderOptionsSchema,
   whitespaceSchema,
 } from "../schemas.js";
+import { MultilingualString } from "../types/multilingual.js";
 
 /**
  * Parses email addresses in a string into HTML links
@@ -143,7 +143,9 @@ export function parseXMLText(
   item: XMLText,
   options: { isRichText: boolean; parseEmail: boolean },
 ): string {
-  let returnString = item.text ?? "";
+  let returnString = (item.text ?? "")
+    .replaceAll("{", String.raw`\{`)
+    .replaceAll("}", String.raw`\}`);
 
   if (item.whitespace != null) {
     returnString = parseWhitespace(returnString, item.whitespace, {
@@ -183,7 +185,7 @@ function createMDXComponent(
     | "documentLink"
     | "tooltipSpan",
   properties: {
-    uuid: string;
+    uuid: string | null;
     text: string;
     content?: string;
     href?: string;
@@ -241,41 +243,44 @@ function createMDXComponent(
  *
  * @internal
  */
-export function parseXMLContent(
+export function parseXMLContent<V extends ReadonlyArray<string>>(
   item: XMLContent,
-  options: { languages: ReadonlyArray<string>; isRichText: boolean },
-): MultilingualText {
+  options: { languages: V; isRichText: boolean },
+): MultilingualString<V> {
   const { languages, isRichText } = options;
 
-  const returnString: MultilingualText = {};
+  let returnString = MultilingualString.empty(languages, { isRichText });
 
   const languageStringItems = item.content.filter((content) =>
     languages.includes(content.lang),
   );
   if (languageStringItems.length === 0) {
-    throw new Error(`Language content not found for languages: “${languages}”`);
+    throw new Error(`Language content not found for languages: "${languages}"`);
   }
 
   for (const stringItems of languageStringItems) {
     for (const stringItem of stringItems.string) {
       if ("text" in stringItem && stringItem.text != null) {
-        returnString[stringItems.lang] += parseXMLText(stringItem, {
-          isRichText,
-          parseEmail: true,
-        });
+        const currentText = returnString.getExactText(stringItems.lang) ?? "";
+        const newText =
+          currentText +
+          parseXMLText(stringItem, { isRichText, parseEmail: true });
+        returnString = returnString.withText(stringItems.lang, newText);
       } else if ("whitespace" in stringItem && stringItem.whitespace != null) {
-        returnString[stringItems.lang] += parseWhitespace(
-          returnString[stringItems.lang]!,
-          stringItem.whitespace,
-          { isRichText },
-        );
+        const currentText = returnString.getExactText(stringItems.lang) ?? "";
+        const newText =
+          currentText +
+          parseWhitespace(currentText, stringItem.whitespace, { isRichText });
+        returnString = returnString.withText(stringItems.lang, newText);
       } else if ("string" in stringItem) {
         for (const innerStringItem of stringItem.string) {
           if ("text" in innerStringItem && innerStringItem.text != null) {
-            returnString[stringItems.lang] += parseXMLText(innerStringItem, {
-              isRichText,
-              parseEmail: true,
-            });
+            const currentText =
+              returnString.getExactText(stringItems.lang) ?? "";
+            const newText =
+              currentText +
+              parseXMLText(innerStringItem, { isRichText, parseEmail: true });
+            returnString = returnString.withText(stringItems.lang, newText);
           } else if (
             "string" in innerStringItem &&
             innerStringItem.string != null
@@ -294,88 +299,129 @@ export function parseXMLContent(
 
             for (const link of links) {
               const linkContent =
-                "content" in link.identification.label ?
-                  parseXMLContent(link.identification.label, {
-                    languages,
+                link.identification != null ?
+                  "content" in link.identification.label ?
+                    parseXMLContent(link.identification.label, {
+                      languages,
+                      isRichText,
+                    })
+                  : MultilingualString.create(
+                      stringItems.lang,
+                      parseXMLText(link.identification.label, {
+                        isRichText,
+                        parseEmail: false,
+                      }),
+                      languages,
+                      { isRichText },
+                    )
+                : MultilingualString.create(stringItems.lang, "", languages, {
                     isRichText,
-                  })
-                : {
-                    [stringItems.lang]: parseXMLText(
-                      link.identification.label,
-                      { isRichText, parseEmail: false },
-                    ),
-                  };
+                  });
 
               if ("type" in link && link.type != null) {
                 switch (link.type) {
                   case "image": {
                     if ("rend" in link && link.rend != null) {
-                      returnString[stringItems.lang] += createMDXComponent(
-                        "inlineImage",
-                        {
+                      const currentText =
+                        returnString.getExactText(stringItems.lang) ?? "";
+                      const newText =
+                        currentText +
+                        createMDXComponent("inlineImage", {
                           uuid: link.uuid,
                           href: link.href,
                           height: link.height,
                           width: link.width,
-                          content: linkContent[stringItems.lang],
+                          content:
+                            linkContent.getExactText(stringItems.lang) ?? "",
                           text: linkString,
-                        },
+                        });
+                      returnString = returnString.withText(
+                        stringItems.lang,
+                        newText,
                       );
                     } else {
-                      returnString[stringItems.lang] += createMDXComponent(
-                        "internalLink",
-                        {
-                          uuid: link.uuid,
+                      const currentText =
+                        returnString.getExactText(stringItems.lang) ?? "";
+                      const newText =
+                        currentText +
+                        createMDXComponent("internalLink", {
+                          uuid: link.uuid ?? null,
                           text: linkString,
-                          content: linkContent[stringItems.lang],
-                        },
+                          content:
+                            linkContent.getExactText(stringItems.lang) ?? "",
+                        });
+                      returnString = returnString.withText(
+                        stringItems.lang,
+                        newText,
                       );
                     }
                     break;
                   }
                   case "externalDocument": {
-                    returnString[stringItems.lang] += createMDXComponent(
-                      "documentLink",
-                      {
-                        uuid: link.uuid,
+                    const currentText =
+                      returnString.getExactText(stringItems.lang) ?? "";
+                    const newText =
+                      currentText +
+                      createMDXComponent("documentLink", {
+                        uuid: link.uuid ?? null,
                         text: linkString,
-                        content: linkContent[stringItems.lang],
-                      },
+                        content:
+                          linkContent.getExactText(stringItems.lang) ?? "",
+                      });
+                    returnString = returnString.withText(
+                      stringItems.lang,
+                      newText,
                     );
                     break;
                   }
                   case "webpage": {
-                    returnString[stringItems.lang] += createMDXComponent(
-                      "externalLink",
-                      {
-                        uuid: link.uuid,
+                    const currentText =
+                      returnString.getExactText(stringItems.lang) ?? "";
+                    const newText =
+                      currentText +
+                      createMDXComponent("externalLink", {
+                        uuid: link.uuid ?? null,
                         href:
                           "href" in link && link.href != null ? link.href : "#",
                         text: linkString,
-                        content: linkContent[stringItems.lang],
-                      },
+                        content:
+                          linkContent.getExactText(stringItems.lang) ?? "",
+                      });
+                    returnString = returnString.withText(
+                      stringItems.lang,
+                      newText,
                     );
                     break;
                   }
                 }
               } else {
                 if (link.publicationDateTime != null) {
-                  returnString[stringItems.lang] += createMDXComponent(
-                    "internalLink",
-                    {
-                      uuid: link.uuid,
+                  const currentText =
+                    returnString.getExactText(stringItems.lang) ?? "";
+                  const newText =
+                    currentText +
+                    createMDXComponent("internalLink", {
+                      uuid: link.uuid ?? null,
                       text: linkString,
-                      content: linkContent[stringItems.lang],
-                    },
+                      content: linkContent.getExactText(stringItems.lang) ?? "",
+                    });
+                  returnString = returnString.withText(
+                    stringItems.lang,
+                    newText,
                   );
                 } else {
-                  returnString[stringItems.lang] += createMDXComponent(
-                    "tooltipSpan",
-                    {
-                      uuid: link.uuid,
+                  const currentText =
+                    returnString.getExactText(stringItems.lang) ?? "";
+                  const newText =
+                    currentText +
+                    createMDXComponent("tooltipSpan", {
+                      uuid: link.uuid ?? null,
                       text: linkString,
-                      content: linkContent[stringItems.lang],
-                    },
+                      content: linkContent.getExactText(stringItems.lang) ?? "",
+                    });
+                  returnString = returnString.withText(
+                    stringItems.lang,
+                    newText,
                   );
                 }
               }
