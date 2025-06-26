@@ -594,15 +594,11 @@ const XMLHeading: v.GenericSchema<XMLHeadingType> = v.intersect([
     "XMLHeading: Shape error",
   ),
   v.union([
-    v.object({ person: v.optional(v.array(v.lazy(() => XMLPerson))) }),
-    v.object({
-      propertyValue: v.optional(v.array(v.lazy(() => XMLPropertyValue))),
-    }),
-    v.object({
-      propertyVariable: v.optional(v.array(v.lazy(() => XMLPropertyVariable))),
-    }),
-    v.object({ resource: v.optional(v.array(v.lazy(() => XMLResource))) }),
-    v.object({ set: v.optional(v.array(v.lazy(() => XMLSet))) }),
+    v.object({ person: v.array(v.lazy(() => XMLPerson)) }),
+    v.object({ propertyValue: v.array(v.lazy(() => XMLPropertyValue)) }),
+    v.object({ propertyVariable: v.array(v.lazy(() => XMLPropertyVariable)) }),
+    v.object({ resource: v.array(v.lazy(() => XMLResource)) }),
+    v.object({ set: v.array(v.lazy(() => XMLSet)) }),
   ]),
 ]);
 
@@ -614,27 +610,21 @@ const XMLTree: v.GenericSchema<XMLTreeType> = v.object(
     notes: v.optional(XMLNote),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     items: v.optional(
-      v.union([
+      v.intersect([
         v.object({ heading: v.optional(v.array(v.lazy(() => XMLHeading))) }),
-        v.object({
-          bibliography: v.optional(v.array(v.lazy(() => XMLBibliography))),
-        }),
-        v.object({ concept: v.optional(v.array(v.lazy(() => XMLConcept))) }),
-        v.object({
-          spatialUnit: v.optional(v.array(v.lazy(() => XMLSpatialUnit))),
-        }),
-        v.object({ period: v.optional(v.array(v.lazy(() => XMLPeriod))) }),
-        v.object({ person: v.optional(v.array(v.lazy(() => XMLPerson))) }),
-        v.object({
-          propertyValue: v.optional(v.array(v.lazy(() => XMLPropertyValue))),
-        }),
-        v.object({
-          propertyVariable: v.optional(
-            v.array(v.lazy(() => XMLPropertyVariable)),
-          ),
-        }),
-        v.object({ resource: v.optional(v.array(v.lazy(() => XMLResource))) }),
-        v.object({ set: v.optional(v.array(v.lazy(() => XMLSet))) }),
+        v.union([
+          v.object({ bibliography: v.array(v.lazy(() => XMLBibliography)) }),
+          v.object({ concept: v.array(v.lazy(() => XMLConcept)) }),
+          v.object({ spatialUnit: v.array(v.lazy(() => XMLSpatialUnit)) }),
+          v.object({ period: v.array(v.lazy(() => XMLPeriod)) }),
+          v.object({ person: v.array(v.lazy(() => XMLPerson)) }),
+          v.object({ propertyValue: v.array(v.lazy(() => XMLPropertyValue)) }),
+          v.object({
+            propertyVariable: v.array(v.lazy(() => XMLPropertyVariable)),
+          }),
+          v.object({ resource: v.array(v.lazy(() => XMLResource)) }),
+          v.object({ set: v.array(v.lazy(() => XMLSet)) }),
+        ]),
       ]),
     ),
   },
@@ -652,26 +642,26 @@ const XMLSet: v.GenericSchema<XMLSetType> = v.object(
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     items: v.optional(
       v.union([
-        v.object({ tree: v.optional(v.array(v.lazy(() => XMLTree))) }),
-        v.object({
-          bibliography: v.optional(v.array(v.lazy(() => XMLBibliography))),
-        }),
-        v.object({ concept: v.optional(v.array(v.lazy(() => XMLConcept))) }),
-        v.object({
-          spatialUnit: v.optional(v.array(v.lazy(() => XMLSpatialUnit))),
-        }),
-        v.object({ period: v.optional(v.array(v.lazy(() => XMLPeriod))) }),
-        v.object({ person: v.optional(v.array(v.lazy(() => XMLPerson))) }),
-        v.object({
-          propertyValue: v.optional(v.array(v.lazy(() => XMLPropertyValue))),
-        }),
-        v.object({
-          propertyVariable: v.optional(
-            v.array(v.lazy(() => XMLPropertyVariable)),
-          ),
-        }),
-        v.object({ resource: v.optional(v.array(v.lazy(() => XMLResource))) }),
-        v.object({ set: v.optional(v.array(v.lazy(() => XMLSet))) }),
+        v.optional(v.object({ tree: v.array(v.lazy(() => XMLTree)) })),
+        v.optional(
+          v.object({ bibliography: v.array(v.lazy(() => XMLBibliography)) }),
+        ),
+        v.optional(v.object({ concept: v.array(v.lazy(() => XMLConcept)) })),
+        v.optional(
+          v.object({ spatialUnit: v.array(v.lazy(() => XMLSpatialUnit)) }),
+        ),
+        v.optional(v.object({ period: v.array(v.lazy(() => XMLPeriod)) })),
+        v.optional(v.object({ person: v.array(v.lazy(() => XMLPerson)) })),
+        v.optional(
+          v.object({ propertyValue: v.array(v.lazy(() => XMLPropertyValue)) }),
+        ),
+        v.optional(
+          v.object({
+            propertyVariable: v.array(v.lazy(() => XMLPropertyVariable)),
+          }),
+        ),
+        v.optional(v.object({ resource: v.array(v.lazy(() => XMLResource)) })),
+        v.optional(v.object({ set: v.array(v.lazy(() => XMLSet)) })),
       ]),
     ),
   },

@@ -325,11 +325,11 @@ export type XMLHeading = {
   abbreviation?: string;
   heading?: Array<XMLHeading>;
 } & (
-  | { person?: Array<XMLPerson> }
-  | { propertyValue?: Array<XMLPropertyValue> }
-  | { propertyVariable?: Array<XMLPropertyVariable> }
-  | { resource?: Array<XMLResource> }
-  | { set?: Array<XMLSet> }
+  | { person: Array<XMLPerson> }
+  | { propertyValue: Array<XMLPropertyValue> }
+  | { propertyVariable: Array<XMLPropertyVariable> }
+  | { resource: Array<XMLResource> }
+  | { set: Array<XMLSet> }
 );
 
 export type XMLTree = XMLBaseItem & {
@@ -338,15 +338,15 @@ export type XMLTree = XMLBaseItem & {
   notes?: XMLNote;
   properties?: { property: Array<XMLProperty> };
   items?: { heading?: Array<XMLHeading> } & (
-    | { bibliography?: Array<XMLBibliography> }
-    | { concept?: Array<XMLConcept> }
-    | { spatialUnit?: Array<XMLSpatialUnit> }
-    | { period?: Array<XMLPeriod> }
-    | { person?: Array<XMLPerson> }
-    | { propertyValue?: Array<XMLPropertyValue> }
-    | { propertyVariable?: Array<XMLPropertyVariable> }
-    | { resource?: Array<XMLResource> }
-    | { set?: Array<XMLSet> }
+    | { bibliography: Array<XMLBibliography> }
+    | { concept: Array<XMLConcept> }
+    | { spatialUnit: Array<XMLSpatialUnit> }
+    | { period: Array<XMLPeriod> }
+    | { person: Array<XMLPerson> }
+    | { propertyValue: Array<XMLPropertyValue> }
+    | { propertyVariable: Array<XMLPropertyVariable> }
+    | { resource: Array<XMLResource> }
+    | { set: Array<XMLSet> }
   );
 };
 
