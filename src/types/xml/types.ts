@@ -58,8 +58,8 @@ export type XMLNumber = string;
 export type XMLBoolean = string;
 
 export type XMLIdentification = {
-  label: XMLText | XMLContent;
-  abbreviation?: XMLText | XMLContent;
+  label: XMLContent;
+  abbreviation?: XMLContent;
   email?: string;
   website?: { text: string };
 };
@@ -201,7 +201,7 @@ export type XMLBaseItem = {
   events?: { event: Array<XMLEvent> };
 };
 
-export type XMLBibliography = XMLBaseItem & {
+export type XMLBibliography = Partial<XMLBaseItem> & {
   type?: string;
   zoteroId?: string;
   sourceDocument?: { uuid: string; text: string };
@@ -210,6 +210,7 @@ export type XMLBibliography = XMLBaseItem & {
     startDate?: { month: XMLNumber; year: XMLNumber; day: XMLNumber };
   };
   entryInfo?: { startIssue: string; startVolume: string };
+  citationDetails?: string;
   citationFormat?: XMLText;
   citationFormatSpan?: XMLText;
   referenceFormatDiv?: XMLText;

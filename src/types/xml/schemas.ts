@@ -41,6 +41,8 @@ import * as v from "valibot";
 function customDateTime(message?: string) {
   return v.union([
     v.pipe(v.string(), v.isoDate()),
+    v.pipe(v.string(), v.isoDateTime()),
+    v.pipe(v.string(), v.isoTimestamp()),
     v.pipe(
       v.string(),
       v.regex(
@@ -154,8 +156,8 @@ const XMLBoolean: v.GenericSchema<XMLBooleanType> = v.pipe(
 
 const XMLIdentification: v.GenericSchema<XMLIdentificationType> = v.object(
   {
-    label: v.union([XMLText, XMLContent]),
-    abbreviation: v.optional(v.union([XMLText, XMLContent])),
+    label: XMLContent,
+    abbreviation: v.optional(XMLContent),
     email: v.optional(
       v.string("XMLIdentification: email is string and optional"),
     ),
@@ -678,7 +680,7 @@ const XMLSet: v.GenericSchema<XMLSetType> = v.object(
 
 const XMLBibliography: v.GenericSchema<XMLBibliographyType> = v.object(
   {
-    ...XMLBaseItem.entries,
+    ...v.partial(XMLBaseItem).entries,
     type: v.optional(v.string("XMLBibliography: type is string and optional")),
     zoteroId: v.optional(
       v.string("XMLBibliography: zoteroId is string and optional"),
@@ -720,6 +722,9 @@ const XMLBibliography: v.GenericSchema<XMLBibliographyType> = v.object(
         },
         "XMLBibliography: entryInfo is object with startIssue and startVolume",
       ),
+    ),
+    citationDetails: v.optional(
+      v.string("XMLBibliography: citationDetails is string and optional"),
     ),
     citationFormat: v.optional(XMLText),
     citationFormatSpan: v.optional(XMLText),
