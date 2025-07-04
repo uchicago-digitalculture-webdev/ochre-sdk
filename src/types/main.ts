@@ -633,11 +633,12 @@ export type WebElementComponent =
     }
   | {
       component: "button";
-      variant: "default" | "transparent";
+      variant: "default" | "transparent" | "link";
       href: string;
       isExternal: boolean;
       label: string;
-      icon: string | null;
+      startIcon: string | null;
+      endIcon: string | null;
     }
   | {
       component: "collection";

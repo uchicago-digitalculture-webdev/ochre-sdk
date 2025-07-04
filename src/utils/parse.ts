@@ -2079,13 +2079,22 @@ async function parseWebElementProperties(
         }
       }
 
-      let icon = null;
-      const iconProperty = getPropertyValueByLabel(
+      let startIcon = null;
+      const startIconProperty = getPropertyValueByLabel(
         componentProperty.properties,
-        "icon",
+        "start-icon",
       );
-      if (iconProperty !== null) {
-        icon = iconProperty;
+      if (startIconProperty !== null) {
+        startIcon = startIconProperty;
+      }
+
+      let endIcon = null;
+      const endIconProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "end-icon",
+      );
+      if (endIconProperty !== null) {
+        endIcon = endIconProperty;
       }
 
       properties.variant = variant;
@@ -2101,7 +2110,8 @@ async function parseWebElementProperties(
         : parseStringContent(
             elementResource.identification.label as OchreStringContent,
           );
-      properties.icon = icon;
+      properties.startIcon = startIcon;
+      properties.endIcon = endIcon;
       break;
     }
     case "collection": {
