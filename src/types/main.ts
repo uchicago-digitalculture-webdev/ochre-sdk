@@ -138,6 +138,7 @@ export type Link = {
   type: string | null;
   category: string | null;
   identification: Identification | null;
+  description: string | null;
   content: string | null;
   href: string | null;
   fileFormat: string | null;
@@ -660,7 +661,7 @@ export type WebElementComponent =
   | {
       component: "image";
       images: Array<WebImage>;
-      variant: "default" | "carousel";
+      variant: "default" | "carousel" | "grid" | "hero";
       width: number | null;
       height: number | null;
       isFullWidth: boolean;
@@ -704,6 +705,7 @@ export type WebElementComponent =
 export type WebImage = {
   url: string;
   label: string | null;
+  description: string | null;
   width: number;
   height: number;
 };

@@ -407,6 +407,10 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
       type: link.type ?? null,
       identification:
         link.identification ? parseIdentification(link.identification) : null,
+      description:
+        "description" in link && link.description != null ?
+          parseStringContent(link.description)
+        : null,
       image: null,
       bibliographies:
         "bibliography" in linkRaw ?
@@ -2259,6 +2263,7 @@ async function parseWebElementProperties(
           label: imageLink.identification?.label ?? null,
           width: imageLink.image?.width ?? 0,
           height: imageLink.image?.height ?? 0,
+          description: imageLink.description ?? null,
         });
       }
 

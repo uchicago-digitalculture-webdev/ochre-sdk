@@ -352,6 +352,7 @@ export type OchreLinkItem = {
   publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
   type?: string;
   identification?: OchreIdentification;
+  description?: OchreStringContent;
   rend?: "inline";
   content?: FakeString;
   heightPreview?: number;
