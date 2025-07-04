@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.31
+
+### Patch Changes
+
+- d6c851f: feat: extend WebElementComponent type with startIcon and endIcon properties, and update parsing logic to accommodate new icon fields
+- a3d416f: feat: add description field to Link and WebImage types, and update parsing logic accordingly
+
 ## 0.8.30
 
 ### Patch Changes
@@ -188,7 +195,6 @@
 ### Minor Changes
 
 - c7f93d6: feat: enhance geographic coordinate types and parsing logic
-
   - Updated `OchreSpatialUnit` and `SpatialUnit` types to include `mapData` and ensure `coordinates` are always defined.
   - Introduced `CoordinatesItem` type to better represent point and plane coordinates.
   - Refactored `parseCoordinates` function to handle new coordinate structures and return an array of `CoordinatesItem`.
