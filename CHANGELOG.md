@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.34
+
+### Patch Changes
+
+- 8aa2d78: refactor: update WebElementComponent type to rename isSearchable to isFilterDisplayed for consistency
+
 ## 0.8.33
 
 ### Patch Changes
