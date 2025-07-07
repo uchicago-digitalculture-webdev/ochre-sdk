@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.32
+
+### Patch Changes
+
+- 0033c76: feat: enhance type definitions and parsing logic for OchreLevelContextItem and WebElement, adding new properties and refining structure
+
 ## 0.8.31
 
 ### Patch Changes
