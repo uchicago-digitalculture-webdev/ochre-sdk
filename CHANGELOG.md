@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.33
+
+### Patch Changes
+
+- 1822131: refactor: rename isSearchable to filterDisplayed in parseWebElementProperties function and update related logic
+
 ## 0.8.32
 
 ### Patch Changes
