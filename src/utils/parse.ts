@@ -1978,14 +1978,14 @@ async function parseWebElementProperties(
         );
       }
 
-      const isSearchable =
+      const isFilterDisplayed =
         getPropertyValueByLabel(
           componentProperty.properties,
-          "is-searchable",
+          "filter-displayed",
         ) === true;
 
       properties.imageUuid = imageLinks[0]!.uuid;
-      properties.isSearchable = isSearchable;
+      properties.isFilterDisplayed = isFilterDisplayed;
       break;
     }
     case "audio-player": {
@@ -2720,10 +2720,11 @@ async function parseWebElement(
   )?.properties;
 
   let variant: "default" | "simple" = "default";
-  let isNameDisplayed = false;
+  let isNameDisplayed = properties.component === "collection";
   let isDescriptionDisplayed = false;
   let isDateDisplayed = false;
   let isCreatorsDisplayed = false;
+  let isCountDisplayed = properties.component === "collection";
 
   if (titleProperties) {
     const titleVariant = getPropertyValueByLabel(titleProperties, "variant");
@@ -2747,6 +2748,9 @@ async function parseWebElement(
       isCreatorsDisplayed = titleShow.some(
         (property) => property.values[0]!.content === "creators",
       );
+      isCountDisplayed = titleShow.some(
+        (property) => property.values[0]!.content === "count",
+      );
     }
   }
 
@@ -2761,6 +2765,7 @@ async function parseWebElement(
         isDescriptionDisplayed,
         isDateDisplayed,
         isCreatorsDisplayed,
+        isCountDisplayed,
       },
     },
     isDisplayedInBlockSectionSidebar,
@@ -3377,15 +3382,29 @@ function parseContexts(
           contextItemToParse.level
         : [contextItemToParse.level];
 
+      let type = "";
+
       const levels: Array<LevelContextItem> = levelsToParse.map((level) => {
-        const [variableUuid, valueUuid] = level.split(", ");
-        return {
-          variableUuid: variableUuid!,
-          valueUuid: valueUuid === "null" ? null : valueUuid!,
-        };
+        let variableUuid = "";
+        let valueUuid: string | null = null;
+
+        if (typeof level === "string") {
+          const splitLevel = level.split(", ");
+
+          variableUuid = splitLevel[0]!;
+          valueUuid = splitLevel[1] === "null" ? null : splitLevel[1]!;
+        } else {
+          const splitLevel = level.content.split(", ");
+
+          type = level.dataType;
+          variableUuid = splitLevel[0]!;
+          valueUuid = splitLevel[1] === "null" ? null : splitLevel[1]!;
+        }
+
+        return { variableUuid, valueUuid };
       });
 
-      contextsParsed.push({ context: levels });
+      contextsParsed.push({ context: levels, type });
     }
   }
 
@@ -3431,6 +3450,7 @@ export async function parseWebsite(
       isDescriptionDisplayed: false,
       isDateDisplayed: false,
       isCreatorsDisplayed: false,
+      isCountDisplayed: false,
     },
   };
   let sidebarLayout: "start" | "end" = "start";
@@ -3557,6 +3577,9 @@ export async function parseWebsite(
         sidebarTitle.properties.isCreatorsDisplayed = titleShow.some(
           (property) => property.values[0]!.content === "creators",
         );
+        sidebarTitle.properties.isCountDisplayed = titleShow.some(
+          (property) => property.values[0]!.content === "count",
+        );
       }
     }
 
@@ -3585,7 +3608,6 @@ export async function parseWebsite(
   }
 
   let globalOptions: Website["globalOptions"] = {
-    collectionUuids: [],
     contexts: {
       flatten: [],
       search: [],
@@ -3634,13 +3656,6 @@ export async function parseWebsite(
       : [];
 
     globalOptions = {
-      collectionUuids:
-        websiteTree.websiteOptions.collectionUuids != null ?
-          (Array.isArray(websiteTree.websiteOptions.collectionUuids.uuid) ?
-            websiteTree.websiteOptions.collectionUuids.uuid
-          : [websiteTree.websiteOptions.collectionUuids.uuid]
-          ).map((uuid) => uuid.content)
-        : [],
       contexts: {
         flatten: parseContexts(flattenContextsRaw),
         search: parseContexts(searchContextsRaw),
@@ -3675,6 +3690,15 @@ export async function parseWebsite(
     pages,
     sidebar,
     properties,
+    searchOptions: {
+      collectionUuids:
+        websiteTree.searchOptions?.collectionUuids != null ?
+          (Array.isArray(websiteTree.searchOptions.collectionUuids.uuid) ?
+            websiteTree.searchOptions.collectionUuids.uuid
+          : [websiteTree.searchOptions.collectionUuids.uuid]
+          ).map((uuid) => uuid.content)
+        : [],
+    },
     globalOptions,
   };
 }

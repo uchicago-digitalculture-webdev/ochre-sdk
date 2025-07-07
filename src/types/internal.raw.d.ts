@@ -142,8 +142,15 @@ type OchreTreeCollectionOption = {
   content: string; // UUID
 };
 
+export type OchreLevelContextItemContent =
+  | string
+  | {
+      dataType: string;
+      content: string; // "variableUuid, valueUuid|null"
+    };
+
 export type OchreLevelContextItem = {
-  level: string | Array<string>; // "variableUuid,valueUuid|null"
+  level: OchreLevelContextItemContent | Array<OchreLevelContextItemContent>;
 };
 
 /**
@@ -165,10 +172,12 @@ export type OchreTree = {
   identification: OchreIdentification;
   date?: string; // YYYY-MM-DD
   creators?: { creator: OchrePerson | Array<OchrePerson> };
-  websiteOptions?: {
+  searchOptions?: {
     collectionUuids?: {
       uuid: OchreTreeCollectionOption | Array<OchreTreeCollectionOption>;
     };
+  };
+  websiteOptions?: {
     flattenContexts?: OchreLevelContext | Array<OchreLevelContext>;
     suppressContexts?: OchreLevelContext | Array<OchreLevelContext>;
     searchContexts?: OchreLevelContext | Array<OchreLevelContext>;

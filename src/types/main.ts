@@ -502,7 +502,7 @@ export type LevelContextItem = {
 /**
  * Represents a level context with a context item
  */
-export type LevelContext = { context: Array<LevelContextItem> };
+export type LevelContext = { context: Array<LevelContextItem>; type: string };
 
 /**
  * Represents a website with its properties and elements
@@ -524,8 +524,8 @@ export type Website = {
     cssStylesMobile: Array<Style>;
   } | null;
   properties: WebsiteProperties;
+  searchOptions: { collectionUuids: Array<string> };
   globalOptions: {
-    collectionUuids: Array<string>;
     contexts: {
       flatten: Array<LevelContext>;
       suppress: Array<LevelContext>;
@@ -600,6 +600,7 @@ export type WebElement = {
       isDescriptionDisplayed: boolean;
       isDateDisplayed: boolean;
       isCreatorsDisplayed: boolean;
+      isCountDisplayed: boolean;
     };
   };
   isDisplayedInBlockSectionSidebar: boolean;
@@ -612,7 +613,11 @@ export type WebElement = {
  */
 export type WebElementComponent =
   | { component: "annotated-document"; documentId: string }
-  | { component: "annotated-image"; imageUuid: string; isSearchable: boolean }
+  | {
+      component: "annotated-image";
+      imageUuid: string;
+      isFilterDisplayed: boolean;
+    }
   | {
       component: "audio-player";
       audioId: string;
