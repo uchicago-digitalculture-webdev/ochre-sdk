@@ -2149,13 +2149,13 @@ async function parseWebElementProperties(
         showCount = showCountProperty === true;
       }
 
-      let isSearchable = false;
-      const isSearchableProperty = getPropertyValueByLabel(
+      let filterDisplayed = false;
+      const filterDisplayedProperty = getPropertyValueByLabel(
         componentProperty.properties,
-        "is-searchable",
+        "filter-displayed",
       );
-      if (isSearchableProperty !== null) {
-        isSearchable = isSearchableProperty === true;
+      if (filterDisplayedProperty !== null) {
+        filterDisplayed = filterDisplayedProperty === true;
       }
 
       let layout = getPropertyValueByLabel(
@@ -2168,7 +2168,7 @@ async function parseWebElementProperties(
       properties.variant = variant;
       properties.itemVariant = itemVariant;
       properties.paginationVariant = paginationVariant;
-      properties.isSearchable = isSearchable;
+      properties.filterDisplayed = filterDisplayed;
       properties.showCount = showCount;
       properties.layout = layout;
       break;
@@ -2201,18 +2201,18 @@ async function parseWebElementProperties(
       ) as "entry" | "item" | null;
       variant ??= "entry";
 
-      let isSearchable = false;
-      const isSearchableProperty = getPropertyValueByLabel(
+      let filterDisplayed = false;
+      const filterDisplayedProperty = getPropertyValueByLabel(
         componentProperty.properties,
-        "is-searchable",
+        "filter-displayed",
       );
-      if (isSearchableProperty !== null) {
-        isSearchable = isSearchableProperty === true;
+      if (filterDisplayedProperty !== null) {
+        filterDisplayed = filterDisplayedProperty === true;
       }
 
       properties.entriesId = entriesLink.uuid;
       properties.variant = variant;
-      properties.isSearchable = isSearchable;
+      properties.filterDisplayed = filterDisplayed;
       break;
     }
     case "filter-categories": {
@@ -2423,14 +2423,14 @@ async function parseWebElementProperties(
         );
       }
 
-      const isSearchable =
+      const filterDisplayed =
         getPropertyValueByLabel(
           componentProperty.properties,
-          "is-searchable",
+          "filter-displayed",
         ) === true;
 
       properties.galleryId = galleryLink.uuid;
-      properties.isSearchable = isSearchable;
+      properties.filterDisplayed = filterDisplayed;
       break;
     }
     case "map": {
