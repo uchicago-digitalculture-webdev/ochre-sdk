@@ -634,7 +634,7 @@ export type WebElementComponent =
       component: "entries";
       entriesId: string;
       variant: "entry" | "item";
-      isSearchable: boolean;
+      isFilterDisplayed: boolean;
     }
   | {
       component: "button";
@@ -651,7 +651,7 @@ export type WebElementComponent =
       variant: "full" | "highlights";
       itemVariant: "default" | "card";
       paginationVariant: "default" | "numeric";
-      isSearchable: boolean;
+      isFilterDisplayed: boolean;
       showCount: boolean;
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
     }
@@ -680,7 +680,11 @@ export type WebElementComponent =
       isCover: boolean;
       carouselOptions: { secondsPerImage: number } | null;
     }
-  | { component: "image-gallery"; galleryId: string; isSearchable: boolean }
+  | {
+      component: "image-gallery";
+      galleryId: string;
+      isFilterDisplayed: boolean;
+    }
   | {
       component: "map";
       mapId: string;
