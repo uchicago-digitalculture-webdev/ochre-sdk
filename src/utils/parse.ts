@@ -2724,7 +2724,8 @@ async function parseWebElement(
   let isDescriptionDisplayed = false;
   let isDateDisplayed = false;
   let isCreatorsDisplayed = false;
-  let isCountDisplayed = properties.component === "collection";
+  let isCountDisplayed =
+    properties.component === "collection" && properties.variant === "full";
 
   if (titleProperties) {
     const titleVariant = getPropertyValueByLabel(titleProperties, "variant");
