@@ -28,6 +28,7 @@ export type OchreStringItemContent = {
 export type OchreStringItem = {
   string:
     | FakeString
+    | OchreStringItem
     | OchreStringItemContent
     | Array<FakeString | OchreStringItemContent>;
   lang?: string; // ISO 639-3 3 character code (zxx = "a.k.a.")

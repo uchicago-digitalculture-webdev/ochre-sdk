@@ -11,7 +11,8 @@ import {
 } from "../schemas.js";
 
 const PRESENTATION_ITEM_UUID = "f1c131b6-1498-48a4-95bf-a9edae9fd518";
-const ANNOTATION_UUID = "b9ca2732-78f4-416e-b77f-dae7647e68a9";
+const TEXT_ANNOTATION_UUID = "b9ca2732-78f4-416e-b77f-dae7647e68a9";
+const TEXT_ANNOTATION_HEADING_UUID = "3e6f86ab-df81-45ae-8257-e2867357df56";
 
 /**
  * Finds a string item in an array by language code
@@ -197,21 +198,27 @@ export function parseStringItem(item: OchreStringItem): string {
         ) {
           returnString += parseFakeString(stringItem);
         } else {
-          const renderedText =
-            stringItem.content == null ? ""
-            : stringItem.rend != null ?
-              parseRenderOptions(
-                parseFakeString(stringItem.content),
-                stringItem.rend,
-              )
-            : parseFakeString(stringItem.content);
+          if ("string" in stringItem) {
+            returnString += parseStringDocumentItem(
+              stringItem as OchreStringRichTextItem,
+            );
+          } else {
+            const renderedText =
+              stringItem.content == null ? ""
+              : stringItem.rend != null ?
+                parseRenderOptions(
+                  parseFakeString(stringItem.content),
+                  stringItem.rend,
+                )
+              : parseFakeString(stringItem.content);
 
-          const whitespacedText =
-            stringItem.whitespace != null ?
-              parseWhitespace(renderedText, stringItem.whitespace)
-            : renderedText;
+            const whitespacedText =
+              stringItem.whitespace != null ?
+                parseWhitespace(renderedText, stringItem.whitespace)
+              : renderedText;
 
-          returnString += whitespacedText;
+            returnString += whitespacedText;
+          }
         }
       }
       break;
@@ -260,6 +267,7 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
     }
 
     const itemLinks = Array.isArray(item.links) ? item.links : [item.links];
+
     for (const link of itemLinks) {
       if ("resource" in link) {
         const linkResource =
@@ -304,9 +312,17 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
                   : null;
                 if (
                   itemPropertyLabelUuid === PRESENTATION_ITEM_UUID &&
-                  itemPropertyValueUuid === ANNOTATION_UUID
+                  itemPropertyValueUuid === TEXT_ANNOTATION_UUID
                 ) {
-                  return `<Annotation uuid="${linkResource.uuid}">${itemString}</Annotation>`;
+                  const textAnnotationProperty =
+                    itemProperty.property != null ?
+                      Array.isArray(itemProperty.property) ?
+                        itemProperty.property[0]
+                      : itemProperty.property
+                    : null;
+                  if (textAnnotationProperty != null) {
+                    return `<Annotation type="hover-card" uuid="${linkResource.uuid}">${itemString}</Annotation>`;
+                  }
                 }
 
                 return `<InternalLink uuid="${linkResource.uuid}" properties="${itemPropertyLabelUuid}"${
@@ -392,6 +408,52 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
           return `<InternalLink uuid="${linkBibliography.uuid}">${itemString}</InternalLink>`;
         } else {
           return `<TooltipSpan>${itemString}</TooltipSpan>`;
+        }
+      } else {
+        if ("properties" in item && item.properties != null) {
+          const itemProperty =
+            Array.isArray(item.properties.property) ?
+              item.properties.property[0]
+            : item.properties.property;
+          if (itemProperty != null) {
+            const itemPropertyLabelUuid = itemProperty.label.uuid;
+            const itemPropertyValueUuid =
+              (
+                typeof itemProperty.value === "object" &&
+                "uuid" in itemProperty.value &&
+                itemProperty.value.uuid != null
+              ) ?
+                itemProperty.value.uuid
+              : null;
+            if (
+              itemPropertyLabelUuid === PRESENTATION_ITEM_UUID &&
+              itemPropertyValueUuid === TEXT_ANNOTATION_UUID
+            ) {
+              const textAnnotationProperty =
+                itemProperty.property != null ?
+                  Array.isArray(itemProperty.property) ?
+                    itemProperty.property[0]
+                  : itemProperty.property
+                : null;
+              if (textAnnotationProperty != null) {
+                const textAnnotationPropertyValueUuid =
+                  (
+                    typeof textAnnotationProperty.value === "object" &&
+                    "uuid" in textAnnotationProperty.value &&
+                    textAnnotationProperty.value.uuid != null
+                  ) ?
+                    textAnnotationProperty.value.uuid
+                  : null;
+
+                if (
+                  textAnnotationPropertyValueUuid ===
+                  TEXT_ANNOTATION_HEADING_UUID
+                ) {
+                  return `<Annotation type="heading">${itemString}</Annotation>`;
+                }
+              }
+            }
+          }
         }
       }
     }
