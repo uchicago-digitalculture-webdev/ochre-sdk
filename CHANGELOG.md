@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.35
+
+### Patch Changes
+
+- f2ef1c1: minor fix
+- f2ef1c1: refactor: rename searchContexts to filterContexts
+
 ## 0.8.34
 
 ### Patch Changes
