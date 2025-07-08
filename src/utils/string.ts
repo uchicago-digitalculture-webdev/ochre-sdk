@@ -11,7 +11,7 @@ import {
 } from "../schemas.js";
 
 const PRESENTATION_ITEM_UUID = "f1c131b6-1498-48a4-95bf-a9edae9fd518";
-const TEXT_ANNOTATION_UUID = "b9ca2732-78f4-416e-b77f-dae7647e68a9";
+const ANNOTATION_UUID = "b9ca2732-78f4-416e-b77f-dae7647e68a9";
 
 /**
  * Finds a string item in an array by language code
@@ -304,17 +304,9 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
                   : null;
                 if (
                   itemPropertyLabelUuid === PRESENTATION_ITEM_UUID &&
-                  itemPropertyValueUuid === TEXT_ANNOTATION_UUID
+                  itemPropertyValueUuid === ANNOTATION_UUID
                 ) {
-                  const itemPropertySubProperty =
-                    Array.isArray(itemProperty.property) ?
-                      (itemProperty.property[0] ?? null)
-                    : (itemProperty.property ?? null);
-
-                  if (itemPropertySubProperty != null) {
-                    // const itemPropertySubPropertyVariant =
-                    return `<TextAnnotation uuid="${linkResource.uuid}">${itemString}</TextAnnotation>`;
-                  }
+                  return `<Annotation uuid="${linkResource.uuid}">${itemString}</Annotation>`;
                 }
 
                 return `<InternalLink uuid="${linkResource.uuid}" properties="${itemPropertyLabelUuid}"${
