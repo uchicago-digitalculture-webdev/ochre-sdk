@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.37
+
+### Patch Changes
+
+- f4943a9: fix: rename filterDisplayed to isFilterDisplayed
+
 ## 0.8.36
 
 ### Patch Changes
