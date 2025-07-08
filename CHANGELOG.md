@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.39
+
+### Patch Changes
+
+- 4fa820c: refactor: simplify property retrieval for display settings in parse functions
+- 4fa820c: feat: enhance string item parsing to support nested OchreStringItem and update annotation UUIDs
+
 ## 0.8.38
 
 ### Patch Changes
