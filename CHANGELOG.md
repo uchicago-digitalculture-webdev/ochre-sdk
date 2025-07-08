@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.36
+
+### Patch Changes
+
+- 7211fc4: refactor: update LevelContext and OchreLevelContextItem types to include identification properties
+
 ## 0.8.35
 
 ### Patch Changes
