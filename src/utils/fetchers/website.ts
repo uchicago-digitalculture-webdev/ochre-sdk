@@ -1,6 +1,5 @@
 import type { OchreData } from "../../types/internal.raw.d.ts";
 import type { Website } from "../../types/main.js";
-import { writeFileSync } from "node:fs";
 import { parseIdentification, parseWebsite } from "../parse.js";
 
 /**
@@ -70,12 +69,3 @@ export async function fetchWebsite(
     return [error instanceof Error ? error.message : "Unknown error", null];
   }
 }
-
-const [_, guerrillaTelevisionStaging] = await fetchWebsite(
-  "guerrilla-television-staging",
-);
-
-writeFileSync(
-  "guerrilla-television-staging.json",
-  JSON.stringify(guerrillaTelevisionStaging, null, 2),
-);
