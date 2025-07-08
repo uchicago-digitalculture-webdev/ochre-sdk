@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.38
+
+### Patch Changes
+
+- e60628d: fix: update isCountDisplayed condition to include variant check
+
 ## 0.8.37
 
 ### Patch Changes
