@@ -529,7 +529,7 @@ export type Website = {
     contexts: {
       flatten: Array<LevelContext>;
       suppress: Array<LevelContext>;
-      search: Array<LevelContext>;
+      filter: Array<LevelContext>;
       detail: Array<LevelContext>;
       download: Array<LevelContext>;
       label: Array<LevelContext>;

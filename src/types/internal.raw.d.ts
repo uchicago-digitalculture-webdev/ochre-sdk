@@ -180,7 +180,7 @@ export type OchreTree = {
   websiteOptions?: {
     flattenContexts?: OchreLevelContext | Array<OchreLevelContext>;
     suppressContexts?: OchreLevelContext | Array<OchreLevelContext>;
-    searchContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    filterContexts?: OchreLevelContext | Array<OchreLevelContext>;
     detailContexts?: OchreLevelContext | Array<OchreLevelContext>;
     downloadContexts?: OchreLevelContext | Array<OchreLevelContext>;
     labelContexts?: OchreLevelContext | Array<OchreLevelContext>;

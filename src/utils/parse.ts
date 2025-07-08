@@ -3610,7 +3610,7 @@ export async function parseWebsite(
   let globalOptions: Website["globalOptions"] = {
     contexts: {
       flatten: [],
-      search: [],
+      filter: [],
       detail: [],
       download: [],
       label: [],
@@ -3630,11 +3630,11 @@ export async function parseWebsite(
           websiteTree.websiteOptions.suppressContexts
         : [websiteTree.websiteOptions.suppressContexts]
       : [];
-    const searchContextsRaw =
-      websiteTree.websiteOptions.searchContexts != null ?
-        Array.isArray(websiteTree.websiteOptions.searchContexts) ?
-          websiteTree.websiteOptions.searchContexts
-        : [websiteTree.websiteOptions.searchContexts]
+    const filterContextsRaw =
+      websiteTree.websiteOptions.filterContexts != null ?
+        Array.isArray(websiteTree.websiteOptions.filterContexts) ?
+          websiteTree.websiteOptions.filterContexts
+        : [websiteTree.websiteOptions.filterContexts]
       : [];
     const detailContextsRaw =
       websiteTree.websiteOptions.detailContexts != null ?
@@ -3658,7 +3658,7 @@ export async function parseWebsite(
     globalOptions = {
       contexts: {
         flatten: parseContexts(flattenContextsRaw),
-        search: parseContexts(searchContextsRaw),
+        filter: parseContexts(filterContextsRaw),
         detail: parseContexts(detailContextsRaw),
         download: parseContexts(downloadContextsRaw),
         label: parseContexts(labelContextsRaw),
