@@ -2149,13 +2149,13 @@ async function parseWebElementProperties(
         showCount = showCountProperty === true;
       }
 
-      let filterDisplayed = false;
-      const filterDisplayedProperty = getPropertyValueByLabel(
+      let isFilterDisplayed = false;
+      const isFilterDisplayedProperty = getPropertyValueByLabel(
         componentProperty.properties,
         "filter-displayed",
       );
-      if (filterDisplayedProperty !== null) {
-        filterDisplayed = filterDisplayedProperty === true;
+      if (isFilterDisplayedProperty !== null) {
+        isFilterDisplayed = isFilterDisplayedProperty === true;
       }
 
       let layout = getPropertyValueByLabel(
@@ -2168,7 +2168,7 @@ async function parseWebElementProperties(
       properties.variant = variant;
       properties.itemVariant = itemVariant;
       properties.paginationVariant = paginationVariant;
-      properties.filterDisplayed = filterDisplayed;
+      properties.isFilterDisplayed = isFilterDisplayed;
       properties.showCount = showCount;
       properties.layout = layout;
       break;
@@ -2201,18 +2201,18 @@ async function parseWebElementProperties(
       ) as "entry" | "item" | null;
       variant ??= "entry";
 
-      let filterDisplayed = false;
-      const filterDisplayedProperty = getPropertyValueByLabel(
+      let isFilterDisplayed = false;
+      const isFilterDisplayedProperty = getPropertyValueByLabel(
         componentProperty.properties,
         "filter-displayed",
       );
-      if (filterDisplayedProperty !== null) {
-        filterDisplayed = filterDisplayedProperty === true;
+      if (isFilterDisplayedProperty !== null) {
+        isFilterDisplayed = isFilterDisplayedProperty === true;
       }
 
       properties.entriesId = entriesLink.uuid;
       properties.variant = variant;
-      properties.filterDisplayed = filterDisplayed;
+      properties.isFilterDisplayed = isFilterDisplayed;
       break;
     }
     case "filter-categories": {
@@ -2423,14 +2423,14 @@ async function parseWebElementProperties(
         );
       }
 
-      const filterDisplayed =
+      const isFilterDisplayed =
         getPropertyValueByLabel(
           componentProperty.properties,
           "filter-displayed",
         ) === true;
 
       properties.galleryId = galleryLink.uuid;
-      properties.filterDisplayed = filterDisplayed;
+      properties.isFilterDisplayed = isFilterDisplayed;
       break;
     }
     case "map": {
