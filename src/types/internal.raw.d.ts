@@ -150,7 +150,10 @@ export type OchreLevelContextItemContent =
     };
 
 export type OchreLevelContextItem = {
-  level: OchreLevelContextItemContent | Array<OchreLevelContextItemContent>;
+  identification: OchreIdentification;
+  levels: {
+    level: OchreLevelContextItemContent | Array<OchreLevelContextItemContent>;
+  };
 };
 
 /**

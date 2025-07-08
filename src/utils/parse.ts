@@ -3378,9 +3378,9 @@ function parseContexts(
 
     for (const contextItemToParse of contextItemsToParse) {
       const levelsToParse =
-        Array.isArray(contextItemToParse.level) ?
-          contextItemToParse.level
-        : [contextItemToParse.level];
+        Array.isArray(contextItemToParse.levels.level) ?
+          contextItemToParse.levels.level
+        : [contextItemToParse.levels.level];
 
       let type = "";
 
@@ -3404,7 +3404,11 @@ function parseContexts(
         return { variableUuid, valueUuid };
       });
 
-      contextsParsed.push({ context: levels, type });
+      contextsParsed.push({
+        context: levels,
+        type,
+        identification: parseIdentification(contextItemToParse.identification),
+      });
     }
   }
 

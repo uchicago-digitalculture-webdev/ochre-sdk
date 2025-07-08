@@ -502,7 +502,11 @@ export type LevelContextItem = {
 /**
  * Represents a level context with a context item
  */
-export type LevelContext = { context: Array<LevelContextItem>; type: string };
+export type LevelContext = {
+  context: Array<LevelContextItem>;
+  identification: Identification;
+  type: string;
+};
 
 /**
  * Represents a website with its properties and elements
