@@ -2132,22 +2132,13 @@ async function parseWebElementProperties(
         componentProperty.properties,
         "item-variant",
       );
-      itemVariant ??= "default";
+      itemVariant ??= "detailed";
 
       let paginationVariant = getPropertyValueByLabel(
         componentProperty.properties,
         "pagination-variant",
       );
       paginationVariant ??= "default";
-
-      let showCount = false;
-      const showCountProperty = getPropertyValueByLabel(
-        componentProperty.properties,
-        "show-count",
-      );
-      if (showCountProperty !== null) {
-        showCount = showCountProperty === true;
-      }
 
       let isFilterDisplayed = false;
       const isFilterDisplayedProperty = getPropertyValueByLabel(
@@ -2169,7 +2160,6 @@ async function parseWebElementProperties(
       properties.itemVariant = itemVariant;
       properties.paginationVariant = paginationVariant;
       properties.isFilterDisplayed = isFilterDisplayed;
-      properties.showCount = showCount;
       properties.layout = layout;
       break;
     }
@@ -2733,26 +2723,17 @@ async function parseWebElement(
       variant = titleVariant as "default" | "simple";
     }
 
-    const titleShow = titleProperties.filter(
-      (property) => property.label === "display",
-    );
-    if (titleShow.length > 0) {
-      isNameDisplayed = titleShow.some(
-        (property) => property.values[0]!.content === "name",
-      );
-      isDescriptionDisplayed = titleShow.some(
-        (property) => property.values[0]!.content === "description",
-      );
-      isDateDisplayed = titleShow.some(
-        (property) => property.values[0]!.content === "date",
-      );
-      isCreatorsDisplayed = titleShow.some(
-        (property) => property.values[0]!.content === "creators",
-      );
-      isCountDisplayed = titleShow.some(
-        (property) => property.values[0]!.content === "count",
-      );
-    }
+    isNameDisplayed =
+      getPropertyValueByLabel(titleProperties, "name-displayed") === true;
+    isDescriptionDisplayed =
+      getPropertyValueByLabel(titleProperties, "description-displayed") ===
+      true;
+    isDateDisplayed =
+      getPropertyValueByLabel(titleProperties, "date-displayed") === true;
+    isCreatorsDisplayed =
+      getPropertyValueByLabel(titleProperties, "creators-displayed") === true;
+    isCountDisplayed =
+      getPropertyValueByLabel(titleProperties, "count-displayed") === true;
   }
 
   return {
@@ -3566,26 +3547,17 @@ export async function parseWebsite(
         sidebarTitle.variant = titleVariant as "default" | "simple";
       }
 
-      const titleShow = titleProperties.filter(
-        (property) => property.label === "display",
-      );
-      if (titleShow.length > 0) {
-        sidebarTitle.properties.isNameDisplayed = titleShow.some(
-          (property) => property.values[0]!.content === "name",
-        );
-        sidebarTitle.properties.isDescriptionDisplayed = titleShow.some(
-          (property) => property.values[0]!.content === "description",
-        );
-        sidebarTitle.properties.isDateDisplayed = titleShow.some(
-          (property) => property.values[0]!.content === "date",
-        );
-        sidebarTitle.properties.isCreatorsDisplayed = titleShow.some(
-          (property) => property.values[0]!.content === "creators",
-        );
-        sidebarTitle.properties.isCountDisplayed = titleShow.some(
-          (property) => property.values[0]!.content === "count",
-        );
-      }
+      sidebarTitle.properties.isNameDisplayed =
+        getPropertyValueByLabel(titleProperties, "name-displayed") === true;
+      sidebarTitle.properties.isDescriptionDisplayed =
+        getPropertyValueByLabel(titleProperties, "description-displayed") ===
+        true;
+      sidebarTitle.properties.isDateDisplayed =
+        getPropertyValueByLabel(titleProperties, "date-displayed") === true;
+      sidebarTitle.properties.isCreatorsDisplayed =
+        getPropertyValueByLabel(titleProperties, "creators-displayed") === true;
+      sidebarTitle.properties.isCountDisplayed =
+        getPropertyValueByLabel(titleProperties, "count-displayed") === true;
     }
 
     const sidebarResources =

@@ -653,10 +653,9 @@ export type WebElementComponent =
       component: "collection";
       collectionId: string;
       variant: "full" | "highlights";
-      itemVariant: "default" | "card";
+      itemVariant: "detailed" | "card";
       paginationVariant: "default" | "numeric";
       isFilterDisplayed: boolean;
-      showCount: boolean;
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
     }
   | { component: "empty-space"; height: string | null; width: string | null }
