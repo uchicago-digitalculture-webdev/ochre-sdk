@@ -528,7 +528,7 @@ export type Website = {
     cssStylesMobile: Array<Style>;
   } | null;
   properties: WebsiteProperties;
-  searchOptions: { collectionUuids: Array<string> };
+  searchOptions: { filterUuids: Array<string>; scopeUuids: Array<string> };
   globalOptions: {
     contexts: {
       flatten: Array<LevelContext>;

@@ -177,7 +177,10 @@ export type OchreTree = {
   date?: string; // YYYY-MM-DD
   creators?: { creator: OchrePerson | Array<OchrePerson> };
   searchOptions?: {
-    collectionUuids?: {
+    filterUuids?: {
+      uuid: OchreTreeCollectionOption | Array<OchreTreeCollectionOption>;
+    };
+    scopeUuids?: {
       uuid: OchreTreeCollectionOption | Array<OchreTreeCollectionOption>;
     };
   };

@@ -3668,11 +3668,18 @@ export async function parseWebsite(
     sidebar,
     properties,
     searchOptions: {
-      collectionUuids:
-        websiteTree.searchOptions?.collectionUuids != null ?
-          (Array.isArray(websiteTree.searchOptions.collectionUuids.uuid) ?
-            websiteTree.searchOptions.collectionUuids.uuid
-          : [websiteTree.searchOptions.collectionUuids.uuid]
+      filterUuids:
+        websiteTree.searchOptions?.filterUuids != null ?
+          (Array.isArray(websiteTree.searchOptions.filterUuids.uuid) ?
+            websiteTree.searchOptions.filterUuids.uuid
+          : [websiteTree.searchOptions.filterUuids.uuid]
+          ).map((uuid) => uuid.content)
+        : [],
+      scopeUuids:
+        websiteTree.searchOptions?.scopeUuids != null ?
+          (Array.isArray(websiteTree.searchOptions.scopeUuids.uuid) ?
+            websiteTree.searchOptions.scopeUuids.uuid
+          : [websiteTree.searchOptions.scopeUuids.uuid]
           ).map((uuid) => uuid.content)
         : [],
     },
