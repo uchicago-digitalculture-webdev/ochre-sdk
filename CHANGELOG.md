@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.40
+
+### Patch Changes
+
+- a900e07: refactor: update searchOptions structure to use filterUuids and scopeUuids
+
 ## 0.8.39
 
 ### Patch Changes
