@@ -528,7 +528,14 @@ export type Website = {
     cssStylesMobile: Array<Style>;
   } | null;
   properties: WebsiteProperties;
-  searchOptions: { filterUuids: Array<string>; scopeUuids: Array<string> };
+  searchOptions: {
+    filters: Array<{ uuid: string; type: string }>;
+    scopes: Array<{
+      uuid: string;
+      type: string;
+      identification: Identification;
+    }>;
+  };
   globalOptions: {
     contexts: {
       flatten: Array<LevelContext>;

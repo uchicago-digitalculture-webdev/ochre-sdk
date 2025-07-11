@@ -138,9 +138,14 @@ export type OchreMetadata = {
   description: OchreStringContent;
 };
 
-type OchreTreeCollectionOption = {
-  type: "set" | "variable";
+type OchreTreeSearchOptionUuid = {
+  type: string;
   content: string; // UUID
+};
+
+type OchreTreeSearchOptionScope = {
+  uuid: OchreTreeSearchOptionUuid;
+  identification: OchreIdentification;
 };
 
 export type OchreLevelContextItemContent =
@@ -178,10 +183,10 @@ export type OchreTree = {
   creators?: { creator: OchrePerson | Array<OchrePerson> };
   searchOptions?: {
     filterUuids?: {
-      uuid: OchreTreeCollectionOption | Array<OchreTreeCollectionOption>;
+      uuid: OchreTreeSearchOptionUuid | Array<OchreTreeSearchOptionUuid>;
     };
-    scopeUuids?: {
-      uuid: OchreTreeCollectionOption | Array<OchreTreeCollectionOption>;
+    scopes?: {
+      scope: OchreTreeSearchOptionScope | Array<OchreTreeSearchOptionScope>;
     };
   };
   websiteOptions?: {

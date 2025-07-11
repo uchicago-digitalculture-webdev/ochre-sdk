@@ -3668,19 +3668,23 @@ export async function parseWebsite(
     sidebar,
     properties,
     searchOptions: {
-      filterUuids:
+      filters:
         websiteTree.searchOptions?.filterUuids != null ?
           (Array.isArray(websiteTree.searchOptions.filterUuids.uuid) ?
             websiteTree.searchOptions.filterUuids.uuid
           : [websiteTree.searchOptions.filterUuids.uuid]
-          ).map((uuid) => uuid.content)
+          ).map((uuid) => ({ uuid: uuid.content, type: uuid.type }))
         : [],
-      scopeUuids:
-        websiteTree.searchOptions?.scopeUuids != null ?
-          (Array.isArray(websiteTree.searchOptions.scopeUuids.uuid) ?
-            websiteTree.searchOptions.scopeUuids.uuid
-          : [websiteTree.searchOptions.scopeUuids.uuid]
-          ).map((uuid) => uuid.content)
+      scopes:
+        websiteTree.searchOptions?.scopes != null ?
+          (Array.isArray(websiteTree.searchOptions.scopes.scope) ?
+            websiteTree.searchOptions.scopes.scope
+          : [websiteTree.searchOptions.scopes.scope]
+          ).map((scope) => ({
+            uuid: scope.uuid.content,
+            type: scope.uuid.type,
+            identification: parseIdentification(scope.identification),
+          }))
         : [],
     },
     globalOptions,
