@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.41
+
+### Patch Changes
+
+- a92cf73: refactor: restructure searchOptions to use filters and scopes with updated types
+
 ## 0.8.40
 
 ### Patch Changes
