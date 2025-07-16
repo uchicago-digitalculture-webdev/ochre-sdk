@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.42
+
+### Patch Changes
+
+- f73909d: feat: extend itemVariant type to include "tile" option
+
 ## 0.8.41
 
 ### Patch Changes
