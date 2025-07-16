@@ -660,7 +660,7 @@ export type WebElementComponent =
       component: "collection";
       collectionId: string;
       variant: "full" | "highlights";
-      itemVariant: "detailed" | "card";
+      itemVariant: "detailed" | "card" | "tile";
       paginationVariant: "default" | "numeric";
       isFilterDisplayed: boolean;
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
