@@ -68,6 +68,7 @@ export const componentSchema = z.enum(
     "n-columns",
     "n-rows",
     "network-graph",
+    "query",
     "search-bar",
     "table",
     "text",

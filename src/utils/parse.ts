@@ -2529,6 +2529,10 @@ async function parseWebElementProperties(
       // TODO: Implement network graph
       break;
     }
+    case "query": {
+      // TODO: Implement query
+      break;
+    }
     case "table": {
       const tableLink = links.find((link) => link.category === "set");
       if (!tableLink) {
