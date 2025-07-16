@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.43
+
+### Patch Changes
+
+- 6ee145f: feat: add skeleton for "query" component to schemas and types
+
 ## 0.8.42
 
 ### Patch Changes
