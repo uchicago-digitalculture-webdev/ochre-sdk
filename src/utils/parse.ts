@@ -2504,7 +2504,30 @@ async function parseWebElementProperties(
       break;
     }
     case "query": {
-      // TODO: Implement query
+      const queries: Array<{ label: string; valueUuids: Array<string> }> = [];
+
+      const queryProperties = componentProperty.properties;
+      if (queryProperties.length === 0) {
+        throw new Error(
+          `Query properties not found for the following component: “${componentName}”`,
+        );
+      }
+
+      for (const query of queryProperties) {
+        const querySubProperties = query.properties;
+        const label = String(
+          getPropertyValueByLabel(querySubProperties, "query-prompt"),
+        );
+        const valueUuids =
+          querySubProperties
+            .find((property) => property.label === "use-value")
+            ?.values.map((value) => value.uuid)
+            .filter((uuid) => uuid !== null) ?? [];
+
+        queries.push({ label, valueUuids });
+      }
+
+      properties.queries = queries;
       break;
     }
     case "table": {

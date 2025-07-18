@@ -706,7 +706,10 @@ export type WebElementComponent =
       isFullHeight: boolean;
     }
   | { component: "network-graph" }
-  | { component: "query" }
+  | {
+      component: "query";
+      queries: Array<{ label: string; valueUuids: Array<string> }>;
+    }
   | { component: "search-bar"; variant: "default" | "full" }
   | { component: "table"; tableId: string }
   | {
