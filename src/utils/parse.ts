@@ -2499,35 +2499,6 @@ async function parseWebElementProperties(
       properties.isFullHeight = isFullHeight;
       break;
     }
-    case "n-columns": {
-      const subElements =
-        elementResource.resource ?
-          await parseWebpageResources(
-            Array.isArray(elementResource.resource) ?
-              elementResource.resource
-            : [elementResource.resource],
-            "element",
-          )
-        : [];
-
-      properties.columns = subElements;
-
-      break;
-    }
-    case "n-rows": {
-      const subElements =
-        elementResource.resource ?
-          await parseWebpageResources(
-            Array.isArray(elementResource.resource) ?
-              elementResource.resource
-            : [elementResource.resource],
-            "element",
-          )
-        : [];
-
-      properties.rows = subElements;
-      break;
-    }
     case "network-graph": {
       // TODO: Implement network graph
       break;

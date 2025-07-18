@@ -705,8 +705,6 @@ export type WebElementComponent =
       isUsingPins: boolean;
       isFullHeight: boolean;
     }
-  | { component: "n-columns"; columns: Array<WebElement> }
-  | { component: "n-rows"; rows: Array<WebElement> }
   | { component: "network-graph" }
   | { component: "query" }
   | { component: "search-bar"; variant: "default" | "full" }

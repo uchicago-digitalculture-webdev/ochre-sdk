@@ -65,8 +65,6 @@ export const componentSchema = z.enum(
     "image",
     "image-gallery",
     "map",
-    "n-columns",
-    "n-rows",
     "network-graph",
     "query",
     "search-bar",
