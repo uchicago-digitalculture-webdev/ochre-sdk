@@ -1819,11 +1819,14 @@ export function parseConcept(concept: OchreConcept): Concept {
         parseContext(concept.context)
       : null,
     identification: parseIdentification(concept.identification),
-    interpretations: parseInterpretations(
-      Array.isArray(concept.interpretations.interpretation) ?
-        concept.interpretations.interpretation
-      : [concept.interpretations.interpretation],
-    ),
+    interpretations:
+      concept.interpretations ?
+        parseInterpretations(
+          Array.isArray(concept.interpretations.interpretation) ?
+            concept.interpretations.interpretation
+          : [concept.interpretations.interpretation],
+        )
+      : [],
   };
 
   return returnConcept;
