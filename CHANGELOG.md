@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.45
+
+### Patch Changes
+
+- 8229036: feat: implement query component logic in parsing and update type definition
+
 ## 0.8.44
 
 ### Patch Changes
