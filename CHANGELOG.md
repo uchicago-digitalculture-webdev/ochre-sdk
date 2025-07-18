@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.44
+
+### Patch Changes
+
+- 425f29b: fix: make interpretations optional in OchreConcept type and handle undefined cases in parseConcept function
+
 ## 0.8.43
 
 ### Patch Changes
