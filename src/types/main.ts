@@ -708,7 +708,7 @@ export type WebElementComponent =
   | { component: "network-graph" }
   | {
       component: "query";
-      queries: Array<{ label: string; valueUuids: Array<string> }>;
+      queries: Array<{ label: string; propertyUuids: Array<string> }>;
     }
   | { component: "search-bar"; variant: "default" | "full" }
   | { component: "table"; tableId: string }
