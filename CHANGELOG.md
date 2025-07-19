@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.8.46
+
+### Patch Changes
+
+- 8c34123: fix: update query component type definition and parsing logic to use propertyUuids instead of valueUuids
+
 ## 0.8.45
 
 ### Patch Changes
