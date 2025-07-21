@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.9
+
+### Patch Changes
+
+- 09e53f6: fix: correct valueContent assignment and handle null values in property-query.ts
+
 ## 0.9.8
 
 ### Patch Changes
