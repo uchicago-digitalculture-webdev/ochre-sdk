@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.8
+
+### Patch Changes
+
+- 123c0da: fix: adjust formatting in XQuery output for property and value elements in property-query.ts
+
 ## 0.9.7
 
 ### Patch Changes
