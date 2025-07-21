@@ -2528,9 +2528,15 @@ async function parseWebElementProperties(
       for (const query of queryProperties) {
         const querySubProperties = query.properties;
 
-        const label = String(
-          getPropertyValueByLabel(querySubProperties, "query-prompt"),
+        const label = getPropertyValueByLabel(
+          querySubProperties,
+          "query-prompt",
         );
+        if (label === null) {
+          throw new Error(
+            `Query prompt not found for the following component: “${componentName}”`,
+          );
+        }
 
         const propertyUuids =
           querySubProperties
@@ -2538,14 +2544,18 @@ async function parseWebElementProperties(
             ?.values.map((value) => value.uuid)
             .filter((uuid) => uuid !== null) ?? [];
 
-        const startIcon =
-          String(getPropertyValueByLabel(querySubProperties, "start-icon")) ||
-          null;
-        const endIcon =
-          String(getPropertyValueByLabel(querySubProperties, "end-icon")) ||
-          null;
+        const startIcon = getPropertyValueByLabel(
+          querySubProperties,
+          "start-icon",
+        );
+        const endIcon = getPropertyValueByLabel(querySubProperties, "end-icon");
 
-        queries.push({ label, propertyUuids, startIcon, endIcon });
+        queries.push({
+          label: String(label),
+          propertyUuids,
+          startIcon: startIcon !== null ? String(startIcon) : null,
+          endIcon: endIcon !== null ? String(endIcon) : null,
+        });
       }
 
       properties.queries = queries;
@@ -2569,16 +2579,14 @@ async function parseWebElementProperties(
       );
       variant ??= "default";
 
-      const placeholder =
-        String(
-          getPropertyValueByLabel(
-            componentProperty.properties,
-            "placeholder-text",
-          ),
-        ) || null;
+      const placeholder = getPropertyValueByLabel(
+        componentProperty.properties,
+        "placeholder-text",
+      );
 
       properties.variant = variant;
-      properties.placeholder = placeholder;
+      properties.placeholder =
+        placeholder !== null ? String(placeholder) : null;
       break;
     }
     case "text": {
