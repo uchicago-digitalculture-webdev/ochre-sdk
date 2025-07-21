@@ -1942,8 +1942,9 @@ async function parseWebElementProperties(
   componentProperty: Property,
   elementResource: OchreResource,
 ): Promise<WebElementComponent> {
-  const componentName = componentSchema.parse(
-    componentProperty.values[0]!.content,
+  const unparsedComponentName = componentProperty.values[0]!.content;
+  const { data: componentName } = componentSchema.safeParse(
+    unparsedComponentName,
   );
 
   const properties: Record<string, unknown> = { component: componentName };
@@ -2206,17 +2207,6 @@ async function parseWebElementProperties(
       properties.entriesId = entriesLink.uuid;
       properties.variant = variant;
       properties.isFilterDisplayed = isFilterDisplayed;
-      break;
-    }
-    case "filter-categories": {
-      const filterLink = links.find((link) => link.category === "set");
-      if (!filterLink) {
-        throw new Error(
-          `Filter link not found for the following component: “${componentName}”`,
-        );
-      }
-
-      properties.filterId = filterLink.uuid;
       break;
     }
     case "iframe": {
@@ -2504,8 +2494,12 @@ async function parseWebElementProperties(
       break;
     }
     case "query": {
-      const queries: Array<{ label: string; propertyUuids: Array<string> }> =
-        [];
+      const queries: Array<{
+        label: string;
+        propertyUuids: Array<string>;
+        startIcon: string | null;
+        endIcon: string | null;
+      }> = [];
 
       const queryProperties = componentProperty.properties;
       if (queryProperties.length === 0) {
@@ -2516,16 +2510,25 @@ async function parseWebElementProperties(
 
       for (const query of queryProperties) {
         const querySubProperties = query.properties;
+
         const label = String(
           getPropertyValueByLabel(querySubProperties, "query-prompt"),
         );
+
         const propertyUuids =
           querySubProperties
             .find((property) => property.label === "use-property")
             ?.values.map((value) => value.uuid)
             .filter((uuid) => uuid !== null) ?? [];
 
-        queries.push({ label, propertyUuids });
+        const startIcon =
+          String(getPropertyValueByLabel(querySubProperties, "start-icon")) ||
+          null;
+        const endIcon =
+          String(getPropertyValueByLabel(querySubProperties, "end-icon")) ||
+          null;
+
+        queries.push({ label, propertyUuids, startIcon, endIcon });
       }
 
       properties.queries = queries;
@@ -2549,7 +2552,16 @@ async function parseWebElementProperties(
       );
       variant ??= "default";
 
+      const placeholder =
+        String(
+          getPropertyValueByLabel(
+            componentProperty.properties,
+            "placeholder-text",
+          ),
+        ) || null;
+
       properties.variant = variant;
+      properties.placeholder = placeholder;
       break;
     }
     case "text": {
@@ -2610,7 +2622,7 @@ async function parseWebElementProperties(
     }
     default: {
       console.warn(
-        `Invalid or non-implemented component name “${componentName as string}” for the following element: “${parseStringContent(
+        `Invalid or non-implemented component name “${String(unparsedComponentName)}” for the following element: “${parseStringContent(
           elementResource.identification.label as OchreStringContent,
         )}”`,
       );

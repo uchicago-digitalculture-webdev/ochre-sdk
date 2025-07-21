@@ -485,6 +485,22 @@ export type Gallery = {
 };
 
 /**
+ * Represents a property query item with its item and value UUIDs
+ */
+export type PropertyQueryItem = {
+  value: {
+    uuid: string | null;
+    category: string | null;
+    type: string | null;
+    dataType: string;
+    publicationDateTime: string | null;
+    content: string;
+    label: string | null;
+  };
+  resultUuids: Array<string>;
+};
+
+/**
  * Represents a metadata object given a UUID
  */
 export type UuidMetadata = {
@@ -666,7 +682,6 @@ export type WebElementComponent =
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
     }
   | { component: "empty-space"; height: string | null; width: string | null }
-  | { component: "filter-categories"; filterId: string }
   | {
       component: "iframe";
       href: string;
@@ -708,9 +723,18 @@ export type WebElementComponent =
   | { component: "network-graph" }
   | {
       component: "query";
-      queries: Array<{ label: string; propertyUuids: Array<string> }>;
+      queries: Array<{
+        label: string;
+        propertyUuids: Array<string>;
+        startIcon: string | null;
+        endIcon: string | null;
+      }>;
     }
-  | { component: "search-bar"; variant: "default" | "full" }
+  | {
+      component: "search-bar";
+      variant: "default" | "full";
+      placeholder: string | null;
+    }
   | { component: "table"; tableId: string }
   | {
       component: "text";

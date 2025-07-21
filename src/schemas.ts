@@ -59,7 +59,6 @@ export const componentSchema = z.enum(
     "collection",
     "empty-space",
     "entries",
-    "filter-categories",
     "iframe",
     "iiif-viewer",
     "image",
