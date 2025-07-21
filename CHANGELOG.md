@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.2
+
+### Patch Changes
+
+- 58536ba: feat: add properties support to OchreConcept and Concept types, and update parsing logic to handle properties
+
 ## 0.9.1
 
 ### Patch Changes
