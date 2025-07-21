@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.5
+
+### Patch Changes
+
+- 3b92327: fix: enhance error handling and type safety in parseWebElementProperties function
+
 ## 0.9.4
 
 ### Patch Changes
