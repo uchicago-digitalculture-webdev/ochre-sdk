@@ -314,6 +314,7 @@ export type Concept = {
   context: Context | null;
   identification: Identification;
   interpretations: Array<Interpretation>;
+  properties: Array<Property>;
 };
 
 /**

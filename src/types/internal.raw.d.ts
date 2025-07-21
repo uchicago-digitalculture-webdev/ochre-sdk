@@ -304,6 +304,7 @@ export type OchreConcept = {
   interpretations?: {
     interpretation: OchreInterpretation | Array<OchreInterpretation>;
   };
+  properties?: { property: OchreProperty | Array<OchreProperty> };
 };
 
 /**

@@ -1836,6 +1836,14 @@ export function parseConcept(concept: OchreConcept): Concept {
           : [concept.interpretations.interpretation],
         )
       : [],
+    properties:
+      concept.properties ?
+        parseProperties(
+          Array.isArray(concept.properties.property) ?
+            concept.properties.property
+          : [concept.properties.property],
+        )
+      : [],
   };
 
   return returnConcept;
