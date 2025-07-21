@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.7
+
+### Patch Changes
+
+- 24d2d9c: feat: introduce WebTitle type and refactor title handling in WebElement and WebBlock
+
 ## 0.9.6
 
 ### Patch Changes
