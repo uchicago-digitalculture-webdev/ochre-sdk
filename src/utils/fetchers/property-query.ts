@@ -70,7 +70,7 @@ function buildXQuery(
   const xquery = `for $q in input()/ochre[@uuidBelongsTo="${PROJECT_SCOPE}"]/*${collectionScopeFilter}/properties//property[label[${propertyFilters}]]
 return <item>
 <property>{xs:string($q/label/@uuid)}</property> {$q/*[2]}
-<value>{$q/*[2]/@uuid} {$q/*[2]/content[1]/string/text()}</value>
+<value>{$q/*[2]/@*} {$q/*[2]/content[1]/string/text()}</value>
 <category> {$q/ancestor::node()[local-name(.)="properties"]/../@uuid}  {local-name($q/ancestor::node()[local-name(.)="properties"]/../self::node())} </category>
 </item>`;
 
