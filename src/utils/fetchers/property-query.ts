@@ -132,19 +132,19 @@ export async function fetchPropertyQuery(
     for (const item of parsedItems) {
       const categoryUuid = item.category.uuid;
       const valueUuid = item.value.uuid;
-      const valueContent = item.value.content ?? item.value.rawValue ?? "";
+      const valueContent = item.value.rawValue ?? item.value.content ?? "";
 
       if (valueContent in items) {
         items[valueContent]!.resultUuids.push(categoryUuid);
       } else {
         items[valueContent] = {
           value: {
-            uuid: valueUuid ?? UNASSIGNED_UUID,
+            uuid: valueUuid ?? null,
             category: item.value.category ?? null,
             type: item.value.type ?? null,
             dataType: item.value.dataType,
             publicationDateTime: item.value.publicationDateTime ?? null,
-            content: item.value.content ?? item.value.rawValue ?? "",
+            content: item.value.rawValue ?? item.value.content ?? "",
             label:
               item.value.rawValue != null && item.value.content != null ?
                 item.value.content
