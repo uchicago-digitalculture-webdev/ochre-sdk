@@ -67,6 +67,7 @@ import type {
   WebSectionSidebarItem,
   Website,
   WebsiteProperties,
+  WebTitle,
 } from "../types/main.js";
 import {
   componentSchema,
@@ -2676,6 +2677,62 @@ async function parseWebElementProperties(
   return properties as WebElementComponent;
 }
 
+function parseWebTitle(
+  properties: Array<Property>,
+  identification: Identification,
+  overrides: {
+    isNameDisplayed?: boolean;
+    isDescriptionDisplayed?: boolean;
+    isDateDisplayed?: boolean;
+    isCreatorsDisplayed?: boolean;
+    isCountDisplayed?: boolean;
+  } = {},
+): WebTitle {
+  const titleProperties = properties.find(
+    (property) =>
+      property.label === "presentation" &&
+      property.values[0]!.content === "title",
+  )?.properties;
+
+  let variant: "default" | "simple" = "default";
+  let isNameDisplayed = overrides.isNameDisplayed ?? false;
+  let isDescriptionDisplayed = false;
+  let isDateDisplayed = false;
+  let isCreatorsDisplayed = false;
+  let isCountDisplayed = overrides.isCountDisplayed ?? false;
+
+  if (titleProperties) {
+    const titleVariant = getPropertyValueByLabel(titleProperties, "variant");
+    if (titleVariant) {
+      variant = titleVariant as "default" | "simple";
+    }
+
+    isNameDisplayed =
+      getPropertyValueByLabel(titleProperties, "name-displayed") === true;
+    isDescriptionDisplayed =
+      getPropertyValueByLabel(titleProperties, "description-displayed") ===
+      true;
+    isDateDisplayed =
+      getPropertyValueByLabel(titleProperties, "date-displayed") === true;
+    isCreatorsDisplayed =
+      getPropertyValueByLabel(titleProperties, "creators-displayed") === true;
+    isCountDisplayed =
+      getPropertyValueByLabel(titleProperties, "count-displayed") === true;
+  }
+
+  return {
+    label: identification.label,
+    variant,
+    properties: {
+      isNameDisplayed,
+      isDescriptionDisplayed,
+      isDateDisplayed,
+      isCreatorsDisplayed,
+      isCountDisplayed,
+    },
+  };
+}
+
 /**
  * Parses raw web element data into a standardized WebElement structure
  *
@@ -2760,53 +2817,16 @@ async function parseWebElement(
     cssStylesMobile.push({ label: property.label, value: cssStyle });
   }
 
-  const titleProperties = elementResourceProperties.find(
-    (property) =>
-      property.label === "presentation" &&
-      property.values[0]!.content === "title",
-  )?.properties;
-
-  let variant: "default" | "simple" = "default";
-  let isNameDisplayed = properties.component === "collection";
-  let isDescriptionDisplayed = false;
-  let isDateDisplayed = false;
-  let isCreatorsDisplayed = false;
-  let isCountDisplayed =
-    properties.component === "collection" && properties.variant === "full";
-
-  if (titleProperties) {
-    const titleVariant = getPropertyValueByLabel(titleProperties, "variant");
-    if (titleVariant) {
-      variant = titleVariant as "default" | "simple";
-    }
-
-    isNameDisplayed =
-      getPropertyValueByLabel(titleProperties, "name-displayed") === true;
-    isDescriptionDisplayed =
-      getPropertyValueByLabel(titleProperties, "description-displayed") ===
-      true;
-    isDateDisplayed =
-      getPropertyValueByLabel(titleProperties, "date-displayed") === true;
-    isCreatorsDisplayed =
-      getPropertyValueByLabel(titleProperties, "creators-displayed") === true;
-    isCountDisplayed =
-      getPropertyValueByLabel(titleProperties, "count-displayed") === true;
-  }
+  const title = parseWebTitle(elementResourceProperties, identification, {
+    isNameDisplayed: properties.component === "collection",
+    isCountDisplayed:
+      properties.component === "collection" && properties.variant === "full",
+  });
 
   return {
     uuid: elementResource.uuid,
     type: "element",
-    title: {
-      label: identification.label,
-      variant,
-      properties: {
-        isNameDisplayed,
-        isDescriptionDisplayed,
-        isDateDisplayed,
-        isCreatorsDisplayed,
-        isCountDisplayed,
-      },
-    },
+    title,
     isDisplayedInBlockSectionSidebar,
     cssStyles,
     cssStylesMobile,
@@ -3044,10 +3064,23 @@ async function parseWebpages(
 async function parseBlock(
   blockResource: OchreResource,
 ): Promise<WebBlock | null> {
+  const blockProperties =
+    blockResource.properties ?
+      parseProperties(
+        Array.isArray(blockResource.properties.property) ?
+          blockResource.properties.property
+        : [blockResource.properties.property],
+      )
+    : [];
+
   const returnBlock: WebBlock = {
     uuid: blockResource.uuid,
     type: "block",
     layout: "vertical",
+    title: parseWebTitle(
+      blockProperties,
+      parseIdentification(blockResource.identification),
+    ),
     items: [],
     properties: {
       spacing: undefined,
@@ -3060,15 +3093,6 @@ async function parseBlock(
     cssStyles: [],
     cssStylesMobile: [],
   };
-
-  const blockProperties =
-    blockResource.properties ?
-      parseProperties(
-        Array.isArray(blockResource.properties.property) ?
-          blockResource.properties.property
-        : [blockResource.properties.property],
-      )
-    : [];
 
   const blockMainProperties = blockProperties.find(
     (property) =>
@@ -3485,7 +3509,7 @@ export async function parseWebsite(
 
   let sidebar: Website["sidebar"] | null = null;
   const sidebarElements: Array<WebElement> = [];
-  const sidebarTitle: WebElement["title"] = {
+  const sidebarTitle: WebTitle = {
     label: "",
     variant: "default",
     properties: {

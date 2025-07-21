@@ -620,23 +620,25 @@ export type WebpageProperties = {
   cssStylesMobile: Array<Style>;
 };
 
+export type WebTitle = {
+  label: string;
+  variant: "default" | "simple";
+  properties: {
+    isNameDisplayed: boolean;
+    isDescriptionDisplayed: boolean;
+    isDateDisplayed: boolean;
+    isCreatorsDisplayed: boolean;
+    isCountDisplayed: boolean;
+  };
+};
+
 /**
  * Base properties for web elements
  */
 export type WebElement = {
   uuid: string;
   type: "element";
-  title: {
-    label: string;
-    variant: "default" | "simple";
-    properties: {
-      isNameDisplayed: boolean;
-      isDescriptionDisplayed: boolean;
-      isDateDisplayed: boolean;
-      isCreatorsDisplayed: boolean;
-      isCountDisplayed: boolean;
-    };
-  };
+  title: WebTitle;
   isDisplayedInBlockSectionSidebar: boolean;
   cssStyles: Array<Style>;
   cssStylesMobile: Array<Style>;
@@ -775,6 +777,7 @@ export type WebBlock = {
   uuid: string;
   type: "block";
   layout: "vertical" | "horizontal" | "grid";
+  title: WebTitle;
   items: Array<WebElement | WebBlock>;
   properties: {
     /**
