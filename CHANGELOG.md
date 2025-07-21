@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.4
+
+### Patch Changes
+
+- 5a7a24a: fix: update value extraction in XQuery to include all attributes for properties
+
 ## 0.9.3
 
 ### Patch Changes
