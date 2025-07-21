@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.6
+
+### Patch Changes
+
+- 4f8e708: feat: add href and slug properties to OchrePropertyValueContent and PropertyValueContent types
+
 ## 0.9.5
 
 ### Patch Changes
