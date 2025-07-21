@@ -101,10 +101,11 @@ export function parseIdentification(
           parseFakeString(identification.label as FakeString)
         : parseStringContent(identification.label as OchreStringContent),
       abbreviation: "",
+      code: identification.code ?? null,
     };
 
     for (const key of Object.keys(identification).filter(
-      (key) => key !== "label",
+      (key) => key !== "label" && key !== "code",
     )) {
       returnIdentification[key as keyof Identification] = parseStringContent(
         identification[key as keyof OchreIdentification]! as OchreStringContent,
@@ -115,7 +116,7 @@ export function parseIdentification(
   } catch (error) {
     console.error(error);
 
-    return { label: "", abbreviation: "" };
+    return { label: "", abbreviation: "", code: null };
   }
 }
 
@@ -147,11 +148,16 @@ export function parseLanguages(
  * @returns Parsed Metadata object
  */
 export function parseMetadata(metadata: OchreMetadata): Metadata {
-  let identification: Identification = { label: "", abbreviation: "" };
+  let identification: Identification = {
+    label: "",
+    abbreviation: "",
+    code: null,
+  };
   if (metadata.item) {
     if (metadata.item.label || metadata.item.abbreviation) {
       let label = "";
       let abbreviation = "";
+      let code: string | null = null;
 
       if (metadata.item.label) {
         label = parseStringContent(metadata.item.label);
@@ -159,8 +165,11 @@ export function parseMetadata(metadata: OchreMetadata): Metadata {
       if (metadata.item.abbreviation) {
         abbreviation = parseStringContent(metadata.item.abbreviation);
       }
+      if (metadata.item.identification.code) {
+        code = metadata.item.identification.code;
+      }
 
-      identification = { label, abbreviation };
+      identification = { label, abbreviation, code };
     } else {
       identification = parseIdentification(metadata.item.identification);
     }

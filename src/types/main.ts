@@ -32,7 +32,11 @@ export type DataCategory =
 /**
  * Basic identification information used across multiple types
  */
-export type Identification = { label: string; abbreviation: string };
+export type Identification = {
+  label: string;
+  abbreviation: string;
+  code: string | null;
+};
 
 /**
  * Metadata information for items including project, publisher and language details

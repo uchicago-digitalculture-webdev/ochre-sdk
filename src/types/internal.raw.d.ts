@@ -341,6 +341,7 @@ export type OchreProperty = {
 export type OchreIdentification = {
   label: OchreStringContent | FakeString;
   abbreviation?: OchreStringContent | FakeString;
+  code?: string;
   MIMEType?: string;
   widthPreview?: number;
   heightPreview?: number;
