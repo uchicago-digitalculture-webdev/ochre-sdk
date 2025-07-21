@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.3
+
+### Patch Changes
+
+- b3cf6ab: refactor: simplify property UUID handling in fetchPropertyQuery function
+
 ## 0.9.2
 
 ### Patch Changes
