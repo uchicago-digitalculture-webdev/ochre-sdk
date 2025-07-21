@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.1
+
+### Patch Changes
+
+- 4d1b675: feat: enhance Identification type by adding optional code property and update parsing logic accordingly
+
 ## 0.9.0
 
 ### Minor Changes
