@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.0
+
+### Minor Changes
+
+- 98190a6: - feat: implement property query fetcher for OCHRE API
+  - refactor: remove unused component types and enhance query component structure with additional properties
+
 ## 0.8.46
 
 ### Patch Changes
