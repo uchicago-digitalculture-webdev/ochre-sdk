@@ -809,6 +809,8 @@ export function parseProperty(
         uuid: null,
         publicationDateTime: null,
         unit: null,
+        href: null,
+        slug: null,
       };
 
       return returnValue;
@@ -907,6 +909,8 @@ export function parseProperty(
             new Date(value.publicationDateTime)
           : null,
         unit: value.unit ?? null,
+        href: value.href ?? null,
+        slug: value.slug ?? null,
       };
 
       return returnValue;
@@ -2085,12 +2089,26 @@ async function parseWebElementProperties(
       variant ??= "default";
 
       let isExternal = false;
-      let href = getPropertyValueByLabel(
+      const navigateToProperty = getPropertyByLabel(
         componentProperty.properties,
         "navigate-to",
       );
+
+      let href =
+        navigateToProperty?.values[0]?.href ??
+        navigateToProperty?.values[0]?.slug ??
+        null;
+
       if (href === null) {
-        href = getPropertyValueByLabel(componentProperty.properties, "link-to");
+        const linkToProperty = getPropertyByLabel(
+          componentProperty.properties,
+          "link-to",
+        );
+        href =
+          linkToProperty?.values[0]?.href ??
+          linkToProperty?.values[0]?.slug ??
+          null;
+
         if (href === null) {
           throw new Error(
             `Properties “navigate-to” or “link-to” not found for the following component: “${componentName}”`,

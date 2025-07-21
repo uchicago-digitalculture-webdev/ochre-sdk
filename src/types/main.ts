@@ -439,6 +439,8 @@ export type PropertyValueContent<T extends PropertyValueContentType> = {
   type: string | null;
   uuid: string | null;
   publicationDateTime: Date | null;
+  href: string | null;
+  slug: string | null;
 };
 
 /**

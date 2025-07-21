@@ -316,9 +316,10 @@ export type OchrePropertyValueContent = {
   dataType?: string;
   category?: string;
   type?: string;
-  slug?: FakeString;
+  slug?: string;
   unit?: string;
   isUncertain?: boolean;
+  href?: string;
   rawValue?: FakeString;
   content?: FakeString | OchreStringItem | Array<OchreStringItem>;
 };
@@ -383,6 +384,7 @@ export type OchreLinkItem = {
   height?: number;
   width?: number;
   href?: string;
+  slug?: string;
   fileFormat?: string;
   fileSize?: number;
   isPrimary?: boolean;
