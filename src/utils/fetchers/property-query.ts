@@ -1,4 +1,4 @@
-import type { Identification, PropertyQueryItem } from "../../types/main.js";
+import type { PropertyQueryItem } from "../../types/main.js";
 import { z } from "zod";
 
 // Hard-coded to UChicago Node (for now)
@@ -81,13 +81,13 @@ return <item>
  * Fetches and parses a property query from the OCHRE API
  *
  * @param scopeUuids - The scope UUIDs to filter by
- * @param propertyUuids - The property UUIDs to fetch
+ * @param propertyUuids - The property UUIDs to query by
  * @param customFetch - A custom fetch function to use instead of the default fetch
  * @returns The parsed property query or null if the fetch/parse fails
  *
  * @example
  * ```ts
- * const propertyQuery = await fetchPropertyQuery([{ uuid: "0c0aae37-7246-495b-9547-e25dbf5b99a3" }], [{ uuid: "9c4da06b-f15e-40af-a747-0933eaf3587e", type: "string", identification: { label: "1978" } }]);
+ * const propertyQuery = await fetchPropertyQuery(["0c0aae37-7246-495b-9547-e25dbf5b99a3"], ["9c4da06b-f15e-40af-a747-0933eaf3587e"]);
  * if (propertyQuery === null) {
  *   console.error("Failed to fetch property query");
  *   return;
@@ -101,11 +101,7 @@ return <item>
  */
 export async function fetchPropertyQuery(
   scopeUuids: Array<string>,
-  propertyUuids: Array<{
-    uuid: string;
-    type: string;
-    identification: Identification;
-  }>,
+  propertyUuids: Array<string>,
   customFetch?: (
     input: string | URL | globalThis.Request,
     init?: RequestInit,
@@ -115,10 +111,7 @@ export async function fetchPropertyQuery(
   | { items: null; error: string }
 > {
   try {
-    const xquery = buildXQuery(
-      scopeUuids,
-      propertyUuids.map((property) => property.uuid),
-    );
+    const xquery = buildXQuery(scopeUuids, propertyUuids);
 
     const response = await (customFetch ?? fetch)(
       `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(xquery)}&format=json`,
