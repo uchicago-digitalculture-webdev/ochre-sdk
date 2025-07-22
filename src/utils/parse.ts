@@ -1833,6 +1833,11 @@ export function parseConcept(concept: OchreConcept): Concept {
         parseContext(concept.context)
       : null,
     identification: parseIdentification(concept.identification),
+    image: concept.image ? parseImage(concept.image) : null,
+    description:
+      concept.description ?
+        parseStringContent(concept.description as OchreStringContent)
+      : null,
     interpretations:
       concept.interpretations ?
         parseInterpretations(

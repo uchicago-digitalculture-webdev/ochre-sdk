@@ -313,6 +313,8 @@ export type Concept = {
   license: License | null;
   context: Context | null;
   identification: Identification;
+  image: Image | null;
+  description: string | null;
   interpretations: Array<Interpretation>;
   properties: Array<Property>;
 };

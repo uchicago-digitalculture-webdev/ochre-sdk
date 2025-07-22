@@ -301,6 +301,8 @@ export type OchreConcept = {
   availability?: OchreLicense;
   context?: OchreContext;
   identification: OchreIdentification;
+  image?: OchreImage;
+  description?: OchreStringContent | FakeString;
   interpretations?: {
     interpretation: OchreInterpretation | Array<OchreInterpretation>;
   };
