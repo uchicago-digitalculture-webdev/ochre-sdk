@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.10
+
+### Patch Changes
+
+- b1c3b0d: feat: add image and description fields to OchreConcept and Concept types, and update parse function accordingly
+
 ## 0.9.9
 
 ### Patch Changes
