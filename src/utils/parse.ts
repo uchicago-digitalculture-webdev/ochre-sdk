@@ -2616,7 +2616,12 @@ async function parseWebElementProperties(
       properties.variant = variant;
       properties.placeholder =
         placeholder !== null ? String(placeholder) : null;
-      properties.baseQuery = baseQuery !== null ? String(baseQuery) : null;
+      properties.baseQuery =
+        baseQuery !== null ?
+          String(baseQuery)
+            .replaceAll(String.raw`\{`, "{")
+            .replaceAll(String.raw`\}`, "}")
+        : null;
       break;
     }
     case "text": {
