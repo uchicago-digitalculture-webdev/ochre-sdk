@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.12
+
+### Patch Changes
+
+- 6450ce7: fix: update baseQuery property handling in parseWebElementProperties function to replace escaped curly braces
+
 ## 0.9.11
 
 ### Patch Changes
