@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.11
+
+### Patch Changes
+
+- c5e7f0c: feat: add baseQuery property to "search-bar" component
+
 ## 0.9.10
 
 ### Patch Changes
