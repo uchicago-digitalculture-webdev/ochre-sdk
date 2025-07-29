@@ -2608,9 +2608,15 @@ async function parseWebElementProperties(
         "placeholder-text",
       );
 
+      const baseQuery = getPropertyValueByLabel(
+        componentProperty.properties,
+        "base-query",
+      );
+
       properties.variant = variant;
       properties.placeholder =
         placeholder !== null ? String(placeholder) : null;
+      properties.baseQuery = baseQuery !== null ? String(baseQuery) : null;
       break;
     }
     case "text": {

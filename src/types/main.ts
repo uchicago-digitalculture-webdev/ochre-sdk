@@ -745,6 +745,7 @@ export type WebElementComponent =
       component: "search-bar";
       variant: "default" | "full";
       placeholder: string | null;
+      baseQuery: string | null;
     }
   | { component: "table"; tableId: string }
   | {
