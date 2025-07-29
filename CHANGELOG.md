@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.13
+
+### Patch Changes
+
+- dc6ffeb: feat: enhance fetchWebsite function to support known abbreviations for UUIDs
+
 ## 0.9.12
 
 ### Patch Changes
