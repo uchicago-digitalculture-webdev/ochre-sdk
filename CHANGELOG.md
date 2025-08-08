@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.9.14
+
+### Patch Changes
+
+- 10f9ce2: feat: extend layout options in WebBlock type and update parseBlock function to support new layouts
+
 ## 0.9.13
 
 ### Patch Changes
