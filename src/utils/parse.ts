@@ -3123,7 +3123,9 @@ async function parseBlock(
       returnBlock.layout = layoutProperty.content as
         | "vertical"
         | "horizontal"
-        | "grid";
+        | "grid"
+        | "vertical-flex"
+        | "horizontal-flex";
     }
 
     const spacingProperty = blockMainProperties.find(

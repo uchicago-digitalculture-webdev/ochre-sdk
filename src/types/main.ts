@@ -779,7 +779,12 @@ export type Style = { label: string; value: string };
 export type WebBlock = {
   uuid: string;
   type: "block";
-  layout: "vertical" | "horizontal" | "grid";
+  layout:
+    | "vertical"
+    | "horizontal"
+    | "grid"
+    | "vertical-flex"
+    | "horizontal-flex";
   title: WebTitle;
   items: Array<WebElement | WebBlock>;
   properties: {
