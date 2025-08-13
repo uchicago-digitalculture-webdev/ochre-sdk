@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.0
+
+### Minor Changes
+
+- 84369ba: feat: update WebElementComponent type to support additional variant options and enhance parseWebElementProperties function for improved variant handling
+
 ## 0.9.14
 
 ### Patch Changes
