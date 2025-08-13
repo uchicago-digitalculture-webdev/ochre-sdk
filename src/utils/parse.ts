@@ -2635,19 +2635,46 @@ async function parseWebElementProperties(
         );
       }
 
-      let variant = getPropertyValueByLabel(
+      let variantName = "block";
+      let variant;
+
+      const variantProperty = getPropertyByLabel(
         componentProperty.properties,
         "variant",
       );
-      variant ??= "block";
+      if (variantProperty !== null) {
+        variantName = variantProperty.values[0]!.content as
+          | "title"
+          | "block"
+          | "banner"
+          | "paragraph"
+          | "label"
+          | "heading"
+          | "display";
 
-      const heading = getPropertyValueByLabel(
-        componentProperty.properties,
-        "heading",
-      );
+        if (
+          variantName === "paragraph" ||
+          variantName === "label" ||
+          variantName === "heading" ||
+          variantName === "display"
+        ) {
+          const size = getPropertyValueByLabel(
+            variantProperty.properties,
+            "size",
+          );
+
+          variant = {
+            name: variantName,
+            size: size !== null ? (size as "xs" | "sm" | "md" | "lg") : "md",
+          };
+        } else {
+          variant = { name: variantName };
+        }
+      } else {
+        variant = { name: variantName };
+      }
 
       properties.variant = variant;
-      properties.heading = heading;
       properties.content = content;
       break;
     }

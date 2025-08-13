@@ -750,8 +750,12 @@ export type WebElementComponent =
   | { component: "table"; tableId: string }
   | {
       component: "text";
-      variant: "title" | "block" | "banner";
-      heading: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | null;
+      variant:
+        | { name: "title" | "block" | "banner" }
+        | { name: "paragraph"; size: "xs" | "sm" | "md" | "lg" }
+        | { name: "label"; size: "xs" | "sm" | "md" | "lg" | "xl" }
+        | { name: "heading"; size: "xs" | "sm" | "md" | "lg" | "xl" | "2xl" }
+        | { name: "display"; size: "xs" | "sm" | "md" | "lg" };
       content: string;
     }
   | { component: "timeline"; timelineId: string }
