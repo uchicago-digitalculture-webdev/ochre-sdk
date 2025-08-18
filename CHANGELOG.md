@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.4
+
+### Patch Changes
+
+- b8a6e1c: fix: update known abbreviations for uchicago-node and add uchicago-node-staging
+
 ## 0.10.3
 
 ### Patch Changes
