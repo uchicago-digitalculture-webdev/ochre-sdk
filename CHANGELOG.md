@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.3
+
+### Patch Changes
+
+- ce8c639: fix: update entries link search to include 'set' category
+
 ## 0.10.2
 
 ### Patch Changes
