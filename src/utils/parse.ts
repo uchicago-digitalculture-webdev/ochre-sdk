@@ -771,7 +771,7 @@ export function parseEvents(events: Array<OchreEvent>): Array<Event> {
   const returnEvents: Array<Event> = [];
   for (const event of events) {
     returnEvents.push({
-      date: event.dateTime ?? null,
+      date: event.dateTime != null ? new Date(event.dateTime) : null,
       label: parseStringContent(event.label),
       agent:
         event.agent ?

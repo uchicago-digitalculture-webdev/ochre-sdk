@@ -236,7 +236,7 @@ export type Observation = {
  * Represents an event with date, label and optional agent
  */
 export type Event = {
-  date: string | null;
+  date: Date | null;
   label: string;
   agent: { uuid: string; content: string } | null;
 };
