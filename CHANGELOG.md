@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.2
+
+### Patch Changes
+
+- 04c64b8: fix: change Event date type from string to Date and update parseEvents function to instantiate Date objects
+
 ## 0.10.1
 
 ### Patch Changes
