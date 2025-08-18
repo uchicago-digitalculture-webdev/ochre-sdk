@@ -2234,7 +2234,9 @@ async function parseWebElementProperties(
       break;
     }
     case "entries": {
-      const entriesLink = links.find((link) => link.category === "tree");
+      const entriesLink = links.find(
+        (link) => link.category === "tree" || link.category === "set",
+      );
       if (!entriesLink) {
         throw new Error(
           `Entries link not found for the following component: “${componentName}”`,
