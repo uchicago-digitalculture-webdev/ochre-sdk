@@ -98,7 +98,7 @@ export type Person = {
   number: number | null;
   context: Context | null;
   availability: License | null;
-  date: Date | null;
+  date: string | null;
   identification: Identification | null;
   address: {
     country: string | null;
@@ -225,7 +225,7 @@ export type Coordinates = Array<CoordinatesItem>;
  */
 export type Observation = {
   number: number;
-  date: Date | null;
+  date: string | null;
   observers: Array<string> | Array<Person>;
   notes: Array<Note>;
   links: Array<Link>;
@@ -236,7 +236,7 @@ export type Observation = {
  * Represents an event with date, label and optional agent
  */
 export type Event = {
-  date: Date | null;
+  date: string | null;
   label: string;
   agent: { uuid: string; content: string } | null;
 };
@@ -245,7 +245,7 @@ export type Event = {
  * Represents an interpretation with date and properties
  */
 export type Interpretation = {
-  date: Date | null;
+  date: string | null;
   number: number;
   properties: Array<Property>;
 };
@@ -262,8 +262,9 @@ export type Resource = {
   context: Context | null;
   license: License | null;
   copyright: string | null;
+  watermark: string | null;
   identification: Identification;
-  date: Date | null;
+  date: string | null;
   image: Image | null;
   creators: Array<Person>;
   notes: Array<Note>;
@@ -329,7 +330,7 @@ export type Set<T extends DataCategory> = {
   publicationDateTime: Date | null;
   type: string;
   number: number;
-  date: Date | null;
+  date: string | null;
   license: License | null;
   identification: Identification;
   isSuppressingBlanks: boolean;
@@ -402,7 +403,7 @@ export type PropertyValue = {
   context: Context | null;
   availability: License | null;
   identification: Identification;
-  date: Date | null;
+  date: string | null;
   creators: Array<Person>;
   description: string;
   notes: Array<Note>;
@@ -467,7 +468,7 @@ export type Tree<T extends DataCategory, U extends DataCategory> = {
   publicationDateTime: Date | null;
   type: string;
   number: number;
-  date: Date | null;
+  date: string | null;
   license: License | null;
   identification: Identification;
   creators: Array<Person>;

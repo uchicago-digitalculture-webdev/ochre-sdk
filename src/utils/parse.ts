@@ -108,9 +108,16 @@ export function parseIdentification(
     for (const key of Object.keys(identification).filter(
       (key) => key !== "label" && key !== "code",
     )) {
-      returnIdentification[key as keyof Identification] = parseStringContent(
-        identification[key as keyof OchreIdentification]! as OchreStringContent,
-      );
+      returnIdentification[key as keyof Identification] =
+        typeof identification[key as keyof OchreIdentification] === "string" ?
+          parseFakeString(
+            identification[key as keyof OchreIdentification]! as FakeString,
+          )
+        : parseStringContent(
+            identification[
+              key as keyof OchreIdentification
+            ]! as OchreStringContent,
+          );
     }
 
     return returnIdentification;
@@ -295,7 +302,7 @@ export function parsePerson(person: OchrePerson): Person {
     type: person.type ?? null,
     number: person.n ?? null,
     context: person.context ? parseContext(person.context) : null,
-    date: person.date != null ? new Date(person.date) : null,
+    date: person.date ?? null,
     identification:
       person.identification ? parseIdentification(person.identification) : null,
     availability:
@@ -694,7 +701,7 @@ export function parseCoordinates(
 export function parseObservation(observation: OchreObservation): Observation {
   return {
     number: observation.observationNo,
-    date: observation.date != null ? new Date(observation.date) : null,
+    date: observation.date ?? null,
     observers:
       observation.observers != null ?
         (
@@ -764,7 +771,7 @@ export function parseEvents(events: Array<OchreEvent>): Array<Event> {
   const returnEvents: Array<Event> = [];
   for (const event of events) {
     returnEvents.push({
-      date: event.dateTime != null ? new Date(event.dateTime) : null,
+      date: event.dateTime ?? null,
       label: parseStringContent(event.label),
       agent:
         event.agent ?
@@ -968,7 +975,7 @@ export function parseInterpretations(
   const returnInterpretations: Array<Interpretation> = [];
   for (const interpretation of interpretations) {
     returnInterpretations.push({
-      date: new Date(interpretation.date),
+      date: interpretation.date,
       number: interpretation.interpretationNo,
       properties:
         interpretation.properties ?
@@ -1221,7 +1228,7 @@ export function parsePropertyValue(
         parseLicense(propertyValue.availability)
       : null,
     identification: parseIdentification(propertyValue.identification),
-    date: propertyValue.date ? new Date(propertyValue.date) : null,
+    date: propertyValue.date ?? null,
     creators:
       propertyValue.creators ?
         parsePersons(
@@ -1301,7 +1308,7 @@ export function parseTree<T extends DataCategory, U extends DataCategory>(
 
   let date = null;
   if (tree.date != null) {
-    date = new Date(tree.date);
+    date = tree.date;
   }
 
   const parsedItemCategory =
@@ -1558,7 +1565,7 @@ export function parseSet<T extends DataCategory>(
     itemCategory: itemCategory!,
     publicationDateTime:
       set.publicationDateTime ? new Date(set.publicationDateTime) : null,
-    date: set.date != null ? new Date(set.date) : null,
+    date: set.date ?? null,
     license: parseLicense(set.availability),
     identification: parseIdentification(set.identification),
     isSuppressingBlanks: set.suppressBlanks ?? false,
@@ -1617,10 +1624,14 @@ export function parseResource(resource: OchreResource): Resource {
       : null,
     copyright:
       "copyright" in resource && resource.copyright != null ?
-        parseFakeString(resource.copyright)
+        parseStringContent(resource.copyright)
+      : null,
+    watermark:
+      "watermark" in resource && resource.watermark != null ?
+        parseStringContent(resource.watermark)
       : null,
     identification: parseIdentification(resource.identification),
-    date: resource.date != null ? new Date(resource.date) : null,
+    date: resource.date ?? null,
     image: resource.image ? parseImage(resource.image) : null,
     creators:
       resource.creators ?

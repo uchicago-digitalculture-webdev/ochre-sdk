@@ -246,7 +246,8 @@ export type OchreResource = {
   slug?: string;
   context?: OchreContext;
   availability?: OchreLicense;
-  copyright?: FakeString;
+  copyright?: OchreStringContent;
+  watermark?: OchreStringContent;
   identification: OchreIdentification;
   href?: string;
   description?: OchreStringContent | FakeString;
