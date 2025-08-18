@@ -3,7 +3,8 @@ import type { Website } from "../../types/main.js";
 import { parseIdentification, parseWebsite } from "../parse.js";
 
 const KNOWN_ABBREVIATIONS: Record<string, string> = {
-  "uchicago-node": "62b60a47-fad5-49d7-a06a-2fa059f6e79a",
+  "uchicago-node": "60a1e386-7e53-4e14-b8cf-fb4ed953d57e",
+  "uchicago-node-staging": "62b60a47-fad5-49d7-a06a-2fa059f6e79a",
   "guerrilla-television": "fad1e1bd-989d-4159-b195-4c32adc5cdc7",
   "mapping-chicagoland": "8db5e83e-0c06-48b7-b4ac-a060d9bb5689",
   "hannah-papanek": "20b2c919-021f-4774-b2c3-2f1ae5b910e7",
