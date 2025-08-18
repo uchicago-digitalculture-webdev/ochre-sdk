@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.1
+
+### Patch Changes
+
+- 1e9814f: feat: update date fields to use string type and enhance OchreResource type with copyright and watermark properties
+
 ## 0.10.0
 
 ### Minor Changes
