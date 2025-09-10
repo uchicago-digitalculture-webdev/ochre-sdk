@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.7
+
+### Patch Changes
+
+- 1b57094: feat: enhance string parsing for text styling annotations
+
 ## 0.10.6
 
 ### Patch Changes
