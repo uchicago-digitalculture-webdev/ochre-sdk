@@ -1,5 +1,6 @@
 import type {
   FakeString,
+  OchrePropertyValueContent,
   OchreStringContent,
   OchreStringItem,
   OchreStringRichTextItem,
@@ -12,7 +13,8 @@ import {
 
 const PRESENTATION_ITEM_UUID = "f1c131b6-1498-48a4-95bf-a9edae9fd518";
 const TEXT_ANNOTATION_UUID = "b9ca2732-78f4-416e-b77f-dae7647e68a9";
-const TEXT_ANNOTATION_HEADING_UUID = "3e6f86ab-df81-45ae-8257-e2867357df56";
+const TEXT_ANNOTATION_TEXT_STYLING_UUID =
+  "3e6f86ab-df81-45ae-8257-e2867357df56";
 
 /**
  * Finds a string item in an array by language code
@@ -447,9 +449,37 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
 
                 if (
                   textAnnotationPropertyValueUuid ===
-                  TEXT_ANNOTATION_HEADING_UUID
+                    TEXT_ANNOTATION_TEXT_STYLING_UUID &&
+                  textAnnotationProperty.property != null
                 ) {
-                  return `<Annotation type="heading">${itemString}</Annotation>`;
+                  const textStylingProperty =
+                    Array.isArray(textAnnotationProperty.property) ?
+                      textAnnotationProperty.property[0]!
+                    : textAnnotationProperty.property;
+
+                  const textStylingPropertyVariant = parseFakeString(
+                    (textStylingProperty.value as OchrePropertyValueContent)
+                      .content as FakeString,
+                  );
+
+                  const textStylingSizeProperty =
+                    textStylingProperty.property != null ?
+                      Array.isArray(textStylingProperty.property) ?
+                        textStylingProperty.property[0]!
+                      : textStylingProperty.property
+                    : null;
+
+                  let textStylingSize = "md";
+                  if (textStylingSizeProperty != null) {
+                    const textStylingSizePropertyValue = parseFakeString(
+                      (
+                        textStylingSizeProperty.value as OchrePropertyValueContent
+                      ).content as FakeString,
+                    );
+                    textStylingSize = textStylingSizePropertyValue;
+                  }
+
+                  return `<Annotation type="text-styling" variant="${textStylingPropertyVariant}" size="${textStylingSize}">${itemString}</Annotation>`;
                 }
               }
             }
