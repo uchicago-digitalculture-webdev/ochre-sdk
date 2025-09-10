@@ -694,6 +694,7 @@ export type WebElementComponent =
       label: string;
       startIcon: string | null;
       endIcon: string | null;
+      image: WebImage | null;
     }
   | {
       component: "collection";
@@ -789,20 +790,29 @@ export type WebImage = {
  */
 export type Style = { label: string; value: string };
 
+export type WebBlockLayout =
+  | "vertical"
+  | "horizontal"
+  | "grid"
+  | "vertical-flex"
+  | "horizontal-flex"
+  | "accordion";
+
 /**
  * Represents a block of vertical or horizontal content alignment
  */
-export type WebBlock = {
+export type WebBlock<T extends WebBlockLayout = WebBlockLayout> = {
   uuid: string;
   type: "block";
-  layout:
-    | "vertical"
-    | "horizontal"
-    | "grid"
-    | "vertical-flex"
-    | "horizontal-flex";
+  layout: T;
   title: WebTitle;
-  items: Array<WebElement | WebBlock>;
+  items: T extends "accordion" ?
+    Array<
+      Extract<WebElement, { component: "text" }> & {
+        items: Array<WebElement | WebBlock>;
+      }
+    >
+  : Array<WebElement | WebBlock>;
   properties: {
     /**
      * valid `gridTemplateColumns` or `gridTemplateRows` CSS property value

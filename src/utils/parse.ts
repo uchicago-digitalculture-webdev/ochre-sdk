@@ -2186,6 +2186,17 @@ async function parseWebElementProperties(
         endIcon = endIconProperty;
       }
 
+      let image: WebImage | null = null;
+      if (imageLinks.length > 0) {
+        image = {
+          url: `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLinks[0]!.uuid}&load`,
+          label: imageLinks[0]!.identification?.label ?? null,
+          width: imageLinks[0]!.image?.width ?? 0,
+          height: imageLinks[0]!.image?.height ?? 0,
+          description: imageLinks[0]!.description ?? null,
+        };
+      }
+
       properties.variant = variant;
       properties.href = href;
       properties.isExternal = isExternal;
@@ -2201,6 +2212,7 @@ async function parseWebElementProperties(
           );
       properties.startIcon = startIcon;
       properties.endIcon = endIcon;
+      properties.image = image;
       break;
     }
     case "collection": {
