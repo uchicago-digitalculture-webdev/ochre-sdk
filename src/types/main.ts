@@ -100,6 +100,7 @@ export type Person = {
   availability: License | null;
   date: string | null;
   identification: Identification | null;
+  image: Image | null;
   address: {
     country: string | null;
     city: string | null;
@@ -111,12 +112,19 @@ export type Person = {
   notes: Array<Note>;
   events: Array<Event>;
   properties: Array<Property>;
+  bibliographies: Array<Bibliography>;
 };
 
 /**
  * Represents a note with number, title and content
  */
-export type Note = { number: number; title: string | null; content: string };
+export type Note = {
+  number: number;
+  title: string | null;
+  date: string | null;
+  authors: Array<Person>;
+  content: string;
+};
 
 /**
  * Represents an image with its metadata and content
@@ -239,6 +247,9 @@ export type Event = {
   date: Date | null;
   label: string;
   agent: { uuid: string; content: string } | null;
+  location: { uuid: string; content: string } | null;
+  comment: string | null;
+  value: string | null;
 };
 
 /**

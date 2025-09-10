@@ -307,6 +307,7 @@ export function parsePerson(person: OchrePerson): Person {
       person.identification ? parseIdentification(person.identification) : null,
     availability:
       person.availability ? parseLicense(person.availability) : null,
+    image: person.image ? parseImage(person.image) : null,
     address:
       person.address ?
         {
@@ -349,6 +350,14 @@ export function parsePerson(person: OchrePerson): Person {
           Array.isArray(person.properties.property) ?
             person.properties.property
           : [person.properties.property],
+        )
+      : [],
+    bibliographies:
+      person.bibliographies ?
+        parseBibliographies(
+          Array.isArray(person.bibliographies.bibliography) ?
+            person.bibliographies.bibliography
+          : [person.bibliographies.bibliography],
         )
       : [],
   };
@@ -568,7 +577,13 @@ export function parseNotes(
         continue;
       }
 
-      returnNotes.push({ number: -1, title: null, content: note });
+      returnNotes.push({
+        number: -1,
+        title: null,
+        date: null,
+        authors: [],
+        content: note,
+      });
       continue;
     }
 
@@ -607,6 +622,15 @@ export function parseNotes(
         noteWithLanguage.title != null ?
           parseFakeString(noteWithLanguage.title)
         : null,
+      date: note.date ?? null,
+      authors:
+        note.authors ?
+          parsePersons(
+            Array.isArray(note.authors.person) ?
+              note.authors.person
+            : [note.authors.person],
+          )
+        : [],
       content,
     });
   }
@@ -773,6 +797,13 @@ export function parseEvents(events: Array<OchreEvent>): Array<Event> {
     returnEvents.push({
       date: event.dateTime != null ? new Date(event.dateTime) : null,
       label: parseStringContent(event.label),
+      location:
+        event.location ?
+          {
+            uuid: event.location.uuid,
+            content: parseFakeString(event.location.content),
+          }
+        : null,
       agent:
         event.agent ?
           {
@@ -780,6 +811,8 @@ export function parseEvents(events: Array<OchreEvent>): Array<Event> {
             content: parseFakeString(event.agent.content),
           }
         : null,
+      comment: event.comment ? parseFakeString(event.comment) : null,
+      value: event.value ? parseFakeString(event.value) : null,
     });
   }
 

@@ -477,6 +477,8 @@ export type OchreNote =
   | string
   | {
       noteNo: number;
+      date?: string; // YYYY-MM-DD
+      authors?: { person: OchrePerson | Array<OchrePerson> };
       content: OchreStringRichText | Array<OchreStringRichText>;
     };
 
@@ -553,6 +555,7 @@ export type OchrePerson = {
   n?: number;
   context?: OchreContext;
   availability?: OchreLicense;
+  image?: OchreImage;
   address?: { country?: string; city?: string; state?: string };
   description?: OchreStringContent | FakeString;
   coordinates?: OchreCoordinates;
@@ -560,6 +563,9 @@ export type OchrePerson = {
   notes?: { note: OchreNote | Array<OchreNote> };
   events?: { event: OchreEvent | Array<OchreEvent> };
   properties?: { property: OchreProperty | Array<OchreProperty> };
+  bibliographies?: {
+    bibliography: OchreBibliography | Array<OchreBibliography>;
+  };
 };
 
 /**
@@ -627,8 +633,10 @@ export type OchreCoordinates = {
 export type OchreEvent = {
   dateTime?: string; // YYYY-MM-DD
   agent?: { uuid: string; content: FakeString };
+  location?: { uuid: string; content: FakeString };
   comment?: FakeString;
   label: OchreStringContent;
+  value?: FakeString;
 };
 
 /**
