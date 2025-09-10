@@ -2201,15 +2201,9 @@ async function parseWebElementProperties(
       properties.href = href;
       properties.isExternal = isExternal;
       properties.label =
-        (
-          ["string", "number", "boolean"].includes(
-            typeof elementResource.identification.label,
-          )
-        ) ?
-          parseFakeString(elementResource.identification.label as FakeString)
-        : parseStringContent(
-            elementResource.identification.label as OchreStringContent,
-          );
+        elementResource.document && "content" in elementResource.document ?
+          parseDocument(elementResource.document.content)
+        : null;
       properties.startIcon = startIcon;
       properties.endIcon = endIcon;
       properties.image = image;
