@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.6
+
+### Patch Changes
+
+- 776d83e: feat: extend WebElement and WebBlock types to include image handling
+
 ## 0.10.5
 
 ### Patch Changes
