@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.5
+
+### Patch Changes
+
+- afb81d6: feat: enhance data models with additional fields for notes, persons, and events
+
 ## 0.10.4
 
 ### Patch Changes
