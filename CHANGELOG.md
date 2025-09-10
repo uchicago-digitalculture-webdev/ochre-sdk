@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.8
+
+### Patch Changes
+
+- 737487e: fix: update label parsing logic for "button" ocmponent
+
 ## 0.10.7
 
 ### Patch Changes
