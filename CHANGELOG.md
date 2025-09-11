@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.10
+
+### Patch Changes
+
+- f1b8502: feat: improve text styling annotation parsing with variant and CSS support
+
 ## 0.10.9
 
 ### Patch Changes
