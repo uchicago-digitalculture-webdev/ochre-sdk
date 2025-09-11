@@ -5,6 +5,7 @@ import type {
   OchreStringItem,
   OchreStringRichTextItem,
 } from "../types/internal.raw.js";
+import type { Style } from "../types/main.js";
 import {
   emailSchema,
   renderOptionsSchema,
@@ -15,6 +16,8 @@ const PRESENTATION_ITEM_UUID = "f1c131b6-1498-48a4-95bf-a9edae9fd518";
 const TEXT_ANNOTATION_UUID = "b9ca2732-78f4-416e-b77f-dae7647e68a9";
 const TEXT_ANNOTATION_TEXT_STYLING_UUID =
   "3e6f86ab-df81-45ae-8257-e2867357df56";
+const TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID =
+  "e1647bef-d801-4100-bdde-d081c422f763";
 
 /**
  * Finds a string item in an array by language code
@@ -452,34 +455,75 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
                     TEXT_ANNOTATION_TEXT_STYLING_UUID &&
                   textAnnotationProperty.property != null
                 ) {
-                  const textStylingProperty =
-                    Array.isArray(textAnnotationProperty.property) ?
-                      textAnnotationProperty.property[0]!
-                    : textAnnotationProperty.property;
-
-                  const textStylingPropertyVariant = parseFakeString(
-                    (textStylingProperty.value as OchrePropertyValueContent)
-                      .content as FakeString,
-                  );
-
-                  const textStylingSizeProperty =
-                    textStylingProperty.property != null ?
-                      Array.isArray(textStylingProperty.property) ?
-                        textStylingProperty.property[0]!
-                      : textStylingProperty.property
-                    : null;
-
+                  const textStylingType = "text-styling";
+                  let textStylingVariant = "default";
                   let textStylingSize = "md";
-                  if (textStylingSizeProperty != null) {
-                    const textStylingSizePropertyValue = parseFakeString(
-                      (
-                        textStylingSizeProperty.value as OchrePropertyValueContent
-                      ).content as FakeString,
-                    );
-                    textStylingSize = textStylingSizePropertyValue;
+                  let textStylingCss: Array<Style> = [];
+
+                  const textStylingProperties =
+                    Array.isArray(textAnnotationProperty.property) ?
+                      textAnnotationProperty.property
+                    : [textAnnotationProperty.property];
+
+                  if (textStylingProperties.length > 0) {
+                    const textStylingVariantProperty =
+                      textStylingProperties.find(
+                        (property) =>
+                          property.label.uuid ===
+                          TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
+                      );
+                    if (textStylingVariantProperty != null) {
+                      const textStylingPropertyVariant = parseFakeString(
+                        (
+                          textStylingVariantProperty.value as OchrePropertyValueContent
+                        ).content as FakeString,
+                      );
+
+                      const textStylingSizeProperty =
+                        textStylingVariantProperty.property != null ?
+                          Array.isArray(textStylingVariantProperty.property) ?
+                            textStylingVariantProperty.property[0]!
+                          : textStylingVariantProperty.property
+                        : null;
+
+                      if (textStylingSizeProperty != null) {
+                        const textStylingSizePropertyValue = parseFakeString(
+                          (
+                            textStylingSizeProperty.value as OchrePropertyValueContent
+                          ).content as FakeString,
+                        );
+                        textStylingSize = textStylingSizePropertyValue;
+                      }
+
+                      textStylingVariant = textStylingPropertyVariant;
+                    }
+
+                    const textStylingCssProperties =
+                      textStylingProperties.filter(
+                        (property) =>
+                          property.label.uuid !==
+                          TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
+                      );
+                    if (textStylingCssProperties.length > 0) {
+                      textStylingCss = textStylingCssProperties.map(
+                        (property) => ({
+                          label: parseFakeString(
+                            property.label.content as FakeString,
+                          ),
+                          value: parseFakeString(
+                            (property.value as OchrePropertyValueContent)
+                              .content as FakeString,
+                          ),
+                        }),
+                      );
+                    }
                   }
 
-                  return `<Annotation type="text-styling" variant="${textStylingPropertyVariant}" size="${textStylingSize}">${itemString}</Annotation>`;
+                  return `<Annotation type="${textStylingType}" variant="${textStylingVariant}" size="${textStylingSize}"${
+                    textStylingCss.length > 0 ?
+                      ` cssStyles={${JSON.stringify(textStylingCss)}}`
+                    : ""
+                  }>${itemString}</Annotation>`;
                 }
               }
             }
