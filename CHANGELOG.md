@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.9
+
+### Patch Changes
+
+- 57cd85a: fix: correct author property in OchreNote type and update parsing logic
+
 ## 0.10.8
 
 ### Patch Changes
