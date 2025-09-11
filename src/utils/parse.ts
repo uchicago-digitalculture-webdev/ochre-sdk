@@ -626,9 +626,9 @@ export function parseNotes(
       authors:
         note.authors ?
           parsePersons(
-            Array.isArray(note.authors.person) ?
-              note.authors.person
-            : [note.authors.person],
+            Array.isArray(note.authors.author) ?
+              note.authors.author
+            : [note.authors.author],
           )
         : [],
       content,

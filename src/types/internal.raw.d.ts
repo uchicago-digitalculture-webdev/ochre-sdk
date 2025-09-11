@@ -478,7 +478,7 @@ export type OchreNote =
   | {
       noteNo: number;
       date?: string; // YYYY-MM-DD
-      authors?: { person: OchrePerson | Array<OchrePerson> };
+      authors?: { author: OchrePerson | Array<OchrePerson> };
       content: OchreStringRichText | Array<OchreStringRichText>;
     };
 
