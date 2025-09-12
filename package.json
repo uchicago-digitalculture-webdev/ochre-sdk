@@ -60,13 +60,13 @@
     "@antfu/eslint-config": "^5.3.0",
     "@arethetypeswrong/cli": "^0.18.2",
     "@changesets/cli": "^2.29.7",
-    "@types/node": "^24.3.1",
+    "@types/node": "^24.3.2",
     "eslint": "^9.35.0",
     "prettier": "^3.6.2",
     "terser": "^5.44.0",
-    "tsdown": "^0.15.0",
+    "tsdown": "^0.15.1",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   },
-  "packageManager": "pnpm@10.15.1"
+  "packageManager": "pnpm@10.16.0"
 }
