@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.11
+
+### Patch Changes
+
+- 97f1daa: fix: make content property optional in OchreNote type and enhance parsing logic for null content
+
 ## 0.10.10
 
 ### Patch Changes
