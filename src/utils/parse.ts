@@ -596,6 +596,10 @@ export function parseNotes(
         : [note.content]
       : [];
 
+    if (notesToParse.length === 0) {
+      continue;
+    }
+
     let noteWithLanguage = notesToParse.find((item) => item.lang === language);
     if (!noteWithLanguage) {
       noteWithLanguage = notesToParse[0];
