@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.12
+
+### Patch Changes
+
+- 1aef7da: fix: add check to skip empty notes in parseNotes function
+
 ## 0.10.11
 
 ### Patch Changes
