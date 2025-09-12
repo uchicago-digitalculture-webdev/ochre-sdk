@@ -590,7 +590,11 @@ export function parseNotes(
     let content = "";
 
     const notesToParse =
-      Array.isArray(note.content) ? note.content : [note.content];
+      note.content != null ?
+        Array.isArray(note.content) ?
+          note.content
+        : [note.content]
+      : [];
 
     let noteWithLanguage = notesToParse.find((item) => item.lang === language);
     if (!noteWithLanguage) {

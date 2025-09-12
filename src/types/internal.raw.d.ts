@@ -479,7 +479,7 @@ export type OchreNote =
       noteNo: number;
       date?: string; // YYYY-MM-DD
       authors?: { author: OchrePerson | Array<OchrePerson> };
-      content: OchreStringRichText | Array<OchreStringRichText>;
+      content?: OchreStringRichText | Array<OchreStringRichText>;
     };
 
 /**
