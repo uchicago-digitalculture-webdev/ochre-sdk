@@ -809,17 +809,14 @@ export function parseEvents(events: Array<OchreEvent>): Array<Event> {
         event.location ?
           {
             uuid: event.location.uuid,
-            content: parseFakeString(event.location.content),
+            content: parseStringContent(event.location),
           }
         : null,
       agent:
         event.agent ?
-          {
-            uuid: event.agent.uuid,
-            content: parseFakeString(event.agent.content),
-          }
+          { uuid: event.agent.uuid, content: parseStringContent(event.agent) }
         : null,
-      comment: event.comment ? parseFakeString(event.comment) : null,
+      comment: event.comment ? parseStringContent(event.comment) : null,
       value: event.value ? parseFakeString(event.value) : null,
     });
   }

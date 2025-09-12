@@ -632,9 +632,9 @@ export type OchreCoordinates = {
  */
 export type OchreEvent = {
   dateTime?: string; // YYYY-MM-DD
-  agent?: { uuid: string; content: FakeString };
-  location?: { uuid: string; content: FakeString };
-  comment?: FakeString;
+  agent?: { uuid: string } & OchreStringContent;
+  location?: { uuid: string } & OchreStringContent;
+  comment?: OchreStringContent;
   label: OchreStringContent;
   value?: FakeString;
 };
