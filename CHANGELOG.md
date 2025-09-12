@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.13
+
+### Patch Changes
+
+- 660bdf6: refactor: update OchreEvent type to use OchreStringContent and enhance parsing logic
+
 ## 0.10.12
 
 ### Patch Changes
