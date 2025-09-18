@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.15
+
+### Patch Changes
+
+- 4ca14d4: fix: improve whitespace handling in parseStringItem and parseStringDocumentItem functions
+
 ## 0.10.14
 
 ### Patch Changes
