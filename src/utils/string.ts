@@ -222,6 +222,11 @@ export function parseStringItem(item: OchreStringItem): string {
                 parseWhitespace(renderedText, stringItem.whitespace)
               : renderedText;
 
+            // if (stringItem.whitespace === "leading trailing") {
+            //   console.log(whitespacedText);
+            // }
+            console.log(stringItem.whitespace);
+
             returnString += whitespacedText;
           }
         }
@@ -257,7 +262,9 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
       // newline in markdown
       return "  \n";
     } else {
-      return "";
+      const result = parseWhitespace("", item.whitespace);
+
+      return result;
     }
   }
 
