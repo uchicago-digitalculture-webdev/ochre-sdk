@@ -2064,8 +2064,15 @@ async function parseWebElementProperties(
           "filter-displayed",
         ) === true;
 
+      const isOptionsDisplayed =
+        getPropertyValueByLabel(
+          componentProperty.properties,
+          "options-displayed",
+        ) === true;
+
       properties.imageUuid = imageLinks[0]!.uuid;
       properties.isFilterDisplayed = isFilterDisplayed;
+      properties.isOptionsDisplayed = isOptionsDisplayed;
       break;
     }
     case "audio-player": {
@@ -2249,6 +2256,12 @@ async function parseWebElementProperties(
         isFilterDisplayed = isFilterDisplayedProperty === true;
       }
 
+      let filterSort = getPropertyValueByLabel(
+        componentProperty.properties,
+        "filter-sort",
+      );
+      filterSort ??= "default";
+
       let layout = getPropertyValueByLabel(
         componentProperty.properties,
         "layout",
@@ -2260,6 +2273,7 @@ async function parseWebElementProperties(
       properties.itemVariant = itemVariant;
       properties.paginationVariant = paginationVariant;
       properties.isFilterDisplayed = isFilterDisplayed;
+      properties.filterSort = filterSort;
       properties.layout = layout;
       break;
     }
@@ -2918,7 +2932,11 @@ async function parseWebElement(
   }
 
   const title = parseWebTitle(elementResourceProperties, identification, {
-    isNameDisplayed: properties.component === "collection",
+    isNameDisplayed: [
+      "annotated-image",
+      "annotated-document",
+      "collection",
+    ].includes(properties.component),
     isCountDisplayed:
       properties.component === "collection" && properties.variant === "full",
   });

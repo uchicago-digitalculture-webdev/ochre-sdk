@@ -667,6 +667,7 @@ export type WebElementComponent =
       component: "annotated-image";
       imageUuid: string;
       isFilterDisplayed: boolean;
+      isOptionsDisplayed: boolean;
     }
   | {
       component: "audio-player";
@@ -703,6 +704,7 @@ export type WebElementComponent =
       itemVariant: "detailed" | "card" | "tile";
       paginationVariant: "default" | "numeric";
       isFilterDisplayed: boolean;
+      filterSort: "default" | "alphabetical";
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
     }
   | { component: "empty-space"; height: string | null; width: string | null }
