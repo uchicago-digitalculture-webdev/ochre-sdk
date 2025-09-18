@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.14
+
+### Patch Changes
+
+- ac00160: feat: enhance WebElementComponent with new properties for options display and filter sorting
+
 ## 0.10.13
 
 ### Patch Changes
