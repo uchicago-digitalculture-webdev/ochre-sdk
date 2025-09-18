@@ -2068,7 +2068,7 @@ async function parseWebElementProperties(
         getPropertyValueByLabel(
           componentProperty.properties,
           "options-displayed",
-        ) === true;
+        ) !== false;
 
       properties.imageUuid = imageLinks[0]!.uuid;
       properties.isFilterDisplayed = isFilterDisplayed;
