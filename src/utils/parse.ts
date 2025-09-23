@@ -2070,9 +2070,17 @@ async function parseWebElementProperties(
           "options-displayed",
         ) !== false;
 
+      const isAnnotationHighlightsDisplayed =
+        getPropertyValueByLabel(
+          componentProperty.properties,
+          "annotation-highlights-displayed",
+        ) !== false;
+
       properties.imageUuid = imageLinks[0]!.uuid;
       properties.isFilterDisplayed = isFilterDisplayed;
       properties.isOptionsDisplayed = isOptionsDisplayed;
+      properties.isAnnotationHighlightsDisplayed =
+        isAnnotationHighlightsDisplayed;
       break;
     }
     case "audio-player": {

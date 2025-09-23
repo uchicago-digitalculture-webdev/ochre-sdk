@@ -668,6 +668,7 @@ export type WebElementComponent =
       imageUuid: string;
       isFilterDisplayed: boolean;
       isOptionsDisplayed: boolean;
+      isAnnotationHighlightsDisplayed: boolean;
     }
   | {
       component: "audio-player";
