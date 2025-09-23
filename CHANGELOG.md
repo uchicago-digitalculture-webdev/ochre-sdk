@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.17
+
+### Patch Changes
+
+- 4af45c2: feat: add optional rend property to OchreStringContent type and enhance parseStringContent function to handle rendering options
+
 ## 0.10.16
 
 ### Patch Changes
