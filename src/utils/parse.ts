@@ -1973,7 +1973,7 @@ const parseWebpageResources = async <T extends "element" | "page" | "block">(
         break;
       }
       case "block": {
-        const block = await parseBlock(resource);
+        const block = await parseWebBlock(resource);
         if (block) {
           returnElements.push(
             block as T extends "element" ? WebElement
@@ -3039,7 +3039,7 @@ async function parseWebpage(
         break;
       }
       case "block": {
-        const block = await parseBlock(resource);
+        const block = await parseWebBlock(resource);
         if (block) {
           items.push(block);
         }
@@ -3182,12 +3182,12 @@ async function parseWebpages(
 }
 
 /**
- * Parses raw block data into a standardized Block structure
+ * Parses raw block data into a standardized WebBlock structure
  *
  * @param blockResource - Raw block resource data in OCHRE format
- * @returns Parsed Block object
+ * @returns Parsed WebBlock object
  */
-async function parseBlock(
+async function parseWebBlock(
   blockResource: OchreResource,
 ): Promise<WebBlock | null> {
   const blockProperties =
@@ -3324,7 +3324,7 @@ async function parseBlock(
         break;
       }
       case "block": {
-        const block = await parseBlock(resource);
+        const block = await parseWebBlock(resource);
         if (block) {
           blockItems.push(block);
         }
