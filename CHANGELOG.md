@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.16
+
+### Patch Changes
+
+- edf40a2: feat: add isAnnotationHighlightsDisplayed property to WebElementComponent and update parseWebElementProperties function
+
 ## 0.10.15
 
 ### Patch Changes
