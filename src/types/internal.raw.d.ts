@@ -40,6 +40,7 @@ export type OchreStringItem = {
  */
 export type OchreStringContent = {
   content: FakeString | OchreStringItem | Array<OchreStringItem>;
+  rend?: string; // "bold" | "italic" | "underline" (space separated)
 };
 
 /**

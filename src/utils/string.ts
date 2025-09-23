@@ -54,7 +54,8 @@ export function parseEmail(string: string): string {
   for (const string of splitString) {
     const cleanString = string
       .replaceAll(/(?<=\s|^)[([{]+|[)\]}]+(?=\s|$)/g, "")
-      .replace(/[!),.:;?\]]$/, "");
+      .replaceAll(/[!),:;?\]]/g, "")
+      .replace(/\.$/, "");
 
     const index = string.indexOf(cleanString);
 
@@ -64,7 +65,6 @@ export function parseEmail(string: string): string {
     const isEmail = emailSchema.safeParse(cleanString).success;
     if (isEmail) {
       returnSplitString.push(
-        before,
         `${before}<ExternalLink href="mailto:${cleanString}">${cleanString}</ExternalLink>${after}`,
       );
       continue;
@@ -580,6 +580,13 @@ export function parseStringContent(
     case "string":
     case "number":
     case "boolean": {
+      if (content.rend != null) {
+        return parseRenderOptions(
+          parseFakeString(content.content),
+          content.rend,
+        );
+      }
+
       return parseFakeString(content.content);
     }
     case "object": {
