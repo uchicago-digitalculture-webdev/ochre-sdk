@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.20
+
+### Patch Changes
+
+- 2b3225a: refactor: replace sectionSidebarItems with isAccordionSidebarDisplayed in WebBlock type and update parseWebBlock function to handle accordion layout
+- a84843c: refactor: replace sectionSidebarItems with isAccordionSidebarDisplayed in WebBlock type and update parseWebBlock function to handle accordion layout
+
 ## 0.10.19
 
 ### Patch Changes
