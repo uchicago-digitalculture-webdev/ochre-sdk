@@ -64,7 +64,6 @@ import type {
   WebElementComponent,
   WebImage,
   Webpage,
-  WebSectionSidebarItem,
   Website,
   WebsiteProperties,
   WebTitle,
@@ -3283,8 +3282,7 @@ async function parseWebBlock(
       gap: undefined,
       alignItems: "start",
       justifyContent: "stretch",
-      sectionSidebarItems: null,
-    },
+    } as WebBlock["properties"],
     propertiesMobile: null,
     cssStyles: [],
     cssStylesMobile: [],
@@ -3307,6 +3305,18 @@ async function parseWebBlock(
         | "vertical-flex"
         | "horizontal-flex"
         | "accordion";
+    }
+
+    if (returnBlock.layout === "accordion") {
+      const isAccordionSidebarDisplayedProperty = blockMainProperties.find(
+        (property) => property.label === "accordion-sidebar-displayed",
+      )?.values[0];
+      if (isAccordionSidebarDisplayedProperty) {
+        returnBlock.properties.isAccordionSidebarDisplayed =
+          isAccordionSidebarDisplayedProperty.content === true;
+      } else {
+        returnBlock.properties.isAccordionSidebarDisplayed = false;
+      }
     }
 
     const spacingProperty = blockMainProperties.find(
@@ -3488,50 +3498,7 @@ async function parseWebBlock(
     }
   }
 
-  returnBlock.properties.sectionSidebarItems =
-    parseSectionSidebarItems(returnBlock);
-
   return returnBlock;
-}
-
-function parseSectionSidebarItems(
-  block: WebBlock,
-): Array<WebSectionSidebarItem> | null {
-  const sectionSidebarItems: Array<WebSectionSidebarItem> = [];
-
-  for (const item of block.items) {
-    switch (item.type) {
-      case "block": {
-        const subItems = parseSectionSidebarItems(item);
-        if (subItems !== null) {
-          sectionSidebarItems.push({
-            uuid: item.uuid,
-            type: "block",
-            name: null,
-            items: subItems,
-          });
-        }
-        break;
-      }
-      case "element": {
-        const isDisplayedInSectionSidebar =
-          item.isDisplayedInBlockSectionSidebar;
-        if (!isDisplayedInSectionSidebar) {
-          continue;
-        }
-
-        sectionSidebarItems.push({
-          uuid: item.uuid,
-          type: "element",
-          name: item.title.label,
-          items: null,
-        });
-        break;
-      }
-    }
-  }
-
-  return sectionSidebarItems.length > 0 ? sectionSidebarItems : null;
 }
 
 /**
