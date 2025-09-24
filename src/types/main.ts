@@ -653,7 +653,6 @@ export type WebElement = {
   uuid: string;
   type: "element";
   title: WebTitle;
-  isDisplayedInBlockSectionSidebar: boolean;
   cssStyles: Array<Style>;
   cssStylesMobile: Array<Style>;
 } & WebElementComponent;
@@ -839,11 +838,4 @@ export type WebBlock<T extends WebBlockLayout = WebBlockLayout> = {
   propertiesMobile: Record<string, string> | null;
   cssStyles: Array<Style>;
   cssStylesMobile: Array<Style>;
-};
-
-export type WebSectionSidebarItem = {
-  uuid: string;
-  type: "block" | "element";
-  name: string | null;
-  items: Array<WebSectionSidebarItem> | null;
 };

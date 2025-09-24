@@ -2904,12 +2904,6 @@ async function parseWebElement(
     elementResource,
   );
 
-  const blockSectionSidebarProperty = presentationProperty.properties.find(
-    (property) => property.label === "section-sidebar-displayed",
-  );
-  const isDisplayedInBlockSectionSidebar =
-    blockSectionSidebarProperty?.values[0]?.content === true;
-
   const elementResourceProperties =
     elementResource.properties?.property ?
       parseProperties(
@@ -2959,7 +2953,6 @@ async function parseWebElement(
     uuid: elementResource.uuid,
     type: "element",
     title,
-    isDisplayedInBlockSectionSidebar,
     cssStyles,
     cssStylesMobile,
     ...properties,
