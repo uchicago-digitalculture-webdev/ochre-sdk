@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.19
+
+### Patch Changes
+
+- 566154e: - fix: update OchreProperty comment type to OchreStringContent and adjust parseProperty function accordingly
+  - feat: implement accordion layout support in parseWebBlock and add parseWebElementForAccordion function
+
 ## 0.10.18
 
 ### Patch Changes
