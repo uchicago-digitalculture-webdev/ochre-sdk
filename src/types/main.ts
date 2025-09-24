@@ -669,6 +669,7 @@ export type WebElementComponent =
       isFilterDisplayed: boolean;
       isOptionsDisplayed: boolean;
       isAnnotationHighlightsDisplayed: boolean;
+      isAnnotationTooltipsDisplayed: boolean;
     }
   | {
       component: "audio-player";
