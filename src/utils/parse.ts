@@ -3189,6 +3189,69 @@ async function parseWebpages(
 }
 
 /**
+ * Parses raw text element data for accordion layout with items support
+ *
+ * @param elementResource - Raw element resource data in OCHRE format
+ * @returns Parsed text WebElement with items array
+ */
+async function parseWebElementForAccordion(
+  elementResource: OchreResource,
+): Promise<
+  Extract<WebElement, { component: "text" }> & {
+    items: Array<WebElement | WebBlock>;
+  }
+> {
+  const textElement = (await parseWebElement(elementResource)) as Extract<
+    WebElement,
+    { component: "text" }
+  >;
+
+  const childResources =
+    elementResource.resource ?
+      Array.isArray(elementResource.resource) ?
+        elementResource.resource
+      : [elementResource.resource]
+    : [];
+
+  const items: Array<WebElement | WebBlock> = [];
+  for (const resource of childResources) {
+    const resourceProperties =
+      resource.properties ?
+        parseProperties(
+          Array.isArray(resource.properties.property) ?
+            resource.properties.property
+          : [resource.properties.property],
+        )
+      : [];
+
+    const resourceType = getPropertyValueByLabel(
+      resourceProperties,
+      "presentation",
+    ) as "element" | "block" | undefined;
+    if (resourceType == null) {
+      continue;
+    }
+
+    switch (resourceType) {
+      case "element": {
+        const element = await parseWebElement(resource);
+        items.push(element);
+        break;
+      }
+      case "block": {
+        const block = await parseWebBlock(resource);
+        if (block) {
+          items.push(block);
+        }
+        break;
+      }
+    }
+  }
+
+  return { ...textElement, items };
+}
+
+/**
  * Parses raw block data into a standardized WebBlock structure
  *
  * @param blockResource - Raw block resource data in OCHRE format
@@ -3242,7 +3305,8 @@ async function parseWebBlock(
         | "horizontal"
         | "grid"
         | "vertical-flex"
-        | "horizontal-flex";
+        | "horizontal-flex"
+        | "accordion";
     }
 
     const spacingProperty = blockMainProperties.find(
@@ -3305,42 +3369,96 @@ async function parseWebBlock(
         blockResource.resource
       : [blockResource.resource]
     : [];
-  const blockItems: Array<WebElement | WebBlock> = [];
-  for (const resource of blockResources) {
-    const resourceProperties =
-      resource.properties ?
-        parseProperties(
-          Array.isArray(resource.properties.property) ?
-            resource.properties.property
-          : [resource.properties.property],
-        )
-      : [];
 
-    const resourceType = getPropertyValueByLabel(
-      resourceProperties,
-      "presentation",
-    ) as "element" | "block" | undefined;
-    if (resourceType == null) {
-      continue;
+  if (returnBlock.layout === "accordion") {
+    const accordionItems: Array<
+      Extract<WebElement, { component: "text" }> & {
+        items: Array<WebElement | WebBlock>;
+      }
+    > = [];
+
+    for (const resource of blockResources) {
+      const resourceProperties =
+        resource.properties ?
+          parseProperties(
+            Array.isArray(resource.properties.property) ?
+              resource.properties.property
+            : [resource.properties.property],
+          )
+        : [];
+
+      const resourceType = getPropertyValueByLabel(
+        resourceProperties,
+        "presentation",
+      ) as "element" | "block" | undefined;
+
+      if (resourceType !== "element") {
+        throw new Error(
+          `Accordion only accepts elements, but got “${resourceType}” for the following resource: “${parseStringContent(
+            resource.identification.label as OchreStringContent,
+          )}”`,
+        );
+      }
+
+      const presentationProperty = resourceProperties.find(
+        (property) => property.label === "presentation",
+      );
+      const componentProperty = presentationProperty?.properties.find(
+        (property) => property.label === "component",
+      );
+      const componentType = componentProperty?.values[0]?.content;
+
+      if (componentType !== "text") {
+        throw new Error(
+          `Accordion only accepts text components, but got “${componentType}” for the following resource: “${parseStringContent(
+            resource.identification.label as OchreStringContent,
+          )}”`,
+        );
+      }
+
+      const element = await parseWebElementForAccordion(resource);
+      accordionItems.push(element);
     }
 
-    switch (resourceType) {
-      case "element": {
-        const element = await parseWebElement(resource);
-        blockItems.push(element);
-        break;
+    returnBlock.items = accordionItems;
+  } else {
+    const blockItems: Array<WebElement | WebBlock> = [];
+    for (const resource of blockResources) {
+      const resourceProperties =
+        resource.properties ?
+          parseProperties(
+            Array.isArray(resource.properties.property) ?
+              resource.properties.property
+            : [resource.properties.property],
+          )
+        : [];
+
+      const resourceType = getPropertyValueByLabel(
+        resourceProperties,
+        "presentation",
+      ) as "element" | "block" | undefined;
+      if (resourceType == null) {
+        continue;
       }
-      case "block": {
-        const block = await parseWebBlock(resource);
-        if (block) {
-          blockItems.push(block);
+
+      switch (resourceType) {
+        case "element": {
+          const element = await parseWebElement(resource);
+          blockItems.push(element);
+          break;
         }
-        break;
+        case "block": {
+          const block = await parseWebBlock(resource);
+          if (block) {
+            blockItems.push(block);
+          }
+          break;
+        }
       }
     }
-  }
 
-  returnBlock.items = blockItems;
+    returnBlock.items = blockItems;
+  }
 
   const blockCssStyles = blockProperties.find(
     (property) =>
