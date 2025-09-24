@@ -970,7 +970,7 @@ export function parseProperty(
       .trim(),
     values,
     comment:
-      property.comment != null ? parseFakeString(property.comment) : null,
+      property.comment != null ? parseStringContent(property.comment) : null,
     properties:
       property.property ?
         parseProperties(

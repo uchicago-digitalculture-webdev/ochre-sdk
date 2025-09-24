@@ -337,7 +337,7 @@ export type OchreProperty = {
     | OchrePropertyValueContent
     | Array<OchrePropertyValueContent>
     | FakeString;
-  comment?: FakeString;
+  comment?: OchreStringContent;
   property?: OchreProperty | Array<OchreProperty>;
 };
 
