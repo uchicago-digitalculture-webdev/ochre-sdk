@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.18
+
+### Patch Changes
+
+- 23171dc: feat: add isAnnotationTooltipsDisplayed property to WebElementComponent and update parseWebElementProperties function
+
 ## 0.10.17
 
 ### Patch Changes
