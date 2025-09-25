@@ -835,7 +835,7 @@ export type WebBlock<T extends WebBlockLayout = WebBlockLayout> = {
     justifyContent: "stretch" | "start" | "center" | "end" | "space-between";
     isAccordionSidebarDisplayed: T extends "accordion" ? boolean : never;
   };
-  propertiesMobile: Record<string, string> | null;
+  propertiesMobile: Partial<WebBlock["properties"]> | null;
   cssStyles: Array<Style>;
   cssStylesMobile: Array<Style>;
 };
