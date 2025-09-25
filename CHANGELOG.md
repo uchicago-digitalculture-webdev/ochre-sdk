@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.22
+
+### Patch Changes
+
+- bffed36: refactor: enhance propertiesMobile type in WebBlock to exclude specific fields and include properties
+
 ## 0.10.21
 
 ### Patch Changes
