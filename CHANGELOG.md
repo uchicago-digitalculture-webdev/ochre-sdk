@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.21
+
+### Patch Changes
+
+- d6ec500: refactor: update propertiesMobile type in WebBlock to use Partial<WebBlock["properties"]>
+
 ## 0.10.20
 
 ### Patch Changes
