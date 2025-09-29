@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.23
+
+### Patch Changes
+
+- 61b0bc6: feat: add filter options for bibliography and periods in search options
+
 ## 0.10.22
 
 ### Patch Changes
