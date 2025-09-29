@@ -3969,6 +3969,11 @@ export async function parseWebsite(
           : [websiteTree.searchOptions.filterUuids.uuid]
           ).map((uuid) => ({ uuid: uuid.content, type: uuid.type }))
         : [],
+      attributeFilters: {
+        bibliographies:
+          websiteTree.searchOptions?.filterUuids?.filterBibliography ?? false,
+        periods: websiteTree.searchOptions?.filterUuids?.filterPeriods ?? false,
+      },
       scopes:
         websiteTree.searchOptions?.scopes != null ?
           (Array.isArray(websiteTree.searchOptions.scopes.scope) ?

@@ -567,6 +567,7 @@ export type Website = {
   properties: WebsiteProperties;
   searchOptions: {
     filters: Array<{ uuid: string; type: string }>;
+    attributeFilters: { bibliographies: boolean; periods: boolean };
     scopes: Array<{
       uuid: string;
       type: string;

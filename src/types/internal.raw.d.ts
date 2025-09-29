@@ -185,6 +185,8 @@ export type OchreTree = {
   searchOptions?: {
     filterUuids?: {
       uuid: OchreTreeSearchOptionUuid | Array<OchreTreeSearchOptionUuid>;
+      filterPeriods?: boolean;
+      filterBibliography?: boolean;
     };
     scopes?: {
       scope: OchreTreeSearchOptionScope | Array<OchreTreeSearchOptionScope>;
