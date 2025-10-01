@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.10.24
+
+### Patch Changes
+
+- b6ce48b: feat: add optional slug property to image map area types and update parsing logic
+
 ## 0.10.23
 
 ### Patch Changes
