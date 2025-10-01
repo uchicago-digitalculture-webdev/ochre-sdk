@@ -507,6 +507,7 @@ export type OchreImageMapArea = {
   title: FakeString;
   shape: "rect" | "circle" | "poly";
   coords: string; // comma separated list of numbers
+  slug?: FakeString;
 };
 
 /**

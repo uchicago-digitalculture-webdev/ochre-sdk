@@ -176,6 +176,7 @@ export type ImageMapArea = {
   title: string;
   shape: "rectangle" | "circle" | "polygon";
   coords: Array<number>;
+  slug: string | null;
 };
 
 /**

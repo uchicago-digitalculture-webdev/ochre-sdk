@@ -1057,6 +1057,7 @@ export function parseImageMap(imageMap: OchreImageMap): ImageMap {
         : area.shape === "circle" ? "circle"
         : "polygon",
       coords: area.coords.split(",").map((coord) => Number.parseInt(coord)),
+      slug: area.slug ? parseFakeString(area.slug) : null,
     });
   }
 
