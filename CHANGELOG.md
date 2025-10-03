@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.0
+
+### Minor Changes
+
+- f0a78d7: feat: revamp parsing logic for CSS styles to support tablet layout, remove sidebar properties from Website type
+
 ## 0.10.24
 
 ### Patch Changes
