@@ -2927,6 +2927,19 @@ async function parseWebElement(
     cssStyles.push({ label: property.label, value: cssStyle });
   }
 
+  const tabletCssProperties =
+    elementResourceProperties.find(
+      (property) =>
+        property.label === "presentation" &&
+        property.values[0]!.content === "css-tablet",
+    )?.properties ?? [];
+
+  const cssStylesTablet: Array<Style> = [];
+  for (const property of tabletCssProperties) {
+    const cssStyle = property.values[0]!.content as string;
+    cssStylesTablet.push({ label: property.label, value: cssStyle });
+  }
+
   const mobileCssProperties =
     elementResourceProperties.find(
       (property) =>
@@ -2954,8 +2967,11 @@ async function parseWebElement(
     uuid: elementResource.uuid,
     type: "element",
     title,
-    cssStyles,
-    cssStylesMobile,
+    cssStyles: {
+      default: cssStyles,
+      tablet: cssStylesTablet,
+      mobile: cssStylesMobile,
+    },
     ...properties,
   };
 }
@@ -3061,7 +3077,6 @@ async function parseWebpage(
   let displayedInHeader = true;
   let width: "default" | "full" | "large" | "narrow" = "default";
   let variant: "default" | "no-background" = "default";
-  let isSidebarDisplayed = true;
   let isBreadcrumbsDisplayed = false;
 
   const webpageSubProperties = webpageProperties.find(
@@ -3092,13 +3107,6 @@ async function parseWebpage(
       variant = variantProperty.content as "default" | "no-background";
     }
 
-    const isSidebarDisplayedProperty = webpageSubProperties.find(
-      (property) => property.label === "sidebar-visible",
-    )?.values[0];
-    if (isSidebarDisplayedProperty) {
-      isSidebarDisplayed = isSidebarDisplayedProperty.content === true;
-    }
-
     const isBreadcrumbsDisplayedProperty = webpageSubProperties.find(
       (property) => property.label === "breadcrumbs-visible",
     )?.values[0];
@@ -3116,6 +3124,21 @@ async function parseWebpage(
   if (cssStyleSubProperties) {
     for (const property of cssStyleSubProperties) {
       cssStyles.push({
+        label: property.label,
+        value: property.values[0]!.content as string,
+      });
+    }
+  }
+
+  const tabletCssStyleSubProperties = webpageProperties.find(
+    (property) =>
+      property.label === "presentation" &&
+      property.values[0]?.content === "css-tablet",
+  )?.properties;
+  const cssStylesTablet: Array<Style> = [];
+  if (tabletCssStyleSubProperties) {
+    for (const property of tabletCssStyleSubProperties) {
+      cssStylesTablet.push({
         label: property.label,
         value: property.values[0]!.content as string,
       });
@@ -3149,10 +3172,12 @@ async function parseWebpage(
         imageLink ?
           `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`
         : null,
-      isSidebarDisplayed,
       isBreadcrumbsDisplayed,
-      cssStyles,
-      cssStylesMobile,
+      cssStyles: {
+        default: cssStyles,
+        tablet: cssStylesTablet,
+        mobile: cssStylesMobile,
+      },
     },
     webpages,
   };
@@ -3265,21 +3290,23 @@ async function parseWebBlock(
   const returnBlock: WebBlock = {
     uuid: blockResource.uuid,
     type: "block",
-    layout: "vertical",
     title: parseWebTitle(
       blockProperties,
       parseIdentification(blockResource.identification),
     ),
     items: [],
     properties: {
-      spacing: undefined,
-      gap: undefined,
-      alignItems: "start",
-      justifyContent: "stretch",
+      default: {
+        layout: "vertical",
+        spacing: undefined,
+        gap: undefined,
+        alignItems: "start",
+        justifyContent: "stretch",
+      },
+      mobile: null,
+      tablet: null,
     } as WebBlock["properties"],
-    propertiesMobile: null,
-    cssStyles: [],
-    cssStylesMobile: [],
+    cssStyles: { default: [], tablet: [], mobile: [] },
   };
 
   const blockMainProperties = blockProperties.find(
@@ -3292,7 +3319,7 @@ async function parseWebBlock(
       (property) => property.label === "layout",
     )?.values[0];
     if (layoutProperty) {
-      returnBlock.layout = layoutProperty.content as
+      returnBlock.properties.default.layout = layoutProperty.content as
         | "vertical"
         | "horizontal"
         | "grid"
@@ -3301,15 +3328,25 @@ async function parseWebBlock(
         | "accordion";
     }
 
-    if (returnBlock.layout === "accordion") {
+    if (returnBlock.properties.default.layout === "accordion") {
+      const isAccordionEnabledProperty = blockMainProperties.find(
+        (property) => property.label === "accordion-enabled",
+      )?.values[0];
+      if (isAccordionEnabledProperty) {
+        returnBlock.properties.default.isAccordionEnabled =
+          isAccordionEnabledProperty.content === true;
+      } else {
+        returnBlock.properties.default.isAccordionEnabled = true;
+      }
+
       const isAccordionSidebarDisplayedProperty = blockMainProperties.find(
         (property) => property.label === "accordion-sidebar-displayed",
       )?.values[0];
       if (isAccordionSidebarDisplayedProperty) {
-        returnBlock.properties.isAccordionSidebarDisplayed =
+        returnBlock.properties.default.isAccordionSidebarDisplayed =
           isAccordionSidebarDisplayedProperty.content === true;
       } else {
-        returnBlock.properties.isAccordionSidebarDisplayed = false;
+        returnBlock.properties.default.isAccordionSidebarDisplayed = false;
       }
     }
 
@@ -3317,21 +3354,22 @@ async function parseWebBlock(
       (property) => property.label === "spacing",
     )?.values[0];
     if (spacingProperty) {
-      returnBlock.properties.spacing = spacingProperty.content as string;
+      returnBlock.properties.default.spacing =
+        spacingProperty.content as string;
     }
 
     const gapProperty = blockMainProperties.find(
       (property) => property.label === "gap",
     )?.values[0];
     if (gapProperty) {
-      returnBlock.properties.gap = gapProperty.content as string;
+      returnBlock.properties.default.gap = gapProperty.content as string;
     }
 
     const alignItemsProperty = blockMainProperties.find(
       (property) => property.label === "align-items",
     )?.values[0];
     if (alignItemsProperty) {
-      returnBlock.properties.alignItems = alignItemsProperty.content as
+      returnBlock.properties.default.alignItems = alignItemsProperty.content as
         | "stretch"
         | "start"
         | "center"
@@ -3343,12 +3381,97 @@ async function parseWebBlock(
       (property) => property.label === "justify-content",
     )?.values[0];
     if (justifyContentProperty) {
-      returnBlock.properties.justifyContent = justifyContentProperty.content as
-        | "stretch"
-        | "start"
-        | "center"
-        | "end"
-        | "space-between";
+      returnBlock.properties.default.justifyContent =
+        justifyContentProperty.content as
+          | "stretch"
+          | "start"
+          | "center"
+          | "end"
+          | "space-between";
+    }
+
+    const tabletOverwriteProperty = blockMainProperties.find(
+      (property) => property.label === "overwrite-tablet",
+    );
+    if (tabletOverwriteProperty) {
+      const tabletOverwriteProperties = tabletOverwriteProperty.properties;
+
+      const propertiesTablet: WebBlock["properties"]["tablet"] = {};
+
+      const layoutProperty = tabletOverwriteProperties.find(
+        (property) => property.label === "layout",
+      )?.values[0];
+      if (layoutProperty) {
+        propertiesTablet.layout = layoutProperty.content as
+          | "vertical"
+          | "horizontal"
+          | "grid"
+          | "vertical-flex"
+          | "horizontal-flex"
+          | "accordion";
+      }
+
+      if (
+        propertiesTablet.layout === "accordion" ||
+        returnBlock.properties.default.layout === "accordion"
+      ) {
+        const isAccordionEnabledProperty = tabletOverwriteProperties.find(
+          (property) => property.label === "accordion-enabled",
+        )?.values[0];
+        if (isAccordionEnabledProperty) {
+          propertiesTablet.isAccordionEnabled =
+            isAccordionEnabledProperty.content === true;
+        }
+
+        const isAccordionSidebarDisplayedProperty =
+          tabletOverwriteProperties.find(
+            (property) => property.label === "accordion-sidebar-displayed",
+          )?.values[0];
+        if (isAccordionSidebarDisplayedProperty) {
+          propertiesTablet.isAccordionSidebarDisplayed =
+            isAccordionSidebarDisplayedProperty.content === true;
+        }
+      }
+
+      const spacingProperty = tabletOverwriteProperties.find(
+        (property) => property.label === "spacing",
+      )?.values[0];
+      if (spacingProperty) {
+        propertiesTablet.spacing = spacingProperty.content as string;
+      }
+
+      const gapProperty = tabletOverwriteProperties.find(
+        (property) => property.label === "gap",
+      )?.values[0];
+      if (gapProperty) {
+        propertiesTablet.gap = gapProperty.content as string;
+      }
+
+      const alignItemsProperty = tabletOverwriteProperties.find(
+        (property) => property.label === "align-items",
+      )?.values[0];
+      if (alignItemsProperty) {
+        propertiesTablet.alignItems = alignItemsProperty.content as
+          | "stretch"
+          | "start"
+          | "center"
+          | "end"
+          | "space-between";
+      }
+
+      const justifyContentProperty = tabletOverwriteProperties.find(
+        (property) => property.label === "justify-content",
+      )?.values[0];
+      if (justifyContentProperty) {
+        propertiesTablet.justifyContent = justifyContentProperty.content as
+          | "stretch"
+          | "start"
+          | "center"
+          | "end"
+          | "space-between";
+      }
+
+      returnBlock.properties.tablet = propertiesTablet;
     }
 
     const mobileOverwriteProperty = blockMainProperties.find(
@@ -3357,13 +3480,82 @@ async function parseWebBlock(
     if (mobileOverwriteProperty) {
       const mobileOverwriteProperties = mobileOverwriteProperty.properties;
 
-      const propertiesMobile: Record<string, string> = {};
-      for (const property of mobileOverwriteProperties) {
-        propertiesMobile[property.label] = property.values[0]!
-          .content as string;
+      const propertiesMobile: WebBlock["properties"]["mobile"] = {};
+
+      const layoutProperty = mobileOverwriteProperties.find(
+        (property) => property.label === "layout",
+      )?.values[0];
+      if (layoutProperty) {
+        propertiesMobile.layout = layoutProperty.content as
+          | "vertical"
+          | "horizontal"
+          | "grid"
+          | "vertical-flex"
+          | "horizontal-flex"
+          | "accordion";
       }
 
-      returnBlock.propertiesMobile = propertiesMobile;
+      if (
+        propertiesMobile.layout === "accordion" ||
+        returnBlock.properties.default.layout === "accordion"
+      ) {
+        const isAccordionEnabledProperty = mobileOverwriteProperties.find(
+          (property) => property.label === "accordion-enabled",
+        )?.values[0];
+        if (isAccordionEnabledProperty) {
+          propertiesMobile.isAccordionEnabled =
+            isAccordionEnabledProperty.content === true;
+        }
+
+        const isAccordionSidebarDisplayedProperty =
+          mobileOverwriteProperties.find(
+            (property) => property.label === "accordion-sidebar-displayed",
+          )?.values[0];
+        if (isAccordionSidebarDisplayedProperty) {
+          propertiesMobile.isAccordionSidebarDisplayed =
+            isAccordionSidebarDisplayedProperty.content === true;
+        }
+      }
+
+      const spacingProperty = mobileOverwriteProperties.find(
+        (property) => property.label === "spacing",
+      )?.values[0];
+      if (spacingProperty) {
+        propertiesMobile.spacing = spacingProperty.content as string;
+      }
+
+      const gapProperty = mobileOverwriteProperties.find(
+        (property) => property.label === "gap",
+      )?.values[0];
+      if (gapProperty) {
+        propertiesMobile.gap = gapProperty.content as string;
+      }
+
+      const alignItemsProperty = mobileOverwriteProperties.find(
+        (property) => property.label === "align-items",
+      )?.values[0];
+      if (alignItemsProperty) {
+        propertiesMobile.alignItems = alignItemsProperty.content as
+          | "stretch"
+          | "start"
+          | "center"
+          | "end"
+          | "space-between";
+      }
+
+      const justifyContentProperty = mobileOverwriteProperties.find(
+        (property) => property.label === "justify-content",
+      )?.values[0];
+      if (justifyContentProperty) {
+        propertiesMobile.justifyContent = justifyContentProperty.content as
+          | "stretch"
+          | "start"
+          | "center"
+          | "end"
+          | "space-between";
+      }
+
+      returnBlock.properties.mobile = propertiesMobile;
     }
   }
 
@@ -3374,7 +3566,7 @@ async function parseWebBlock(
       : [blockResource.resource]
     : [];
 
-  if (returnBlock.layout === "accordion") {
+  if (returnBlock.properties.default.layout === "accordion") {
     const accordionItems: Array<
       Extract<WebElement, { component: "text" }> & {
         items: Array<WebElement | WebBlock>;
@@ -3471,7 +3663,21 @@ async function parseWebBlock(
   )?.properties;
   if (blockCssStyles) {
     for (const property of blockCssStyles) {
-      returnBlock.cssStyles.push({
+      returnBlock.cssStyles.default.push({
+        label: property.label,
+        value: property.values[0]!.content as string,
+      });
+    }
+  }
+
+  const blockTabletCssStyles = blockProperties.find(
+    (property) =>
+      property.label === "presentation" &&
+      property.values[0]?.content === "css-tablet",
+  )?.properties;
+  if (blockTabletCssStyles) {
+    for (const property of blockTabletCssStyles) {
+      returnBlock.cssStyles.tablet.push({
         label: property.label,
         value: property.values[0]!.content as string,
       });
@@ -3485,7 +3691,7 @@ async function parseWebBlock(
   )?.properties;
   if (blockMobileCssStyles) {
     for (const property of blockMobileCssStyles) {
-      returnBlock.cssStylesMobile.push({
+      returnBlock.cssStyles.mobile.push({
         label: property.label,
         value: property.values[0]!.content as string,
       });
@@ -3550,7 +3756,6 @@ function parseWebsiteProperties(
   let headerAlignment: "start" | "center" | "end" = "start";
   let isHeaderProjectDisplayed = true;
   let isFooterDisplayed = true;
-  let isSidebarDisplayed = false;
   let supportsThemeToggle = true;
   let defaultTheme: "light" | "dark" | null = null;
 
@@ -3596,13 +3801,6 @@ function parseWebsiteProperties(
     isFooterDisplayed = footerProperty.content === true;
   }
 
-  const sidebarProperty = websiteProperties.find(
-    (property) => property.label === "sidebar-visible",
-  )?.values[0];
-  if (sidebarProperty) {
-    isSidebarDisplayed = sidebarProperty.content === true;
-  }
-
   const supportsThemeToggleProperty = websiteProperties.find(
     (property) => property.label === "supports-theme-toggle",
   )?.values[0];
@@ -3633,7 +3831,6 @@ function parseWebsiteProperties(
     headerAlignment,
     isHeaderProjectDisplayed,
     isFooterDisplayed,
-    isSidebarDisplayed,
     supportsThemeToggle,
     defaultTheme,
     logoUrl:
@@ -3721,164 +3918,6 @@ export async function parseWebsite(
 
   const pages = await parseWebpages(resources);
 
-  let sidebar: Website["sidebar"] | null = null;
-  const sidebarElements: Array<WebElement> = [];
-  const sidebarTitle: WebTitle = {
-    label: "",
-    variant: "default",
-    properties: {
-      isNameDisplayed: false,
-      isDescriptionDisplayed: false,
-      isDateDisplayed: false,
-      isCreatorsDisplayed: false,
-      isCountDisplayed: false,
-    },
-  };
-  let sidebarLayout: "start" | "end" = "start";
-  let sidebarMobileLayout: "default" | "inline" = "default";
-  const sidebarCssStyles: Array<Style> = [];
-  const sidebarCssStylesMobile: Array<Style> = [];
-
-  const sidebarResource = resources.find((resource) => {
-    const resourceProperties =
-      resource.properties ?
-        parseProperties(
-          Array.isArray(resource.properties.property) ?
-            resource.properties.property
-          : [resource.properties.property],
-        )
-      : [];
-    return resourceProperties.some(
-      (property) =>
-        property.label === "presentation" &&
-        property.values[0]?.content === "element" &&
-        property.properties[0]?.label === "component" &&
-        property.properties[0].values[0]?.content === "sidebar",
-    );
-  });
-  if (sidebarResource) {
-    sidebarTitle.label =
-      (
-        typeof sidebarResource.identification.label === "string" ||
-        typeof sidebarResource.identification.label === "number" ||
-        typeof sidebarResource.identification.label === "boolean"
-      ) ?
-        parseFakeString(sidebarResource.identification.label)
-      : parseStringContent(sidebarResource.identification.label);
-
-    const sidebarBaseProperties =
-      sidebarResource.properties ?
-        parseProperties(
-          Array.isArray(sidebarResource.properties.property) ?
-            sidebarResource.properties.property
-          : [sidebarResource.properties.property],
-        )
-      : [];
-
-    const sidebarProperties =
-      sidebarBaseProperties
-        .find(
-          (property) =>
-            property.label === "presentation" &&
-            property.values[0]?.content === "element",
-        )
-        ?.properties.find(
-          (property) =>
-            property.label === "component" &&
-            property.values[0]?.content === "sidebar",
-        )?.properties ?? [];
-
-    const sidebarLayoutProperty = sidebarProperties.find(
-      (property) => property.label === "layout",
-    );
-    if (sidebarLayoutProperty) {
-      sidebarLayout = sidebarLayoutProperty.values[0]!.content as
-        | "start"
-        | "end";
-    }
-
-    const sidebarMobileLayoutProperty = sidebarProperties.find(
-      (property) => property.label === "layout-mobile",
-    );
-    if (sidebarMobileLayoutProperty) {
-      sidebarMobileLayout = sidebarMobileLayoutProperty.values[0]!.content as
-        | "default"
-        | "inline";
-    }
-
-    const cssProperties =
-      sidebarBaseProperties.find(
-        (property) =>
-          property.label === "presentation" &&
-          property.values[0]!.content === "css",
-      )?.properties ?? [];
-
-    for (const property of cssProperties) {
-      const cssStyle = property.values[0]!.content as string;
-      sidebarCssStyles.push({ label: property.label, value: cssStyle });
-    }
-
-    const mobileCssProperties =
-      sidebarBaseProperties.find(
-        (property) =>
-          property.label === "presentation" &&
-          property.values[0]!.content === "css-mobile",
-      )?.properties ?? [];
-
-    for (const property of mobileCssProperties) {
-      const cssStyle = property.values[0]!.content as string;
-      sidebarCssStylesMobile.push({ label: property.label, value: cssStyle });
-    }
-
-    const titleProperties = sidebarBaseProperties.find(
-      (property) =>
-        property.label === "presentation" &&
-        property.values[0]!.content === "title",
-    )?.properties;
-
-    if (titleProperties) {
-      const titleVariant = getPropertyValueByLabel(titleProperties, "variant");
-      if (titleVariant) {
-        sidebarTitle.variant = titleVariant as "default" | "simple";
-      }
-
-      sidebarTitle.properties.isNameDisplayed =
-        getPropertyValueByLabel(titleProperties, "name-displayed") === true;
-      sidebarTitle.properties.isDescriptionDisplayed =
-        getPropertyValueByLabel(titleProperties, "description-displayed") ===
-        true;
-      sidebarTitle.properties.isDateDisplayed =
-        getPropertyValueByLabel(titleProperties, "date-displayed") === true;
-      sidebarTitle.properties.isCreatorsDisplayed =
-        getPropertyValueByLabel(titleProperties, "creators-displayed") === true;
-      sidebarTitle.properties.isCountDisplayed =
-        getPropertyValueByLabel(titleProperties, "count-displayed") === true;
-    }
-
-    const sidebarResources =
-      sidebarResource.resource ?
-        Array.isArray(sidebarResource.resource) ?
-          sidebarResource.resource
-        : [sidebarResource.resource]
-      : [];
-
-    for (const resource of sidebarResources) {
-      const element = await parseWebElement(resource);
-      sidebarElements.push(element);
-    }
-  }
-
-  if (sidebarElements.length > 0) {
-    sidebar = {
-      elements: sidebarElements,
-      title: sidebarTitle,
-      layout: sidebarLayout,
-      mobileLayout: sidebarMobileLayout,
-      cssStyles: sidebarCssStyles,
-      cssStylesMobile: sidebarCssStylesMobile,
-    };
-  }
-
   let globalOptions: Website["globalOptions"] = {
     contexts: {
       flatten: [],
@@ -3960,7 +3999,6 @@ export async function parseWebsite(
       : [],
     license: parseLicense(websiteTree.availability),
     pages,
-    sidebar,
     properties,
     searchOptions: {
       filters:

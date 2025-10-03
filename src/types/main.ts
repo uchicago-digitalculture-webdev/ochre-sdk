@@ -557,14 +557,6 @@ export type Website = {
   creators: Array<Person>;
   license: License | null;
   pages: Array<Webpage>;
-  sidebar: {
-    elements: Array<WebElement>;
-    title: WebElement["title"];
-    layout: "start" | "end";
-    mobileLayout: "default" | "inline";
-    cssStyles: Array<Style>;
-    cssStylesMobile: Array<Style>;
-  } | null;
   properties: WebsiteProperties;
   searchOptions: {
     filters: Array<{ uuid: string; type: string }>;
@@ -608,7 +600,6 @@ export type WebsiteProperties = {
   headerAlignment: "start" | "center" | "end";
   isHeaderProjectDisplayed: boolean;
   isFooterDisplayed: boolean;
-  isSidebarDisplayed: boolean;
   supportsThemeToggle: boolean;
   defaultTheme: "light" | "dark" | null;
   logoUrl: string | null;
@@ -630,10 +621,12 @@ export type WebpageProperties = {
   width: "full" | "large" | "narrow" | "default";
   variant: "default" | "no-background";
   backgroundImageUrl: string | null;
-  isSidebarDisplayed: boolean;
   isBreadcrumbsDisplayed: boolean;
-  cssStyles: Array<Style>;
-  cssStylesMobile: Array<Style>;
+  cssStyles: {
+    default: Array<Style>;
+    tablet: Array<Style>;
+    mobile: Array<Style>;
+  };
 };
 
 export type WebTitle = {
@@ -655,8 +648,11 @@ export type WebElement = {
   uuid: string;
   type: "element";
   title: WebTitle;
-  cssStyles: Array<Style>;
-  cssStylesMobile: Array<Style>;
+  cssStyles: {
+    default: Array<Style>;
+    tablet: Array<Style>;
+    mobile: Array<Style>;
+  };
 } & WebElementComponent;
 
 /**
@@ -809,7 +805,6 @@ export type WebBlockLayout =
 export type WebBlock<T extends WebBlockLayout = WebBlockLayout> = {
   uuid: string;
   type: "block";
-  layout: T;
   title: WebTitle;
   items: T extends "accordion" ?
     Array<
@@ -819,28 +814,33 @@ export type WebBlock<T extends WebBlockLayout = WebBlockLayout> = {
     >
   : Array<WebElement | WebBlock>;
   properties: {
-    /**
-     * valid `gridTemplateColumns` or `gridTemplateRows` CSS property value
-     */
-    spacing: string | undefined;
-    /**
-     * `gap` CSS property value
-     */
-    gap: string | undefined;
-    /**
-     * `align-items` CSS property value
-     */
-    alignItems: "stretch" | "start" | "center" | "end" | "space-between";
-    /**
-     * `justify-content` CSS property value
-     */
-    justifyContent: "stretch" | "start" | "center" | "end" | "space-between";
-    isAccordionSidebarDisplayed: T extends "accordion" ? boolean : never;
+    default: {
+      layout: T;
+      /**
+       * valid `gridTemplateColumns` or `gridTemplateRows` CSS property value
+       */
+      spacing: string | undefined;
+      /**
+       * `gap` CSS property value
+       */
+      gap: string | undefined;
+      /**
+       * `align-items` CSS property value
+       */
+      alignItems: "stretch" | "start" | "center" | "end" | "space-between";
+      /**
+       * `justify-content` CSS property value
+       */
+      justifyContent: "stretch" | "start" | "center" | "end" | "space-between";
+      isAccordionEnabled: T extends "accordion" ? boolean : never;
+      isAccordionSidebarDisplayed: T extends "accordion" ? boolean : never;
+    };
+    tablet: Partial<WebBlock["properties"]["default"]> | null;
+    mobile: Partial<WebBlock["properties"]["default"]> | null;
   };
-  propertiesMobile: Partial<
-    Omit<WebBlock, "uuid" | "type" | "properties" | "propertiesMobile"> &
-      WebBlock["properties"]
-  > | null;
-  cssStyles: Array<Style>;
-  cssStylesMobile: Array<Style>;
+  cssStyles: {
+    default: Array<Style>;
+    tablet: Array<Style>;
+    mobile: Array<Style>;
+  };
 };
