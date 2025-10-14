@@ -2262,6 +2262,15 @@ async function parseWebElementProperties(
       );
       paginationVariant ??= "default";
 
+      let isSortDisplayed = false;
+      const isSortDisplayedProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "sort-displayed",
+      );
+      if (isSortDisplayedProperty !== null) {
+        isSortDisplayed = isSortDisplayedProperty === true;
+      }
+
       let isFilterDisplayed = false;
       const isFilterDisplayedProperty = getPropertyValueByLabel(
         componentProperty.properties,
@@ -2287,6 +2296,7 @@ async function parseWebElementProperties(
       properties.variant = variant;
       properties.itemVariant = itemVariant;
       properties.paginationVariant = paginationVariant;
+      properties.isSortDisplayed = isSortDisplayed;
       properties.isFilterDisplayed = isFilterDisplayed;
       properties.filterSort = filterSort;
       properties.layout = layout;

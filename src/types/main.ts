@@ -702,6 +702,7 @@ export type WebElementComponent =
       variant: "full" | "highlights";
       itemVariant: "detailed" | "card" | "tile";
       paginationVariant: "default" | "numeric";
+      isSortDisplayed: boolean;
       isFilterDisplayed: boolean;
       filterSort: "default" | "alphabetical";
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
