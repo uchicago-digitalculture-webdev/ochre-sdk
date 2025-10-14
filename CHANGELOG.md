@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.1
+
+### Patch Changes
+
+- 017aab6: feat: add isSortDisplayed property to WebElementComponent and update parsing logic
+
 ## 0.11.0
 
 ### Minor Changes
