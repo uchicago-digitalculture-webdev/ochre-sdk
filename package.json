@@ -57,16 +57,16 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^5.4.1",
+    "@antfu/eslint-config": "^6.0.0",
     "@arethetypeswrong/cli": "^0.18.2",
     "@changesets/cli": "^2.29.7",
-    "@types/node": "^24.7.2",
-    "eslint": "^9.37.0",
+    "@types/node": "^24.9.1",
+    "eslint": "^9.38.0",
     "prettier": "^3.6.2",
     "terser": "^5.44.0",
-    "tsdown": "^0.15.7",
+    "tsdown": "^0.15.9",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
-  "packageManager": "pnpm@10.18.3"
+  "packageManager": "pnpm@10.19.0"
 }
