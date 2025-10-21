@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.6
+
+### Patch Changes
+
+- 076af1b: fix: enhance citation parsing and update sidebar display logic
+
 ## 0.11.5
 
 ### Patch Changes
