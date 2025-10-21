@@ -847,6 +847,7 @@ export type WebBlock<T extends WebBlockLayout = WebBlockLayout> = {
        */
       justifyContent: "stretch" | "start" | "center" | "end" | "space-between";
       isAccordionEnabled: T extends "accordion" ? boolean : never;
+      isAccordionExpandedByDefault: T extends "accordion" ? boolean : never;
       isAccordionSidebarDisplayed: T extends "accordion" ? boolean : never;
     };
     tablet: Partial<WebBlock["properties"]["default"]> | null;

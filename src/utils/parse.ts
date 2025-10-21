@@ -3532,6 +3532,16 @@ async function parseWebBlock(
         returnBlock.properties.default.isAccordionEnabled = true;
       }
 
+      const isAccordionExpandedByDefaultProperty = blockMainProperties.find(
+        (property) => property.label === "accordion-expanded",
+      )?.values[0];
+      if (isAccordionExpandedByDefaultProperty) {
+        returnBlock.properties.default.isAccordionExpandedByDefault =
+          isAccordionExpandedByDefaultProperty.content === true;
+      } else {
+        returnBlock.properties.default.isAccordionExpandedByDefault = false;
+      }
+
       const isAccordionSidebarDisplayedProperty = blockMainProperties.find(
         (property) => property.label === "accordion-sidebar-displayed",
       )?.values[0];
@@ -3616,6 +3626,15 @@ async function parseWebBlock(
             isAccordionEnabledProperty.content === true;
         }
 
+        const isAccordionExpandedByDefaultProperty =
+          tabletOverwriteProperties.find(
+            (property) => property.label === "accordion-expanded",
+          )?.values[0];
+        if (isAccordionExpandedByDefaultProperty) {
+          propertiesTablet.isAccordionExpandedByDefault =
+            isAccordionExpandedByDefaultProperty.content === true;
+        }
+
         const isAccordionSidebarDisplayedProperty =
           tabletOverwriteProperties.find(
             (property) => property.label === "accordion-sidebar-displayed",
@@ -3698,6 +3717,15 @@ async function parseWebBlock(
         if (isAccordionEnabledProperty) {
           propertiesMobile.isAccordionEnabled =
             isAccordionEnabledProperty.content === true;
+        }
+
+        const isAccordionExpandedByDefaultProperty =
+          mobileOverwriteProperties.find(
+            (property) => property.label === "accordion-expanded",
+          )?.values[0];
+        if (isAccordionExpandedByDefaultProperty) {
+          propertiesMobile.isAccordionExpandedByDefault =
+            isAccordionExpandedByDefaultProperty.content === true;
         }
 
         const isAccordionSidebarDisplayedProperty =
