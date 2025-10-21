@@ -1124,6 +1124,27 @@ export function parseBibliography(
     };
   }
 
+  let shortCitation = null;
+  let longCitation = null;
+  if (bibliography.citationFormatSpan) {
+    try {
+      shortCitation = JSON.parse(
+        `"${bibliography.citationFormatSpan}"`,
+      ) as string;
+    } catch {
+      shortCitation = bibliography.citationFormatSpan;
+    }
+  }
+  if (bibliography.referenceFormatDiv) {
+    try {
+      longCitation = JSON.parse(
+        `"${bibliography.referenceFormatDiv}"`,
+      ) as string;
+    } catch {
+      longCitation = bibliography.referenceFormatDiv;
+    }
+  }
+
   return {
     uuid: bibliography.uuid ?? null,
     zoteroId: bibliography.zoteroId ?? null,
@@ -1146,14 +1167,8 @@ export function parseBibliography(
     citation: {
       details: bibliography.citationDetails ?? null,
       format: bibliography.citationFormat ?? null,
-      short:
-        bibliography.citationFormatSpan ?
-          (JSON.parse(`"${bibliography.citationFormatSpan}"`) as string)
-        : null,
-      long:
-        bibliography.referenceFormatDiv ?
-          (JSON.parse(`"${bibliography.referenceFormatDiv}"`) as string)
-        : null,
+      short: shortCitation,
+      long: longCitation,
     },
     publicationInfo: {
       publishers:
@@ -3075,7 +3090,7 @@ async function parseWebpage(
   let displayedInHeader = true;
   let width: "default" | "full" | "large" | "narrow" = "default";
   let variant: "default" | "no-background" = "default";
-  let isSidebarDisplayed = false;
+  let isSidebarDisplayed = true;
   let isBreadcrumbsDisplayed = false;
 
   const webpageSubProperties = webpageProperties.find(

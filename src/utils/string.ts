@@ -523,7 +523,7 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
 
                   return `<Annotation type="${textStylingType}" variant="${textStylingVariant}" size="${textStylingSize}"${
                     textStylingCss.length > 0 ?
-                      ` cssStyles={{default: ${JSON.stringify(textStylingCss)}}}`
+                      ` cssStyles={{default: ${JSON.stringify(textStylingCss)}, tablet: [], mobile: []}}`
                     : ""
                   }>${itemString}</Annotation>`;
                 }
