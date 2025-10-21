@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.3
+
+### Patch Changes
+
+- 6614ab4: refactor: simplify citationFormatSpan and referenceFormatDiv types in OchreBibliography
+
 ## 0.11.2
 
 ### Patch Changes
