@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.2
+
+### Patch Changes
+
+- 583e080: chore: bring back sidebar support
+
 ## 0.11.1
 
 ### Patch Changes
