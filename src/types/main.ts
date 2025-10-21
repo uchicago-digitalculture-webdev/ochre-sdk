@@ -562,8 +562,11 @@ export type Website = {
     title: WebElement["title"];
     layout: "start" | "end";
     mobileLayout: "default" | "inline";
-    cssStyles: Array<Style>;
-    cssStylesMobile: Array<Style>;
+    cssStyles: {
+      default: Array<Style>;
+      tablet: Array<Style>;
+      mobile: Array<Style>;
+    };
   } | null;
   properties: WebsiteProperties;
   searchOptions: {

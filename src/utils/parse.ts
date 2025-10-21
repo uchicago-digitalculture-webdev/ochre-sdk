@@ -3238,6 +3238,7 @@ async function parseSidebar(
   let sidebarLayout: "start" | "end" = "start";
   let sidebarMobileLayout: "default" | "inline" = "default";
   const sidebarCssStyles: Array<Style> = [];
+  const sidebarCssStylesTablet: Array<Style> = [];
   const sidebarCssStylesMobile: Array<Style> = [];
 
   const sidebarResource = resources.find((resource) => {
@@ -3319,6 +3320,18 @@ async function parseSidebar(
       sidebarCssStyles.push({ label: property.label, value: cssStyle });
     }
 
+    const tabletCssProperties =
+      sidebarBaseProperties.find(
+        (property) =>
+          property.label === "presentation" &&
+          property.values[0]!.content === "css-tablet",
+      )?.properties ?? [];
+
+    for (const property of tabletCssProperties) {
+      const cssStyle = property.values[0]!.content as string;
+      sidebarCssStylesTablet.push({ label: property.label, value: cssStyle });
+    }
+
     const mobileCssProperties =
       sidebarBaseProperties.find(
         (property) =>
@@ -3375,8 +3388,11 @@ async function parseSidebar(
       title: sidebarTitle,
       layout: sidebarLayout,
       mobileLayout: sidebarMobileLayout,
-      cssStyles: sidebarCssStyles,
-      cssStylesMobile: sidebarCssStylesMobile,
+      cssStyles: {
+        default: sidebarCssStyles,
+        tablet: sidebarCssStylesTablet,
+        mobile: sidebarCssStylesMobile,
+      },
     };
   }
 
