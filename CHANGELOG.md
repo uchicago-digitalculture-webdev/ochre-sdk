@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.4
+
+### Patch Changes
+
+- 2c5c2f9: refactor: restructure cssStyles in Website type and update sidebar parsing logic
+
 ## 0.11.3
 
 ### Patch Changes
