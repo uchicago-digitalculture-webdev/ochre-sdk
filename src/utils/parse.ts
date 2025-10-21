@@ -1148,20 +1148,11 @@ export function parseBibliography(
       format: bibliography.citationFormat ?? null,
       short:
         bibliography.citationFormatSpan ?
-          parseFakeString(
-            "default:span" in bibliography.citationFormatSpan ?
-              bibliography.citationFormatSpan["default:span"].content
-            : bibliography.citationFormatSpan.span.content,
-          )
+          (JSON.parse(`"${bibliography.citationFormatSpan}"`) as string)
         : null,
       long:
         bibliography.referenceFormatDiv ?
-          parseFakeString(
-            "default:div" in bibliography.referenceFormatDiv ?
-              bibliography.referenceFormatDiv["default:div"]["default:div"]
-                .content
-            : bibliography.referenceFormatDiv.div.div.content,
-          )
+          (JSON.parse(`"${bibliography.referenceFormatDiv}"`) as string)
         : null,
     },
     publicationInfo: {

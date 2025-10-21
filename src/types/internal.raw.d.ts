@@ -444,24 +444,8 @@ export type OchreBibliography = {
   entryInfo?: { startIssue: FakeString; startVolume: FakeString };
   citationDetails?: string;
   citationFormat?: string;
-  citationFormatSpan?:
-    | { span: { content: FakeString } }
-    | { "default:span": { content: FakeString } };
-  referenceFormatDiv?:
-    | {
-        div: {
-          div: { class: string; content: FakeString };
-          style: string;
-          class: string;
-        };
-      }
-    | {
-        "default:div": {
-          "default:div": { class: string; content: FakeString };
-          style: string;
-          class: string;
-        };
-      };
+  citationFormatSpan?: string;
+  referenceFormatDiv?: string;
   source?: {
     resource: Pick<
       OchreResource,
