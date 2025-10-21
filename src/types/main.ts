@@ -557,6 +557,14 @@ export type Website = {
   creators: Array<Person>;
   license: License | null;
   pages: Array<Webpage>;
+  sidebar: {
+    elements: Array<WebElement>;
+    title: WebElement["title"];
+    layout: "start" | "end";
+    mobileLayout: "default" | "inline";
+    cssStyles: Array<Style>;
+    cssStylesMobile: Array<Style>;
+  } | null;
   properties: WebsiteProperties;
   searchOptions: {
     filters: Array<{ uuid: string; type: string }>;
@@ -600,6 +608,7 @@ export type WebsiteProperties = {
   headerAlignment: "start" | "center" | "end";
   isHeaderProjectDisplayed: boolean;
   isFooterDisplayed: boolean;
+  isSidebarDisplayed: boolean;
   supportsThemeToggle: boolean;
   defaultTheme: "light" | "dark" | null;
   logoUrl: string | null;
@@ -622,6 +631,7 @@ export type WebpageProperties = {
   variant: "default" | "no-background";
   backgroundImageUrl: string | null;
   isBreadcrumbsDisplayed: boolean;
+  isSidebarDisplayed: boolean;
   cssStyles: {
     default: Array<Style>;
     tablet: Array<Style>;

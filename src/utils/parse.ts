@@ -2498,10 +2498,7 @@ async function parseWebElementProperties(
 
         let secondsPerImage = 5;
 
-        if (
-          variantProperty &&
-          variantProperty.values[0]!.content === "carousel"
-        ) {
+        if (variantProperty?.values[0]!.content === "carousel") {
           const secondsPerImageProperty = getPropertyValueByLabel(
             variantProperty.properties,
             "seconds-per-image",
@@ -3087,6 +3084,7 @@ async function parseWebpage(
   let displayedInHeader = true;
   let width: "default" | "full" | "large" | "narrow" = "default";
   let variant: "default" | "no-background" = "default";
+  let isSidebarDisplayed = false;
   let isBreadcrumbsDisplayed = false;
 
   const webpageSubProperties = webpageProperties.find(
@@ -3115,6 +3113,13 @@ async function parseWebpage(
     )?.values[0];
     if (variantProperty) {
       variant = variantProperty.content as "default" | "no-background";
+    }
+
+    const isSidebarDisplayedProperty = webpageSubProperties.find(
+      (property) => property.label === "sidebar-visible",
+    )?.values[0];
+    if (isSidebarDisplayedProperty) {
+      isSidebarDisplayed = isSidebarDisplayedProperty.content === true;
     }
 
     const isBreadcrumbsDisplayedProperty = webpageSubProperties.find(
@@ -3182,6 +3187,7 @@ async function parseWebpage(
         imageLink ?
           `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`
         : null,
+      isSidebarDisplayed,
       isBreadcrumbsDisplayed,
       cssStyles: {
         default: cssStyles,
@@ -3214,6 +3220,176 @@ async function parseWebpages(
   }
 
   return returnPages;
+}
+
+/**
+ * Parses raw sidebar data into a standardized Sidebar structure
+ *
+ * @param resources - Array of raw sidebar resources in OCHRE format
+ * @returns Parsed Sidebar object
+ */
+async function parseSidebar(
+  resources: Array<OchreResource>,
+): Promise<Website["sidebar"] | null> {
+  let sidebar: Website["sidebar"] | null = null;
+  const sidebarElements: Array<WebElement> = [];
+  const sidebarTitle: WebTitle = {
+    label: "",
+    variant: "default",
+    properties: {
+      isNameDisplayed: false,
+      isDescriptionDisplayed: false,
+      isDateDisplayed: false,
+      isCreatorsDisplayed: false,
+      isCountDisplayed: false,
+    },
+  };
+  let sidebarLayout: "start" | "end" = "start";
+  let sidebarMobileLayout: "default" | "inline" = "default";
+  const sidebarCssStyles: Array<Style> = [];
+  const sidebarCssStylesMobile: Array<Style> = [];
+
+  const sidebarResource = resources.find((resource) => {
+    const resourceProperties =
+      resource.properties ?
+        parseProperties(
+          Array.isArray(resource.properties.property) ?
+            resource.properties.property
+          : [resource.properties.property],
+        )
+      : [];
+    return resourceProperties.some(
+      (property) =>
+        property.label === "presentation" &&
+        property.values[0]?.content === "element" &&
+        property.properties[0]?.label === "component" &&
+        property.properties[0].values[0]?.content === "sidebar",
+    );
+  });
+  if (sidebarResource) {
+    sidebarTitle.label =
+      (
+        typeof sidebarResource.identification.label === "string" ||
+        typeof sidebarResource.identification.label === "number" ||
+        typeof sidebarResource.identification.label === "boolean"
+      ) ?
+        parseFakeString(sidebarResource.identification.label)
+      : parseStringContent(sidebarResource.identification.label);
+
+    const sidebarBaseProperties =
+      sidebarResource.properties ?
+        parseProperties(
+          Array.isArray(sidebarResource.properties.property) ?
+            sidebarResource.properties.property
+          : [sidebarResource.properties.property],
+        )
+      : [];
+
+    const sidebarProperties =
+      sidebarBaseProperties
+        .find(
+          (property) =>
+            property.label === "presentation" &&
+            property.values[0]?.content === "element",
+        )
+        ?.properties.find(
+          (property) =>
+            property.label === "component" &&
+            property.values[0]?.content === "sidebar",
+        )?.properties ?? [];
+
+    const sidebarLayoutProperty = sidebarProperties.find(
+      (property) => property.label === "layout",
+    );
+    if (sidebarLayoutProperty) {
+      sidebarLayout = sidebarLayoutProperty.values[0]!.content as
+        | "start"
+        | "end";
+    }
+
+    const sidebarMobileLayoutProperty = sidebarProperties.find(
+      (property) => property.label === "layout-mobile",
+    );
+    if (sidebarMobileLayoutProperty) {
+      sidebarMobileLayout = sidebarMobileLayoutProperty.values[0]!.content as
+        | "default"
+        | "inline";
+    }
+
+    const cssProperties =
+      sidebarBaseProperties.find(
+        (property) =>
+          property.label === "presentation" &&
+          property.values[0]!.content === "css",
+      )?.properties ?? [];
+
+    for (const property of cssProperties) {
+      const cssStyle = property.values[0]!.content as string;
+      sidebarCssStyles.push({ label: property.label, value: cssStyle });
+    }
+
+    const mobileCssProperties =
+      sidebarBaseProperties.find(
+        (property) =>
+          property.label === "presentation" &&
+          property.values[0]!.content === "css-mobile",
+      )?.properties ?? [];
+
+    for (const property of mobileCssProperties) {
+      const cssStyle = property.values[0]!.content as string;
+      sidebarCssStylesMobile.push({ label: property.label, value: cssStyle });
+    }
+
+    const titleProperties = sidebarBaseProperties.find(
+      (property) =>
+        property.label === "presentation" &&
+        property.values[0]!.content === "title",
+    )?.properties;
+
+    if (titleProperties) {
+      const titleVariant = getPropertyValueByLabel(titleProperties, "variant");
+      if (titleVariant) {
+        sidebarTitle.variant = titleVariant as "default" | "simple";
+      }
+
+      sidebarTitle.properties.isNameDisplayed =
+        getPropertyValueByLabel(titleProperties, "name-displayed") === true;
+      sidebarTitle.properties.isDescriptionDisplayed =
+        getPropertyValueByLabel(titleProperties, "description-displayed") ===
+        true;
+      sidebarTitle.properties.isDateDisplayed =
+        getPropertyValueByLabel(titleProperties, "date-displayed") === true;
+      sidebarTitle.properties.isCreatorsDisplayed =
+        getPropertyValueByLabel(titleProperties, "creators-displayed") === true;
+      sidebarTitle.properties.isCountDisplayed =
+        getPropertyValueByLabel(titleProperties, "count-displayed") === true;
+    }
+
+    const sidebarResources =
+      sidebarResource.resource ?
+        Array.isArray(sidebarResource.resource) ?
+          sidebarResource.resource
+        : [sidebarResource.resource]
+      : [];
+
+    for (const resource of sidebarResources) {
+      const element = await parseWebElement(resource);
+      sidebarElements.push(element);
+    }
+  }
+
+  if (sidebarElements.length > 0) {
+    sidebar = {
+      elements: sidebarElements,
+      title: sidebarTitle,
+      layout: sidebarLayout,
+      mobileLayout: sidebarMobileLayout,
+      cssStyles: sidebarCssStyles,
+      cssStylesMobile: sidebarCssStylesMobile,
+    };
+  }
+
+  return sidebar;
 }
 
 /**
@@ -3766,6 +3942,7 @@ function parseWebsiteProperties(
   let headerAlignment: "start" | "center" | "end" = "start";
   let isHeaderProjectDisplayed = true;
   let isFooterDisplayed = true;
+  let isSidebarDisplayed = false;
   let supportsThemeToggle = true;
   let defaultTheme: "light" | "dark" | null = null;
 
@@ -3811,6 +3988,13 @@ function parseWebsiteProperties(
     isFooterDisplayed = footerProperty.content === true;
   }
 
+  const sidebarProperty = websiteProperties.find(
+    (property) => property.label === "sidebar-visible",
+  )?.values[0];
+  if (sidebarProperty) {
+    isSidebarDisplayed = sidebarProperty.content === true;
+  }
+
   const supportsThemeToggleProperty = websiteProperties.find(
     (property) => property.label === "supports-theme-toggle",
   )?.values[0];
@@ -3841,6 +4025,7 @@ function parseWebsiteProperties(
     headerAlignment,
     isHeaderProjectDisplayed,
     isFooterDisplayed,
+    isSidebarDisplayed,
     supportsThemeToggle,
     defaultTheme,
     logoUrl:
@@ -3928,6 +4113,8 @@ export async function parseWebsite(
 
   const pages = await parseWebpages(resources);
 
+  const sidebar = await parseSidebar(resources);
+
   let globalOptions: Website["globalOptions"] = {
     contexts: {
       flatten: [],
@@ -4008,6 +4195,7 @@ export async function parseWebsite(
         )
       : [],
     license: parseLicense(websiteTree.availability),
+    sidebar,
     pages,
     properties,
     searchOptions: {
