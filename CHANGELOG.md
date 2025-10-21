@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.5
+
+### Patch Changes
+
+- df132a0: feat: add isAccordionExpandedByDefault property to WebBlock type and update parsing logic
+
 ## 0.11.4
 
 ### Patch Changes
