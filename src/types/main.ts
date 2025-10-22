@@ -690,6 +690,7 @@ export type WebElementComponent =
     }
   | {
       component: "bibliography";
+      setUuids: Array<string>;
       resourceUuids: Array<string>;
       bibliographies: Array<Bibliography>;
       layout: "long" | "short";
