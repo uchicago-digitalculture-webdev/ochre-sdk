@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.10
+
+### Patch Changes
+
+- 25e0c8f: refactor: optimize parsing functions by removing unnecessary async/await and improving type definitions
+
 ## 0.11.9
 
 ### Patch Changes
