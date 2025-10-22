@@ -79,7 +79,7 @@ export async function fetchWebsite(
         parseIdentification(result.ochre.metadata.project.identification)
       : null;
 
-    const website = await parseWebsite(
+    const website = parseWebsite(
       result.ochre.tree,
       projectIdentification?.label ?? "",
       result.ochre.metadata.project?.identification.website ?? null,

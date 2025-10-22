@@ -1925,15 +1925,13 @@ export function parseConcept(concept: OchreConcept): Concept {
  * @param type - Type of resource to parse ("element" or "page")
  * @returns Array of parsed WebElement or Webpage objects
  */
-const parseWebpageResources = async <T extends "element" | "page" | "block">(
+const parseWebpageResources = <T extends "element" | "page" | "block">(
   webpageResources: Array<OchreResource>,
   type: T,
-): Promise<
-  Array<
-    T extends "element" ? WebElement
-    : T extends "page" ? Webpage
-    : WebBlock
-  >
+): Array<
+  T extends "element" ? WebElement
+  : T extends "page" ? Webpage
+  : WebBlock
 > => {
   const returnElements: Array<
     T extends "element" ? WebElement
@@ -1960,7 +1958,7 @@ const parseWebpageResources = async <T extends "element" | "page" | "block">(
 
     switch (type) {
       case "element": {
-        const element = await parseWebElement(resource);
+        const element = parseWebElement(resource);
 
         returnElements.push(
           element as T extends "element" ? WebElement
@@ -1971,7 +1969,7 @@ const parseWebpageResources = async <T extends "element" | "page" | "block">(
         break;
       }
       case "page": {
-        const webpage = await parseWebpage(resource);
+        const webpage = parseWebpage(resource);
         if (webpage) {
           returnElements.push(
             webpage as T extends "element" ? WebElement
@@ -1983,7 +1981,7 @@ const parseWebpageResources = async <T extends "element" | "page" | "block">(
         break;
       }
       case "block": {
-        const block = await parseWebBlock(resource);
+        const block = parseWebBlock(resource);
         if (block) {
           returnElements.push(
             block as T extends "element" ? WebElement
@@ -2024,10 +2022,10 @@ export function parseConcepts(concepts: Array<OchreConcept>): Array<Concept> {
  * @param elementResource - Raw element resource data in OCHRE format
  * @returns Parsed WebElementComponent object
  */
-async function parseWebElementProperties(
+function parseWebElementProperties(
   componentProperty: Property,
   elementResource: OchreResource,
-): Promise<WebElementComponent> {
+): WebElementComponent {
   const unparsedComponentName = componentProperty.values[0]!.content;
   const { data: componentName } = componentSchema.safeParse(
     unparsedComponentName,
@@ -2904,9 +2902,7 @@ function parseWebTitle(
  * @param elementResource - Raw element resource data in OCHRE format
  * @returns Parsed WebElement object
  */
-async function parseWebElement(
-  elementResource: OchreResource,
-): Promise<WebElement> {
+function parseWebElement(elementResource: OchreResource): WebElement {
   const identification = parseIdentification(elementResource.identification);
 
   const elementProperties =
@@ -2936,7 +2932,7 @@ async function parseWebElement(
     );
   }
 
-  const properties = await parseWebElementProperties(
+  const properties = parseWebElementProperties(
     componentProperty,
     elementResource,
   );
@@ -3018,9 +3014,7 @@ async function parseWebElement(
  * @param webpageResource - Raw webpage resource data in OCHRE format
  * @returns Parsed Webpage object
  */
-async function parseWebpage(
-  webpageResource: OchreResource,
-): Promise<Webpage | null> {
+function parseWebpage(webpageResource: OchreResource): Webpage | null {
   const webpageProperties =
     webpageResource.properties ?
       parseProperties(
@@ -3086,12 +3080,12 @@ async function parseWebpage(
 
     switch (resourceType) {
       case "element": {
-        const element = await parseWebElement(resource);
+        const element = parseWebElement(resource);
         items.push(element);
         break;
       }
       case "block": {
-        const block = await parseWebBlock(resource);
+        const block = parseWebBlock(resource);
         if (block) {
           items.push(block);
         }
@@ -3102,7 +3096,7 @@ async function parseWebpage(
 
   const webpages =
     webpageResource.resource ?
-      await parseWebpageResources(
+      parseWebpageResources(
         Array.isArray(webpageResource.resource) ?
           webpageResource.resource
         : [webpageResource.resource],
@@ -3234,15 +3228,13 @@ async function parseWebpage(
  * @param webpageResources - Array of raw webpage resources in OCHRE format
  * @returns Array of parsed Webpage objects
  */
-async function parseWebpages(
-  webpageResources: Array<OchreResource>,
-): Promise<Array<Webpage>> {
+function parseWebpages(webpageResources: Array<OchreResource>): Array<Webpage> {
   const returnPages: Array<Webpage> = [];
   const pagesToParse =
     Array.isArray(webpageResources) ? webpageResources : [webpageResources];
 
   for (const page of pagesToParse) {
-    const webpage = await parseWebpage(page);
+    const webpage = parseWebpage(page);
     if (webpage) {
       returnPages.push(webpage);
     }
@@ -3257,9 +3249,9 @@ async function parseWebpages(
  * @param resources - Array of raw sidebar resources in OCHRE format
  * @returns Parsed Sidebar object
  */
-async function parseSidebar(
+function parseSidebar(
   resources: Array<OchreResource>,
-): Promise<Website["sidebar"] | null> {
+): Website["sidebar"] | null {
   let sidebar: Website["sidebar"] | null = null;
   const sidebarElements: Array<WebElement> = [];
   const sidebarTitle: WebTitle = {
@@ -3415,7 +3407,7 @@ async function parseSidebar(
       : [];
 
     for (const resource of sidebarResources) {
-      const element = await parseWebElement(resource);
+      const element = parseWebElement(resource);
       sidebarElements.push(element);
     }
   }
@@ -3443,14 +3435,12 @@ async function parseSidebar(
  * @param elementResource - Raw element resource data in OCHRE format
  * @returns Parsed text WebElement with items array
  */
-async function parseWebElementForAccordion(
+function parseWebElementForAccordion(
   elementResource: OchreResource,
-): Promise<
-  Extract<WebElement, { component: "text" }> & {
-    items: Array<WebElement | WebBlock>;
-  }
-> {
-  const textElement = (await parseWebElement(elementResource)) as Extract<
+): Extract<WebElement, { component: "text" }> & {
+  items: Array<WebElement | WebBlock>;
+} {
+  const textElement = parseWebElement(elementResource) as Extract<
     WebElement,
     { component: "text" }
   >;
@@ -3483,12 +3473,12 @@ async function parseWebElementForAccordion(
 
     switch (resourceType) {
       case "element": {
-        const element = await parseWebElement(resource);
+        const element = parseWebElement(resource);
         items.push(element);
         break;
       }
       case "block": {
-        const block = await parseWebBlock(resource);
+        const block = parseWebBlock(resource);
         if (block) {
           items.push(block);
         }
@@ -3506,9 +3496,7 @@ async function parseWebElementForAccordion(
  * @param blockResource - Raw block resource data in OCHRE format
  * @returns Parsed WebBlock object
  */
-async function parseWebBlock(
-  blockResource: OchreResource,
-): Promise<WebBlock | null> {
+function parseWebBlock(blockResource: OchreResource): WebBlock | null {
   const blockProperties =
     blockResource.properties ?
       parseProperties(
@@ -3871,7 +3859,7 @@ async function parseWebBlock(
         );
       }
 
-      const element = await parseWebElementForAccordion(resource);
+      const element = parseWebElementForAccordion(resource);
       accordionItems.push(element);
     }
 
@@ -3898,12 +3886,12 @@ async function parseWebBlock(
 
       switch (resourceType) {
         case "element": {
-          const element = await parseWebElement(resource);
+          const element = parseWebElement(resource);
           blockItems.push(element);
           break;
         }
         case "block": {
-          const block = await parseWebBlock(resource);
+          const block = parseWebBlock(resource);
           if (block) {
             blockItems.push(block);
           }
@@ -4157,11 +4145,11 @@ function parseContexts(
   return contextsParsed;
 }
 
-export async function parseWebsite(
+export function parseWebsite(
   websiteTree: OchreTree,
   projectName: FakeString,
   website: FakeString | null,
-): Promise<Website> {
+): Website {
   if (!websiteTree.properties) {
     throw new Error("Website properties not found");
   }
@@ -4184,9 +4172,9 @@ export async function parseWebsite(
       websiteTree.items.resource
     : [websiteTree.items.resource];
 
-  const pages = await parseWebpages(resources);
+  const pages = parseWebpages(resources);
 
-  const sidebar = await parseSidebar(resources);
+  const sidebar = parseSidebar(resources);
 
   let globalOptions: Website["globalOptions"] = {
     contexts: {
