@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.8
+
+### Patch Changes
+
+- cc5c20d: fix: improve citation parsing by replacing HTML entities in short and long citations
+
 ## 0.11.7
 
 ### Patch Changes
