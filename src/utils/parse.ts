@@ -2142,15 +2142,20 @@ async function parseWebElementProperties(
       break;
     }
     case "bibliography": {
+      const setLinks = links.filter((link) => link.category === "set");
       const resourceLinks = links.filter(
         (link) => link.category === "resource",
       );
       const bibliographyLinks = links.filter(
         (link) => link.category === "bibliography",
       );
-      if (resourceLinks.length === 0 && bibliographyLinks.length === 0) {
+      if (
+        setLinks.length === 0 &&
+        resourceLinks.length === 0 &&
+        bibliographyLinks.length === 0
+      ) {
         throw new Error(
-          `Resource or bibliography links not found for the following component: “${componentName}”`,
+          `Set, resource or bibliography links not found for the following component: “${componentName}”`,
         );
       }
 
@@ -2169,6 +2174,9 @@ async function parseWebElementProperties(
         isSourceDocumentDisplayed = isSourceDocumentDisplayedProperty === true;
       }
 
+      properties.setUuids = setLinks
+        .map((link) => link.uuid)
+        .filter((uuid) => uuid !== null);
       properties.resourceUuids = resourceLinks
         .map((link) => link.uuid)
         .filter((uuid) => uuid !== null);
