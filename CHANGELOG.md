@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.7
+
+### Patch Changes
+
+- dce4493: feat: enhance bibliography component with resource UUIDs and source document display logic
+
 ## 0.11.6
 
 ### Patch Changes
