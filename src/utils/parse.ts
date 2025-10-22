@@ -2144,13 +2144,13 @@ function parseWebElementProperties(
       const resourceLinks = links.filter(
         (link) => link.category === "resource",
       );
-      const bibliographyLinks = links.filter(
+      const bibliographyLink = links.find(
         (link) => link.category === "bibliography",
       );
       if (
         setLinks.length === 0 &&
         resourceLinks.length === 0 &&
-        bibliographyLinks.length === 0
+        bibliographyLink?.bibliographies == null
       ) {
         throw new Error(
           `Set, resource or bibliography links not found for the following component: “${componentName}”`,
@@ -2178,8 +2178,7 @@ function parseWebElementProperties(
       properties.resourceUuids = resourceLinks
         .map((link) => link.uuid)
         .filter((uuid) => uuid !== null);
-      properties.bibliographies =
-        bibliographyLinks as unknown as Array<Bibliography>;
+      properties.bibliographies = bibliographyLink?.bibliographies ?? [];
       properties.layout = layout;
       properties.isSourceDocumentDisplayed = isSourceDocumentDisplayed;
 
