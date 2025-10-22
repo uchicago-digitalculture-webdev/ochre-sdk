@@ -1128,18 +1128,22 @@ export function parseBibliography(
   let longCitation = null;
   if (bibliography.citationFormatSpan) {
     try {
-      shortCitation = JSON.parse(
-        `"${bibliography.citationFormatSpan}"`,
-      ) as string;
+      shortCitation = (
+        JSON.parse(`"${bibliography.citationFormatSpan}"`) as string
+      )
+        .replaceAll("&lt;", "<")
+        .replaceAll("&gt;", ">");
     } catch {
       shortCitation = bibliography.citationFormatSpan;
     }
   }
   if (bibliography.referenceFormatDiv) {
     try {
-      longCitation = JSON.parse(
-        `"${bibliography.referenceFormatDiv}"`,
-      ) as string;
+      longCitation = (
+        JSON.parse(`"${bibliography.referenceFormatDiv}"`) as string
+      )
+        .replaceAll("&lt;", "<")
+        .replaceAll("&gt;", ">");
     } catch {
       longCitation = bibliography.referenceFormatDiv;
     }
