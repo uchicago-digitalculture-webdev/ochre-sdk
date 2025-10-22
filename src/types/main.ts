@@ -746,6 +746,11 @@ export type WebElementComponent =
       isTransparentBackground: boolean;
       isCover: boolean;
       carouselOptions: { secondsPerImage: number } | null;
+      heroOptions: {
+        isBackgroundImageDisplayed: boolean;
+        isDocumentDisplayed: boolean;
+        isLinkDisplayed: boolean;
+      } | null;
     }
   | {
       component: "image-gallery";

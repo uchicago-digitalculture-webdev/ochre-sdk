@@ -2515,13 +2515,13 @@ function parseWebElementProperties(
         isCover = isCoverProperty === true;
       }
 
+      const variantProperty = getPropertyByLabel(
+        componentProperty.properties,
+        "variant",
+      );
+
       let carouselOptions: { secondsPerImage: number } | null = null;
       if (images.length > 1) {
-        const variantProperty = getPropertyByLabel(
-          componentProperty.properties,
-          "variant",
-        );
-
         let secondsPerImage = 5;
 
         if (variantProperty?.values[0]!.content === "carousel") {
@@ -2541,6 +2541,33 @@ function parseWebElementProperties(
         carouselOptions = { secondsPerImage };
       }
 
+      let heroOptions: {
+        isBackgroundImageDisplayed: boolean;
+        isDocumentDisplayed: boolean;
+        isLinkDisplayed: boolean;
+      } | null = null;
+      if (variantProperty?.values[0]!.content === "hero") {
+        const isBackgroundImageDisplayedProperty = getPropertyValueByLabel(
+          variantProperty.properties,
+          "background-image-displayed",
+        );
+        const isDocumentDisplayedProperty = getPropertyValueByLabel(
+          variantProperty.properties,
+          "document-displayed",
+        );
+        const isLinkDisplayedProperty = getPropertyValueByLabel(
+          variantProperty.properties,
+          "link-displayed",
+        );
+
+        heroOptions = {
+          isBackgroundImageDisplayed:
+            isBackgroundImageDisplayedProperty !== false,
+          isDocumentDisplayed: isDocumentDisplayedProperty !== false,
+          isLinkDisplayed: isLinkDisplayedProperty !== false,
+        };
+      }
+
       properties.images = images;
       properties.variant = variant;
       properties.width = width;
@@ -2554,6 +2581,7 @@ function parseWebElementProperties(
       properties.isTransparentBackground = isTransparentBackground;
       properties.isCover = isCover;
       properties.carouselOptions = carouselOptions;
+      properties.heroOptions = heroOptions;
       break;
     }
     case "image-gallery": {
