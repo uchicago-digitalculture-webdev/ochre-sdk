@@ -10,6 +10,7 @@ const KNOWN_ABBREVIATIONS: Record<string, string> = {
   "hannah-papanek": "20b2c919-021f-4774-b2c3-2f1ae5b910e7",
   mepa: "85ddaa5a-535b-4809-8714-855d2d812a3e",
   ssmc: "8ff977dd-d440-40f5-ad93-8ad7e2d39e74",
+  "sosc-core-at-smart": "db26c953-9b2a-4691-a909-5e8726b531d7",
 };
 
 /**
