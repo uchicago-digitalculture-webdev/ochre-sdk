@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.9
+
+### Patch Changes
+
+- e4adba1: fix: enhance error handling and add set link UUIDs in bibliography parsing
+
 ## 0.11.8
 
 ### Patch Changes
