@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.11
+
+### Patch Changes
+
+- f2ae301: - fix: improve bibliography link handling in parseWebElementProperties function
+  - feat: add heroOptions to WebElementComponent and update parseWebElementProperties for hero variant handling
+
 ## 0.11.10
 
 ### Patch Changes
