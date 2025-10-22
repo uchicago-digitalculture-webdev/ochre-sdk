@@ -2138,18 +2138,15 @@ async function parseWebElementProperties(
       break;
     }
     case "bibliography": {
-      const bibliographyLink = links.find(
+      const resourceLinks = links.filter(
+        (link) => link.category === "resource",
+      );
+      const bibliographyLinks = links.filter(
         (link) => link.category === "bibliography",
       );
-      if (!bibliographyLink) {
+      if (resourceLinks.length === 0 && bibliographyLinks.length === 0) {
         throw new Error(
-          `Bibliography link not found for the following component: “${componentName}”`,
-        );
-      }
-
-      if (!bibliographyLink.bibliographies) {
-        throw new Error(
-          `Bibliography not found for the following component: “${componentName}”`,
+          `Resource or bibliography links not found for the following component: “${componentName}”`,
         );
       }
 
@@ -2159,8 +2156,22 @@ async function parseWebElementProperties(
       );
       layout ??= "long";
 
-      properties.bibliographies = bibliographyLink.bibliographies;
+      let isSourceDocumentDisplayed = true;
+      const isSourceDocumentDisplayedProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "source-document-displayed",
+      );
+      if (isSourceDocumentDisplayedProperty !== null) {
+        isSourceDocumentDisplayed = isSourceDocumentDisplayedProperty === true;
+      }
+
+      properties.resourceUuids = resourceLinks
+        .map((link) => link.uuid)
+        .filter((uuid) => uuid !== null);
+      properties.bibliographies =
+        bibliographyLinks as unknown as Array<Bibliography>;
       properties.layout = layout;
+      properties.isSourceDocumentDisplayed = isSourceDocumentDisplayed;
 
       break;
     }

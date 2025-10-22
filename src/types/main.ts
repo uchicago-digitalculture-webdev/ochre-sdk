@@ -690,8 +690,10 @@ export type WebElementComponent =
     }
   | {
       component: "bibliography";
+      resourceUuids: Array<string>;
       bibliographies: Array<Bibliography>;
       layout: "long" | "short";
+      isSourceDocumentDisplayed: boolean;
     }
   | {
       component: "entries";
