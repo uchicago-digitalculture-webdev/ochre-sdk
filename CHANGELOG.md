@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.12
+
+### Patch Changes
+
+- 4079d98: refactor: rename resourceUuids to itemUuids in WebElementComponent and update parseWebElementProperties for improved link handling
+
 ## 0.11.11
 
 ### Patch Changes
