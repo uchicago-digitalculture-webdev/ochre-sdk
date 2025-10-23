@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.13
+
+### Patch Changes
+
+- a2c61a2: feat: add bibliographies support to various types and update parsing functions accordingly
+
 ## 0.11.12
 
 ### Patch Changes
