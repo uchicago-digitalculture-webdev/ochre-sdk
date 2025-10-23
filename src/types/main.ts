@@ -691,7 +691,7 @@ export type WebElementComponent =
   | {
       component: "bibliography";
       setUuids: Array<string>;
-      resourceUuids: Array<string>;
+      itemUuids: Array<string>;
       bibliographies: Array<Bibliography>;
       layout: "long" | "short";
       isSourceDocumentDisplayed: boolean;

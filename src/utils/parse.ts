@@ -2141,19 +2141,24 @@ function parseWebElementProperties(
     }
     case "bibliography": {
       const setLinks = links.filter((link) => link.category === "set");
-      const resourceLinks = links.filter(
-        (link) => link.category === "resource",
+      const itemLinks = links.filter(
+        (link) =>
+          link.category === "resource" ||
+          link.category === "spatialUnit" ||
+          link.category === "concept" ||
+          link.category === "period" ||
+          link.category === "person",
       );
       const bibliographyLink = links.find(
         (link) => link.category === "bibliography",
       );
       if (
         setLinks.length === 0 &&
-        resourceLinks.length === 0 &&
+        itemLinks.length === 0 &&
         bibliographyLink?.bibliographies == null
       ) {
         throw new Error(
-          `Set, resource or bibliography links not found for the following component: “${componentName}”`,
+          `No links found for the following component: “${componentName}”`,
         );
       }
 
@@ -2175,7 +2180,7 @@ function parseWebElementProperties(
       properties.setUuids = setLinks
         .map((link) => link.uuid)
         .filter((uuid) => uuid !== null);
-      properties.resourceUuids = resourceLinks
+      properties.itemUuids = itemLinks
         .map((link) => link.uuid)
         .filter((uuid) => uuid !== null);
       properties.bibliographies = bibliographyLink?.bibliographies ?? [];
