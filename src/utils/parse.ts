@@ -773,6 +773,14 @@ export function parseObservation(observation: OchreObservation): Observation {
           : [observation.properties.property],
         )
       : [],
+    bibliographies:
+      observation.bibliographies ?
+        parseBibliographies(
+          Array.isArray(observation.bibliographies.bibliography) ?
+            observation.bibliographies.bibliography
+          : [observation.bibliographies.bibliography],
+        )
+      : [],
   };
 }
 
@@ -1020,6 +1028,14 @@ export function parseInterpretations(
             Array.isArray(interpretation.properties.property) ?
               interpretation.properties.property
             : [interpretation.properties.property],
+          )
+        : [],
+      bibliographies:
+        interpretation.bibliographies ?
+          parseBibliographies(
+            Array.isArray(interpretation.bibliographies.bibliography) ?
+              interpretation.bibliographies.bibliography
+            : [interpretation.bibliographies.bibliography],
           )
         : [],
     });
@@ -1843,6 +1859,14 @@ export function parseSpatialUnit(spatialUnit: OchreSpatialUnit): SpatialUnit {
           : [spatialUnit.properties.property],
         )
       : [],
+    bibliographies:
+      spatialUnit.bibliographies ?
+        parseBibliographies(
+          Array.isArray(spatialUnit.bibliographies.bibliography) ?
+            spatialUnit.bibliographies.bibliography
+          : [spatialUnit.bibliographies.bibliography],
+        )
+      : [],
   };
 
   return returnSpatialUnit;
@@ -1911,6 +1935,14 @@ export function parseConcept(concept: OchreConcept): Concept {
           Array.isArray(concept.properties.property) ?
             concept.properties.property
           : [concept.properties.property],
+        )
+      : [],
+    bibliographies:
+      concept.bibliographies ?
+        parseBibliographies(
+          Array.isArray(concept.bibliographies.bibliography) ?
+            concept.bibliographies.bibliography
+          : [concept.bibliographies.bibliography],
         )
       : [],
   };
@@ -2140,23 +2172,13 @@ function parseWebElementProperties(
       break;
     }
     case "bibliography": {
-      const setLinks = links.filter((link) => link.category === "set");
       const itemLinks = links.filter(
-        (link) =>
-          link.category === "resource" ||
-          link.category === "spatialUnit" ||
-          link.category === "concept" ||
-          link.category === "period" ||
-          link.category === "person",
+        (link) => link.category !== "bibliography",
       );
       const bibliographyLink = links.find(
         (link) => link.category === "bibliography",
       );
-      if (
-        setLinks.length === 0 &&
-        itemLinks.length === 0 &&
-        bibliographyLink?.bibliographies == null
-      ) {
+      if (itemLinks.length === 0 && bibliographyLink?.bibliographies == null) {
         throw new Error(
           `No links found for the following component: “${componentName}”`,
         );
@@ -2177,9 +2199,6 @@ function parseWebElementProperties(
         isSourceDocumentDisplayed = isSourceDocumentDisplayedProperty === true;
       }
 
-      properties.setUuids = setLinks
-        .map((link) => link.uuid)
-        .filter((uuid) => uuid !== null);
       properties.itemUuids = itemLinks
         .map((link) => link.uuid)
         .filter((uuid) => uuid !== null);

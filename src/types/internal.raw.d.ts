@@ -293,6 +293,9 @@ export type OchreSpatialUnit = {
   observations?: { observation: OchreObservation | Array<OchreObservation> };
   observation?: OchreObservation;
   properties?: { property: OchreProperty | Array<OchreProperty> };
+  bibliographies?: {
+    bibliography: OchreBibliography | Array<OchreBibliography>;
+  };
 };
 
 /**
@@ -311,6 +314,9 @@ export type OchreConcept = {
     interpretation: OchreInterpretation | Array<OchreInterpretation>;
   };
   properties?: { property: OchreProperty | Array<OchreProperty> };
+  bibliographies?: {
+    bibliography: OchreBibliography | Array<OchreBibliography>;
+  };
 };
 
 /**
@@ -566,6 +572,9 @@ export type OchreObservation = {
   notes?: { note: OchreNote | Array<OchreNote> };
   links?: OchreLink | Array<OchreLink>;
   properties?: { property: OchreProperty | Array<OchreProperty> };
+  bibliographies?: {
+    bibliography: OchreBibliography | Array<OchreBibliography>;
+  };
 };
 
 /**
@@ -634,6 +643,9 @@ export type OchreInterpretation = {
   date: string; // YYYY-MM-DD
   interpretationNo: number;
   properties?: { property: OchreProperty | Array<OchreProperty> };
+  bibliographies?: {
+    bibliography: OchreBibliography | Array<OchreBibliography>;
+  };
 };
 
 /**

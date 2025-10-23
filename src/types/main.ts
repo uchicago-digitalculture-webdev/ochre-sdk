@@ -239,6 +239,7 @@ export type Observation = {
   notes: Array<Note>;
   links: Array<Link>;
   properties: Array<Property>;
+  bibliographies: Array<Bibliography>;
 };
 
 /**
@@ -260,6 +261,7 @@ export type Interpretation = {
   date: string | null;
   number: number;
   properties: Array<Property>;
+  bibliographies: Array<Bibliography>;
 };
 
 /**
@@ -313,6 +315,7 @@ export type SpatialUnit = {
   observations: Array<Observation>;
   events: Array<Event>;
   properties: Array<Property>;
+  bibliographies: Array<Bibliography>;
 };
 
 /**
@@ -330,6 +333,7 @@ export type Concept = {
   description: string | null;
   interpretations: Array<Interpretation>;
   properties: Array<Property>;
+  bibliographies: Array<Bibliography>;
 };
 
 /**
@@ -690,7 +694,6 @@ export type WebElementComponent =
     }
   | {
       component: "bibliography";
-      setUuids: Array<string>;
       itemUuids: Array<string>;
       bibliographies: Array<Bibliography>;
       layout: "long" | "short";
