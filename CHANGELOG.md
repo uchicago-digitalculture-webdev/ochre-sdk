@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.18
+
+### Patch Changes
+
+- 00624df: fix: correct property name from IIIFId to iiifId in WebElementComponent type
+
 ## 0.11.17
 
 ### Patch Changes
