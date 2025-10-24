@@ -2456,7 +2456,7 @@ function parseWebElementProperties(
       const images: Array<WebImage> = [];
       for (const link of links) {
         images.push({
-          url: `https://ochre.lib.uchicago.edu/ochre?uuid=${link.uuid}$${imageQuality === "high" && (link.type === "image" || link.type === "IIIF") ? "&load" : "&preview"}`,
+          url: `https://ochre.lib.uchicago.edu/ochre?uuid=${link.uuid}${imageQuality === "high" && (link.type === "image" || link.type === "IIIF") ? "&load" : "&preview"}`,
           label: link.identification?.label ?? null,
           width: link.image?.width ?? 0,
           height: link.image?.height ?? 0,
