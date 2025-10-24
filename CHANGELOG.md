@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.17
+
+### Patch Changes
+
+- 7650c11: refactor: streamline image link handling in parseWebElementProperties function
+
 ## 0.11.16
 
 ### Patch Changes
