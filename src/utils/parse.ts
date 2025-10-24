@@ -2436,7 +2436,7 @@ function parseWebElementProperties(
       );
       variant ??= "universal-viewer";
 
-      properties.IIIFId = manifestLink.uuid;
+      properties.iiifId = manifestLink.uuid;
       properties.variant = variant;
       break;
     }

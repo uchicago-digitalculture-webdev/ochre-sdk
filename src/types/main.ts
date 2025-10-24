@@ -737,7 +737,7 @@ export type WebElementComponent =
     }
   | {
       component: "iiif-viewer";
-      IIIFId: string;
+      iiifId: string;
       variant: "universal-viewer" | "clover";
     }
   | {
