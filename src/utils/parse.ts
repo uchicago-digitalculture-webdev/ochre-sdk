@@ -2073,9 +2073,6 @@ function parseWebElementProperties(
         : [elementResource.links],
       )
     : [];
-  const imageLinks = links.filter(
-    (link) => link.type === "image" || link.type === "IIIF",
-  );
 
   switch (componentName) {
     case "annotated-document": {
@@ -2092,6 +2089,10 @@ function parseWebElementProperties(
       break;
     }
     case "annotated-image": {
+      const imageLinks = links.filter(
+        (link) => link.type === "image" || link.type === "IIIF",
+      );
+
       if (imageLinks.length === 0) {
         throw new Error(
           `Image link not found for the following component: “${componentName}”`,
@@ -2264,13 +2265,16 @@ function parseWebElementProperties(
       }
 
       let image: WebImage | null = null;
-      if (imageLinks.length > 0) {
+      const imageLink = links.find(
+        (link) => link.type === "image" || link.type === "IIIF",
+      );
+      if (imageLink != null) {
         image = {
-          url: `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLinks[0]!.uuid}&load`,
-          label: imageLinks[0]!.identification?.label ?? null,
-          width: imageLinks[0]!.image?.width ?? 0,
-          height: imageLinks[0]!.image?.height ?? 0,
-          description: imageLinks[0]!.description ?? null,
+          url: `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`,
+          label: imageLink.identification?.label ?? null,
+          width: imageLink.image?.width ?? 0,
+          height: imageLink.image?.height ?? 0,
+          description: imageLink.description ?? null,
         };
       }
 
@@ -2437,20 +2441,26 @@ function parseWebElementProperties(
       break;
     }
     case "image": {
-      if (imageLinks.length === 0) {
+      if (links.length === 0) {
         throw new Error(
-          `Image link not found for the following component: “${componentName}”`,
+          `No links found for the following component: “${componentName}”`,
         );
       }
 
+      let imageQuality = getPropertyValueByLabel(
+        componentProperty.properties,
+        "quality",
+      );
+      imageQuality ??= "high";
+
       const images: Array<WebImage> = [];
-      for (const imageLink of imageLinks) {
+      for (const link of links) {
         images.push({
-          url: `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`,
-          label: imageLink.identification?.label ?? null,
-          width: imageLink.image?.width ?? 0,
-          height: imageLink.image?.height ?? 0,
-          description: imageLink.description ?? null,
+          url: `https://ochre.lib.uchicago.edu/ochre?uuid=${link.uuid}$${imageQuality === "high" && (link.type === "image" || link.type === "IIIF") ? "&load" : "&preview"}`,
+          label: link.identification?.label ?? null,
+          width: link.image?.width ?? 0,
+          height: link.image?.height ?? 0,
+          description: link.description ?? null,
         });
       }
 
@@ -2509,12 +2519,6 @@ function parseWebElementProperties(
       if (isFullHeightProperty !== null) {
         isFullHeight = isFullHeightProperty === true;
       }
-
-      let imageQuality = getPropertyValueByLabel(
-        componentProperty.properties,
-        "image-quality",
-      );
-      imageQuality ??= "high";
 
       let captionSource = getPropertyValueByLabel(
         componentProperty.properties,
