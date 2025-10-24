@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.15
+
+### Patch Changes
+
+- a4c01ec: feat: add iiifViewer property to WebsiteProperties type and update parsing logic to handle its default value
+
 ## 0.11.14
 
 ### Patch Changes
