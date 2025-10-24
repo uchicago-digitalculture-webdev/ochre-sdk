@@ -2426,7 +2426,14 @@ function parseWebElementProperties(
         );
       }
 
+      let variant = getPropertyValueByLabel(
+        componentProperty.properties,
+        "variant",
+      );
+      variant ??= "universal-viewer";
+
       properties.IIIFId = manifestLink.uuid;
+      properties.variant = variant;
       break;
     }
     case "image": {

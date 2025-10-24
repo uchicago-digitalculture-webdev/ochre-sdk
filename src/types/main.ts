@@ -734,7 +734,11 @@ export type WebElementComponent =
       height: string | null;
       width: string | null;
     }
-  | { component: "iiif-viewer"; IIIFId: string }
+  | {
+      component: "iiif-viewer";
+      IIIFId: string;
+      variant: "universal-viewer" | "clover";
+    }
   | {
       component: "image";
       images: Array<WebImage>;
