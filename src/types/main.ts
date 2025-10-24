@@ -587,6 +587,7 @@ export type Website = {
       flatten: Array<LevelContext>;
       suppress: Array<LevelContext>;
       filter: Array<LevelContext>;
+      sort: Array<LevelContext>;
       detail: Array<LevelContext>;
       download: Array<LevelContext>;
       label: Array<LevelContext>;

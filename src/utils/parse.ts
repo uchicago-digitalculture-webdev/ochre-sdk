@@ -4231,6 +4231,7 @@ export function parseWebsite(
     contexts: {
       flatten: [],
       filter: [],
+      sort: [],
       detail: [],
       download: [],
       label: [],
@@ -4256,6 +4257,12 @@ export function parseWebsite(
           websiteTree.websiteOptions.filterContexts
         : [websiteTree.websiteOptions.filterContexts]
       : [];
+    const sortContextsRaw =
+      websiteTree.websiteOptions.sortContexts != null ?
+        Array.isArray(websiteTree.websiteOptions.sortContexts) ?
+          websiteTree.websiteOptions.sortContexts
+        : [websiteTree.websiteOptions.sortContexts]
+      : [];
     const detailContextsRaw =
       websiteTree.websiteOptions.detailContexts != null ?
         Array.isArray(websiteTree.websiteOptions.detailContexts) ?
@@ -4279,6 +4286,7 @@ export function parseWebsite(
       contexts: {
         flatten: parseContexts(flattenContextsRaw),
         filter: parseContexts(filterContextsRaw),
+        sort: parseContexts(sortContextsRaw),
         detail: parseContexts(detailContextsRaw),
         download: parseContexts(downloadContextsRaw),
         label: parseContexts(labelContextsRaw),

@@ -196,6 +196,7 @@ export type OchreTree = {
     flattenContexts?: OchreLevelContext | Array<OchreLevelContext>;
     suppressContexts?: OchreLevelContext | Array<OchreLevelContext>;
     filterContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    sortContexts?: OchreLevelContext | Array<OchreLevelContext>;
     detailContexts?: OchreLevelContext | Array<OchreLevelContext>;
     downloadContexts?: OchreLevelContext | Array<OchreLevelContext>;
     labelContexts?: OchreLevelContext | Array<OchreLevelContext>;
