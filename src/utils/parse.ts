@@ -4062,6 +4062,7 @@ function parseWebsiteProperties(
   let isHeaderProjectDisplayed = true;
   let isFooterDisplayed = true;
   let isSidebarDisplayed = false;
+  let iiifViewer: "universal-viewer" | "clover" = "universal-viewer";
   let supportsThemeToggle = true;
   let defaultTheme: "light" | "dark" | null = null;
 
@@ -4114,6 +4115,13 @@ function parseWebsiteProperties(
     isSidebarDisplayed = sidebarProperty.content === true;
   }
 
+  const iiifViewerProperty = websiteProperties.find(
+    (property) => property.label === "iiif-viewer",
+  )?.values[0];
+  if (iiifViewerProperty) {
+    iiifViewer = iiifViewerProperty.content as "universal-viewer" | "clover";
+  }
+
   const supportsThemeToggleProperty = websiteProperties.find(
     (property) => property.label === "supports-theme-toggle",
   )?.values[0];
@@ -4145,6 +4153,7 @@ function parseWebsiteProperties(
     isHeaderProjectDisplayed,
     isFooterDisplayed,
     isSidebarDisplayed,
+    iiifViewer,
     supportsThemeToggle,
     defaultTheme,
     logoUrl:

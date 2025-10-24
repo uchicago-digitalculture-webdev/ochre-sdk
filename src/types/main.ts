@@ -617,6 +617,7 @@ export type WebsiteProperties = {
   isHeaderProjectDisplayed: boolean;
   isFooterDisplayed: boolean;
   isSidebarDisplayed: boolean;
+  iiifViewer: "universal-viewer" | "clover";
   supportsThemeToggle: boolean;
   defaultTheme: "light" | "dark" | null;
   logoUrl: string | null;
