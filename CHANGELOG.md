@@ -1,5 +1,12 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.14
+
+### Patch Changes
+
+- dd08fb3: - feat: add sortContexts and variant properties to OchreTree and Website types, and update parsing functions accordingly
+  - feat: extend iiif-viewer component to include variant property and update parsing logic to handle default value
+
 ## 0.11.13
 
 ### Patch Changes
