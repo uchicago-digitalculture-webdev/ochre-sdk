@@ -1,5 +1,11 @@
 # @digitalculture/ochre-sdk
 
+## 0.11.19
+
+### Patch Changes
+
+- 1515cff: feat: add prominentContexts to OchreTree and prominent to Website type, update parseWebsite function to handle prominent contexts
+
 ## 0.11.18
 
 ### Patch Changes
