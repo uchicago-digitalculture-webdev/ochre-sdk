@@ -25,7 +25,8 @@
     "research"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "dev": "tsdown src/index.ts --watch",
