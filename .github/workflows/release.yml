@@ -5,13 +5,13 @@ on:
     branches:
       - main
 
-permissions:
-  id-token: write
-  contents: write
-  pull-requests: write
-
 jobs:
   release:
+    environment: release
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
     name: Release
     runs-on: ubuntu-latest
     steps:
@@ -43,4 +43,4 @@ jobs:
           title: "chore: update versions"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ""
+          NPM_CONFIG_PROVENANCE: true
