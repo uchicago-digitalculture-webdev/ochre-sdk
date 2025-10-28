@@ -200,6 +200,7 @@ export type OchreTree = {
     detailContexts?: OchreLevelContext | Array<OchreLevelContext>;
     downloadContexts?: OchreLevelContext | Array<OchreLevelContext>;
     labelContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    prominentContexts?: OchreLevelContext | Array<OchreLevelContext>;
   };
   items:
     | string

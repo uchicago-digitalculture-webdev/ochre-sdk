@@ -591,6 +591,7 @@ export type Website = {
       detail: Array<LevelContext>;
       download: Array<LevelContext>;
       label: Array<LevelContext>;
+      prominent: Array<LevelContext>;
     };
   };
 };

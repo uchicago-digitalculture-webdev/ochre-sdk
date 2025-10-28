@@ -4256,6 +4256,7 @@ export function parseWebsite(
       download: [],
       label: [],
       suppress: [],
+      prominent: [],
     },
   };
   if (websiteTree.websiteOptions) {
@@ -4301,6 +4302,12 @@ export function parseWebsite(
           websiteTree.websiteOptions.labelContexts
         : [websiteTree.websiteOptions.labelContexts]
       : [];
+    const prominentContextsRaw =
+      websiteTree.websiteOptions.prominentContexts != null ?
+        Array.isArray(websiteTree.websiteOptions.prominentContexts) ?
+          websiteTree.websiteOptions.prominentContexts
+        : [websiteTree.websiteOptions.prominentContexts]
+      : [];
 
     globalOptions = {
       contexts: {
@@ -4311,6 +4318,7 @@ export function parseWebsite(
         download: parseContexts(downloadContextsRaw),
         label: parseContexts(labelContextsRaw),
         suppress: parseContexts(suppressContextsRaw),
+        prominent: parseContexts(prominentContextsRaw),
       },
     };
   }
