@@ -1,6 +1,6 @@
 {
   "name": "@digitalculture/ochre-sdk",
-  "version": "0.11.19",
+  "version": "0.11.18",
   "type": "module",
   "license": "MIT",
   "description": "Node.js library for working with OCHRE (Online Cultural and Historical Research Environment) data",
@@ -25,8 +25,7 @@
     "research"
   ],
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "scripts": {
     "dev": "tsdown src/index.ts --watch",
@@ -38,9 +37,7 @@
     "check-types": "tsc --noEmit",
     "check-exports": "attw --pack .",
     "test": "vitest run",
-    "ci": "pnpm run build && pnpm run lint && pnpm run format && pnpm run check-types && pnpm run check-exports",
-    "changeset": "changeset add",
-    "release": "changeset version && changeset publish"
+    "release": "bumpp"
   },
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -54,6 +51,17 @@
   "files": [
     "dist"
   ],
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged"
+  },
+  "lint-staged": {
+    "*": [
+      "pnpm run lint:fix",
+      "pnpm run format:fix",
+      "pnpm run check-types",
+      "pnpm run test"
+    ]
+  },
   "dependencies": {
     "zod": "^4.1.12"
   },
@@ -62,8 +70,11 @@
     "@arethetypeswrong/cli": "^0.18.2",
     "@changesets/cli": "^2.29.7",
     "@types/node": "^24.9.2",
+    "bumpp": "^10.3.1",
     "eslint": "^9.38.0",
+    "lint-staged": "^16.2.6",
     "prettier": "^3.6.2",
+    "simple-git-hooks": "^2.13.1",
     "terser": "^5.44.0",
     "tsdown": "^0.15.11",
     "typescript": "^5.9.3",
