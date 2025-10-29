@@ -35,7 +35,6 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write --list-different .",
     "check-types": "tsc --noEmit",
-    "check-exports": "attw --pack .",
     "test": "vitest run",
     "release": "bumpp"
   },

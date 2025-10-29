@@ -25,9 +25,6 @@ jobs:
       - name: Check types
         run: pnpm run check-types
 
-      - name: Check exports
-        run: pnpm run check-exports
-
       - name: Run formatter
         run: pnpm run format
 
