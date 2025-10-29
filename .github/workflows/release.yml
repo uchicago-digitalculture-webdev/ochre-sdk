@@ -1,12 +1,6 @@
 name: Release
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types:
-      - completed
-    branches:
-      - main
   push:
     tags:
       - "v*"
@@ -14,10 +8,10 @@ on:
 jobs:
   release:
     name: Release
-    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     uses: sxzz/workflows/.github/workflows/release.yml@v1
     with:
       publish: true
+      build: "pnpm run build"
     permissions:
       contents: write
       id-token: write
