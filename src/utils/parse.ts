@@ -337,11 +337,7 @@ export function parsePerson(person: OchrePerson): Person {
       : [],
     links:
       person.links ?
-        parseLinks(
-          Array.isArray(person.links.link) ?
-            person.links.link
-          : [person.links.link],
-        )
+        parseLinks(Array.isArray(person.links) ? person.links : [person.links])
       : [],
     events:
       person.events ?
