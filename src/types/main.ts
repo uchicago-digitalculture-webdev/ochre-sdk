@@ -110,6 +110,7 @@ export type Person = {
   coordinates: Coordinates;
   content: string | null;
   notes: Array<Note>;
+  links: Array<Link>;
   events: Array<Event>;
   properties: Array<Property>;
   bibliographies: Array<Bibliography>;

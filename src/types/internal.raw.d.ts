@@ -557,6 +557,7 @@ export type OchrePerson = {
   coordinates?: OchreCoordinates;
   content?: FakeString | null;
   notes?: { note: OchreNote | Array<OchreNote> };
+  links?: { link: OchreLink | Array<OchreLink> };
   events?: { event: OchreEvent | Array<OchreEvent> };
   properties?: { property: OchreProperty | Array<OchreProperty> };
   bibliographies?: {
