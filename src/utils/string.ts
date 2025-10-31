@@ -416,119 +416,121 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
         } else {
           return `<TooltipSpan>${itemString}</TooltipSpan>`;
         }
-      } else {
-        if ("properties" in item && item.properties != null) {
-          const itemProperty =
-            Array.isArray(item.properties.property) ?
-              item.properties.property[0]
-            : item.properties.property;
-          if (itemProperty != null) {
-            const itemPropertyLabelUuid = itemProperty.label.uuid;
-            const itemPropertyValueUuid =
-              (
-                typeof itemProperty.value === "object" &&
-                "uuid" in itemProperty.value &&
-                itemProperty.value.uuid != null
-              ) ?
-                itemProperty.value.uuid
-              : null;
-            if (
-              itemPropertyLabelUuid === PRESENTATION_ITEM_UUID &&
-              itemPropertyValueUuid === TEXT_ANNOTATION_UUID
-            ) {
-              const textAnnotationProperty =
-                itemProperty.property != null ?
-                  Array.isArray(itemProperty.property) ?
-                    itemProperty.property[0]
-                  : itemProperty.property
-                : null;
-              if (textAnnotationProperty != null) {
-                const textAnnotationPropertyValueUuid =
+      }
+    }
+  }
+
+  if ("properties" in item && item.properties != null) {
+    let itemString = "";
+    if (typeof item.string === "object") {
+      itemString = parseStringContent(item.string);
+    } else {
+      itemString = parseFakeString(item.string)
+        .replaceAll("<", String.raw`\<`)
+        .replaceAll("{", String.raw`\{`);
+    }
+
+    const itemProperty =
+      Array.isArray(item.properties.property) ?
+        item.properties.property[0]
+      : item.properties.property;
+    if (itemProperty != null) {
+      const itemPropertyLabelUuid = itemProperty.label.uuid;
+      const itemPropertyValueUuid =
+        (
+          typeof itemProperty.value === "object" &&
+          "uuid" in itemProperty.value &&
+          itemProperty.value.uuid != null
+        ) ?
+          itemProperty.value.uuid
+        : null;
+      if (
+        itemPropertyLabelUuid === PRESENTATION_ITEM_UUID &&
+        itemPropertyValueUuid === TEXT_ANNOTATION_UUID
+      ) {
+        const textAnnotationProperty =
+          itemProperty.property != null ?
+            Array.isArray(itemProperty.property) ?
+              itemProperty.property[0]
+            : itemProperty.property
+          : null;
+        if (textAnnotationProperty != null) {
+          const textAnnotationPropertyValueUuid =
+            (
+              typeof textAnnotationProperty.value === "object" &&
+              "uuid" in textAnnotationProperty.value &&
+              textAnnotationProperty.value.uuid != null
+            ) ?
+              textAnnotationProperty.value.uuid
+            : null;
+
+          if (
+            textAnnotationPropertyValueUuid ===
+              TEXT_ANNOTATION_TEXT_STYLING_UUID &&
+            textAnnotationProperty.property != null
+          ) {
+            const textStylingType = "text-styling";
+            let textStylingVariant = "default";
+            let textStylingSize = "md";
+            let textStylingCss: Array<Style> = [];
+
+            const textStylingProperties =
+              Array.isArray(textAnnotationProperty.property) ?
+                textAnnotationProperty.property
+              : [textAnnotationProperty.property];
+
+            if (textStylingProperties.length > 0) {
+              const textStylingVariantProperty = textStylingProperties.find(
+                (property) =>
+                  property.label.uuid ===
+                  TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
+              );
+              if (textStylingVariantProperty != null) {
+                const textStylingPropertyVariant = parseFakeString(
                   (
-                    typeof textAnnotationProperty.value === "object" &&
-                    "uuid" in textAnnotationProperty.value &&
-                    textAnnotationProperty.value.uuid != null
-                  ) ?
-                    textAnnotationProperty.value.uuid
+                    textStylingVariantProperty.value as OchrePropertyValueContent
+                  ).content as FakeString,
+                );
+
+                const textStylingSizeProperty =
+                  textStylingVariantProperty.property != null ?
+                    Array.isArray(textStylingVariantProperty.property) ?
+                      textStylingVariantProperty.property[0]!
+                    : textStylingVariantProperty.property
                   : null;
 
-                if (
-                  textAnnotationPropertyValueUuid ===
-                    TEXT_ANNOTATION_TEXT_STYLING_UUID &&
-                  textAnnotationProperty.property != null
-                ) {
-                  const textStylingType = "text-styling";
-                  let textStylingVariant = "default";
-                  let textStylingSize = "md";
-                  let textStylingCss: Array<Style> = [];
-
-                  const textStylingProperties =
-                    Array.isArray(textAnnotationProperty.property) ?
-                      textAnnotationProperty.property
-                    : [textAnnotationProperty.property];
-
-                  if (textStylingProperties.length > 0) {
-                    const textStylingVariantProperty =
-                      textStylingProperties.find(
-                        (property) =>
-                          property.label.uuid ===
-                          TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
-                      );
-                    if (textStylingVariantProperty != null) {
-                      const textStylingPropertyVariant = parseFakeString(
-                        (
-                          textStylingVariantProperty.value as OchrePropertyValueContent
-                        ).content as FakeString,
-                      );
-
-                      const textStylingSizeProperty =
-                        textStylingVariantProperty.property != null ?
-                          Array.isArray(textStylingVariantProperty.property) ?
-                            textStylingVariantProperty.property[0]!
-                          : textStylingVariantProperty.property
-                        : null;
-
-                      if (textStylingSizeProperty != null) {
-                        const textStylingSizePropertyValue = parseFakeString(
-                          (
-                            textStylingSizeProperty.value as OchrePropertyValueContent
-                          ).content as FakeString,
-                        );
-                        textStylingSize = textStylingSizePropertyValue;
-                      }
-
-                      textStylingVariant = textStylingPropertyVariant;
-                    }
-
-                    const textStylingCssProperties =
-                      textStylingProperties.filter(
-                        (property) =>
-                          property.label.uuid !==
-                          TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
-                      );
-                    if (textStylingCssProperties.length > 0) {
-                      textStylingCss = textStylingCssProperties.map(
-                        (property) => ({
-                          label: parseFakeString(
-                            property.label.content as FakeString,
-                          ),
-                          value: parseFakeString(
-                            (property.value as OchrePropertyValueContent)
-                              .content as FakeString,
-                          ),
-                        }),
-                      );
-                    }
-                  }
-
-                  return `<Annotation type="${textStylingType}" variant="${textStylingVariant}" size="${textStylingSize}"${
-                    textStylingCss.length > 0 ?
-                      ` cssStyles={{default: ${JSON.stringify(textStylingCss)}, tablet: [], mobile: []}}`
-                    : ""
-                  }>${itemString}</Annotation>`;
+                if (textStylingSizeProperty != null) {
+                  const textStylingSizePropertyValue = parseFakeString(
+                    (textStylingSizeProperty.value as OchrePropertyValueContent)
+                      .content as FakeString,
+                  );
+                  textStylingSize = textStylingSizePropertyValue;
                 }
+
+                textStylingVariant = textStylingPropertyVariant;
+              }
+
+              const textStylingCssProperties = textStylingProperties.filter(
+                (property) =>
+                  property.label.uuid !==
+                  TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
+              );
+              if (textStylingCssProperties.length > 0) {
+                textStylingCss = textStylingCssProperties.map((property) => ({
+                  label: parseFakeString(property.label.content as FakeString),
+                  value: parseFakeString(
+                    (property.value as OchrePropertyValueContent)
+                      .content as FakeString,
+                  ),
+                }));
               }
             }
+
+            return `<Annotation type="${textStylingType}" variant="${textStylingVariant}" size="${textStylingSize}"${
+              textStylingCss.length > 0 ?
+                ` cssStyles={{default: ${JSON.stringify(textStylingCss)}, tablet: [], mobile: []}}`
+              : ""
+            }>${itemString}</Annotation>`;
           }
         }
       }
