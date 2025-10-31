@@ -470,7 +470,7 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
             textAnnotationProperty.property != null
           ) {
             const textStylingType = "text-styling";
-            let textStylingVariant = "default";
+            let textStylingVariant = "block";
             let textStylingSize = "md";
             let textStylingCss: Array<Style> = [];
 
