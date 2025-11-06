@@ -2282,6 +2282,7 @@ function parseWebElementProperties(
       );
       if (imageLink != null) {
         image = {
+          uuid: imageLink.uuid,
           url: `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`,
           label: imageLink.identification?.label ?? null,
           width: imageLink.image?.width ?? 0,
@@ -2468,6 +2469,7 @@ function parseWebElementProperties(
       const images: Array<WebImage> = [];
       for (const link of links) {
         images.push({
+          uuid: link.uuid,
           url: `https://ochre.lib.uchicago.edu/ochre?uuid=${link.uuid}${imageQuality === "high" && (link.type === "image" || link.type === "IIIF") ? "&load" : "&preview"}`,
           label: link.identification?.label ?? null,
           width: link.image?.width ?? 0,

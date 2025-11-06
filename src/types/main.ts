@@ -813,6 +813,7 @@ export type WebElementComponent =
  * Represents an image used in web elements
  */
 export type WebImage = {
+  uuid: string | null;
   url: string;
   label: string | null;
   description: string | null;
