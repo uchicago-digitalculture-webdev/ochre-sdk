@@ -261,6 +261,7 @@ export type Event = {
 export type Interpretation = {
   date: string | null;
   number: number;
+  links: Array<Link>;
   properties: Array<Property>;
   bibliographies: Array<Bibliography>;
 };

@@ -645,6 +645,7 @@ export type OchreEvent = {
 export type OchreInterpretation = {
   date: string; // YYYY-MM-DD
   interpretationNo: number;
+  links?: OchreLink | Array<OchreLink>;
   properties?: { property: OchreProperty | Array<OchreProperty> };
   bibliographies?: {
     bibliography: OchreBibliography | Array<OchreBibliography>;

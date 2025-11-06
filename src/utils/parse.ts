@@ -1026,6 +1026,14 @@ export function parseInterpretations(
     returnInterpretations.push({
       date: interpretation.date,
       number: interpretation.interpretationNo,
+      links:
+        interpretation.links ?
+          parseLinks(
+            Array.isArray(interpretation.links) ?
+              interpretation.links
+            : [interpretation.links],
+          )
+        : [],
       properties:
         interpretation.properties ?
           parseProperties(
