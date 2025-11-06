@@ -3,6 +3,7 @@ import antfu from "@antfu/eslint-config";
 export default antfu({
   stylistic: false,
   markdown: false,
+  yaml: false,
   typescript: {
     parserOptions: {
       tsconfigRootDir: import.meta.dir,
