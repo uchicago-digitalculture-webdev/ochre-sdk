@@ -346,7 +346,7 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
           }
           case "externalDocument": {
             if (linkResource.publicationDateTime != null) {
-              return `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${linkResource.uuid}&load" ${
+              return String.raw`<ExternalLink href="https:\/\/ochre.lib.uchicago.edu/ochre?uuid=${linkResource.uuid}&load" ${
                 linkContent !== null ? `content="${linkContent}"` : ""
               }>${itemString}</ExternalLink>`;
             } else {
