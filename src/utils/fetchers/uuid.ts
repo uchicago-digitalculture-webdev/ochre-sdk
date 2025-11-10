@@ -21,16 +21,24 @@ import { uuidSchema } from "../../schemas.js";
  */
 export async function fetchByUuid(
   uuid: string,
-  customFetch?: (
-    input: string | URL | globalThis.Request,
-    init?: RequestInit,
-  ) => Promise<Response>,
+  options?: {
+    customFetch?: (
+      input: string | URL | globalThis.Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+    isVersion2?: boolean;
+  },
 ): Promise<[null, OchreData] | [string, null]> {
   try {
+    const customFetch = options?.customFetch;
+    const isVersion2 = options?.isVersion2 ?? false;
+
     const parsedUuid = uuidSchema.parse(uuid);
 
     const response = await (customFetch ?? fetch)(
-      `https://ochre.lib.uchicago.edu/ochre?uuid=${parsedUuid}&format=json&lang="*"`,
+      isVersion2 ?
+        `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${parsedUuid}&format=json&lang="*"`
+      : `https://ochre.lib.uchicago.edu/ochre?uuid=${parsedUuid}&format=json&lang="*"`,
     );
     if (!response.ok) {
       throw new Error("Failed to fetch OCHRE data");

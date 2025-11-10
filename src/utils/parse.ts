@@ -2359,6 +2359,99 @@ function parseWebElementProperties(
       );
       layout ??= "image-start";
 
+      const options: Extract<
+        WebElementComponent,
+        { component: "collection" }
+      >["options"] = {
+        attributeFilters: {
+          bibliographies: elementResource.options?.filterBibliography ?? false,
+          periods: elementResource.options?.filterPeriods ?? false,
+        },
+        scopes:
+          elementResource.options?.scopes != null ?
+            (Array.isArray(elementResource.options.scopes.scope) ?
+              elementResource.options.scopes.scope
+            : [elementResource.options.scopes.scope]
+            ).map((scope) => ({
+              uuid: scope.uuid.content,
+              type: scope.uuid.type,
+              identification: parseIdentification(scope.identification),
+            }))
+          : [],
+        contexts: {
+          flatten: [],
+          filter: [],
+          sort: [],
+          detail: [],
+          download: [],
+          label: [],
+          suppress: [],
+          prominent: [],
+        },
+      };
+
+      if ("options" in elementResource && elementResource.options) {
+        const flattenContextsRaw =
+          elementResource.options.flattenContexts != null ?
+            Array.isArray(elementResource.options.flattenContexts) ?
+              elementResource.options.flattenContexts
+            : [elementResource.options.flattenContexts]
+          : [];
+        const suppressContextsRaw =
+          elementResource.options.suppressContexts != null ?
+            Array.isArray(elementResource.options.suppressContexts) ?
+              elementResource.options.suppressContexts
+            : [elementResource.options.suppressContexts]
+          : [];
+        const filterContextsRaw =
+          elementResource.options.filterContexts != null ?
+            Array.isArray(elementResource.options.filterContexts) ?
+              elementResource.options.filterContexts
+            : [elementResource.options.filterContexts]
+          : [];
+        const sortContextsRaw =
+          elementResource.options.sortContexts != null ?
+            Array.isArray(elementResource.options.sortContexts) ?
+              elementResource.options.sortContexts
+            : [elementResource.options.sortContexts]
+          : [];
+        const detailContextsRaw =
+          elementResource.options.detailContexts != null ?
+            Array.isArray(elementResource.options.detailContexts) ?
+              elementResource.options.detailContexts
+            : [elementResource.options.detailContexts]
+          : [];
+        const downloadContextsRaw =
+          elementResource.options.downloadContexts != null ?
+            Array.isArray(elementResource.options.downloadContexts) ?
+              elementResource.options.downloadContexts
+            : [elementResource.options.downloadContexts]
+          : [];
+        const labelContextsRaw =
+          elementResource.options.labelContexts != null ?
+            Array.isArray(elementResource.options.labelContexts) ?
+              elementResource.options.labelContexts
+            : [elementResource.options.labelContexts]
+          : [];
+        const prominentContextsRaw =
+          elementResource.options.prominentContexts != null ?
+            Array.isArray(elementResource.options.prominentContexts) ?
+              elementResource.options.prominentContexts
+            : [elementResource.options.prominentContexts]
+          : [];
+
+        options.contexts = {
+          flatten: parseContexts(flattenContextsRaw),
+          filter: parseContexts(filterContextsRaw),
+          sort: parseContexts(sortContextsRaw),
+          detail: parseContexts(detailContextsRaw),
+          download: parseContexts(downloadContextsRaw),
+          label: parseContexts(labelContextsRaw),
+          suppress: parseContexts(suppressContextsRaw),
+          prominent: parseContexts(prominentContextsRaw),
+        };
+      }
+
       properties.collectionId = collectionLink.uuid;
       properties.variant = variant;
       properties.itemVariant = itemVariant;
@@ -2367,6 +2460,7 @@ function parseWebElementProperties(
       properties.isFilterDisplayed = isFilterDisplayed;
       properties.filterSort = filterSort;
       properties.layout = layout;
+      properties.options = options;
       break;
     }
     case "empty-space": {
@@ -4234,6 +4328,7 @@ export function parseWebsite(
   websiteTree: OchreTree,
   projectName: FakeString,
   website: FakeString | null,
+  { isVersion2 = false }: { isVersion2?: boolean } = {},
 ): Website {
   if (!websiteTree.properties) {
     throw new Error("Website properties not found");
@@ -4261,84 +4356,9 @@ export function parseWebsite(
 
   const sidebar = parseSidebar(resources);
 
-  let globalOptions: Website["globalOptions"] = {
-    contexts: {
-      flatten: [],
-      filter: [],
-      sort: [],
-      detail: [],
-      download: [],
-      label: [],
-      suppress: [],
-      prominent: [],
-    },
-  };
-  if (websiteTree.websiteOptions) {
-    const flattenContextsRaw =
-      websiteTree.websiteOptions.flattenContexts != null ?
-        Array.isArray(websiteTree.websiteOptions.flattenContexts) ?
-          websiteTree.websiteOptions.flattenContexts
-        : [websiteTree.websiteOptions.flattenContexts]
-      : [];
-    const suppressContextsRaw =
-      websiteTree.websiteOptions.suppressContexts != null ?
-        Array.isArray(websiteTree.websiteOptions.suppressContexts) ?
-          websiteTree.websiteOptions.suppressContexts
-        : [websiteTree.websiteOptions.suppressContexts]
-      : [];
-    const filterContextsRaw =
-      websiteTree.websiteOptions.filterContexts != null ?
-        Array.isArray(websiteTree.websiteOptions.filterContexts) ?
-          websiteTree.websiteOptions.filterContexts
-        : [websiteTree.websiteOptions.filterContexts]
-      : [];
-    const sortContextsRaw =
-      websiteTree.websiteOptions.sortContexts != null ?
-        Array.isArray(websiteTree.websiteOptions.sortContexts) ?
-          websiteTree.websiteOptions.sortContexts
-        : [websiteTree.websiteOptions.sortContexts]
-      : [];
-    const detailContextsRaw =
-      websiteTree.websiteOptions.detailContexts != null ?
-        Array.isArray(websiteTree.websiteOptions.detailContexts) ?
-          websiteTree.websiteOptions.detailContexts
-        : [websiteTree.websiteOptions.detailContexts]
-      : [];
-    const downloadContextsRaw =
-      websiteTree.websiteOptions.downloadContexts != null ?
-        Array.isArray(websiteTree.websiteOptions.downloadContexts) ?
-          websiteTree.websiteOptions.downloadContexts
-        : [websiteTree.websiteOptions.downloadContexts]
-      : [];
-    const labelContextsRaw =
-      websiteTree.websiteOptions.labelContexts != null ?
-        Array.isArray(websiteTree.websiteOptions.labelContexts) ?
-          websiteTree.websiteOptions.labelContexts
-        : [websiteTree.websiteOptions.labelContexts]
-      : [];
-    const prominentContextsRaw =
-      websiteTree.websiteOptions.prominentContexts != null ?
-        Array.isArray(websiteTree.websiteOptions.prominentContexts) ?
-          websiteTree.websiteOptions.prominentContexts
-        : [websiteTree.websiteOptions.prominentContexts]
-      : [];
-
-    globalOptions = {
-      contexts: {
-        flatten: parseContexts(flattenContextsRaw),
-        filter: parseContexts(filterContextsRaw),
-        sort: parseContexts(sortContextsRaw),
-        detail: parseContexts(detailContextsRaw),
-        download: parseContexts(downloadContextsRaw),
-        label: parseContexts(labelContextsRaw),
-        suppress: parseContexts(suppressContextsRaw),
-        prominent: parseContexts(prominentContextsRaw),
-      },
-    };
-  }
-
   return {
     uuid: websiteTree.uuid,
+    version: isVersion2 ? 2 : 1,
     publicationDateTime:
       websiteTree.publicationDateTime ?
         new Date(websiteTree.publicationDateTime)
@@ -4360,31 +4380,5 @@ export function parseWebsite(
     sidebar,
     pages,
     properties,
-    searchOptions: {
-      filters:
-        websiteTree.searchOptions?.filterUuids != null ?
-          (Array.isArray(websiteTree.searchOptions.filterUuids.uuid) ?
-            websiteTree.searchOptions.filterUuids.uuid
-          : [websiteTree.searchOptions.filterUuids.uuid]
-          ).map((uuid) => ({ uuid: uuid.content, type: uuid.type }))
-        : [],
-      attributeFilters: {
-        bibliographies:
-          websiteTree.searchOptions?.filterUuids?.filterBibliography ?? false,
-        periods: websiteTree.searchOptions?.filterUuids?.filterPeriods ?? false,
-      },
-      scopes:
-        websiteTree.searchOptions?.scopes != null ?
-          (Array.isArray(websiteTree.searchOptions.scopes.scope) ?
-            websiteTree.searchOptions.scopes.scope
-          : [websiteTree.searchOptions.scopes.scope]
-          ).map((scope) => ({
-            uuid: scope.uuid.content,
-            type: scope.uuid.type,
-            identification: parseIdentification(scope.identification),
-          }))
-        : [],
-    },
-    globalOptions,
   };
 }

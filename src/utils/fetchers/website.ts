@@ -1,8 +1,13 @@
-import type { OchreData } from "../../types/internal.raw.d.ts";
+import type {
+  OchreData,
+  OchreMetadata,
+  OchreTree,
+} from "../../types/internal.raw.d.ts";
 import type { Website } from "../../types/main.js";
+import { writeFileSync } from "node:fs";
 import { parseIdentification, parseWebsite } from "../parse.js";
 
-const KNOWN_ABBREVIATIONS: Record<string, string> = {
+const KNOWN_ABBREVIATIONS: Readonly<Record<string, string>> = {
   "uchicago-node": "60a1e386-7e53-4e14-b8cf-fb4ed953d57e",
   "uchicago-node-staging": "62b60a47-fad5-49d7-a06a-2fa059f6e79a",
   "guerrilla-television": "fad1e1bd-989d-4159-b195-4c32adc5cdc7",
@@ -12,6 +17,8 @@ const KNOWN_ABBREVIATIONS: Record<string, string> = {
   ssmc: "8ff977dd-d440-40f5-ad93-8ad7e2d39e74",
   "sosc-core-at-smart": "db26c953-9b2a-4691-a909-5e8726b531d7",
 };
+
+const V2_ABBREVIATIONS: ReadonlySet<string> = new Set(["bengali-song"]);
 
 /**
  * Fetches and parses a website configuration from the OCHRE API
@@ -44,45 +51,80 @@ const KNOWN_ABBREVIATIONS: Record<string, string> = {
  */
 export async function fetchWebsite(
   abbreviation: string,
-  customFetch?: (
-    input: string | URL | globalThis.Request,
-    init?: RequestInit,
-  ) => Promise<Response>,
+  options?: {
+    customFetch?: (
+      input: string | URL | globalThis.Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+    isVersion2?: boolean;
+  },
 ): Promise<[null, Website] | [string, null]> {
   try {
-    const uuid = KNOWN_ABBREVIATIONS[abbreviation.toLocaleLowerCase("en-US")];
+    const customFetch = options?.customFetch;
+    const isVersion2 = options?.isVersion2 ?? false;
 
-    const response = await (customFetch ?? fetch)(
-      uuid != null ?
-        `https://ochre.lib.uchicago.edu/ochre?uuid=${uuid}&format=json`
-      : `https://ochre.lib.uchicago.edu/ochre?xquery=for $q in input()/ochre[tree[@type='lesson'][identification/abbreviation='${abbreviation.toLocaleLowerCase("en-US")}']] return $q&format=json`,
-    );
-    if (!response.ok) {
-      throw new Error("Failed to fetch website");
-    }
+    const cleanAbbreviation = abbreviation.trim().toLocaleLowerCase("en-US");
 
-    const data = (await response.json()) as
-      | OchreData
-      | { result: OchreData | [] };
+    let metadata: OchreMetadata | null = null;
+    let tree: OchreTree | null = null;
 
-    const result =
-      "result" in data && !Array.isArray(data.result) ? data.result
-      : !("result" in data) ? data
-      : null;
+    if (V2_ABBREVIATIONS.has(cleanAbbreviation) || isVersion2) {
+      const response = await (customFetch ?? fetch)(
+        `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(`collection('ochre/tree')/ochre[tree/identification/abbreviation/content/string='${cleanAbbreviation}']`)}&format=json&lang="*"`,
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch website");
+      }
 
-    if (result == null || !("tree" in result.ochre)) {
-      throw new Error("Failed to fetch website");
+      const data = (await response.json()) as
+        | { result: OchreData }
+        | { result: [] };
+
+      if (Array.isArray(data.result) || !("tree" in data.result.ochre)) {
+        throw new Error("Failed to fetch website");
+      }
+
+      metadata = data.result.ochre.metadata;
+      tree = data.result.ochre.tree;
+    } else {
+      const uuid = KNOWN_ABBREVIATIONS[cleanAbbreviation];
+
+      const response = await (customFetch ?? fetch)(
+        uuid != null ?
+          `https://ochre.lib.uchicago.edu/ochre?uuid=${uuid}&format=json`
+        : `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(`for $q in input()/ochre[tree[@type='lesson'][identification/abbreviation='${cleanAbbreviation}']] return $q`)}&format=json`,
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch website");
+      }
+
+      const data = (await response.json()) as
+        | OchreData
+        | { result: OchreData | [] };
+
+      const result =
+        "result" in data && !Array.isArray(data.result) ? data.result
+        : !("result" in data) ? data
+        : null;
+
+      if (result == null || !("tree" in result.ochre)) {
+        throw new Error("Failed to fetch website");
+      }
+
+      metadata = result.ochre.metadata;
+      tree = result.ochre.tree;
     }
 
     const projectIdentification =
-      result.ochre.metadata.project?.identification ?
-        parseIdentification(result.ochre.metadata.project.identification)
+      metadata.project?.identification ?
+        parseIdentification(metadata.project.identification)
       : null;
 
     const website = parseWebsite(
-      result.ochre.tree,
+      tree,
       projectIdentification?.label ?? "",
-      result.ochre.metadata.project?.identification.website ?? null,
+      metadata.project?.identification.website ?? null,
+      { isVersion2: true },
     );
 
     return [null, website];
@@ -91,3 +133,7 @@ export async function fetchWebsite(
     return [error instanceof Error ? error.message : "Unknown error", null];
   }
 }
+
+const [_, website] = await fetchWebsite("bengali-song");
+
+writeFileSync("website.json", JSON.stringify(website, null, 2));

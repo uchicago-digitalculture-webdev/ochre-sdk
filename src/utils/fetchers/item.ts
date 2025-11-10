@@ -64,10 +64,13 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
   uuid: string,
   category?: T,
   setCategory?: T extends "set" ? U : never,
-  customFetch?: (
-    input: string | URL | globalThis.Request,
-    init?: RequestInit,
-  ) => Promise<Response>,
+  options?: {
+    customFetch?: (
+      input: string | URL | globalThis.Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+    isVersion2: boolean;
+  },
 ): Promise<
   | {
       error: null;
@@ -94,7 +97,10 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
     }
 > {
   try {
-    const [error, data] = await fetchByUuid(uuid, customFetch);
+    const customFetch = options?.customFetch;
+    const isVersion2 = options?.isVersion2 ?? false;
+
+    const [error, data] = await fetchByUuid(uuid, { customFetch, isVersion2 });
     if (error !== null) {
       throw new Error(error);
     }

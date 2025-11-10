@@ -182,26 +182,6 @@ export type OchreTree = {
   identification: OchreIdentification;
   date?: string; // YYYY-MM-DD
   creators?: { creator: OchrePerson | Array<OchrePerson> };
-  searchOptions?: {
-    filterUuids?: {
-      uuid: OchreTreeSearchOptionUuid | Array<OchreTreeSearchOptionUuid>;
-      filterPeriods?: boolean;
-      filterBibliography?: boolean;
-    };
-    scopes?: {
-      scope: OchreTreeSearchOptionScope | Array<OchreTreeSearchOptionScope>;
-    };
-  };
-  websiteOptions?: {
-    flattenContexts?: OchreLevelContext | Array<OchreLevelContext>;
-    suppressContexts?: OchreLevelContext | Array<OchreLevelContext>;
-    filterContexts?: OchreLevelContext | Array<OchreLevelContext>;
-    sortContexts?: OchreLevelContext | Array<OchreLevelContext>;
-    detailContexts?: OchreLevelContext | Array<OchreLevelContext>;
-    downloadContexts?: OchreLevelContext | Array<OchreLevelContext>;
-    labelContexts?: OchreLevelContext | Array<OchreLevelContext>;
-    prominentContexts?: OchreLevelContext | Array<OchreLevelContext>;
-  };
   items:
     | string
     | { resource: OchreResource | Array<OchreResource> }
@@ -275,6 +255,21 @@ export type OchreResource = {
     bibliography: OchreBibliography | Array<OchreBibliography>;
   };
   resource?: OchreResource | Array<OchreResource>;
+  options?: {
+    filterBibliography?: boolean;
+    filterPeriods?: boolean;
+    scopes?: {
+      scope: OchreTreeSearchOptionScope | Array<OchreTreeSearchOptionScope>;
+    };
+    flattenContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    suppressContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    filterContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    sortContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    detailContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    downloadContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    labelContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    prominentContexts?: OchreLevelContext | Array<OchreLevelContext>;
+  };
 };
 
 /**

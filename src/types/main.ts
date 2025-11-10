@@ -557,6 +557,7 @@ export type LevelContext = {
  */
 export type Website = {
   uuid: string;
+  version: 1 | 2;
   publicationDateTime: Date | null;
   identification: Identification;
   project: { name: string; website: string | null };
@@ -575,27 +576,6 @@ export type Website = {
     };
   } | null;
   properties: WebsiteProperties;
-  searchOptions: {
-    filters: Array<{ uuid: string; type: string }>;
-    attributeFilters: { bibliographies: boolean; periods: boolean };
-    scopes: Array<{
-      uuid: string;
-      type: string;
-      identification: Identification;
-    }>;
-  };
-  globalOptions: {
-    contexts: {
-      flatten: Array<LevelContext>;
-      suppress: Array<LevelContext>;
-      filter: Array<LevelContext>;
-      sort: Array<LevelContext>;
-      detail: Array<LevelContext>;
-      download: Array<LevelContext>;
-      label: Array<LevelContext>;
-      prominent: Array<LevelContext>;
-    };
-  };
 };
 
 /**
@@ -730,6 +710,24 @@ export type WebElementComponent =
       isFilterDisplayed: boolean;
       filterSort: "default" | "alphabetical";
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
+      options: {
+        attributeFilters: { bibliographies: boolean; periods: boolean };
+        scopes: Array<{
+          uuid: string;
+          type: string;
+          identification: Identification;
+        }>;
+        contexts: {
+          flatten: Array<LevelContext>;
+          suppress: Array<LevelContext>;
+          filter: Array<LevelContext>;
+          sort: Array<LevelContext>;
+          detail: Array<LevelContext>;
+          download: Array<LevelContext>;
+          label: Array<LevelContext>;
+          prominent: Array<LevelContext>;
+        };
+      };
     }
   | { component: "empty-space"; height: string | null; width: string | null }
   | {
