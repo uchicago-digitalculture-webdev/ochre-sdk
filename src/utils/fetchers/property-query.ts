@@ -1,10 +1,10 @@
 import type { PropertyQueryItem } from "../../types/main.js";
-import { z } from "zod";
+import * as z from "zod";
+import { UNASSIGNED_UUID } from "../../constants.js";
 
 // Hard-coded to UChicago Node (for now)
 const PROJECT_SCOPE = "0c0aae37-7246-495b-9547-e25dbf5b99a3";
 const BELONG_TO_COLLECTION_UUID = "30054cb2-909a-4f34-8db9-8fe7369d691d";
-const UNASSIGNED_UUID = "e28e29af-b663-c0ac-ceb6-11a688fca0dd";
 
 /**
  * Check if a string is a valid UUID
@@ -82,7 +82,9 @@ return <item>
  *
  * @param scopeUuids - The scope UUIDs to filter by
  * @param propertyUuids - The property UUIDs to query by
- * @param customFetch - A custom fetch function to use instead of the default fetch
+ * @param options - Options for the fetch
+ * @param options.customFetch - A custom fetch function to use instead of the default fetch
+ * @param options.isVersion2 - Whether to use the v2 API
  * @returns The parsed property query or null if the fetch/parse fails
  *
  * @example
@@ -102,19 +104,27 @@ return <item>
 export async function fetchPropertyQuery(
   scopeUuids: Array<string>,
   propertyUuids: Array<string>,
-  customFetch?: (
-    input: string | URL | globalThis.Request,
-    init?: RequestInit,
-  ) => Promise<Response>,
+  options?: {
+    customFetch?: (
+      input: string | URL | globalThis.Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+    isVersion2?: boolean;
+  },
 ): Promise<
   | { items: Array<PropertyQueryItem> | null; error: null }
   | { items: null; error: string }
 > {
   try {
+    const customFetch = options?.customFetch;
+    const isVersion2 = options?.isVersion2 ?? false;
+
     const xquery = buildXQuery(scopeUuids, propertyUuids);
 
     const response = await (customFetch ?? fetch)(
-      `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(xquery)}&format=json`,
+      isVersion2 ?
+        `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(xquery)}&format=json&lang="*"`
+      : `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(xquery)}&format=json&lang="*"`,
     );
     if (!response.ok) {
       throw new Error(`OCHRE API responded with status: ${response.status}`);

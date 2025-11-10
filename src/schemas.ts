@@ -5,7 +5,7 @@ import type {
   WebElementComponent,
   WebsiteProperties,
 } from "./types/main.js";
-import { z } from "zod";
+import * as z from "zod";
 
 /**
  * Schema for validating UUIDs
