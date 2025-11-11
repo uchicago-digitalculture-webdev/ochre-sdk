@@ -698,7 +698,7 @@ export type WebElementComponent =
     }
   | {
       component: "collection";
-      collectionId: string;
+      collectionIds: Array<string>;
       variant: "full" | "highlights";
       itemVariant: "detailed" | "card" | "tile";
       paginationVariant: "default" | "numeric";

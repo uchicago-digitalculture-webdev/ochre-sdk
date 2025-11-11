@@ -2303,10 +2303,10 @@ function parseWebElementProperties(
       break;
     }
     case "collection": {
-      const collectionLink = links.find((link) => link.category === "set");
-      if (!collectionLink) {
+      const collectionLinks = links.filter((link) => link.category === "set");
+      if (collectionLinks.length === 0) {
         throw new Error(
-          `Collection link not found for the following component: “${componentName}”`,
+          `Collection links not found for the following component: “${componentName}”`,
         );
       }
 
@@ -2460,7 +2460,7 @@ function parseWebElementProperties(
         };
       }
 
-      properties.collectionId = collectionLink.uuid;
+      properties.collectionIds = collectionLinks.map((link) => link.uuid);
       properties.variant = variant;
       properties.itemVariant = itemVariant;
       properties.paginationVariant = paginationVariant;
