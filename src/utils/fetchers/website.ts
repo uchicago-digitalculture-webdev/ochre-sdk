@@ -4,7 +4,6 @@ import type {
   OchreTree,
 } from "../../types/internal.raw.d.ts";
 import type { Website } from "../../types/main.js";
-import { writeFileSync } from "node:fs";
 import { parseIdentification, parseWebsite } from "../parse.js";
 
 const KNOWN_ABBREVIATIONS: Readonly<Record<string, string>> = {
@@ -133,7 +132,3 @@ export async function fetchWebsite(
     return [error instanceof Error ? error.message : "Unknown error", null];
   }
 }
-
-const [_, website] = await fetchWebsite("bengali-song");
-
-writeFileSync("website.json", JSON.stringify(website, null, 2));
