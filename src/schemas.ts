@@ -3,7 +3,7 @@ import type {
   DataCategory,
   PropertyValueContentType,
   WebElementComponent,
-  WebsiteProperties,
+  Website,
 } from "./types/main.js";
 import * as z from "zod";
 
@@ -28,18 +28,18 @@ export const websiteSchema = z.object({
       "maple",
       "oak",
       "palm",
-    ] as const satisfies ReadonlyArray<WebsiteProperties["type"]>,
+    ] as const satisfies ReadonlyArray<Website["properties"]["type"]>,
     { error: "Invalid website type" },
   ),
   status: z.enum(
     ["development", "preview", "production"] as const satisfies ReadonlyArray<
-      WebsiteProperties["status"]
+      Website["properties"]["status"]
     >,
     { error: "Invalid website status" },
   ),
   privacy: z.enum(
     ["public", "password", "private"] as const satisfies ReadonlyArray<
-      WebsiteProperties["privacy"]
+      Website["properties"]["privacy"]
     >,
     { error: "Invalid website privacy" },
   ),

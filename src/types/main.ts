@@ -575,35 +575,31 @@ export type Website = {
       mobile: Array<Style>;
     };
   } | null;
-  properties: WebsiteProperties;
-};
-
-/**
- * Properties for configuring website display and styling
- */
-export type WebsiteProperties = {
-  type:
-    | "traditional"
-    | "digital-collection"
-    | "plum"
-    | "cedar"
-    | "elm"
-    | "maple"
-    | "oak"
-    | "palm";
-  privacy: "public" | "password" | "private";
-  status: "development" | "preview" | "production";
-  contact: { name: string; email: string | null } | null;
-  isHeaderDisplayed: boolean;
-  headerVariant: "default" | "floating" | "inline";
-  headerAlignment: "start" | "center" | "end";
-  isHeaderProjectDisplayed: boolean;
-  isFooterDisplayed: boolean;
-  isSidebarDisplayed: boolean;
-  iiifViewer: "universal-viewer" | "clover";
-  supportsThemeToggle: boolean;
-  defaultTheme: "light" | "dark" | null;
-  logoUrl: string | null;
+  properties: {
+    type:
+      | "traditional"
+      | "digital-collection"
+      | "plum"
+      | "cedar"
+      | "elm"
+      | "maple"
+      | "oak"
+      | "palm";
+    privacy: "public" | "password" | "private";
+    status: "development" | "preview" | "production";
+    contact: { name: string; email: string | null } | null;
+    isHeaderDisplayed: boolean;
+    headerVariant: "default" | "floating" | "inline";
+    headerAlignment: "start" | "center" | "end";
+    isHeaderProjectDisplayed: boolean;
+    isFooterDisplayed: boolean;
+    isSidebarDisplayed: boolean;
+    headerSearchButtonPageSlug: string | null;
+    iiifViewer: "universal-viewer" | "clover";
+    supportsThemeToggle: boolean;
+    defaultTheme: "light" | "dark" | null;
+    logoUrl: string | null;
+  };
 };
 
 export type Webpage = {
@@ -706,6 +702,7 @@ export type WebElementComponent =
       variant: "full" | "highlights";
       itemVariant: "detailed" | "card" | "tile";
       paginationVariant: "default" | "numeric";
+      isSearchDisplayed: boolean;
       isSortDisplayed: boolean;
       isFilterDisplayed: boolean;
       filterSort: "default" | "alphabetical";

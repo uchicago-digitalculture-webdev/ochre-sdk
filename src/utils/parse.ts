@@ -65,7 +65,6 @@ import type {
   WebImage,
   Webpage,
   Website,
-  WebsiteProperties,
   WebTitle,
 } from "../types/main.js";
 import {
@@ -2329,6 +2328,15 @@ function parseWebElementProperties(
       );
       paginationVariant ??= "default";
 
+      let isSearchDisplayed = false;
+      const isSearchDisplayedProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "search-displayed",
+      );
+      if (isSearchDisplayedProperty !== null) {
+        isSearchDisplayed = isSearchDisplayedProperty === true;
+      }
+
       let isSortDisplayed = false;
       const isSortDisplayedProperty = getPropertyValueByLabel(
         componentProperty.properties,
@@ -2456,6 +2464,7 @@ function parseWebElementProperties(
       properties.variant = variant;
       properties.itemVariant = itemVariant;
       properties.paginationVariant = paginationVariant;
+      properties.isSearchDisplayed = isSearchDisplayed;
       properties.isSortDisplayed = isSortDisplayed;
       properties.isFilterDisplayed = isFilterDisplayed;
       properties.filterSort = filterSort;
@@ -4119,14 +4128,14 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
 }
 
 /**
- * Parses raw website properties into a standardized WebsiteProperties structure
+ * Parses raw website properties into a standardized Website properties structure
  *
  * @param properties - Array of raw website properties in OCHRE format
  * @returns Parsed WebsiteProperties object
  */
 function parseWebsiteProperties(
   properties: Array<OchreProperty>,
-): WebsiteProperties {
+): Website["properties"] {
   const mainProperties = parseProperties(properties);
   const websiteProperties = mainProperties.find(
     (property) => property.label === "presentation",
@@ -4227,6 +4236,11 @@ function parseWebsiteProperties(
     isSidebarDisplayed = sidebarProperty.content === true;
   }
 
+  const headerSearchButtonPageSlug =
+    websiteProperties
+      .find((property) => property.label === "navbar-search-button-page")
+      ?.values[0]?.content?.toString() ?? null;
+
   const iiifViewerProperty = websiteProperties.find(
     (property) => property.label === "iiif-viewer",
   )?.values[0];
@@ -4265,6 +4279,7 @@ function parseWebsiteProperties(
     isHeaderProjectDisplayed,
     isFooterDisplayed,
     isSidebarDisplayed,
+    headerSearchButtonPageSlug,
     iiifViewer,
     supportsThemeToggle,
     defaultTheme,
