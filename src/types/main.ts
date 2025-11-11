@@ -657,6 +657,7 @@ export type WebElement = {
  * Union type of all possible web element components
  */
 export type WebElementComponent =
+  | { component: "advanced-search"; boundComponentUuid: string }
   | { component: "annotated-document"; documentId: string }
   | {
       component: "annotated-image";

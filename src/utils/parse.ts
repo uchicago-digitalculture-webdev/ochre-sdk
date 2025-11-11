@@ -2086,6 +2086,20 @@ function parseWebElementProperties(
     : [];
 
   switch (componentName) {
+    case "advanced-search": {
+      const boundComponentPropertyUuid = getPropertyByLabel(
+        componentProperty.properties,
+        "bound-component",
+      )?.values[0]?.uuid;
+      if (!boundComponentPropertyUuid) {
+        throw new Error(
+          `Bound component not found for the following component: “${componentName}”`,
+        );
+      }
+
+      properties.boundComponentUuid = boundComponentPropertyUuid;
+      break;
+    }
     case "annotated-document": {
       const documentLink = links.find(
         (link) => link.type === "internalDocument",

@@ -51,6 +51,7 @@ export const websiteSchema = z.object({
  */
 export const componentSchema = z.enum(
   [
+    "advanced-search",
     "annotated-document",
     "annotated-image",
     "audio-player",
