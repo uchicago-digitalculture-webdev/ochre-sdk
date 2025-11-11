@@ -59,15 +59,18 @@ export async function fetchWebsite(
   },
 ): Promise<[null, Website] | [string, null]> {
   try {
-    const customFetch = options?.customFetch;
-    const isVersion2 = options?.isVersion2 ?? false;
-
     const cleanAbbreviation = abbreviation.trim().toLocaleLowerCase("en-US");
+
+    const customFetch = options?.customFetch;
+    const isVersion2 =
+      V2_ABBREVIATIONS.has(cleanAbbreviation) ? true : (
+        (options?.isVersion2 ?? false)
+      );
 
     let metadata: OchreMetadata | null = null;
     let tree: OchreTree | null = null;
 
-    if (V2_ABBREVIATIONS.has(cleanAbbreviation) || isVersion2) {
+    if (isVersion2) {
       const response = await (customFetch ?? fetch)(
         `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(`collection('ochre/tree')/ochre[tree/identification/abbreviation/content/string='${cleanAbbreviation}']`)}&format=json&lang="*"`,
       );
@@ -123,7 +126,7 @@ export async function fetchWebsite(
       tree,
       projectIdentification?.label ?? "",
       metadata.project?.identification.website ?? null,
-      { isVersion2: true },
+      { isVersion2 },
     );
 
     return [null, website];
