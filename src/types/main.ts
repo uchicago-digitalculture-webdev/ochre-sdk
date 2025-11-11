@@ -783,6 +783,11 @@ export type WebElementComponent =
         startIcon: string | null;
         endIcon: string | null;
       }>;
+      scopes: Array<{
+        uuid: string;
+        type: string;
+        identification: Identification;
+      }>;
     }
   | {
       component: "search-bar";

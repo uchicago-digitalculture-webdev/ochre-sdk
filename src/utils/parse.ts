@@ -2881,7 +2881,20 @@ function parseWebElementProperties(
         });
       }
 
+      const scopes =
+        elementResource.options?.scopes != null ?
+          (Array.isArray(elementResource.options.scopes.scope) ?
+            elementResource.options.scopes.scope
+          : [elementResource.options.scopes.scope]
+          ).map((scope) => ({
+            uuid: scope.uuid.content,
+            type: scope.uuid.type,
+            identification: parseIdentification(scope.identification),
+          }))
+        : [];
+
       properties.queries = queries;
+      properties.scopes = scopes;
       break;
     }
     case "table": {
