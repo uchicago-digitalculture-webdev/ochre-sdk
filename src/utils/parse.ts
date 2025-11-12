@@ -2091,13 +2091,24 @@ function parseWebElementProperties(
         componentProperty.properties,
         "bound-element",
       )?.values[0]?.uuid;
-      if (!boundElementPropertyUuid) {
+
+      const linkToProperty = getPropertyByLabel(
+        componentProperty.properties,
+        "link-to",
+      );
+      const href =
+        linkToProperty?.values[0]?.href ??
+        linkToProperty?.values[0]?.slug ??
+        null;
+
+      if (!boundElementPropertyUuid && !href) {
         throw new Error(
-          `Bound element not found for the following component: “${componentName}”`,
+          `Bound element or href not found for the following component: “${componentName}”`,
         );
       }
 
       properties.boundElementUuid = boundElementPropertyUuid;
+      properties.href = href;
       break;
     }
     case "annotated-document": {
