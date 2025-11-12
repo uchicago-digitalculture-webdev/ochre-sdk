@@ -2087,17 +2087,17 @@ function parseWebElementProperties(
 
   switch (componentName) {
     case "advanced-search": {
-      const boundComponentPropertyUuid = getPropertyByLabel(
+      const boundElementPropertyUuid = getPropertyByLabel(
         componentProperty.properties,
-        "bound-component",
+        "bound-element",
       )?.values[0]?.uuid;
-      if (!boundComponentPropertyUuid) {
+      if (!boundElementPropertyUuid) {
         throw new Error(
-          `Bound component not found for the following component: “${componentName}”`,
+          `Bound element not found for the following component: “${componentName}”`,
         );
       }
 
-      properties.boundComponentUuid = boundComponentPropertyUuid;
+      properties.boundElementUuid = boundElementPropertyUuid;
       break;
     }
     case "annotated-document": {
@@ -2923,6 +2923,16 @@ function parseWebElementProperties(
       break;
     }
     case "search-bar": {
+      const boundElementPropertyUuid = getPropertyByLabel(
+        componentProperty.properties,
+        "bound-element",
+      )?.values[0]?.uuid;
+      if (!boundElementPropertyUuid) {
+        throw new Error(
+          `Bound element not found for the following component: “${componentName}”`,
+        );
+      }
+
       let variant = getPropertyValueByLabel(
         componentProperty.properties,
         "variant",
@@ -2948,6 +2958,7 @@ function parseWebElementProperties(
             .replaceAll(String.raw`\{`, "{")
             .replaceAll(String.raw`\}`, "}")
         : null;
+      properties.boundElementUuid = boundElementPropertyUuid;
       break;
     }
     case "text": {
