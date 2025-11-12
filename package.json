@@ -55,14 +55,14 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^6.2.0",
-    "@types/node": "^24.10.0",
+    "@types/node": "^24.10.1",
     "bumpp": "^10.3.1",
     "eslint": "^9.39.1",
     "prettier": "^3.6.2",
     "terser": "^5.44.1",
-    "tsdown": "^0.16.2",
+    "tsdown": "^0.16.3",
     "typescript": "^5.9.3",
     "vitest": "^4.0.8"
   },
-  "packageManager": "pnpm@10.21.0"
+  "packageManager": "pnpm@10.22.0"
 }
