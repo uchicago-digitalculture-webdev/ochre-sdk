@@ -2928,11 +2928,14 @@ function parseWebElementProperties(
         "bound-element",
       )?.values[0]?.uuid;
 
+      const linkToProperty = getPropertyByLabel(
+        componentProperty.properties,
+        "link-to",
+      );
       const href =
-        getPropertyValueByLabel(
-          componentProperty.properties,
-          "link-to",
-        )?.toString() ?? null;
+        linkToProperty?.values[0]?.href ??
+        linkToProperty?.values[0]?.slug ??
+        null;
 
       if (!boundElementPropertyUuid && !href) {
         throw new Error(
