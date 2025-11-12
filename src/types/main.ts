@@ -795,7 +795,8 @@ export type WebElementComponent =
       variant: "default" | "full";
       placeholder: string | null;
       baseQuery: string | null;
-      boundElementUuid: string;
+      boundElementUuid: string | null;
+      href: string | null;
     }
   | { component: "table"; tableId: string }
   | {

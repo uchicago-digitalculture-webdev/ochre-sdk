@@ -2927,9 +2927,16 @@ function parseWebElementProperties(
         componentProperty.properties,
         "bound-element",
       )?.values[0]?.uuid;
-      if (!boundElementPropertyUuid) {
+
+      const href =
+        getPropertyValueByLabel(
+          componentProperty.properties,
+          "link-to",
+        )?.toString() ?? null;
+
+      if (!boundElementPropertyUuid && !href) {
         throw new Error(
-          `Bound element not found for the following component: “${componentName}”`,
+          `Bound element or href not found for the following component: “${componentName}”`,
         );
       }
 
@@ -2959,6 +2966,7 @@ function parseWebElementProperties(
             .replaceAll(String.raw`\}`, "}")
         : null;
       properties.boundElementUuid = boundElementPropertyUuid;
+      properties.href = href;
       break;
     }
     case "text": {
