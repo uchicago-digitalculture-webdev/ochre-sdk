@@ -594,7 +594,7 @@ export type Website = {
     isHeaderProjectDisplayed: boolean;
     isFooterDisplayed: boolean;
     isSidebarDisplayed: boolean;
-    headerSearchButtonPageSlug: string | null;
+    headerSearchBarPageSlug: string | null;
     iiifViewer: "universal-viewer" | "clover";
     supportsThemeToggle: boolean;
     defaultTheme: "light" | "dark" | null;
@@ -602,31 +602,33 @@ export type Website = {
   };
 };
 
+/**
+ * Represents a webpage with its title, slug, properties, items and subpages
+ */
 export type Webpage = {
   title: string;
   slug: string;
-  properties: WebpageProperties;
+  properties: {
+    displayedInHeader: boolean;
+    width: "full" | "large" | "narrow" | "default";
+    variant: "default" | "no-background";
+    backgroundImageUrl: string | null;
+    isBreadcrumbsDisplayed: boolean;
+    isSidebarDisplayed: boolean;
+    isHeaderSearchBarDisplayed: boolean;
+    cssStyles: {
+      default: Array<Style>;
+      tablet: Array<Style>;
+      mobile: Array<Style>;
+    };
+  };
   items: Array<WebElement | WebBlock>;
   webpages: Array<Webpage>;
 };
 
 /**
- * Properties for configuring webpage display and styling
+ * Represents a title with its label and variant
  */
-export type WebpageProperties = {
-  displayedInHeader: boolean;
-  width: "full" | "large" | "narrow" | "default";
-  variant: "default" | "no-background";
-  backgroundImageUrl: string | null;
-  isBreadcrumbsDisplayed: boolean;
-  isSidebarDisplayed: boolean;
-  cssStyles: {
-    default: Array<Style>;
-    tablet: Array<Style>;
-    mobile: Array<Style>;
-  };
-};
-
 export type WebTitle = {
   label: string;
   variant: "default" | "simple";

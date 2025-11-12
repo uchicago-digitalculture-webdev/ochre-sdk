@@ -3370,6 +3370,7 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
   let variant: "default" | "no-background" = "default";
   let isSidebarDisplayed = true;
   let isBreadcrumbsDisplayed = false;
+  let isHeaderSearchBarDisplayed = true;
 
   const webpageSubProperties = webpageProperties.find(
     (property) =>
@@ -3400,17 +3401,25 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
     }
 
     const isSidebarDisplayedProperty = webpageSubProperties.find(
-      (property) => property.label === "sidebar-visible",
+      (property) => property.label === "sidebar-displayed",
     )?.values[0];
     if (isSidebarDisplayedProperty) {
       isSidebarDisplayed = isSidebarDisplayedProperty.content === true;
     }
 
     const isBreadcrumbsDisplayedProperty = webpageSubProperties.find(
-      (property) => property.label === "breadcrumbs-visible",
+      (property) => property.label === "breadcrumbs-displayed",
     )?.values[0];
     if (isBreadcrumbsDisplayedProperty) {
       isBreadcrumbsDisplayed = isBreadcrumbsDisplayedProperty.content === true;
+    }
+
+    const isHeaderSearchBarDisplayedProperty = webpageSubProperties.find(
+      (property) => property.label === "header-search-bar-displayed",
+    )?.values[0];
+    if (isHeaderSearchBarDisplayedProperty) {
+      isHeaderSearchBarDisplayed =
+        isHeaderSearchBarDisplayedProperty.content === true;
     }
   }
 
@@ -3473,6 +3482,7 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
         : null,
       isSidebarDisplayed,
       isBreadcrumbsDisplayed,
+      isHeaderSearchBarDisplayed,
       cssStyles: {
         default: cssStyles,
         tablet: cssStylesTablet,
@@ -4270,7 +4280,7 @@ function parseWebsiteProperties(
   let defaultTheme: "light" | "dark" | null = null;
 
   const headerProperty = websiteProperties.find(
-    (property) => property.label === "navbar-visible",
+    (property) => property.label === "navbar-displayed",
   )?.values[0];
   if (headerProperty) {
     isHeaderDisplayed = headerProperty.content === true;
@@ -4297,7 +4307,7 @@ function parseWebsiteProperties(
   }
 
   const isHeaderProjectDisplayedProperty = websiteProperties.find(
-    (property) => property.label === "navbar-project-visible",
+    (property) => property.label === "navbar-project-displayed",
   )?.values[0];
   if (isHeaderProjectDisplayedProperty) {
     isHeaderProjectDisplayed =
@@ -4305,22 +4315,22 @@ function parseWebsiteProperties(
   }
 
   const footerProperty = websiteProperties.find(
-    (property) => property.label === "footer-visible",
+    (property) => property.label === "footer-displayed",
   )?.values[0];
   if (footerProperty) {
     isFooterDisplayed = footerProperty.content === true;
   }
 
   const sidebarProperty = websiteProperties.find(
-    (property) => property.label === "sidebar-visible",
+    (property) => property.label === "sidebar-displayed",
   )?.values[0];
   if (sidebarProperty) {
     isSidebarDisplayed = sidebarProperty.content === true;
   }
 
-  const headerSearchButtonPageSlug =
+  const headerSearchBarPageSlug =
     websiteProperties
-      .find((property) => property.label === "navbar-search-button-page")
+      .find((property) => property.label === "navbar-search-bar-page")
       ?.values[0]?.content?.toString() ?? null;
 
   const iiifViewerProperty = websiteProperties.find(
@@ -4361,7 +4371,7 @@ function parseWebsiteProperties(
     isHeaderProjectDisplayed,
     isFooterDisplayed,
     isSidebarDisplayed,
-    headerSearchButtonPageSlug,
+    headerSearchBarPageSlug,
     iiifViewer,
     supportsThemeToggle,
     defaultTheme,
