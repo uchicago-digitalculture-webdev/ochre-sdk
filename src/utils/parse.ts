@@ -2353,13 +2353,31 @@ function parseWebElementProperties(
       );
       paginationVariant ??= "default";
 
-      let isSearchDisplayed = false;
-      const isSearchDisplayedProperty = getPropertyValueByLabel(
+      let isInputDisplayed = false;
+      const isInputDisplayedProperty = getPropertyValueByLabel(
         componentProperty.properties,
-        "search-displayed",
+        "input-displayed",
       );
-      if (isSearchDisplayedProperty !== null) {
-        isSearchDisplayed = isSearchDisplayedProperty === true;
+      if (isInputDisplayedProperty !== null) {
+        isInputDisplayed = isInputDisplayedProperty === true;
+      }
+
+      let isResultsBarDisplayed = false;
+      const isResultsBarDisplayedProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "results-bar-displayed",
+      );
+      if (isResultsBarDisplayedProperty !== null) {
+        isResultsBarDisplayed = isResultsBarDisplayedProperty === true;
+      }
+
+      let isMapDisplayed = false;
+      const isMapDisplayedProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "map-displayed",
+      );
+      if (isMapDisplayedProperty !== null) {
+        isMapDisplayed = isMapDisplayedProperty === true;
       }
 
       let isSortDisplayed = false;
@@ -2489,7 +2507,11 @@ function parseWebElementProperties(
       properties.variant = variant;
       properties.itemVariant = itemVariant;
       properties.paginationVariant = paginationVariant;
-      properties.isSearchDisplayed = isSearchDisplayed;
+      properties.search = {
+        isInputDisplayed,
+        isResultsBarDisplayed,
+        isMapDisplayed,
+      };
       properties.isSortDisplayed = isSortDisplayed;
       properties.isFilterDisplayed = isFilterDisplayed;
       properties.filterSort = filterSort;
