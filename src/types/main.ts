@@ -595,10 +595,24 @@ export type Website = {
     isFooterDisplayed: boolean;
     isSidebarDisplayed: boolean;
     headerSearchBarPageSlug: string | null;
-    iiifViewer: "universal-viewer" | "clover";
     supportsThemeToggle: boolean;
     defaultTheme: "light" | "dark" | null;
     logoUrl: string | null;
+    itemPage: {
+      iiifViewer: "universal-viewer" | "clover";
+      options: {
+        contexts: {
+          flatten: Array<LevelContext>;
+          suppress: Array<LevelContext>;
+          filter: Array<LevelContext>;
+          sort: Array<LevelContext>;
+          detail: Array<LevelContext>;
+          download: Array<LevelContext>;
+          label: Array<LevelContext>;
+          prominent: Array<LevelContext>;
+        };
+      };
+    };
   };
 };
 

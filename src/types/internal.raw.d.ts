@@ -182,6 +182,16 @@ export type OchreTree = {
   identification: OchreIdentification;
   date?: string; // YYYY-MM-DD
   creators?: { creator: OchrePerson | Array<OchrePerson> };
+  options?: {
+    flattenContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    suppressContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    filterContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    sortContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    detailContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    downloadContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    labelContexts?: OchreLevelContext | Array<OchreLevelContext>;
+    prominentContexts?: OchreLevelContext | Array<OchreLevelContext>;
+  };
   items:
     | string
     | { resource: OchreResource | Array<OchreResource> }

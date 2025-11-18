@@ -4227,6 +4227,7 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
  */
 function parseWebsiteProperties(
   properties: Array<OchreProperty>,
+  websiteTree: OchreTree,
 ): Website["properties"] {
   const mainProperties = parseProperties(properties);
   const websiteProperties = mainProperties.find(
@@ -4360,6 +4361,79 @@ function parseWebsiteProperties(
     privacy: validatedPrivacy,
   } = result.data;
 
+  let contexts: Website["properties"]["itemPage"]["options"]["contexts"] = {
+    flatten: [],
+    suppress: [],
+    filter: [],
+    sort: [],
+    detail: [],
+    download: [],
+    label: [],
+    prominent: [],
+  };
+
+  if ("options" in websiteTree && websiteTree.options) {
+    const flattenContextsRaw =
+      websiteTree.options.flattenContexts != null ?
+        Array.isArray(websiteTree.options.flattenContexts) ?
+          websiteTree.options.flattenContexts
+        : [websiteTree.options.flattenContexts]
+      : [];
+    const suppressContextsRaw =
+      websiteTree.options.suppressContexts != null ?
+        Array.isArray(websiteTree.options.suppressContexts) ?
+          websiteTree.options.suppressContexts
+        : [websiteTree.options.suppressContexts]
+      : [];
+    const filterContextsRaw =
+      websiteTree.options.filterContexts != null ?
+        Array.isArray(websiteTree.options.filterContexts) ?
+          websiteTree.options.filterContexts
+        : [websiteTree.options.filterContexts]
+      : [];
+    const sortContextsRaw =
+      websiteTree.options.sortContexts != null ?
+        Array.isArray(websiteTree.options.sortContexts) ?
+          websiteTree.options.sortContexts
+        : [websiteTree.options.sortContexts]
+      : [];
+    const detailContextsRaw =
+      websiteTree.options.detailContexts != null ?
+        Array.isArray(websiteTree.options.detailContexts) ?
+          websiteTree.options.detailContexts
+        : [websiteTree.options.detailContexts]
+      : [];
+    const downloadContextsRaw =
+      websiteTree.options.downloadContexts != null ?
+        Array.isArray(websiteTree.options.downloadContexts) ?
+          websiteTree.options.downloadContexts
+        : [websiteTree.options.downloadContexts]
+      : [];
+    const labelContextsRaw =
+      websiteTree.options.labelContexts != null ?
+        Array.isArray(websiteTree.options.labelContexts) ?
+          websiteTree.options.labelContexts
+        : [websiteTree.options.labelContexts]
+      : [];
+    const prominentContextsRaw =
+      websiteTree.options.prominentContexts != null ?
+        Array.isArray(websiteTree.options.prominentContexts) ?
+          websiteTree.options.prominentContexts
+        : [websiteTree.options.prominentContexts]
+      : [];
+
+    contexts = {
+      flatten: parseContexts(flattenContextsRaw),
+      suppress: parseContexts(suppressContextsRaw),
+      filter: parseContexts(filterContextsRaw),
+      sort: parseContexts(sortContextsRaw),
+      detail: parseContexts(detailContextsRaw),
+      download: parseContexts(downloadContextsRaw),
+      label: parseContexts(labelContextsRaw),
+      prominent: parseContexts(prominentContextsRaw),
+    };
+  }
+
   return {
     type: validatedType,
     privacy: validatedPrivacy,
@@ -4372,13 +4446,13 @@ function parseWebsiteProperties(
     isFooterDisplayed,
     isSidebarDisplayed,
     headerSearchBarPageSlug,
-    iiifViewer,
     supportsThemeToggle,
     defaultTheme,
     logoUrl:
       logoUuid !== null ?
         `https://ochre.lib.uchicago.edu/ochre?uuid=${logoUuid}&load`
       : null,
+    itemPage: { iiifViewer, options: { contexts } },
   };
 }
 
@@ -4445,6 +4519,7 @@ export function parseWebsite(
     Array.isArray(websiteTree.properties.property) ?
       websiteTree.properties.property
     : [websiteTree.properties.property],
+    websiteTree,
   );
 
   if (
