@@ -714,7 +714,7 @@ export type WebElementComponent =
       isFilterDisplayed: boolean;
       filterSort: "default" | "alphabetical";
       search: {
-        isInputDisplayed: boolean;
+        isUsingQueryParams: boolean;
         isResultsBarDisplayed: boolean;
         isMapDisplayed: boolean;
       };

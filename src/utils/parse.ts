@@ -2353,13 +2353,13 @@ function parseWebElementProperties(
       );
       paginationVariant ??= "default";
 
-      let isInputDisplayed = false;
-      const isInputDisplayedProperty = getPropertyValueByLabel(
+      let isUsingQueryParams = false;
+      const isUsingQueryParamsProperty = getPropertyValueByLabel(
         componentProperty.properties,
-        "input-displayed",
+        "is-using-query-params",
       );
-      if (isInputDisplayedProperty !== null) {
-        isInputDisplayed = isInputDisplayedProperty === true;
+      if (isUsingQueryParamsProperty !== null) {
+        isUsingQueryParams = isUsingQueryParamsProperty === true;
       }
 
       let isResultsBarDisplayed = false;
@@ -2508,7 +2508,7 @@ function parseWebElementProperties(
       properties.itemVariant = itemVariant;
       properties.paginationVariant = paginationVariant;
       properties.search = {
-        isInputDisplayed,
+        isUsingQueryParams,
         isResultsBarDisplayed,
         isMapDisplayed,
       };
