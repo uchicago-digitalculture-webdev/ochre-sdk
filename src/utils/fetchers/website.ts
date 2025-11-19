@@ -17,7 +17,7 @@ const KNOWN_ABBREVIATIONS: Readonly<Record<string, string>> = {
   "sosc-core-at-smart": "db26c953-9b2a-4691-a909-5e8726b531d7",
 };
 
-const V2_ABBREVIATIONS: ReadonlySet<string> = new Set(["bengali-song"]);
+const V2_ABBREVIATIONS: ReadonlySet<string> = new Set();
 
 /**
  * Fetches and parses a website configuration from the OCHRE API
