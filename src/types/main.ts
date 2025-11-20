@@ -594,7 +594,7 @@ export type Website = {
     isHeaderProjectDisplayed: boolean;
     isFooterDisplayed: boolean;
     isSidebarDisplayed: boolean;
-    headerSearchBarPageSlug: string | null;
+    headerSearchBarBoundElementUuid: string | null;
     supportsThemeToggle: boolean;
     defaultTheme: "light" | "dark" | null;
     logoUrl: string | null;

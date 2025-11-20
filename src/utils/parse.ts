@@ -3415,7 +3415,7 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
     }
 
     const isHeaderSearchBarDisplayedProperty = webpageSubProperties.find(
-      (property) => property.label === "header-search-bar-displayed",
+      (property) => property.label === "navbar-search-bar-displayed",
     )?.values[0];
     if (isHeaderSearchBarDisplayedProperty) {
       isHeaderSearchBarDisplayed =
@@ -4329,10 +4329,10 @@ function parseWebsiteProperties(
     isSidebarDisplayed = sidebarProperty.content === true;
   }
 
-  const headerSearchBarPageSlug =
-    websiteProperties
-      .find((property) => property.label === "navbar-search-bar-page")
-      ?.values[0]?.content?.toString() ?? null;
+  const headerSearchBarBoundElementUuid =
+    websiteProperties.find(
+      (property) => property.label === "bound-element-navbar-search-bar",
+    )?.values[0]?.uuid ?? null;
 
   const iiifViewerProperty = websiteProperties.find(
     (property) => property.label === "iiif-viewer",
@@ -4445,7 +4445,7 @@ function parseWebsiteProperties(
     isHeaderProjectDisplayed,
     isFooterDisplayed,
     isSidebarDisplayed,
-    headerSearchBarPageSlug,
+    headerSearchBarBoundElementUuid,
     supportsThemeToggle,
     defaultTheme,
     logoUrl:
