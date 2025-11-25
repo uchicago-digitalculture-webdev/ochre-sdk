@@ -726,13 +726,13 @@ export type WebElementComponent =
       paginationVariant: "default" | "numeric";
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
       isSortDisplayed: boolean;
-      isFilterDisplayed: boolean;
-      filterSort: "default" | "alphabetical";
       isUsingQueryParams: boolean;
-      search: {
+      filter: {
+        isSidebarDisplayed: boolean;
         isResultsBarDisplayed: boolean;
         isMapDisplayed: boolean;
         isInputDisplayed: boolean;
+        sidebarSort: "default" | "alphabetical";
       };
       options: {
         attributeFilters: { bibliographies: boolean; periods: boolean };
