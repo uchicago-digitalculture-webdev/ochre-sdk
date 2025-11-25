@@ -720,6 +720,7 @@ export type WebElementComponent =
   | {
       component: "collection";
       collectionIds: Array<string>;
+      displayedPropertyUuids: Array<string> | null;
       variant: "full" | "highlights";
       itemVariant: "detailed" | "card" | "tile";
       paginationVariant: "default" | "numeric";
@@ -727,10 +728,11 @@ export type WebElementComponent =
       isSortDisplayed: boolean;
       isFilterDisplayed: boolean;
       filterSort: "default" | "alphabetical";
+      isUsingQueryParams: boolean;
       search: {
-        isUsingQueryParams: boolean;
         isResultsBarDisplayed: boolean;
         isMapDisplayed: boolean;
+        isInputDisplayed: boolean;
       };
       options: {
         attributeFilters: { bibliographies: boolean; periods: boolean };
@@ -816,9 +818,8 @@ export type WebElementComponent =
     }
   | {
       component: "search-bar";
-      variant: "default" | "full";
       placeholder: string | null;
-      baseQuery: string | null;
+      baseFilterQueries: string | null;
       boundElementUuid: string | null;
       href: string | null;
     }

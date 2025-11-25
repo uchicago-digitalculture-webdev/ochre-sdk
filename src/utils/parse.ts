@@ -2335,6 +2335,11 @@ function parseWebElementProperties(
         );
       }
 
+      const displayedProperties = getPropertyByLabel(
+        componentProperty.properties,
+        "use-property",
+      );
+
       let variant = getPropertyValueByLabel(
         componentProperty.properties,
         "variant",
@@ -2362,22 +2367,32 @@ function parseWebElementProperties(
         isUsingQueryParams = isUsingQueryParamsProperty === true;
       }
 
-      let isResultsBarDisplayed = false;
-      const isResultsBarDisplayedProperty = getPropertyValueByLabel(
+      let isFilterResultsBarDisplayed = false;
+      const isFilterResultsBarDisplayedProperty = getPropertyValueByLabel(
         componentProperty.properties,
-        "results-bar-displayed",
+        "filter-results-bar-displayed",
       );
-      if (isResultsBarDisplayedProperty !== null) {
-        isResultsBarDisplayed = isResultsBarDisplayedProperty === true;
+      if (isFilterResultsBarDisplayedProperty !== null) {
+        isFilterResultsBarDisplayed =
+          isFilterResultsBarDisplayedProperty === true;
       }
 
-      let isMapDisplayed = false;
-      const isMapDisplayedProperty = getPropertyValueByLabel(
+      let isFilterMapDisplayed = false;
+      const isFilterMapDisplayedProperty = getPropertyValueByLabel(
         componentProperty.properties,
-        "map-displayed",
+        "filter-map-displayed",
       );
-      if (isMapDisplayedProperty !== null) {
-        isMapDisplayed = isMapDisplayedProperty === true;
+      if (isFilterMapDisplayedProperty !== null) {
+        isFilterMapDisplayed = isFilterMapDisplayedProperty === true;
+      }
+
+      let isFilterInputDisplayed = false;
+      const isFilterInputDisplayedProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "filter-input-displayed",
+      );
+      if (isFilterInputDisplayedProperty !== null) {
+        isFilterInputDisplayed = isFilterInputDisplayedProperty === true;
       }
 
       let isSortDisplayed = false;
@@ -2389,20 +2404,20 @@ function parseWebElementProperties(
         isSortDisplayed = isSortDisplayedProperty === true;
       }
 
-      let isFilterDisplayed = false;
-      const isFilterDisplayedProperty = getPropertyValueByLabel(
+      let isFilterSidebarDisplayed = false;
+      const isFilterSidebarDisplayedProperty = getPropertyValueByLabel(
         componentProperty.properties,
-        "filter-displayed",
+        "filter-sidebar-displayed",
       );
-      if (isFilterDisplayedProperty !== null) {
-        isFilterDisplayed = isFilterDisplayedProperty === true;
+      if (isFilterSidebarDisplayedProperty !== null) {
+        isFilterSidebarDisplayed = isFilterSidebarDisplayedProperty === true;
       }
 
-      let filterSort = getPropertyValueByLabel(
+      let filterSidebarSort = getPropertyValueByLabel(
         componentProperty.properties,
-        "filter-sort",
+        "filter-sidebar-sort",
       );
-      filterSort ??= "default";
+      filterSidebarSort ??= "default";
 
       let layout = getPropertyValueByLabel(
         componentProperty.properties,
@@ -2504,17 +2519,22 @@ function parseWebElementProperties(
       }
 
       properties.collectionIds = collectionLinks.map((link) => link.uuid);
+      properties.displayedPropertyUuids =
+        displayedProperties?.values
+          .map((value) => value.uuid)
+          .filter(Boolean) ?? null;
       properties.variant = variant;
       properties.itemVariant = itemVariant;
       properties.paginationVariant = paginationVariant;
-      properties.search = {
-        isUsingQueryParams,
-        isResultsBarDisplayed,
-        isMapDisplayed,
+      properties.isUsingQueryParams = isUsingQueryParams;
+      properties.filter = {
+        isSidebarDisplayed: isFilterSidebarDisplayed,
+        isResultsBarDisplayed: isFilterResultsBarDisplayed,
+        isMapDisplayed: isFilterMapDisplayed,
+        isInputDisplayed: isFilterInputDisplayed,
+        sidebarSort: filterSidebarSort,
       };
       properties.isSortDisplayed = isSortDisplayed;
-      properties.isFilterDisplayed = isFilterDisplayed;
-      properties.filterSort = filterSort;
       properties.layout = layout;
       properties.options = options;
       break;
@@ -2976,28 +2996,21 @@ function parseWebElementProperties(
         );
       }
 
-      let variant = getPropertyValueByLabel(
-        componentProperty.properties,
-        "variant",
-      );
-      variant ??= "default";
-
       const placeholder = getPropertyValueByLabel(
         componentProperty.properties,
         "placeholder-text",
       );
 
-      const baseQuery = getPropertyValueByLabel(
+      const baseFilterQueries = getPropertyValueByLabel(
         componentProperty.properties,
-        "base-query",
+        "base-filter-queries",
       );
 
-      properties.variant = variant;
       properties.placeholder =
         placeholder !== null ? String(placeholder) : null;
-      properties.baseQuery =
-        baseQuery !== null ?
-          String(baseQuery)
+      properties.baseFilterQueries =
+        baseFilterQueries !== null ?
+          String(baseFilterQueries)
             .replaceAll(String.raw`\{`, "{")
             .replaceAll(String.raw`\}`, "}")
         : null;
@@ -3380,7 +3393,7 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
 
   if (webpageSubProperties) {
     const headerProperty = webpageSubProperties.find(
-      (property) => property.label === "header",
+      (property) => property.label === "displayed-in-navbar",
     )?.values[0];
     if (headerProperty) {
       displayedInHeader = headerProperty.content === true;
