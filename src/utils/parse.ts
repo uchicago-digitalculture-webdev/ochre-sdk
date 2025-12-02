@@ -2519,9 +2519,9 @@ function parseWebElementProperties(
       }
 
       properties.collectionIds = collectionLinks.map((link) => link.uuid);
-      properties.displayedPropertyUuids =
+      properties.displayedProperties =
         displayedProperties?.values
-          .map((value) => value.uuid)
+          .map((value) => ({ uuid: value.uuid, label: value.content }))
           .filter(Boolean) ?? null;
       properties.variant = variant;
       properties.itemVariant = itemVariant;

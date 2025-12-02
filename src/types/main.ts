@@ -720,7 +720,7 @@ export type WebElementComponent =
   | {
       component: "collection";
       collectionIds: Array<string>;
-      displayedPropertyUuids: Array<string> | null;
+      displayedProperties: Array<{ uuid: string; label: string }> | null;
       variant: "full" | "highlights";
       itemVariant: "detailed" | "card" | "tile";
       paginationVariant: "default" | "numeric";
