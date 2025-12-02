@@ -1,7 +1,10 @@
 /**
  * Represents the core data structure containing item information and metadata
  */
-export type Data<T extends DataCategory, U extends DataCategory> = {
+export type Data<
+  T extends DataCategory = DataCategory,
+  U extends DataCategory = T extends "tree" | "set" ? DataCategory : never,
+> = {
   uuid: string;
   belongsTo: { uuid: string; abbreviation: string };
   publicationDateTime: Date;
@@ -25,7 +28,10 @@ export type DataCategory =
 /**
  * Represents the item of the data
  */
-export type Item<T extends DataCategory, U extends DataCategory> =
+export type Item<
+  T extends DataCategory = DataCategory,
+  U extends DataCategory = T extends "tree" | "set" ? DataCategory : never,
+> =
   | Tree<T, U>
   | Set<T>
   | Resource
