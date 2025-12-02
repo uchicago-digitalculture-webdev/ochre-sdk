@@ -289,10 +289,11 @@ export function parseLicense(license: OchreLicense): License | null {
  * @param person - Raw person data from OCHRE format
  * @returns Parsed Person object
  */
-export function parsePerson(person: OchrePerson): Person {
+export function parsePerson(person: OchrePerson, metadata?: Metadata): Person {
   return {
     uuid: person.uuid,
     category: "person",
+    metadata: metadata ?? null,
     publicationDateTime:
       person.publicationDateTime != null ?
         new Date(person.publicationDateTime)
@@ -1097,10 +1098,11 @@ export function parseImageMap(imageMap: OchreImageMap): ImageMap {
  * @param period - Raw period data in OCHRE format
  * @returns Parsed Period object
  */
-export function parsePeriod(period: OchrePeriod): Period {
+export function parsePeriod(period: OchrePeriod, metadata?: Metadata): Period {
   return {
     uuid: period.uuid,
     category: "period",
+    metadata: metadata ?? null,
     publicationDateTime:
       period.publicationDateTime != null ?
         new Date(period.publicationDateTime)
@@ -1135,6 +1137,7 @@ export function parsePeriods(periods: Array<OchrePeriod>): Array<Period> {
  */
 export function parseBibliography(
   bibliography: OchreBibliography,
+  metadata?: Metadata,
 ): Bibliography {
   let resource: Bibliography["source"]["resource"] | null = null;
   if (bibliography.source?.resource) {
@@ -1180,6 +1183,7 @@ export function parseBibliography(
     uuid: bibliography.uuid ?? null,
     zoteroId: bibliography.zoteroId ?? null,
     category: "bibliography",
+    metadata: metadata ?? null,
     publicationDateTime:
       bibliography.publicationDateTime != null ?
         new Date(bibliography.publicationDateTime)
@@ -1288,10 +1292,12 @@ export function parseBibliographies(
  */
 export function parsePropertyValue(
   propertyValue: OchrePropertyValue,
+  metadata?: Metadata,
 ): PropertyValue {
   return {
     uuid: propertyValue.uuid,
     category: "propertyValue",
+    metadata: metadata ?? null,
     number: propertyValue.n,
     publicationDateTime:
       propertyValue.publicationDateTime ?
@@ -1367,6 +1373,7 @@ export function parseTree<T extends DataCategory, U extends DataCategory>(
   tree: OchreTree,
   itemCategory?: T,
   itemSubCategory?: U,
+  metadata?: Metadata,
 ): Tree<T, U> {
   if (typeof tree.items === "string") {
     throw new TypeError("Invalid OCHRE data: Tree has no items");
@@ -1500,6 +1507,7 @@ export function parseTree<T extends DataCategory, U extends DataCategory>(
   const returnTree: Tree<T, U> = {
     uuid: tree.uuid,
     category: "tree",
+    metadata: metadata ?? null,
     publicationDateTime: new Date(tree.publicationDateTime),
     identification: parseIdentification(tree.identification),
     creators,
@@ -1538,6 +1546,7 @@ export function parseTree<T extends DataCategory, U extends DataCategory>(
 export function parseSet<T extends DataCategory>(
   set: OchreSet,
   itemCategory?: T,
+  metadata?: Metadata,
 ): Set<T> {
   if (typeof set.items === "string") {
     throw new TypeError("Invalid OCHRE data: Set has no items");
@@ -1637,6 +1646,7 @@ export function parseSet<T extends DataCategory>(
   return {
     uuid: set.uuid,
     category: "set",
+    metadata: metadata ?? null,
     itemCategory: itemCategory!,
     publicationDateTime:
       set.publicationDateTime ? new Date(set.publicationDateTime) : null,
@@ -1677,10 +1687,14 @@ export function parseSet<T extends DataCategory>(
  * @param resource - Raw resource data in OCHRE format
  * @returns Parsed Resource object
  */
-export function parseResource(resource: OchreResource): Resource {
+export function parseResource(
+  resource: OchreResource,
+  metadata?: Metadata,
+): Resource {
   const returnResource: Resource = {
     uuid: resource.uuid,
     category: "resource",
+    metadata: metadata ?? null,
     publicationDateTime:
       resource.publicationDateTime ?
         new Date(resource.publicationDateTime)
@@ -1814,10 +1828,14 @@ export function parseResources(
  * @param spatialUnit - Raw spatial unit in OCHRE format
  * @returns Parsed SpatialUnit object
  */
-export function parseSpatialUnit(spatialUnit: OchreSpatialUnit): SpatialUnit {
+export function parseSpatialUnit(
+  spatialUnit: OchreSpatialUnit,
+  metadata?: Metadata,
+): SpatialUnit {
   const returnSpatialUnit: SpatialUnit = {
     uuid: spatialUnit.uuid,
     category: "spatialUnit",
+    metadata: metadata ?? null,
     publicationDateTime:
       spatialUnit.publicationDateTime != null ?
         new Date(spatialUnit.publicationDateTime)
@@ -1909,10 +1927,14 @@ export function parseSpatialUnits(
  * @param concept - Raw concept data in OCHRE format
  * @returns Parsed Concept object
  */
-export function parseConcept(concept: OchreConcept): Concept {
+export function parseConcept(
+  concept: OchreConcept,
+  metadata?: Metadata,
+): Concept {
   const returnConcept: Concept = {
     uuid: concept.uuid,
     category: "concept",
+    metadata: metadata ?? null,
     publicationDateTime:
       concept.publicationDateTime ?
         new Date(concept.publicationDateTime)

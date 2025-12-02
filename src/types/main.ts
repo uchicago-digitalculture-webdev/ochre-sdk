@@ -5,19 +5,12 @@ export type Data<T extends DataCategory, U extends DataCategory> = {
   uuid: string;
   belongsTo: { uuid: string; abbreviation: string };
   publicationDateTime: Date;
-  metadata: Metadata;
-  item:
-    | Tree<T, U>
-    | Set<T>
-    | Resource
-    | SpatialUnit
-    | Concept
-    | Period
-    | Bibliography
-    | Person
-    | PropertyValue;
+  item: Item<T, U>;
 };
 
+/**
+ * Represents the category of the data
+ */
 export type DataCategory =
   | "tree"
   | "set"
@@ -28,6 +21,20 @@ export type DataCategory =
   | "bibliography"
   | "person"
   | "propertyValue";
+
+/**
+ * Represents the item of the data
+ */
+export type Item<T extends DataCategory, U extends DataCategory> =
+  | Tree<T, U>
+  | Set<T>
+  | Resource
+  | SpatialUnit
+  | Concept
+  | Period
+  | Bibliography
+  | Person
+  | PropertyValue;
 
 /**
  * Basic identification information used across multiple types
@@ -93,6 +100,7 @@ export type License = { content: string; url: string };
 export type Person = {
   uuid: string;
   category: "person";
+  metadata: Metadata | null;
   publicationDateTime: Date | null;
   type: string | null;
   number: number | null;
@@ -272,6 +280,7 @@ export type Interpretation = {
 export type Resource = {
   uuid: string;
   category: "resource";
+  metadata: Metadata | null;
   publicationDateTime: Date | null;
   type: string;
   number: number;
@@ -305,6 +314,7 @@ export type Resource = {
 export type SpatialUnit = {
   uuid: string;
   category: "spatialUnit";
+  metadata: Metadata | null;
   publicationDateTime: Date | null;
   number: number;
   context: Context | null;
@@ -326,6 +336,7 @@ export type SpatialUnit = {
 export type Concept = {
   uuid: string;
   category: "concept";
+  metadata: Metadata | null;
   publicationDateTime: Date | null;
   number: number;
   license: License | null;
@@ -344,6 +355,7 @@ export type Concept = {
 export type Set<T extends DataCategory> = {
   uuid: string;
   category: "set";
+  metadata: Metadata | null;
   itemCategory: T;
   publicationDateTime: Date | null;
   type: string;
@@ -371,6 +383,7 @@ export type Bibliography = {
   uuid: string | null;
   zoteroId: string | null;
   category: "bibliography";
+  metadata: Metadata | null;
   publicationDateTime: Date | null;
   type: string | null;
   number: number | null;
@@ -403,6 +416,7 @@ export type Bibliography = {
 export type Period = {
   uuid: string;
   category: "period";
+  metadata: Metadata | null;
   publicationDateTime: Date | null;
   type: string | null;
   number: number | null;
@@ -416,6 +430,7 @@ export type Period = {
 export type PropertyValue = {
   uuid: string;
   category: "propertyValue";
+  metadata: Metadata | null;
   number: number;
   publicationDateTime: Date | null;
   context: Context | null;
@@ -483,6 +498,7 @@ export type Property<
 export type Tree<T extends DataCategory, U extends DataCategory> = {
   uuid: string;
   category: "tree";
+  metadata: Metadata | null;
   publicationDateTime: Date | null;
   type: string;
   number: number;
