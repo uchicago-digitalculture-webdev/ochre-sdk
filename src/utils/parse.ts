@@ -33,8 +33,7 @@ import type {
   Concept,
   Context,
   ContextItem,
-  Coordinates,
-  CoordinatesItem,
+  Coordinate,
   DataCategory,
   Event,
   Identification,
@@ -650,25 +649,25 @@ export function parseNotes(
 }
 
 /**
- * Parses raw coordinates data into a standardized Coordinates structure
+ * Parses raw coordinates data into a standardized array of Coordinate structures
  *
  * @param coordinates - Raw coordinates data in OCHRE format
- * @returns Parsed Coordinates object
+ * @returns Parsed array of Coordinate objects
  */
 export function parseCoordinates(
   coordinates: OchreCoordinates | undefined,
-): Coordinates {
+): Array<Coordinate> {
   if (coordinates == null) {
     return [];
   }
 
-  const returnCoordinates: Array<CoordinatesItem> = [];
+  const returnCoordinates: Array<Coordinate> = [];
 
   const coordsToParse =
     Array.isArray(coordinates.coord) ? coordinates.coord : [coordinates.coord];
 
   for (const coord of coordsToParse) {
-    const source: CoordinatesItem["source"] =
+    const source: Coordinate["source"] =
       "source" in coord && coord.source ?
         coord.source.context === "self" ?
           {

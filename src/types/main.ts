@@ -134,7 +134,7 @@ export type Person = {
     state: string | null;
   } | null;
   description: string | null;
-  coordinates: Coordinates;
+  coordinates: Array<Coordinate>;
   content: string | null;
   notes: Array<Note>;
   links: Array<Link>;
@@ -217,9 +217,9 @@ export type ImageMap = {
 };
 
 /**
- * Geographic coordinates item with optional type and label
+ * Geographic coordinate with optional type and label
  */
-export type CoordinatesItem =
+export type Coordinate =
   | {
       type: "point";
       latitude: number;
@@ -251,11 +251,6 @@ export type CoordinatesItem =
           }
         | null;
     };
-
-/**
- * Geographic coordinates with optional type and label
- */
-export type Coordinates = Array<CoordinatesItem>;
 
 /**
  * Represents an observation with notes, links and properties
@@ -313,7 +308,7 @@ export type Resource = {
   creators: Array<Person>;
   notes: Array<Note>;
   description: string;
-  coordinates: Coordinates;
+  coordinates: Array<Coordinate>;
   document: string | null;
   href: string | null;
   fileFormat: string | null;
@@ -341,7 +336,7 @@ export type SpatialUnit = {
   identification: Identification;
   image: Image | null;
   description: string | null;
-  coordinates: Coordinates;
+  coordinates: Array<Coordinate>;
   mapData: { geoJSON: { multiPolygon: string; EPSG: number } } | null;
   observations: Array<Observation>;
   events: Array<Event>;

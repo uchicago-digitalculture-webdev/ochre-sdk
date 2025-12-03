@@ -626,7 +626,7 @@ export type OchreCoordinatesItem =
     };
 
 /**
- * Raw coordinates structure corresponding to the parsed Coordinates type
+ * Raw coordinates structure corresponding to the parsed coordinate array type
  */
 export type OchreCoordinates = {
   coord: OchreCoordinatesItem | Array<OchreCoordinatesItem>;
