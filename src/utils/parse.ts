@@ -1514,15 +1514,7 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
     date,
     type: tree.type,
     number: tree.n,
-    items: items as U extends "resource" ? Array<Resource>
-    : U extends "spatialUnit" ? Array<SpatialUnit>
-    : U extends "concept" ? Array<Concept>
-    : U extends "period" ? Array<Period>
-    : U extends "bibliography" ? Array<Bibliography>
-    : U extends "person" ? Array<Person>
-    : U extends "propertyValue" ? Array<PropertyValue>
-    : U extends "set" ? Array<Set<U>>
-    : never,
+    items: items as Tree<U>["items"],
     properties:
       tree.properties ?
         parseProperties(
@@ -1669,14 +1661,7 @@ export function parseSet<U extends DataCategory>(
       : [],
     type: set.type,
     number: set.n,
-    items: items as U extends "resource" ? Array<Resource>
-    : U extends "spatialUnit" ? Array<SpatialUnit>
-    : U extends "concept" ? Array<Concept>
-    : U extends "period" ? Array<Period>
-    : U extends "bibliography" ? Array<Bibliography>
-    : U extends "person" ? Array<Person>
-    : U extends "propertyValue" ? Array<PropertyValue>
-    : never,
+    items: items as Set<U>["items"],
   };
 }
 

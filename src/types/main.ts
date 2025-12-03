@@ -371,7 +371,7 @@ export type Concept = {
 /**
  * Represents a set that can contain resources, spatial units and concepts
  */
-export type Set<U extends DataCategory> = {
+export type Set<U extends DataCategory = DataCategory> = {
   uuid: string;
   category: "set";
   metadata: Metadata | null;
@@ -385,7 +385,8 @@ export type Set<U extends DataCategory> = {
   isSuppressingBlanks: boolean;
   description: string;
   creators: Array<Person>;
-  items: U extends "resource" ? Array<Resource>
+  items: [DataCategory] extends [U] ? Array<Item>
+  : U extends "resource" ? Array<Resource>
   : U extends "spatialUnit" ? Array<SpatialUnit>
   : U extends "concept" ? Array<Concept>
   : U extends "period" ? Array<Period>
@@ -394,7 +395,7 @@ export type Set<U extends DataCategory> = {
   : U extends "propertyValue" ? Array<PropertyValue>
   : U extends "tree" ? Array<Tree<Exclude<DataCategory, "tree">>>
   : U extends "set" ? Array<Set<DataCategory>>
-  : never;
+  : Array<Item>;
 };
 
 /**
@@ -516,7 +517,9 @@ export type Property<
 /**
  * Represents a tree structure containing resources, spatial units and concepts
  */
-export type Tree<U extends Exclude<DataCategory, "tree">> = {
+export type Tree<
+  U extends Exclude<DataCategory, "tree"> = Exclude<DataCategory, "tree">,
+> = {
   uuid: string;
   category: "tree";
   metadata: Metadata | null;
@@ -528,7 +531,8 @@ export type Tree<U extends Exclude<DataCategory, "tree">> = {
   identification: Identification;
   creators: Array<Person>;
   properties: Array<Property>;
-  items: U extends "resource" ? Array<Resource>
+  items: [Exclude<DataCategory, "tree">] extends [U] ? Array<Item>
+  : U extends "resource" ? Array<Resource>
   : U extends "spatialUnit" ? Array<SpatialUnit>
   : U extends "concept" ? Array<Concept>
   : U extends "period" ? Array<Period>
@@ -536,7 +540,7 @@ export type Tree<U extends Exclude<DataCategory, "tree">> = {
   : U extends "person" ? Array<Person>
   : U extends "propertyValue" ? Array<PropertyValue>
   : U extends "set" ? Array<Set<DataCategory>>
-  : never;
+  : Array<Item>;
 };
 
 /**
