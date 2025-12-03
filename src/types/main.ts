@@ -3,7 +3,9 @@
  */
 export type Data<
   T extends DataCategory = DataCategory,
-  U extends DataCategory = T extends "tree" | "set" ? DataCategory : never,
+  U extends DataCategory = T extends "tree" ? Exclude<DataCategory, "tree">
+  : T extends "set" ? DataCategory
+  : never,
 > = {
   uuid: string;
   belongsTo: { uuid: string; abbreviation: string };
@@ -26,21 +28,32 @@ export type DataCategory =
   | "propertyValue";
 
 /**
- * Represents the item of the data
+ * Represents the item of the data, with proper type narrowing based on category
  */
 export type Item<
   T extends DataCategory = DataCategory,
-  U extends DataCategory = T extends "tree" | "set" ? DataCategory : never,
+  U extends DataCategory = T extends "tree" ? Exclude<DataCategory, "tree">
+  : T extends "set" ? DataCategory
+  : never,
 > =
-  | Tree<T, U>
-  | Set<U>
-  | Resource
-  | SpatialUnit
-  | Concept
-  | Period
-  | Bibliography
-  | Person
-  | PropertyValue;
+  T extends "resource" ? Resource
+  : T extends "spatialUnit" ? SpatialUnit
+  : T extends "concept" ? Concept
+  : T extends "period" ? Period
+  : T extends "bibliography" ? Bibliography
+  : T extends "person" ? Person
+  : T extends "propertyValue" ? PropertyValue
+  : T extends "tree" ? Tree<Exclude<U, "tree">>
+  : T extends "set" ? Set<U>
+  : | Resource
+    | SpatialUnit
+    | Concept
+    | Period
+    | Bibliography
+    | Person
+    | PropertyValue
+    | Tree<Exclude<U, "tree">>
+    | Set<U>;
 
 /**
  * Basic identification information used across multiple types
@@ -358,11 +371,11 @@ export type Concept = {
 /**
  * Represents a set that can contain resources, spatial units and concepts
  */
-export type Set<T extends DataCategory> = {
+export type Set<U extends DataCategory> = {
   uuid: string;
   category: "set";
   metadata: Metadata | null;
-  itemCategory: T;
+  itemCategory: U;
   publicationDateTime: Date | null;
   type: string;
   number: number;
@@ -372,13 +385,15 @@ export type Set<T extends DataCategory> = {
   isSuppressingBlanks: boolean;
   description: string;
   creators: Array<Person>;
-  items: T extends "resource" ? Array<Resource>
-  : T extends "spatialUnit" ? Array<SpatialUnit>
-  : T extends "concept" ? Array<Concept>
-  : T extends "period" ? Array<Period>
-  : T extends "bibliography" ? Array<Bibliography>
-  : T extends "person" ? Array<Person>
-  : T extends "propertyValue" ? Array<PropertyValue>
+  items: U extends "resource" ? Array<Resource>
+  : U extends "spatialUnit" ? Array<SpatialUnit>
+  : U extends "concept" ? Array<Concept>
+  : U extends "period" ? Array<Period>
+  : U extends "bibliography" ? Array<Bibliography>
+  : U extends "person" ? Array<Person>
+  : U extends "propertyValue" ? Array<PropertyValue>
+  : U extends "tree" ? Array<Tree<Exclude<DataCategory, "tree">>>
+  : U extends "set" ? Array<Set<DataCategory>>
   : never;
 };
 
@@ -501,7 +516,7 @@ export type Property<
 /**
  * Represents a tree structure containing resources, spatial units and concepts
  */
-export type Tree<T extends DataCategory, U extends DataCategory> = {
+export type Tree<U extends Exclude<DataCategory, "tree">> = {
   uuid: string;
   category: "tree";
   metadata: Metadata | null;
@@ -513,14 +528,14 @@ export type Tree<T extends DataCategory, U extends DataCategory> = {
   identification: Identification;
   creators: Array<Person>;
   properties: Array<Property>;
-  items: T extends "resource" ? Array<Resource>
-  : T extends "spatialUnit" ? Array<SpatialUnit>
-  : T extends "concept" ? Array<Concept>
-  : T extends "period" ? Array<Period>
-  : T extends "bibliography" ? Array<Bibliography>
-  : T extends "person" ? Array<Person>
-  : T extends "propertyValue" ? Array<PropertyValue>
-  : T extends "set" ? Array<Set<U>>
+  items: U extends "resource" ? Array<Resource>
+  : U extends "spatialUnit" ? Array<SpatialUnit>
+  : U extends "concept" ? Array<Concept>
+  : U extends "period" ? Array<Period>
+  : U extends "bibliography" ? Array<Bibliography>
+  : U extends "person" ? Array<Person>
+  : U extends "propertyValue" ? Array<PropertyValue>
+  : U extends "set" ? Array<Set<DataCategory>>
   : never;
 };
 

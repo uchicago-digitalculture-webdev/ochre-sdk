@@ -1369,12 +1369,11 @@ export function parsePropertyValues(
  * @param tree - Raw tree data in OCHRE format
  * @returns Parsed Tree object or null if invalid
  */
-export function parseTree<T extends DataCategory, U extends DataCategory>(
+export function parseTree<U extends Exclude<DataCategory, "tree">>(
   tree: OchreTree,
-  itemCategory?: T,
-  itemSubCategory?: U,
+  itemCategory?: Exclude<DataCategory, "tree">,
   metadata?: Metadata,
-): Tree<T, U> {
+): Tree<U> {
   if (typeof tree.items === "string") {
     throw new TypeError("Invalid OCHRE data: Tree has no items");
   }
@@ -1394,7 +1393,7 @@ export function parseTree<T extends DataCategory, U extends DataCategory>(
   }
 
   const parsedItemCategory =
-    itemSubCategory ?? getItemCategory(Object.keys(tree.items));
+    itemCategory ?? getItemCategory(Object.keys(tree.items));
 
   let items:
     | Array<Resource>
@@ -1493,7 +1492,7 @@ export function parseTree<T extends DataCategory, U extends DataCategory>(
       for (const item of Array.isArray(tree.items.set) ?
         tree.items.set
       : [tree.items.set]) {
-        setItems.push(parseSet<U>(item, itemSubCategory));
+        setItems.push(parseSet<U>(item, itemCategory as U | undefined));
       }
 
       items = setItems;
@@ -1504,7 +1503,7 @@ export function parseTree<T extends DataCategory, U extends DataCategory>(
     }
   }
 
-  const returnTree: Tree<T, U> = {
+  const returnTree: Tree<U> = {
     uuid: tree.uuid,
     category: "tree",
     metadata: metadata ?? null,
@@ -1515,14 +1514,14 @@ export function parseTree<T extends DataCategory, U extends DataCategory>(
     date,
     type: tree.type,
     number: tree.n,
-    items: items as T extends "resource" ? Array<Resource>
-    : T extends "spatialUnit" ? Array<SpatialUnit>
-    : T extends "concept" ? Array<Concept>
-    : T extends "period" ? Array<Period>
-    : T extends "bibliography" ? Array<Bibliography>
-    : T extends "person" ? Array<Person>
-    : T extends "propertyValue" ? Array<PropertyValue>
-    : T extends "set" ? Array<Set<U>>
+    items: items as U extends "resource" ? Array<Resource>
+    : U extends "spatialUnit" ? Array<SpatialUnit>
+    : U extends "concept" ? Array<Concept>
+    : U extends "period" ? Array<Period>
+    : U extends "bibliography" ? Array<Bibliography>
+    : U extends "person" ? Array<Person>
+    : U extends "propertyValue" ? Array<PropertyValue>
+    : U extends "set" ? Array<Set<U>>
     : never,
     properties:
       tree.properties ?
@@ -1543,11 +1542,11 @@ export function parseTree<T extends DataCategory, U extends DataCategory>(
  * @param set - Raw set data in OCHRE format
  * @returns Parsed Set object
  */
-export function parseSet<T extends DataCategory>(
+export function parseSet<U extends DataCategory>(
   set: OchreSet,
-  itemCategory?: T,
+  itemCategory?: U,
   metadata?: Metadata,
-): Set<T> {
+): Set<U> {
   if (typeof set.items === "string") {
     throw new TypeError("Invalid OCHRE data: Set has no items");
   }
@@ -1670,13 +1669,13 @@ export function parseSet<T extends DataCategory>(
       : [],
     type: set.type,
     number: set.n,
-    items: items as T extends "resource" ? Array<Resource>
-    : T extends "spatialUnit" ? Array<SpatialUnit>
-    : T extends "concept" ? Array<Concept>
-    : T extends "period" ? Array<Period>
-    : T extends "bibliography" ? Array<Bibliography>
-    : T extends "person" ? Array<Person>
-    : T extends "propertyValue" ? Array<PropertyValue>
+    items: items as U extends "resource" ? Array<Resource>
+    : U extends "spatialUnit" ? Array<SpatialUnit>
+    : U extends "concept" ? Array<Concept>
+    : U extends "period" ? Array<Period>
+    : U extends "bibliography" ? Array<Bibliography>
+    : U extends "person" ? Array<Person>
+    : U extends "propertyValue" ? Array<PropertyValue>
     : never,
   };
 }

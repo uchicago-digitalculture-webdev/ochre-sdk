@@ -1,15 +1,4 @@
-import type {
-  Bibliography,
-  Concept,
-  DataCategory,
-  Item,
-  Metadata,
-  Period,
-  Person,
-  PropertyValue,
-  Resource,
-  SpatialUnit,
-} from "../../types/main.js";
+import type { DataCategory, Item } from "../../types/main.js";
 import { getItemCategory } from "../helpers.js";
 import {
   parseBibliography,
@@ -62,7 +51,9 @@ import { fetchByUuid } from "./uuid.js";
 export async function fetchItem<T extends DataCategory, U extends DataCategory>(
   uuid: string,
   category?: T,
-  setCategory?: T extends "set" ? U : never,
+  itemCategory?: T extends "tree" ? Exclude<U, "tree">
+  : T extends "set" ? U
+  : never,
   options?: {
     customFetch?: (
       input: string | URL | globalThis.Request,
@@ -73,17 +64,19 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
 ): Promise<
   | {
       error: null;
-      metadata: Metadata;
       belongsTo: { uuid: string; abbreviation: string };
       item: Item<T, U>;
       category: T;
+      itemCategory: T extends "tree" ? Exclude<U, "tree">
+      : T extends "set" ? U
+      : never;
     }
   | {
       error: string;
-      metadata: never;
       belongsTo: never;
       item: never;
       category: never;
+      itemCategory: never;
     }
 > {
   try {
@@ -108,7 +101,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
             "Invalid OCHRE data: API response missing 'resource' key",
           );
         }
-        item = parseResource(data.ochre.resource, metadata);
+        item = parseResource(data.ochre.resource, metadata) as Item<T, U>;
         break;
       }
       case "spatialUnit": {
@@ -117,7 +110,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
             "Invalid OCHRE data: API response missing 'spatialUnit' key",
           );
         }
-        item = parseSpatialUnit(data.ochre.spatialUnit, metadata);
+        item = parseSpatialUnit(data.ochre.spatialUnit, metadata) as Item<T, U>;
         break;
       }
       case "concept": {
@@ -126,7 +119,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
             "Invalid OCHRE data: API response missing 'concept' key",
           );
         }
-        item = parseConcept(data.ochre.concept, metadata);
+        item = parseConcept(data.ochre.concept, metadata) as Item<T, U>;
         break;
       }
       case "period": {
@@ -135,7 +128,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
             "Invalid OCHRE data: API response missing 'period' key",
           );
         }
-        item = parsePeriod(data.ochre.period, metadata);
+        item = parsePeriod(data.ochre.period, metadata) as Item<T, U>;
         break;
       }
       case "bibliography": {
@@ -144,7 +137,10 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
             "Invalid OCHRE data: API response missing 'bibliography' key",
           );
         }
-        item = parseBibliography(data.ochre.bibliography, metadata);
+        item = parseBibliography(data.ochre.bibliography, metadata) as Item<
+          T,
+          U
+        >;
         break;
       }
       case "person": {
@@ -153,7 +149,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
             "Invalid OCHRE data: API response missing 'person' key",
           );
         }
-        item = parsePerson(data.ochre.person, metadata);
+        item = parsePerson(data.ochre.person, metadata) as Item<T, U>;
         break;
       }
       case "propertyValue": {
@@ -162,14 +158,20 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
             "Invalid OCHRE data: API response missing 'propertyValue' key",
           );
         }
-        item = parsePropertyValue(data.ochre.propertyValue, metadata);
+        item = parsePropertyValue(data.ochre.propertyValue, metadata) as Item<
+          T,
+          U
+        >;
         break;
       }
       case "set": {
         if (!("set" in data.ochre)) {
           throw new Error("Invalid OCHRE data: API response missing 'set' key");
         }
-        item = parseSet<U>(data.ochre.set, setCategory, metadata);
+        item = parseSet<U>(data.ochre.set, itemCategory, metadata) as Item<
+          T,
+          U
+        >;
         break;
       }
       case "tree": {
@@ -178,12 +180,11 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
             "Invalid OCHRE data: API response missing 'tree' key",
           );
         }
-        item = parseTree<T, U>(
+        item = parseTree<Exclude<U, "tree">>(
           data.ochre.tree,
-          category,
-          setCategory,
+          itemCategory as Exclude<U, "tree"> | undefined,
           metadata,
-        );
+        ) as Item<T, U>;
         break;
       }
       default: {
@@ -198,25 +199,18 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
 
     return {
       error: null as never,
-      metadata,
       belongsTo,
-      item: item as T extends "resource" ? Resource
-      : T extends "spatialUnit" ? SpatialUnit
-      : T extends "concept" ? Concept
-      : T extends "period" ? Period
-      : T extends "bibliography" ? Bibliography
-      : T extends "person" ? Person
-      : T extends "propertyValue" ? PropertyValue
-      : never,
+      item,
       category: category!,
+      itemCategory: itemCategory!,
     };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unknown error",
-      metadata: undefined as never,
       belongsTo: undefined as never,
       item: undefined as never,
       category: undefined as never,
+      itemCategory: undefined as never,
     };
   }
 }
