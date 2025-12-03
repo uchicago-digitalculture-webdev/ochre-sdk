@@ -99,7 +99,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
 
     const metadata = parseMetadata(data.ochre.metadata);
 
-    let item;
+    let item: Item<T, U>;
 
     switch (categoryKey) {
       case "resource": {

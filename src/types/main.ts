@@ -33,7 +33,7 @@ export type Item<
   U extends DataCategory = T extends "tree" | "set" ? DataCategory : never,
 > =
   | Tree<T, U>
-  | Set<T>
+  | Set<U>
   | Resource
   | SpatialUnit
   | Concept
