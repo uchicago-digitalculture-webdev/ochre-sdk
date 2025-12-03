@@ -1,6 +1,5 @@
 import type { PropertyQueryItem } from "../../types/main.js";
 import * as z from "zod";
-import { UNASSIGNED_UUID } from "../../constants.js";
 
 // Hard-coded to UChicago Node (for now)
 const PROJECT_SCOPE = "0c0aae37-7246-495b-9547-e25dbf5b99a3";
@@ -165,14 +164,12 @@ export async function fetchPropertyQuery(
       }
     }
 
-    const returnedItems = Object.values(items)
-      .filter((result) => result.value.uuid !== UNASSIGNED_UUID)
-      .toSorted((a, b) => {
-        const aValue = a.value.label ?? a.value.content;
-        const bValue = b.value.label ?? b.value.content;
+    const returnedItems = Object.values(items).toSorted((a, b) => {
+      const aValue = a.value.label ?? a.value.content;
+      const bValue = b.value.label ?? b.value.content;
 
-        return aValue.localeCompare(bValue, "en-US");
-      });
+      return aValue.localeCompare(bValue, "en-US");
+    });
 
     return { items: returnedItems, error: null };
   } catch (error) {
