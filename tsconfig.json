@@ -15,7 +15,6 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
-    "noErrorTruncation": true,
     "declaration": true,
     "sourceMap": true,
     "incremental": true,

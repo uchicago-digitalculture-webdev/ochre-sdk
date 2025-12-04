@@ -70,6 +70,8 @@ export default antfu({
     "node/prefer-global/process": ["off"],
     "node/no-process-env": ["error"],
     "jsonc/sort-keys": "off",
+    "pnpm/json-enforce-catalog": "off",
+    "pnpm/yaml-enforce-settings": "off",
     "unused-imports/no-unused-imports": "warn",
     "unused-imports/no-unused-vars": [
       "warn",
