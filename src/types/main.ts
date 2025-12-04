@@ -589,6 +589,20 @@ export type LevelContext = {
 };
 
 /**
+ * Represents property contexts with its levels
+ */
+export type PropertyContexts = {
+  flatten: Array<LevelContext>;
+  suppress: Array<LevelContext>;
+  filter: Array<LevelContext>;
+  sort: Array<LevelContext>;
+  detail: Array<LevelContext>;
+  download: Array<LevelContext>;
+  label: Array<LevelContext>;
+  prominent: Array<LevelContext>;
+};
+
+/**
  * Represents a website with its properties and elements
  */
 export type Website = {
@@ -636,18 +650,7 @@ export type Website = {
     logoUrl: string | null;
     itemPage: {
       iiifViewer: "universal-viewer" | "clover";
-      options: {
-        contexts: {
-          flatten: Array<LevelContext>;
-          suppress: Array<LevelContext>;
-          filter: Array<LevelContext>;
-          sort: Array<LevelContext>;
-          detail: Array<LevelContext>;
-          download: Array<LevelContext>;
-          label: Array<LevelContext>;
-          prominent: Array<LevelContext>;
-        };
-      };
+      options: { contexts: PropertyContexts };
     };
   };
 };
@@ -777,16 +780,7 @@ export type WebElementComponent =
           type: string;
           identification: Identification;
         }>;
-        contexts: {
-          flatten: Array<LevelContext>;
-          suppress: Array<LevelContext>;
-          filter: Array<LevelContext>;
-          sort: Array<LevelContext>;
-          detail: Array<LevelContext>;
-          download: Array<LevelContext>;
-          label: Array<LevelContext>;
-          prominent: Array<LevelContext>;
-        };
+        contexts: PropertyContexts;
       };
     }
   | { component: "empty-space"; height: string | null; width: string | null }
