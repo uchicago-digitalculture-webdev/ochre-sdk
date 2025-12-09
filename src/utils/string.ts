@@ -364,6 +364,17 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
             return "";
           }
         }
+      } else if ("spatialUnit" in link) {
+        const linkSpatialUnit =
+          Array.isArray(link.spatialUnit) ?
+            link.spatialUnit[0]!
+          : link.spatialUnit;
+
+        if (linkSpatialUnit.publicationDateTime != null) {
+          return `<InternalLink uuid="${linkSpatialUnit.uuid}">${itemString}</InternalLink>`;
+        } else {
+          return `<TooltipSpan>${itemString}</TooltipSpan>`;
+        }
       } else if ("concept" in link) {
         const linkConcept =
           Array.isArray(link.concept) ? link.concept[0]! : link.concept;
