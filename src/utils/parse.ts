@@ -2091,6 +2091,50 @@ function parseWebElementProperties(
     : [];
 
   switch (componentName) {
+    case "3d-viewer": {
+      const resourceLink = links.find(
+        (link) =>
+          link.category === "resource" && link.fileFormat === "model/obj",
+      );
+      if (!resourceLink) {
+        throw new Error(
+          `Resource link not found for the following component: “${componentName}”`,
+        );
+      }
+
+      let isInteractive = true;
+      const isInteractiveProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "is-interactive",
+      );
+      if (isInteractiveProperty !== null) {
+        isInteractive = isInteractiveProperty === true;
+      }
+
+      let isControlsDisplayed = true;
+      const isControlsDisplayedProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "controls-displayed",
+      );
+      if (isControlsDisplayedProperty !== null) {
+        isControlsDisplayed = isControlsDisplayedProperty === true;
+      }
+
+      let isLightingDisplayed = true;
+      const isLightingDisplayedProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "lighting-displayed",
+      );
+      if (isLightingDisplayedProperty !== null) {
+        isLightingDisplayed = isLightingDisplayedProperty === true;
+      }
+
+      properties.resourceId = resourceLink.uuid;
+      properties.isInteractive = isInteractive;
+      properties.isControlsDisplayed = isControlsDisplayed;
+      properties.isLightingDisplayed = isLightingDisplayed;
+      break;
+    }
     case "advanced-search": {
       const boundElementPropertyUuid = getPropertyByLabel(
         componentProperty.properties,

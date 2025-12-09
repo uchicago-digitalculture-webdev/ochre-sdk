@@ -713,6 +713,13 @@ export type WebElement = {
  */
 export type WebElementComponent =
   | {
+      component: "3d-viewer";
+      resourceId: string;
+      isInteractive: boolean;
+      isControlsDisplayed: boolean;
+      isLightingDisplayed: boolean;
+    }
+  | {
       component: "advanced-search";
       boundElementUuid: string | null;
       href: string | null;
