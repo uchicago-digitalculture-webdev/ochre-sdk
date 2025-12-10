@@ -718,7 +718,6 @@ export type WebElementComponent =
       fileSize: number | null;
       isInteractive: boolean;
       isControlsDisplayed: boolean;
-      isLightingDisplayed: boolean;
     }
   | {
       component: "advanced-search";

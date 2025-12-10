@@ -2120,15 +2120,6 @@ function parseWebElementProperties(
         isControlsDisplayed = isControlsDisplayedProperty === true;
       }
 
-      let isLightingDisplayed = true;
-      const isLightingDisplayedProperty = getPropertyValueByLabel(
-        componentProperty.properties,
-        "lighting-displayed",
-      );
-      if (isLightingDisplayedProperty !== null) {
-        isLightingDisplayed = isLightingDisplayedProperty === true;
-      }
-
       properties.resourceId = resourceLink.uuid;
       properties.fileSize = resourceLink.fileSize;
       properties.isInteractive = isInteractive;
