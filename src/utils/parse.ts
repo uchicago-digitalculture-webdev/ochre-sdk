@@ -2130,6 +2130,7 @@ function parseWebElementProperties(
       }
 
       properties.resourceId = resourceLink.uuid;
+      properties.fileSize = resourceLink.fileSize;
       properties.isInteractive = isInteractive;
       properties.isControlsDisplayed = isControlsDisplayed;
       properties.isLightingDisplayed = isLightingDisplayed;

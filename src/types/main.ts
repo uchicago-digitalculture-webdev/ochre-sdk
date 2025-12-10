@@ -715,6 +715,7 @@ export type WebElementComponent =
   | {
       component: "3d-viewer";
       resourceId: string;
+      fileSize: number | null;
       isInteractive: boolean;
       isControlsDisplayed: boolean;
       isLightingDisplayed: boolean;
