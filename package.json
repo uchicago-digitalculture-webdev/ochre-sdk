@@ -54,8 +54,8 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^6.5.1",
-    "@types/node": "^24.10.2",
+    "@antfu/eslint-config": "^6.6.1",
+    "@types/node": "^24.10.3",
     "bumpp": "^10.3.2",
     "eslint": "^9.39.1",
     "prettier": "^3.7.4",
