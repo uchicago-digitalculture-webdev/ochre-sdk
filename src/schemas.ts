@@ -8,10 +8,49 @@ import type {
 import * as z from "zod";
 
 /**
+ * Validates a pseudo-UUID string
+ * @param value - The string to validate
+ * @returns True if the string is a valid pseudo-UUID, false otherwise
+ * @internal
+ */
+export function isPseudoUuid(value: string): boolean {
+  return /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(value);
+}
+
+/**
  * Schema for validating UUIDs
  * @internal
  */
-export const uuidSchema = z.uuid({ error: "Invalid UUID provided" });
+export const uuidSchema = z
+  .string()
+  .refine(isPseudoUuid, { error: "Invalid UUID" });
+
+/**
+ * Schema for validating filters
+ * @internal
+ */
+export const filterSchema = z.string().optional();
+
+/**
+ * Schema for validating data options
+ * @internal
+ */
+export const dataOptionsSchema = z
+  .object({
+    filter: z.string().optional().default(""),
+    start: z
+      .number()
+      .positive({ error: "Start must be positive" })
+      .optional()
+      .default(1),
+    limit: z
+      .number()
+      .positive({ error: "Limit must be positive" })
+      .optional()
+      .default(40),
+  })
+  .optional()
+  .default({ filter: "", start: 1, limit: 40 });
 
 /**
  * Schema for validating website properties
@@ -115,7 +154,7 @@ export const propertyValueContentTypeSchema = z.enum([
  */
 export const gallerySchema = z
   .object({
-    uuid: z.uuid({ error: "Invalid UUID" }),
+    uuid: z.string().refine(isPseudoUuid, { error: "Invalid UUID" }),
     filter: z.string().optional(),
     page: z.number().positive({ error: "Page must be positive" }),
     perPage: z.number().positive({ error: "Per page must be positive" }),

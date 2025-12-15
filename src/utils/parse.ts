@@ -2124,7 +2124,6 @@ function parseWebElementProperties(
       properties.fileSize = resourceLink.fileSize;
       properties.isInteractive = isInteractive;
       properties.isControlsDisplayed = isControlsDisplayed;
-      properties.isLightingDisplayed = isLightingDisplayed;
       break;
     }
     case "advanced-search": {
