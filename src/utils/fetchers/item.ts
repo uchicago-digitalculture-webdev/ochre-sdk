@@ -10,6 +10,7 @@ import {
   parseResource,
   parseSet,
   parseSpatialUnit,
+  parseText,
   parseTree,
 } from "../parse.js";
 import { parseFakeString } from "../string.js";
@@ -162,6 +163,15 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
           T,
           U
         >;
+        break;
+      }
+      case "text": {
+        if (!("text" in data.ochre)) {
+          throw new Error(
+            "Invalid OCHRE data: API response missing 'text' key",
+          );
+        }
+        item = parseText(data.ochre.text, metadata) as Item<T, U>;
         break;
       }
       case "set": {

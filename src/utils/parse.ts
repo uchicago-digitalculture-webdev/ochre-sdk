@@ -22,10 +22,12 @@ import type {
   OchreProperty,
   OchrePropertyValue,
   OchreResource,
+  OchreSection,
   OchreSet,
   OchreSpatialUnit,
   OchreStringContent,
   OchreStringRichText,
+  OchreText,
   OchreTree,
 } from "../types/internal.raw.d.ts";
 import type {
@@ -54,9 +56,11 @@ import type {
   PropertyValueContent,
   PropertyValueContentType,
   Resource,
+  Section,
   Set,
   SpatialUnit,
   Style,
+  Text,
   Tree,
   WebBlock,
   WebElement,
@@ -1360,6 +1364,176 @@ export function parsePropertyValues(
 }
 
 /**
+ * Parses raw text data into a standardized Text object
+ *
+ * @param text - Raw text data in OCHRE format
+ * @returns Parsed Text object
+ */
+export function parseText(text: OchreText, metadata?: Metadata): Text {
+  return {
+    uuid: text.uuid,
+    category: "text",
+    metadata: metadata ?? null,
+    publicationDateTime:
+      text.publicationDateTime ? new Date(text.publicationDateTime) : null,
+    type: text.type ?? null,
+    language: text.language ?? null,
+    number: text.n ?? 0,
+    context: text.context ? parseContext(text.context) : null,
+    license:
+      "availability" in text && text.availability ?
+        parseLicense(text.availability)
+      : null,
+    copyright:
+      "copyright" in text && text.copyright != null ?
+        parseStringContent(text.copyright)
+      : null,
+    watermark:
+      "watermark" in text && text.watermark != null ?
+        parseStringContent(text.watermark)
+      : null,
+    identification: parseIdentification(text.identification),
+    creators:
+      text.creators ?
+        parsePersons(
+          Array.isArray(text.creators.creator) ?
+            text.creators.creator
+          : [text.creators.creator],
+        )
+      : [],
+    editors:
+      text.editions ?
+        parsePersons(
+          Array.isArray(text.editions.editor) ?
+            text.editions.editor
+          : [text.editions.editor],
+        )
+      : [],
+    notes:
+      text.notes ?
+        parseNotes(
+          Array.isArray(text.notes.note) ? text.notes.note : [text.notes.note],
+        )
+      : [],
+    description:
+      text.description ?
+        parseStringContent(text.description as OchreStringContent)
+      : "",
+    periods:
+      text.periods ?
+        parsePeriods(
+          Array.isArray(text.periods.period) ?
+            text.periods.period
+          : [text.periods.period],
+        )
+      : [],
+    links:
+      text.links ?
+        parseLinks(Array.isArray(text.links) ? text.links : [text.links])
+      : [],
+    reverseLinks:
+      text.reverseLinks ?
+        parseLinks(
+          Array.isArray(text.reverseLinks) ?
+            text.reverseLinks
+          : [text.reverseLinks],
+        )
+      : [],
+    properties:
+      text.properties ?
+        parseProperties(
+          Array.isArray(text.properties.property) ?
+            text.properties.property
+          : [text.properties.property],
+        )
+      : [],
+    bibliographies:
+      text.bibliographies ?
+        parseBibliographies(
+          Array.isArray(text.bibliographies.bibliography) ?
+            text.bibliographies.bibliography
+          : [text.bibliographies.bibliography],
+        )
+      : [],
+    sections: text.sections ? parseSections(text.sections) : [],
+  };
+}
+
+/**
+ * Parses an array of raw texts into standardized Text objects
+ *
+ * @param texts - Array of raw texts in OCHRE format
+ * @returns Array of parsed Text objects
+ */
+export function parseTexts(texts: Array<OchreText>): Array<Text> {
+  const returnTexts: Array<Text> = [];
+  for (const text of texts) {
+    returnTexts.push(parseText(text));
+  }
+  return returnTexts;
+}
+
+/**
+ * Parses a raw section data into a standardized Section object
+ *
+ * @param section - Raw section data in OCHRE format
+ * @returns Parsed Section object
+ */
+export function parseSection(
+  section: OchreSection,
+  variant: "translation" | "phonemic",
+): Section {
+  return {
+    uuid: section.uuid,
+    variant,
+    type: section.type,
+    identification: parseIdentification(section.identification),
+    project: {
+      identification: parseIdentification(section.project.identification),
+    },
+  };
+}
+
+/**
+ * Parses raw sections data into a standardized Section object
+ *
+ * @param sections - Raw sections data in OCHRE format
+ * @param sections.translation - Translation sections
+ * @param sections.phonemic - Phonemic sections
+ * @param sections.translation.section - Translation sections
+ * @param sections.phonemic.section - Phonemic sections
+ * @returns Parsed Section object
+ */
+export function parseSections(sections: {
+  translation?: { section: OchreSection | Array<OchreSection> };
+  phonemic?: { section: OchreSection | Array<OchreSection> };
+}): Array<Section> {
+  const returnSections: Array<Section> = [];
+
+  const translationSections =
+    sections.translation ?
+      Array.isArray(sections.translation.section) ?
+        sections.translation.section
+      : [sections.translation.section]
+    : [];
+  const phonemicSections =
+    sections.phonemic ?
+      Array.isArray(sections.phonemic.section) ?
+        sections.phonemic.section
+      : [sections.phonemic.section]
+    : [];
+
+  for (const section of translationSections) {
+    returnSections.push(parseSection(section, "translation"));
+  }
+  for (const section of phonemicSections) {
+    returnSections.push(parseSection(section, "phonemic"));
+  }
+
+  return returnSections;
+}
+
+/**
  * Parses a raw tree structure into a standardized Tree object
  *
  * @param tree - Raw tree data in OCHRE format
@@ -1399,6 +1573,7 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
     | Array<Bibliography>
     | Array<Person>
     | Array<PropertyValue>
+    | Array<Text>
     | Array<Set<U>> = [];
 
   switch (parsedItemCategory) {
@@ -1476,6 +1651,15 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
         Array.isArray(tree.items.propertyValue) ?
           tree.items.propertyValue
         : [tree.items.propertyValue],
+      );
+      break;
+    }
+    case "text": {
+      if (!("text" in tree.items)) {
+        throw new Error("Invalid OCHRE data: Tree has no texts");
+      }
+      items = parseTexts(
+        Array.isArray(tree.items.text) ? tree.items.text : [tree.items.text],
       );
       break;
     }
@@ -1565,7 +1749,8 @@ export function parseSet<U extends DataCategory>(
     | Array<Period>
     | Array<Bibliography>
     | Array<Person>
-    | Array<PropertyValue> = [];
+    | Array<PropertyValue>
+    | Array<Text> = [];
 
   switch (parsedItemCategory) {
     case "resource": {
@@ -1638,6 +1823,15 @@ export function parseSet<U extends DataCategory>(
         Array.isArray(set.items.propertyValue) ?
           set.items.propertyValue
         : [set.items.propertyValue],
+      );
+      break;
+    }
+    case "text": {
+      if (!("text" in set.items)) {
+        throw new Error("Invalid OCHRE data: Set has no texts");
+      }
+      items = parseTexts(
+        Array.isArray(set.items.text) ? set.items.text : [set.items.text],
       );
       break;
     }

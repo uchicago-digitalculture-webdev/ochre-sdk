@@ -128,8 +128,9 @@ export const categorySchema = z.enum([
   "bibliography",
   "person",
   "propertyValue",
-  "set",
+  "text",
   "tree",
+  "set",
 ] as const satisfies ReadonlyArray<DataCategory>);
 
 /**

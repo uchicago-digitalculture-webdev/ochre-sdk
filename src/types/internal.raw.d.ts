@@ -102,8 +102,6 @@ export type OchreData = {
     metadata: OchreMetadata;
     languages?: string; // ISO 639-3 3 character codes, semicolon separated
   } & (
-    | { tree: OchreTree }
-    | { set: OchreSet }
     | { resource: OchreResource }
     | { spatialUnit: OchreSpatialUnit }
     | { concept: OchreConcept }
@@ -111,6 +109,9 @@ export type OchreData = {
     | { bibliography: OchreBibliography }
     | { person: OchrePerson }
     | { propertyValue: OchrePropertyValue }
+    | { text: OchreText }
+    | { tree: OchreTree }
+    | { set: OchreSet }
   );
 };
 
@@ -201,6 +202,7 @@ export type OchreTree = {
     | { bibliography: OchreBibliography | Array<OchreBibliography> }
     | { person: OchrePerson | Array<OchrePerson> }
     | { propertyValue: OchrePropertyValue | Array<OchrePropertyValue> }
+    | { text: OchreText | Array<OchreText> }
     | { set: OchreSet | Array<OchreSet> };
   properties?: { property: OchreProperty | Array<OchreProperty> };
 };
@@ -227,7 +229,8 @@ export type OchreSet = {
     | { period: OchrePeriod | Array<OchrePeriod> }
     | { bibliography: OchreBibliography | Array<OchreBibliography> }
     | { person: OchrePerson | Array<OchrePerson> }
-    | { propertyValue: OchrePropertyValue | Array<OchrePropertyValue> };
+    | { propertyValue: OchrePropertyValue | Array<OchrePropertyValue> }
+    | { text: OchreText | Array<OchreText> };
 };
 
 /**
@@ -416,11 +419,12 @@ export type OchreLink =
   | { resource: OchreLinkItem | Array<OchreLinkItem> }
   | { spatialUnit: OchreLinkItem | Array<OchreLinkItem> }
   | { concept: OchreLinkItem | Array<OchreLinkItem> }
-  | { set: OchreLinkItem | Array<OchreLinkItem> }
-  | { tree: OchreLinkItem | Array<OchreLinkItem> }
   | { person: OchreLinkItem | Array<OchreLinkItem> }
   | { bibliography: OchreBibliography | Array<OchreBibliography> }
-  | { propertyValue: OchreLinkItem | Array<OchreLinkItem> };
+  | { propertyValue: OchreLinkItem | Array<OchreLinkItem> }
+  | { text: OchreLinkItem | Array<OchreLinkItem> }
+  | { tree: OchreLinkItem | Array<OchreLinkItem> }
+  | { set: OchreLinkItem | Array<OchreLinkItem> };
 
 /**
  * Raw image structure corresponding to the parsed Image type
@@ -678,6 +682,50 @@ export type OchrePropertyValue = {
   description?: OchreStringContent | FakeString;
   notes?: { note: OchreNote | Array<OchreNote> };
   links?: OchreLink | Array<OchreLink>;
+};
+
+/**
+ * Raw text structure corresponding to the parsed Text type
+ */
+export type OchreText = {
+  uuid: string;
+  publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
+  type?: string;
+  language?: string;
+  n?: number;
+  context?: OchreContext;
+  availability?: OchreLicense;
+  copyright?: OchreStringContent;
+  watermark?: OchreStringContent;
+  identification: OchreIdentification;
+  description?: OchreStringContent | FakeString;
+  properties?: { property: OchreProperty | Array<OchreProperty> };
+  bibliographies?: {
+    bibliography: OchreBibliography | Array<OchreBibliography>;
+  };
+  links?: OchreLink | Array<OchreLink>;
+  reverseLinks?: OchreLink | Array<OchreLink>;
+  notes?: { note: OchreNote | Array<OchreNote> };
+  events?: { event: OchreEvent | Array<OchreEvent> };
+  sections?: {
+    translation?: { section: OchreSection | Array<OchreSection> };
+    phonemic?: { section: OchreSection | Array<OchreSection> };
+  };
+  periods?: { period: OchrePeriod | Array<OchrePeriod> };
+  creators?: { creator: OchrePerson | Array<OchrePerson> };
+  editions?: { editor: OchrePerson | Array<OchrePerson> };
+};
+
+/**
+ * Raw section structure corresponding to the parsed Section type
+ */
+export type OchreSection = {
+  uuid: string;
+  publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
+  type: string;
+  n?: number;
+  identification: OchreIdentification;
+  project: { identification: OchreIdentification };
 };
 
 /**

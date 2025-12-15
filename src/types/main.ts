@@ -17,15 +17,16 @@ export type Data<
  * Represents the category of the data
  */
 export type DataCategory =
-  | "tree"
-  | "set"
   | "resource"
   | "spatialUnit"
   | "concept"
   | "period"
   | "bibliography"
   | "person"
-  | "propertyValue";
+  | "propertyValue"
+  | "text"
+  | "tree"
+  | "set";
 
 /**
  * Represents the item of the data, with proper type narrowing based on category
@@ -43,6 +44,7 @@ export type Item<
   : T extends "bibliography" ? Bibliography
   : T extends "person" ? Person
   : T extends "propertyValue" ? PropertyValue
+  : T extends "text" ? Text
   : T extends "tree" ? Tree<Exclude<U, "tree">>
   : T extends "set" ? Set<U>
   : | Resource
@@ -514,6 +516,45 @@ export type Property<
 };
 
 /**
+ * Represents a resource item with associated metadata, content and relationships
+ */
+export type Text = {
+  uuid: string;
+  category: "text";
+  metadata: Metadata | null;
+  publicationDateTime: Date | null;
+  type: string | null;
+  language: string | null;
+  number: number;
+  context: Context | null;
+  license: License | null;
+  copyright: string | null;
+  watermark: string | null;
+  identification: Identification;
+  creators: Array<Person>;
+  editors: Array<Person>;
+  notes: Array<Note>;
+  description: string;
+  periods: Array<Period>;
+  links: Array<Link>;
+  reverseLinks: Array<Link>;
+  properties: Array<Property>;
+  bibliographies: Array<Bibliography>;
+  sections: Array<Section>;
+};
+
+/**
+ * Represents a section of a text
+ */
+export type Section = {
+  uuid: string;
+  variant: "translation" | "phonemic";
+  type: string;
+  identification: Identification;
+  project: { identification: Identification };
+};
+
+/**
  * Represents a tree structure containing resources, spatial units and concepts
  */
 export type Tree<
@@ -538,6 +579,7 @@ export type Tree<
   : U extends "bibliography" ? Array<Bibliography>
   : U extends "person" ? Array<Person>
   : U extends "propertyValue" ? Array<PropertyValue>
+  : U extends "text" ? Array<Text>
   : U extends "set" ? Array<Set<DataCategory>>
   : Array<Item>;
 };
