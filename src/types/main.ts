@@ -431,6 +431,8 @@ export type Bibliography = {
   >;
   periods: Array<Period>;
   authors: Array<Person>;
+  links: Array<Link>;
+  reverseLinks: Array<Link>;
   properties: Array<Property>;
 };
 

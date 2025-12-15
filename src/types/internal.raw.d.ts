@@ -478,6 +478,8 @@ export type OchreBibliography = {
   };
   periods?: { period: OchrePeriod | Array<OchrePeriod> };
   authors?: { person: OchrePerson | Array<OchrePerson> };
+  links?: OchreLink | Array<OchreLink>;
+  reverseLinks?: OchreLink | Array<OchreLink>;
   properties?: { property: OchreProperty | Array<OchreProperty> };
 };
 

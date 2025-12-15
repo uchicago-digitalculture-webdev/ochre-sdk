@@ -1258,6 +1258,22 @@ export function parseBibliography(
           : [bibliography.authors.person],
         )
       : [],
+    links:
+      bibliography.links ?
+        parseLinks(
+          Array.isArray(bibliography.links) ?
+            bibliography.links
+          : [bibliography.links],
+        )
+      : [],
+    reverseLinks:
+      bibliography.reverseLinks ?
+        parseLinks(
+          Array.isArray(bibliography.reverseLinks) ?
+            bibliography.reverseLinks
+          : [bibliography.reverseLinks],
+        )
+      : [],
     properties:
       bibliography.properties ?
         parseProperties(
