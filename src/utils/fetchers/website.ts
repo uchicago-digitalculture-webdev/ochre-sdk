@@ -17,8 +17,6 @@ const KNOWN_ABBREVIATIONS: Readonly<Record<string, string>> = {
   "sosc-core-at-smart": "db26c953-9b2a-4691-a909-5e8726b531d7",
 };
 
-const V2_ABBREVIATIONS: ReadonlySet<string> = new Set();
-
 /**
  * Fetches and parses a website configuration from the OCHRE API
  *
@@ -63,9 +61,7 @@ export async function fetchWebsite(
 
     const customFetch = options?.customFetch;
     const isVersion2 =
-      V2_ABBREVIATIONS.has(cleanAbbreviation) ? true : (
-        (options?.isVersion2 ?? false)
-      );
+      cleanAbbreviation.endsWith("-v2") ? true : (options?.isVersion2 ?? false);
 
     let metadata: OchreMetadata | null = null;
     let tree: OchreTree | null = null;
