@@ -1528,6 +1528,22 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
 }
 
 /**
+ * Parses raw trees data into a standardized Trees structure
+ *
+ * @param trees - Raw trees data in OCHRE format
+ * @returns Parsed Trees object
+ */
+export function parseTrees<U extends Exclude<DataCategory, "tree">>(
+  trees: Array<OchreTree>,
+): Array<Tree<U>> {
+  const returnTrees: Array<Tree<U>> = [];
+  for (const tree of trees) {
+    returnTrees.push(parseTree<U>(tree));
+  }
+  return returnTrees;
+}
+
+/**
  * Parses raw set data into a standardized Set structure
  *
  * @param set - Raw set data in OCHRE format
@@ -1662,6 +1678,22 @@ export function parseSet<U extends DataCategory>(
     number: set.n,
     items: items as Set<U>["items"],
   };
+}
+
+/**
+ * Parses raw sets data into a standardized Sets structure
+ *
+ * @param sets - Raw sets data in OCHRE format
+ * @returns Parsed Sets object
+ */
+export function parseSets<U extends DataCategory>(
+  sets: Array<OchreSet>,
+): Array<Set<U>> {
+  const returnSets: Array<Set<U>> = [];
+  for (const set of sets) {
+    returnSets.push(parseSet<U>(set));
+  }
+  return returnSets;
 }
 
 /**
