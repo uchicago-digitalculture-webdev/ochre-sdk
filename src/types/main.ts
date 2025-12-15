@@ -409,6 +409,7 @@ export type Bibliography = {
   identification: Identification | null;
   projectIdentification: Identification | null;
   context: Context | null;
+  image: Image | null;
   citation: {
     details: string | null;
     format: string | null;
@@ -531,6 +532,7 @@ export type Text = {
   copyright: string | null;
   watermark: string | null;
   identification: Identification;
+  image: Image | null;
   creators: Array<Person>;
   editors: Array<Person>;
   notes: Array<Note>;
@@ -551,7 +553,7 @@ export type Section = {
   variant: "translation" | "phonemic";
   type: string;
   identification: Identification;
-  project: { identification: Identification };
+  projectIdentification: Identification | null;
 };
 
 /**

@@ -453,6 +453,7 @@ export type OchreBibliography = {
   identification?: OchreIdentification;
   project?: { identification: OchreIdentification };
   context?: OchreContext;
+  image?: OchreImage;
   publicationInfo?: {
     publishers?: { publishers: { person: OchrePerson | Array<OchrePerson> } };
     startDate?: { month: number; year: number; day: number };
@@ -699,6 +700,7 @@ export type OchreText = {
   watermark?: OchreStringContent;
   identification: OchreIdentification;
   description?: OchreStringContent | FakeString;
+  image?: OchreImage;
   properties?: { property: OchreProperty | Array<OchreProperty> };
   bibliographies?: {
     bibliography: OchreBibliography | Array<OchreBibliography>;
@@ -725,7 +727,7 @@ export type OchreSection = {
   type: string;
   n?: number;
   identification: OchreIdentification;
-  project: { identification: OchreIdentification };
+  project?: { identification: OchreIdentification };
 };
 
 /**

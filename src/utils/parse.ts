@@ -1205,6 +1205,7 @@ export function parseBibliography(
         parseIdentification(bibliography.project.identification)
       : null,
     context: bibliography.context ? parseContext(bibliography.context) : null,
+    image: bibliography.image ? parseImage(bibliography.image) : null,
     citation: {
       details: bibliography.citationDetails ?? null,
       format: bibliography.citationFormat ?? null,
@@ -1393,6 +1394,7 @@ export function parseText(text: OchreText, metadata?: Metadata): Text {
         parseStringContent(text.watermark)
       : null,
     identification: parseIdentification(text.identification),
+    image: text.image ? parseImage(text.image) : null,
     creators:
       text.creators ?
         parsePersons(
@@ -1488,9 +1490,10 @@ export function parseSection(
     variant,
     type: section.type,
     identification: parseIdentification(section.identification),
-    project: {
-      identification: parseIdentification(section.project.identification),
-    },
+    projectIdentification:
+      section.project?.identification ?
+        parseIdentification(section.project.identification)
+      : null,
   };
 }
 
