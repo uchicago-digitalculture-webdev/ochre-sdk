@@ -449,7 +449,6 @@ export type OchreBibliography = {
   identification?: OchreIdentification;
   project?: { identification: OchreIdentification };
   context?: OchreContext;
-  sourceDocument?: { uuid: string; content: FakeString };
   publicationInfo?: {
     publishers?: { publishers: { person: OchrePerson | Array<OchrePerson> } };
     startDate?: { month: number; year: number; day: number };
@@ -460,10 +459,17 @@ export type OchreBibliography = {
   citationFormatSpan?: string;
   referenceFormatDiv?: string;
   source?: {
-    resource: Pick<
-      OchreResource,
-      "uuid" | "type" | "publicationDateTime" | "identification"
-    >;
+    resource:
+      | Pick<
+          OchreResource,
+          "uuid" | "type" | "publicationDateTime" | "identification" | "href"
+        >
+      | Array<
+          Pick<
+            OchreResource,
+            "uuid" | "type" | "publicationDateTime" | "identification" | "href"
+          >
+        >;
   };
   periods?: { period: OchrePeriod | Array<OchrePeriod> };
   authors?: { person: OchrePerson | Array<OchrePerson> };

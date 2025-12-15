@@ -415,13 +415,17 @@ export type Bibliography = {
   };
   publicationInfo: { publishers: Array<Person>; startDate: Date | null };
   entryInfo: { startIssue: string; startVolume: string } | null;
-  source: {
-    resource: Pick<
+  sourceResources: Array<
+    Pick<
       Resource,
-      "uuid" | "publicationDateTime" | "type" | "identification"
-    > | null;
-    documentUrl: string | null;
-  };
+      | "uuid"
+      | "category"
+      | "publicationDateTime"
+      | "type"
+      | "identification"
+      | "href"
+    >
+  >;
   periods: Array<Period>;
   authors: Array<Person>;
   properties: Array<Property>;

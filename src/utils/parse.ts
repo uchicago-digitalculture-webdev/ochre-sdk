@@ -1138,19 +1138,22 @@ export function parseBibliography(
   bibliography: OchreBibliography,
   metadata?: Metadata,
 ): Bibliography {
-  let resource: Bibliography["source"]["resource"] | null = null;
+  const sourceResources: Bibliography["sourceResources"] = [];
   if (bibliography.source?.resource) {
-    resource = {
-      uuid: bibliography.source.resource.uuid,
-      publicationDateTime:
-        bibliography.source.resource.publicationDateTime ?
-          new Date(bibliography.source.resource.publicationDateTime)
-        : null,
-      type: bibliography.source.resource.type,
-      identification: parseIdentification(
-        bibliography.source.resource.identification,
-      ),
-    };
+    const resourcesToParse =
+      Array.isArray(bibliography.source.resource) ?
+        bibliography.source.resource
+      : [bibliography.source.resource];
+    for (const resource of resourcesToParse) {
+      sourceResources.push({
+        uuid: resource.uuid,
+        category: "resource",
+        publicationDateTime: new Date(resource.publicationDateTime),
+        type: resource.type,
+        identification: parseIdentification(resource.identification),
+        href: resource.href ?? null,
+      });
+    }
   }
 
   let shortCitation = null;
@@ -1233,13 +1236,7 @@ export function parseBibliography(
           startVolume: parseFakeString(bibliography.entryInfo.startVolume),
         }
       : null,
-    source: {
-      resource,
-      documentUrl:
-        bibliography.sourceDocument ?
-          `https://ochre.lib.uchicago.edu/ochre?uuid=${bibliography.sourceDocument.uuid}&load`
-        : null,
-    },
+    sourceResources,
     periods:
       bibliography.periods ?
         parsePeriods(
