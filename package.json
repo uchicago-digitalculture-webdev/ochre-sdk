@@ -51,18 +51,18 @@
     "release": "bumpp"
   },
   "dependencies": {
-    "zod": "^4.1.13"
+    "zod": "^4.2.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^6.6.1",
+    "@antfu/eslint-config": "^6.7.1",
     "@types/node": "^24.10.3",
     "bumpp": "^10.3.2",
-    "eslint": "^9.39.1",
+    "eslint": "^9.39.2",
     "prettier": "^3.7.4",
     "terser": "^5.44.1",
-    "tsdown": "^0.17.2",
+    "tsdown": "^0.18.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.15"
   },
-  "packageManager": "pnpm@10.25.0"
+  "packageManager": "pnpm@10.26.0"
 }
