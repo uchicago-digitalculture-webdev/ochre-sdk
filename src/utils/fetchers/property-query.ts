@@ -27,7 +27,7 @@ const responseItemSchema = z.object({
     category: z.string().optional(),
     type: z.string().optional(),
     dataType: z.string(),
-    publicationDateTime: z.iso.datetime().optional(),
+    publicationDateTime: z.string().optional(),
     content: z.string().optional(),
     rawValue: z.string().optional(),
   }),
