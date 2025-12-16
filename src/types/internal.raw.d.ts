@@ -320,6 +320,7 @@ export type OchreConcept = {
   identification: OchreIdentification;
   image?: OchreImage;
   description?: OchreStringContent | FakeString;
+  coordinates?: OchreCoordinates;
   interpretations?: {
     interpretation: OchreInterpretation | Array<OchreInterpretation>;
   };
@@ -505,6 +506,7 @@ export type OchrePeriod = {
   n?: number;
   identification: OchreIdentification;
   description?: OchreStringContent;
+  coordinates?: OchreCoordinates;
 };
 
 /**
@@ -683,6 +685,7 @@ export type OchrePropertyValue = {
   date?: string; // YYYY-MM-DD
   creators?: { creator: OchrePerson | Array<OchrePerson> };
   description?: OchreStringContent | FakeString;
+  coordinates?: OchreCoordinates;
   notes?: { note: OchreNote | Array<OchreNote> };
   links?: OchreLink | Array<OchreLink>;
 };
@@ -703,6 +706,7 @@ export type OchreText = {
   identification: OchreIdentification;
   description?: OchreStringContent | FakeString;
   image?: OchreImage;
+  coordinates?: OchreCoordinates;
   properties?: { property: OchreProperty | Array<OchreProperty> };
   bibliographies?: {
     bibliography: OchreBibliography | Array<OchreBibliography>;

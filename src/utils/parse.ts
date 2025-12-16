@@ -1115,6 +1115,7 @@ export function parsePeriod(period: OchrePeriod, metadata?: Metadata): Period {
     identification: parseIdentification(period.identification),
     description:
       period.description ? parseStringContent(period.description) : null,
+    coordinates: parseCoordinates(period.coordinates),
   };
 }
 
@@ -1345,6 +1346,7 @@ export function parsePropertyValue(
           parseFakeString(propertyValue.description)
         : parseStringContent(propertyValue.description)
       : "",
+    coordinates: parseCoordinates(propertyValue.coordinates),
     notes:
       propertyValue.notes ?
         parseNotes(
@@ -1437,6 +1439,7 @@ export function parseText(text: OchreText, metadata?: Metadata): Text {
       text.description ?
         parseStringContent(text.description as OchreStringContent)
       : "",
+    coordinates: parseCoordinates(text.coordinates),
     periods:
       text.periods ?
         parsePeriods(
@@ -2179,6 +2182,7 @@ export function parseConcept(
       concept.description ?
         parseStringContent(concept.description as OchreStringContent)
       : null,
+    coordinates: parseCoordinates(concept.coordinates),
     interpretations:
       concept.interpretations ?
         parseInterpretations(

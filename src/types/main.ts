@@ -360,6 +360,7 @@ export type Concept = {
   identification: Identification;
   image: Image | null;
   description: string | null;
+  coordinates: Array<Coordinate>;
   interpretations: Array<Interpretation>;
   properties: Array<Property>;
   bibliographies: Array<Bibliography>;
@@ -447,6 +448,7 @@ export type Period = {
   type: string | null;
   number: number | null;
   identification: Identification;
+  coordinates: Array<Coordinate>;
   description: string | null;
 };
 
@@ -465,6 +467,7 @@ export type PropertyValue = {
   date: string | null;
   creators: Array<Person>;
   description: string;
+  coordinates: Array<Coordinate>;
   notes: Array<Note>;
   links: Array<Link>;
 };
@@ -539,6 +542,7 @@ export type Text = {
   editors: Array<Person>;
   notes: Array<Note>;
   description: string;
+  coordinates: Array<Coordinate>;
   periods: Array<Period>;
   links: Array<Link>;
   reverseLinks: Array<Link>;
