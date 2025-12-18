@@ -68,7 +68,7 @@ export async function fetchWebsite(
 
     if (isVersion2) {
       const response = await (customFetch ?? fetch)(
-        `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(`collection('ochre/tree')/ochre[tree/identification/abbreviation/content/string='${cleanAbbreviation}']`)}&format=json&lang="*"`,
+        `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(`collection('ochre/tree')/ochre[tree/identification/abbreviation/content/string='${cleanAbbreviation.replace("-v2", "")}']`)}&format=json&lang="*"`,
       );
       if (!response.ok) {
         throw new Error("Failed to fetch website");
