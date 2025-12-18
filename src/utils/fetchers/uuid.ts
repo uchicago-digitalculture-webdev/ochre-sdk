@@ -44,11 +44,25 @@ export async function fetchByUuid(
       throw new Error("Failed to fetch OCHRE data");
     }
     const dataRaw = (await response.json()) as OchreDataResponse;
-    if (!("ochre" in dataRaw)) {
+    if (
+      (isVersion2 &&
+        (!("result" in dataRaw) || !("ochre" in dataRaw.result))) ||
+      (!isVersion2 && !("ochre" in dataRaw))
+    ) {
       throw new Error("Invalid OCHRE data: API response missing 'ochre' key");
     }
 
-    return [null, dataRaw];
+    return [
+      null,
+      (
+        "result" in dataRaw &&
+        !Array.isArray(dataRaw.result) &&
+        "ochre" in dataRaw.result
+      ) ?
+        dataRaw.result
+      : "ochre" in dataRaw ? dataRaw
+      : (null as never),
+    ];
   } catch (error) {
     return [error instanceof Error ? error.message : "Unknown error", null];
   }

@@ -118,7 +118,10 @@ export type OchreData = {
 /**
  * Raw data response structure from the OCHRE API
  */
-export type OchreDataResponse = OchreData | { result: [] };
+export type OchreDataResponse =
+  | OchreData
+  | { result: OchreData }
+  | { result: [] };
 
 /**
  * Raw metadata structure corresponding to the parsed Metadata type
@@ -734,6 +737,30 @@ export type OchreSection = {
   n?: number;
   identification: OchreIdentification;
   project?: { identification: OchreIdentification };
+};
+
+/**
+ * Raw paginated sets response structure
+ */
+export type PaginatedSetsResponse = {
+  result: {
+    ochre:
+      | {
+          items:
+            | { resource: OchreResource | Array<OchreResource> }
+            | { spatialUnit: OchreSpatialUnit | Array<OchreSpatialUnit> }
+            | { concept: OchreConcept | Array<OchreConcept> }
+            | { period: OchrePeriod | Array<OchrePeriod> }
+            | { bibliography: OchreBibliography | Array<OchreBibliography> }
+            | { person: OchrePerson | Array<OchrePerson> }
+            | { propertyValue: OchrePropertyValue | Array<OchrePropertyValue> }
+            | { text: OchreText | Array<OchreText> }
+            | { tree: OchreTree | Array<OchreTree> }
+            | { set: OchreSet | Array<OchreSet> };
+          maxLength: number;
+        }
+      | [];
+  };
 };
 
 /**
