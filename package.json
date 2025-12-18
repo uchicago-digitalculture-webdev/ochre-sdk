@@ -55,12 +55,12 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^6.7.1",
-    "@types/node": "^24.10.3",
+    "@types/node": "^24.10.4",
     "bumpp": "^10.3.2",
     "eslint": "^9.39.2",
     "prettier": "^3.7.4",
     "terser": "^5.44.1",
-    "tsdown": "^0.18.0",
+    "tsdown": "^0.18.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"
   },
