@@ -707,6 +707,7 @@ export type Website = {
     logoUrl: string | null;
     itemPage: {
       iiifViewer: "universal-viewer" | "clover";
+      isPropertyValuesGrouped: boolean;
       options: { contexts: PropertyContexts };
     };
   };
@@ -828,6 +829,7 @@ export type WebElementComponent =
       itemVariant: "detailed" | "card" | "tile";
       paginationVariant: "default" | "numeric";
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
+      imageQuality: "high" | "low";
       isSortDisplayed: boolean;
       isUsingQueryParams: boolean;
       filter: {

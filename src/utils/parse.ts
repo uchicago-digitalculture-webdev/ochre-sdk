@@ -2650,6 +2650,12 @@ function parseWebElementProperties(
       );
       paginationVariant ??= "default";
 
+      let imageQuality = getPropertyValueByLabel(
+        componentProperty.properties,
+        "image-quality",
+      );
+      imageQuality ??= "low";
+
       let isUsingQueryParams = false;
       const isUsingQueryParamsProperty = getPropertyValueByLabel(
         componentProperty.properties,
@@ -2818,6 +2824,8 @@ function parseWebElementProperties(
       properties.variant = variant;
       properties.itemVariant = itemVariant;
       properties.paginationVariant = paginationVariant;
+      properties.layout = layout;
+      properties.imageQuality = imageQuality;
       properties.isUsingQueryParams = isUsingQueryParams;
       properties.filter = {
         isSidebarDisplayed: isFilterSidebarDisplayed,
@@ -2827,7 +2835,6 @@ function parseWebElementProperties(
         sidebarSort: filterSidebarSort,
       };
       properties.isSortDisplayed = isSortDisplayed;
-      properties.layout = layout;
       properties.options = options;
       break;
     }
@@ -2924,7 +2931,7 @@ function parseWebElementProperties(
 
       let imageQuality = getPropertyValueByLabel(
         componentProperty.properties,
-        "quality",
+        "image-quality",
       );
       imageQuality ??= "high";
 
@@ -4582,6 +4589,7 @@ function parseWebsiteProperties(
   let isFooterDisplayed = true;
   let isSidebarDisplayed = false;
   let iiifViewer: "universal-viewer" | "clover" = "universal-viewer";
+  let isPropertyValuesGrouped = true;
   let supportsThemeToggle = true;
   let defaultTheme: "light" | "dark" | null = null;
 
@@ -4644,6 +4652,13 @@ function parseWebsiteProperties(
   )?.values[0];
   if (iiifViewerProperty) {
     iiifViewer = iiifViewerProperty.content as "universal-viewer" | "clover";
+  }
+
+  const isPropertyValuesGroupedProperty = websiteProperties.find(
+    (property) => property.label === "is-property-values-grouped",
+  )?.values[0];
+  if (isPropertyValuesGroupedProperty) {
+    isPropertyValuesGrouped = isPropertyValuesGroupedProperty.content === true;
   }
 
   const supportsThemeToggleProperty = websiteProperties.find(
@@ -4757,7 +4772,7 @@ function parseWebsiteProperties(
       logoUuid !== null ?
         `https://ochre.lib.uchicago.edu/ochre?uuid=${logoUuid}&load`
       : null,
-    itemPage: { iiifViewer, options: { contexts } },
+    itemPage: { iiifViewer, isPropertyValuesGrouped, options: { contexts } },
   };
 }
 
