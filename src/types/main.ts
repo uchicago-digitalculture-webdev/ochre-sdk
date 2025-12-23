@@ -500,6 +500,9 @@ export type PropertyValueContent<T extends PropertyValueContentType> = {
   label: string | null;
   isUncertain: boolean;
   unit: string | null;
+  height: number | null;
+  width: number | null;
+  fileSize: number | null;
   category: string | null;
   type: string | null;
   uuid: string | null;

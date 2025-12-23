@@ -869,6 +869,9 @@ export function parseProperty(
         uuid: null,
         publicationDateTime: null,
         unit: null,
+        height: null,
+        width: null,
+        fileSize: null,
         href: null,
         slug: null,
       };
@@ -969,6 +972,9 @@ export function parseProperty(
             new Date(value.publicationDateTime)
           : null,
         unit: value.unit ?? null,
+        height: value.height ?? null,
+        width: value.width ?? null,
+        fileSize: value.fileSize ?? null,
         href: value.href ?? null,
         slug: value.slug ?? null,
       };

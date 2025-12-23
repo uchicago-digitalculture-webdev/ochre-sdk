@@ -344,6 +344,9 @@ export type OchrePropertyValueContent = {
   type?: string;
   slug?: string;
   unit?: string;
+  height?: number;
+  width?: number;
+  fileSize?: number;
   isUncertain?: boolean;
   href?: string;
   rawValue?: FakeString;
