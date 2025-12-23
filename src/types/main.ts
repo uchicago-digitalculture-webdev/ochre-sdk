@@ -202,7 +202,7 @@ export type Link = {
 export type ImageMapArea = {
   uuid: string;
   publicationDateTime: Date | null;
-  type: string;
+  category: string;
   title: string;
   shape: "rectangle" | "circle" | "polygon";
   coords: Array<number>;

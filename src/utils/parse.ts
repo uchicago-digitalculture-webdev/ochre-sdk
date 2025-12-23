@@ -1087,7 +1087,7 @@ export function parseImageMap(imageMap: OchreImageMap): ImageMap {
         area.publicationDateTime != null ?
           new Date(area.publicationDateTime)
         : null,
-      type: area.type,
+      category: area.type,
       title: parseFakeString(area.title),
       shape:
         area.shape === "rect" ? "rectangle"
