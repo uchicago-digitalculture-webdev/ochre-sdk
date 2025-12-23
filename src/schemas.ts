@@ -201,3 +201,41 @@ export const whitespaceSchema = z
  * @internal
  */
 export const emailSchema = z.email({ error: "Invalid email" });
+
+/**
+ * Schema for parsing and validating a string in the format "[[number, number], [number, number]]"
+ * into an array with exactly two bounds
+ * @internal
+ */
+export const boundsSchema = z
+  .string()
+  .transform((str, ctx): unknown => {
+    const trimmed = str.trim();
+
+    if (!trimmed.startsWith("[[") || !trimmed.endsWith("]]")) {
+      ctx.addIssue({
+        code: "invalid_format",
+        format: "string",
+        message: "String must start with '[[' and end with ']]'",
+      });
+      return z.NEVER;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      return parsed;
+    } catch {
+      ctx.addIssue({
+        code: "invalid_format",
+        format: "string",
+        message: "Invalid JSON format",
+      });
+      return z.NEVER;
+    }
+  })
+  .pipe(
+    z.tuple(
+      [z.tuple([z.number(), z.number()]), z.tuple([z.number(), z.number()])],
+      { message: "Must contain exactly 2 coordinate pairs" },
+    ),
+  );

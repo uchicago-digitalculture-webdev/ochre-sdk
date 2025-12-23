@@ -891,6 +891,8 @@ export type WebElementComponent =
       component: "map";
       mapId: string;
       customBasemap: string | null;
+      initialBounds: [[number, number], [number, number]] | null;
+      maximumBounds: [[number, number], [number, number]] | null;
       isControlsDisplayed: boolean;
       isInteractive: boolean;
       isClustered: boolean;

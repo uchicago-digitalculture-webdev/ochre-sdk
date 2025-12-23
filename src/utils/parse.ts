@@ -71,6 +71,7 @@ import type {
   WebTitle,
 } from "../types/main.js";
 import {
+  boundsSchema,
   componentSchema,
   propertyValueContentTypeSchema,
   websiteSchema,
@@ -2315,6 +2316,14 @@ export function parseConcepts(concepts: Array<OchreConcept>): Array<Concept> {
   return returnConcepts;
 }
 
+function parseBounds(bounds: string): [[number, number], [number, number]] {
+  const result = boundsSchema.safeParse(bounds);
+  if (!result.success) {
+    throw new Error(`Invalid bounds: ${result.error.message}`);
+  }
+  return result.data;
+}
+
 /**
  * Parses raw web element properties into a standardized WebElementComponent structure
  *
@@ -3168,6 +3177,24 @@ function parseWebElementProperties(
         customBasemap = customBasemapProperty as string;
       }
 
+      let initialBounds: [[number, number], [number, number]] | null = null;
+      const initialBoundsProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "initial-bounds",
+      );
+      if (initialBoundsProperty !== null) {
+        initialBounds = parseBounds(String(initialBoundsProperty));
+      }
+
+      let maximumBounds: [[number, number], [number, number]] | null = null;
+      const maximumBoundsProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "maximum-bounds",
+      );
+      if (maximumBoundsProperty !== null) {
+        maximumBounds = parseBounds(String(maximumBoundsProperty));
+      }
+
       let isControlsDisplayed = false;
       const isControlsDisplayedProperty = getPropertyValueByLabel(
         componentProperty.properties,
@@ -3187,10 +3214,12 @@ function parseWebElementProperties(
       }
 
       properties.mapId = mapLink.uuid;
+      properties.customBasemap = customBasemap;
+      properties.initialBounds = initialBounds;
+      properties.maximumBounds = maximumBounds;
       properties.isInteractive = isInteractive;
       properties.isClustered = isClustered;
       properties.isUsingPins = isUsingPins;
-      properties.customBasemap = customBasemap;
       properties.isControlsDisplayed = isControlsDisplayed;
       properties.isFullHeight = isFullHeight;
       break;
