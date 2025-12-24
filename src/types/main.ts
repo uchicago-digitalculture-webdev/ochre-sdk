@@ -172,6 +172,51 @@ export type Image = {
 };
 
 /**
+ * Represents a file format
+ */
+export type FileFormat =
+  | "image/jpeg"
+  | "image/gif"
+  | "image/tiff"
+  | "image/bmp"
+  | "image/png"
+  | "image/svg+xml"
+  | "image/jpeg-imageMap"
+  | "image/gif-imageMap"
+  | "image/tiff-imageMap"
+  | "image/bmp-imageMap"
+  | "image/png-imageMap"
+  | "image/svg+xml-imageMap"
+  | "video/mpeg"
+  | "video/mp4"
+  | "video/quicktime"
+  | "video/x-msvideo"
+  | "video/x-ms-wmv"
+  | "video/x-ms-asf"
+  | "drawing/dwg"
+  | "audio/aiff"
+  | "audio/basic"
+  | "audio/midi"
+  | "audio/mp4"
+  | "audio/mpeg"
+  | "audio/x-ms-wax"
+  | "audio/x-ms-wma"
+  | "audio/wav"
+  | "text/pdf"
+  | "text/doc"
+  | "text/ppt"
+  | "text/html"
+  | "text/plain"
+  | "application/xls"
+  | "application/xlsx"
+  | "application/ai"
+  | "application/octet-stream"
+  | "application/iiif"
+  | "image/fits"
+  | "image/ptm"
+  | "model/obj";
+
+/**
  * Represents a link to another item with optional image and bibliographic references
  */
 export type Link = {
@@ -183,7 +228,7 @@ export type Link = {
   description: string | null;
   content: string | null;
   href: string | null;
-  fileFormat: string | null;
+  fileFormat: FileFormat | null;
   fileSize: number | null;
   image: {
     isInline: boolean;
@@ -327,7 +372,7 @@ export type Resource = {
   coordinates: Array<Coordinate>;
   document: string | null;
   href: string | null;
-  fileFormat: string | null;
+  fileFormat: FileFormat | null;
   fileSize: number | null;
   imageMap: ImageMap | null;
   periods: Array<Period>;
