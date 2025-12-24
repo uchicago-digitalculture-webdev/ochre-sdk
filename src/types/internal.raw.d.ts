@@ -658,11 +658,16 @@ export type OchreCoordinates = {
  */
 export type OchreEvent = {
   dateTime?: string; // YYYY-MM-DD
-  agent?: { uuid: string } & OchreStringContent;
-  location?: { uuid: string } & OchreStringContent;
+  partialDates?: { year: number; endYear?: number };
+  agent?: { uuid: string; publicationDateTime?: string } & OchreStringContent;
+  location?: {
+    uuid: string;
+    publicationDateTime?: string;
+  } & OchreStringContent;
   comment?: OchreStringContent;
   label: OchreStringContent;
   value?: FakeString;
+  other?: { uuid?: string; category?: string } & OchreStringContent;
 };
 
 /**

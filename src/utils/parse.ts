@@ -818,20 +818,43 @@ export function parseEvents(events: Array<OchreEvent>): Array<Event> {
   const returnEvents: Array<Event> = [];
   for (const event of events) {
     returnEvents.push({
-      date: event.dateTime != null ? new Date(event.dateTime) : null,
+      dateTime: event.dateTime != null ? new Date(event.dateTime) : null,
+      date:
+        event.partialDates?.year != null ?
+          `${event.partialDates.year}-01-01/${event.partialDates.endYear ?? event.partialDates.year}-12-31`
+        : null,
       label: parseStringContent(event.label),
       location:
         event.location ?
           {
             uuid: event.location.uuid,
+            publicationDateTime:
+              event.location.publicationDateTime != null ?
+                new Date(event.location.publicationDateTime)
+              : null,
             content: parseStringContent(event.location),
           }
         : null,
       agent:
         event.agent ?
-          { uuid: event.agent.uuid, content: parseStringContent(event.agent) }
+          {
+            uuid: event.agent.uuid,
+            publicationDateTime:
+              event.agent.publicationDateTime != null ?
+                new Date(event.agent.publicationDateTime)
+              : null,
+            content: parseStringContent(event.agent),
+          }
         : null,
       comment: event.comment ? parseStringContent(event.comment) : null,
+      other:
+        event.other != null ?
+          {
+            uuid: event.other.uuid ?? null,
+            category: event.other.category ?? null,
+            content: parseStringContent(event.other),
+          }
+        : null,
       value: event.value ? parseFakeString(event.value) : null,
     });
   }

@@ -271,11 +271,25 @@ export type Observation = {
  * Represents an event with date, label and optional agent
  */
 export type Event = {
-  date: Date | null;
+  dateTime: Date | null;
+  date: string | null;
   label: string;
-  agent: { uuid: string; content: string } | null;
-  location: { uuid: string; content: string } | null;
+  agent: {
+    uuid: string;
+    publicationDateTime: Date | null;
+    content: string;
+  } | null;
+  location: {
+    uuid: string;
+    publicationDateTime: Date | null;
+    content: string;
+  } | null;
   comment: string | null;
+  other: {
+    uuid: string | null;
+    category: string | null;
+    content: string;
+  } | null;
   value: string | null;
 };
 
