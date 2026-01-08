@@ -38,6 +38,7 @@ import type {
   Coordinate,
   DataCategory,
   Event,
+  FileFormat,
   Identification,
   Image,
   ImageMap,
@@ -432,7 +433,7 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
       href: "href" in link && link.href != null ? link.href : null,
       fileFormat:
         "fileFormat" in link && link.fileFormat != null ?
-          link.fileFormat
+          (link.fileFormat as FileFormat)
         : null,
       fileSize:
         "fileSize" in link && link.fileSize != null ? link.fileSize : null,
@@ -1959,7 +1960,7 @@ export function parseResource(
       : null,
     type: resource.type,
     number: resource.n,
-    fileFormat: resource.fileFormat ?? null,
+    fileFormat: (resource.fileFormat as FileFormat | undefined) ?? null,
     fileSize: resource.fileSize ?? null,
     context:
       "context" in resource && resource.context ?
