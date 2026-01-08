@@ -845,7 +845,7 @@ export type WebElementComponent =
   | {
       component: "annotated-image";
       imageUuid: string;
-      isFilterDisplayed: boolean;
+      isFilterInputDisplayed: boolean;
       isOptionsDisplayed: boolean;
       isAnnotationHighlightsDisplayed: boolean;
       isAnnotationTooltipsDisplayed: boolean;
@@ -868,7 +868,7 @@ export type WebElementComponent =
       component: "entries";
       entriesId: string;
       variant: "entry" | "item";
-      isFilterDisplayed: boolean;
+      isFilterInputDisplayed: boolean;
     }
   | {
       component: "button";
@@ -944,7 +944,7 @@ export type WebElementComponent =
   | {
       component: "image-gallery";
       galleryId: string;
-      isFilterDisplayed: boolean;
+      isFilterInputDisplayed: boolean;
     }
   | {
       component: "map";

@@ -2460,10 +2460,10 @@ function parseWebElementProperties(
         );
       }
 
-      const isFilterDisplayed =
+      const isFilterInputDisplayed =
         getPropertyValueByLabel(
           componentProperty.properties,
-          "filter-displayed",
+          "filter-input-displayed",
         ) === true;
 
       const isOptionsDisplayed =
@@ -2485,7 +2485,7 @@ function parseWebElementProperties(
         ) !== false;
 
       properties.imageUuid = imageLinks[0]!.uuid;
-      properties.isFilterDisplayed = isFilterDisplayed;
+      properties.isFilterInputDisplayed = isFilterInputDisplayed;
       properties.isOptionsDisplayed = isOptionsDisplayed;
       properties.isAnnotationHighlightsDisplayed =
         isAnnotationHighlightsDisplayed;
@@ -2901,18 +2901,18 @@ function parseWebElementProperties(
       ) as "entry" | "item" | null;
       variant ??= "entry";
 
-      let isFilterDisplayed = false;
-      const isFilterDisplayedProperty = getPropertyValueByLabel(
+      let isFilterInputDisplayed = false;
+      const isFilterInputDisplayedProperty = getPropertyValueByLabel(
         componentProperty.properties,
-        "filter-displayed",
+        "filter-input-displayed",
       );
-      if (isFilterDisplayedProperty !== null) {
-        isFilterDisplayed = isFilterDisplayedProperty === true;
+      if (isFilterInputDisplayedProperty !== null) {
+        isFilterInputDisplayed = isFilterInputDisplayedProperty === true;
       }
 
       properties.entriesId = entriesLink.uuid;
       properties.variant = variant;
-      properties.isFilterDisplayed = isFilterDisplayed;
+      properties.isFilterInputDisplayed = isFilterInputDisplayed;
       break;
     }
     case "iframe": {
@@ -3145,14 +3145,14 @@ function parseWebElementProperties(
         );
       }
 
-      const isFilterDisplayed =
+      const isFilterInputDisplayed =
         getPropertyValueByLabel(
           componentProperty.properties,
-          "filter-displayed",
+          "filter-input-displayed",
         ) === true;
 
       properties.galleryId = galleryLink.uuid;
-      properties.isFilterDisplayed = isFilterDisplayed;
+      properties.isFilterInputDisplayed = isFilterInputDisplayed;
       break;
     }
     case "map": {
