@@ -211,7 +211,7 @@ export type FileFormat =
   | "application/xlsx"
   | "application/ai"
   | "application/octet-stream"
-  | "application/iiif"
+  | "application/IIIF"
   | "image/fits"
   | "image/ptm"
   | "model/obj";
