@@ -53,7 +53,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
   uuid: string,
   category?: T,
   itemCategory?: T extends "tree" ? Exclude<U, "tree">
-  : T extends "set" ? U
+  : T extends "set" ? Array<U>
   : never,
   options?: {
     customFetch?: (
@@ -69,7 +69,7 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
       item: Item<T, U>;
       category: T;
       itemCategory: T extends "tree" ? Exclude<U, "tree">
-      : T extends "set" ? U
+      : T extends "set" ? Array<U>
       : never;
     }
   | {
@@ -178,10 +178,11 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
         if (!("set" in data.ochre)) {
           throw new Error("Invalid OCHRE data: API response missing 'set' key");
         }
-        item = parseSet<U>(data.ochre.set, itemCategory, metadata) as Item<
-          T,
-          U
-        >;
+        item = parseSet<U>(
+          data.ochre.set,
+          itemCategory as Array<U> | undefined,
+          metadata,
+        ) as Item<T, U>;
         break;
       }
       case "tree": {

@@ -226,14 +226,16 @@ export type OchreSet = {
   creators?: { creator: OchrePerson | Array<OchrePerson> };
   items:
     | string
-    | { resource: OchreResource | Array<OchreResource> }
-    | { spatialUnit: OchreSpatialUnit | Array<OchreSpatialUnit> }
-    | { concept: OchreConcept | Array<OchreConcept> }
-    | { period: OchrePeriod | Array<OchrePeriod> }
-    | { bibliography: OchreBibliography | Array<OchreBibliography> }
-    | { person: OchrePerson | Array<OchrePerson> }
-    | { propertyValue: OchrePropertyValue | Array<OchrePropertyValue> }
-    | { text: OchreText | Array<OchreText> };
+    | {
+        resource?: OchreResource | Array<OchreResource>;
+        spatialUnit?: OchreSpatialUnit | Array<OchreSpatialUnit>;
+        concept?: OchreConcept | Array<OchreConcept>;
+        period?: OchrePeriod | Array<OchrePeriod>;
+        bibliography?: OchreBibliography | Array<OchreBibliography>;
+        person?: OchrePerson | Array<OchrePerson>;
+        propertyValue?: OchrePropertyValue | Array<OchrePropertyValue>;
+        text?: OchreText | Array<OchreText>;
+      };
 };
 
 /**

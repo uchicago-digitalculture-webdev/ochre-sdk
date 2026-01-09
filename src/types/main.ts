@@ -432,7 +432,7 @@ export type Set<U extends DataCategory = DataCategory> = {
   uuid: string;
   category: "set";
   metadata: Metadata | null;
-  itemCategory: U;
+  itemCategories: Array<U>;
   publicationDateTime: Date | null;
   type: string;
   number: number;
