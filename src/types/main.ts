@@ -935,11 +935,11 @@ export type WebElementComponent =
       altTextSource: "name" | "abbreviation" | "description";
       isTransparentBackground: boolean;
       isCover: boolean;
+      isLinkDisplayed: boolean;
       carouselOptions: { secondsPerImage: number } | null;
       heroOptions: {
         isBackgroundImageDisplayed: boolean;
         isDocumentDisplayed: boolean;
-        isLinkDisplayed: boolean;
       } | null;
     }
   | {
