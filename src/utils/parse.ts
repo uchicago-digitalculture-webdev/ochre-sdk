@@ -2735,6 +2735,16 @@ function parseWebElementProperties(
         isFilterInputDisplayed = isFilterInputDisplayedProperty === true;
       }
 
+      let isFilterLimitedToTitleQuery = false;
+      const isFilterLimitedToTitleQueryProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "filter-limit-to-title-query",
+      );
+      if (isFilterLimitedToTitleQueryProperty !== null) {
+        isFilterLimitedToTitleQuery =
+          isFilterLimitedToTitleQueryProperty === true;
+      }
+
       let isSortDisplayed = false;
       const isSortDisplayedProperty = getPropertyValueByLabel(
         componentProperty.properties,
@@ -2874,6 +2884,7 @@ function parseWebElementProperties(
         isResultsBarDisplayed: isFilterResultsBarDisplayed,
         isMapDisplayed: isFilterMapDisplayed,
         isInputDisplayed: isFilterInputDisplayed,
+        isLimitedToTitleQuery: isFilterLimitedToTitleQuery,
         sidebarSort: filterSidebarSort,
       };
       properties.isSortDisplayed = isSortDisplayed;

@@ -896,6 +896,7 @@ export type WebElementComponent =
         isResultsBarDisplayed: boolean;
         isMapDisplayed: boolean;
         isInputDisplayed: boolean;
+        isLimitedToTitleQuery: boolean;
         sidebarSort: "default" | "alphabetical";
       };
       options: {
