@@ -96,6 +96,7 @@ export default antfu({
           "ts-equals-import",
           "unknown",
         ],
+        tsconfig: { rootDir: "./", filename: "tsconfig.json" },
         newlinesBetween: 0,
         order: "asc",
         type: "natural",
