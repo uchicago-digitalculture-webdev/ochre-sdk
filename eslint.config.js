@@ -85,17 +85,6 @@ export default antfu({
     "perfectionist/sort-imports": [
       "error",
       {
-        groups: [
-          "side-effect",
-          "type-import",
-          ["type-internal", "type-parent", "type-sibling", "type-index"],
-          "value-builtin",
-          "value-internal",
-          "value-external",
-          ["value-parent", "value-sibling", "value-index"],
-          "ts-equals-import",
-          "unknown",
-        ],
         tsconfig: { rootDir: import.meta.dirname, filename: "tsconfig.json" },
         newlinesBetween: 0,
         order: "asc",

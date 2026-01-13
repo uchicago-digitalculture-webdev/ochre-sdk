@@ -1,3 +1,4 @@
+import * as z from "zod";
 import type { RenderOption, WhitespaceOption } from "./types/internal.raw.js";
 import type {
   DataCategory,
@@ -5,7 +6,6 @@ import type {
   WebElementComponent,
   Website,
 } from "./types/main.js";
-import * as z from "zod";
 
 /**
  * Validates a pseudo-UUID string

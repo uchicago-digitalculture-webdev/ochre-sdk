@@ -1,5 +1,5 @@
-import type { PropertyQueryItem } from "../../types/main.js";
 import * as z from "zod";
+import type { PropertyQueryItem } from "../../types/main.js";
 
 // Hard-coded to UChicago Node (for now)
 const PROJECT_SCOPE = "0c0aae37-7246-495b-9547-e25dbf5b99a3";
