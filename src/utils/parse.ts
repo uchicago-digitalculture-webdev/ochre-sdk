@@ -3086,15 +3086,6 @@ function parseWebElementProperties(
         isCover = isCoverProperty === true;
       }
 
-      let isLinkDisplayed = false;
-      const isLinkDisplayedProperty = getPropertyValueByLabel(
-        componentProperty.properties,
-        "link-displayed",
-      );
-      if (isLinkDisplayedProperty !== null) {
-        isLinkDisplayed = isLinkDisplayedProperty === true;
-      }
-
       const variantProperty = getPropertyByLabel(
         componentProperty.properties,
         "variant",
@@ -3121,10 +3112,10 @@ function parseWebElementProperties(
         carouselOptions = { secondsPerImage };
       }
 
-      let heroOptions: {
-        isBackgroundImageDisplayed: boolean;
-        isDocumentDisplayed: boolean;
-      } | null = null;
+      let heroOptions: Extract<
+        WebElementComponent,
+        { component: "image" }
+      >["heroOptions"] = null;
       if (variantProperty?.values[0]!.content === "hero") {
         const isBackgroundImageDisplayedProperty = getPropertyValueByLabel(
           variantProperty.properties,
@@ -3134,11 +3125,16 @@ function parseWebElementProperties(
           variantProperty.properties,
           "document-displayed",
         );
+        const isLinkDisplayedProperty = getPropertyValueByLabel(
+          variantProperty.properties,
+          "link-displayed",
+        );
 
         heroOptions = {
           isBackgroundImageDisplayed:
             isBackgroundImageDisplayedProperty !== false,
           isDocumentDisplayed: isDocumentDisplayedProperty !== false,
+          isLinkDisplayed: isLinkDisplayedProperty !== false,
         };
       }
 
@@ -3154,7 +3150,6 @@ function parseWebElementProperties(
       properties.altTextSource = altTextSource;
       properties.isTransparentBackground = isTransparentBackground;
       properties.isCover = isCover;
-      properties.isLinkDisplayed = isLinkDisplayed;
       properties.carouselOptions = carouselOptions;
       properties.heroOptions = heroOptions;
       break;
