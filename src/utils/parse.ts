@@ -3125,16 +3125,11 @@ function parseWebElementProperties(
           variantProperty.properties,
           "document-displayed",
         );
-        const isLinkDisplayedProperty = getPropertyValueByLabel(
-          variantProperty.properties,
-          "link-displayed",
-        );
 
         heroOptions = {
           isBackgroundImageDisplayed:
             isBackgroundImageDisplayedProperty !== false,
           isDocumentDisplayed: isDocumentDisplayedProperty !== false,
-          isLinkDisplayed: isLinkDisplayedProperty !== false,
         };
       }
 

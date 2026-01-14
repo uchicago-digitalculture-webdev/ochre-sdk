@@ -939,7 +939,6 @@ export type WebElementComponent =
       heroOptions: {
         isBackgroundImageDisplayed: boolean;
         isDocumentDisplayed: boolean;
-        isLinkDisplayed: boolean;
       } | null;
     }
   | {
