@@ -143,7 +143,9 @@ function parseWhitespace(contentString: string, whitespace: string): string {
   for (const option of result.data) {
     switch (option) {
       case "newline": {
-        if (returnString.trim() !== "***") {
+        if (returnString.trim() === "***") {
+          returnString = `${returnString}\n`;
+        } else {
           returnString = `<br />\n${returnString}`;
         }
         break;
