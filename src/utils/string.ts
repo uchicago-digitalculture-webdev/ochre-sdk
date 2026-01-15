@@ -14,6 +14,11 @@ import {
 
 const PRESENTATION_ITEM_UUID = "f1c131b6-1498-48a4-95bf-a9edae9fd518";
 const TEXT_ANNOTATION_UUID = "b9ca2732-78f4-416e-b77f-dae7647e68a9";
+const TEXT_ANNOTATION_HOVER_CARD_UUID = "c7f6a08a-f07b-49b6-bcb1-af485da3c58f";
+const TEXT_ANNOTATION_ITEM_PAGE_VARIANT_UUID =
+  "bf4476ab-6bc8-40d0-a001-1446213c72ce";
+const TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID =
+  "9d52db95-a9cf-45f7-a0bf-fc9ba9f0aae0";
 const TEXT_ANNOTATION_TEXT_STYLING_UUID =
   "3e6f86ab-df81-45ae-8257-e2867357df56";
 const TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID =
@@ -331,8 +336,30 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
                         itemProperty.property[0]
                       : itemProperty.property
                     : null;
+
                   if (textAnnotationProperty != null) {
-                    return `<Annotation type="hover-card" uuid="${linkResource.uuid}">${itemString}</Annotation>`;
+                    const textAnnotationPropertyValueUuid =
+                      (
+                        typeof textAnnotationProperty.value === "object" &&
+                        "uuid" in textAnnotationProperty.value &&
+                        textAnnotationProperty.value.uuid != null
+                      ) ?
+                        textAnnotationProperty.value.uuid
+                      : null;
+
+                    if (
+                      textAnnotationPropertyValueUuid ===
+                      TEXT_ANNOTATION_HOVER_CARD_UUID
+                    ) {
+                      return `<Annotation type="hover-card" uuid="${linkResource.uuid}">${itemString}</Annotation>`;
+                    } else if (
+                      textAnnotationPropertyValueUuid ===
+                        TEXT_ANNOTATION_ITEM_PAGE_VARIANT_UUID ||
+                      textAnnotationPropertyValueUuid ===
+                        TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID
+                    ) {
+                      return `<InternalLink type="${textAnnotationPropertyValueUuid === TEXT_ANNOTATION_ITEM_PAGE_VARIANT_UUID ? "item" : "entry"}" uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+                    }
                   }
                 }
 
