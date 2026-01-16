@@ -3,6 +3,7 @@ import antfu from "@antfu/eslint-config";
 export default antfu({
   stylistic: false,
   markdown: false,
+  node: true,
   typescript: {
     parserOptions: {
       tsconfigRootDir: import.meta.dir,
@@ -64,6 +65,19 @@ export default antfu({
       "unicorn/prefer-ternary": "off",
     },
   },
+  imports: {
+    overrides: {
+      "perfectionist/sort-imports": [
+        "error",
+        {
+          tsconfig: { rootDir: import.meta.dirname, filename: "tsconfig.json" },
+          newlinesBetween: 0,
+          order: "asc",
+          type: "natural",
+        },
+      ],
+    },
+  },
   rules: {
     "no-console": ["warn"],
     "antfu/no-top-level-await": ["off"],
@@ -80,15 +94,6 @@ export default antfu({
         varsIgnorePattern: "^_",
         args: "after-used",
         argsIgnorePattern: "^_",
-      },
-    ],
-    "perfectionist/sort-imports": [
-      "error",
-      {
-        tsconfig: { rootDir: import.meta.dirname, filename: "tsconfig.json" },
-        newlinesBetween: 0,
-        order: "asc",
-        type: "natural",
       },
     ],
   },
