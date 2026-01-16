@@ -555,6 +555,7 @@ export type PropertyValueContentType =
  * Represents a property value with type information
  */
 export type PropertyValueContent<T extends PropertyValueContentType> = {
+  hierarchyLevel: number | null;
   content:
     | (T extends "integer" ? number
       : T extends "decimal" ? number
@@ -585,7 +586,6 @@ export type PropertyValueContent<T extends PropertyValueContentType> = {
 export type Property<
   T extends PropertyValueContentType = PropertyValueContentType,
 > = {
-  hierarchyLevel: number | null;
   uuid: string;
   label: string;
   values: Array<PropertyValueContent<T>>;

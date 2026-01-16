@@ -879,142 +879,151 @@ export function parseProperty(
       : [property.value]
     : [];
 
-  const values = valuesToParse.map((value) => {
-    let content: string | number | boolean | Date | null = null;
-    let label: string | null = null;
+  const values = valuesToParse
+    .map((value) => {
+      let content: string | number | boolean | Date | null = null;
+      let label: string | null = null;
 
-    if (
-      typeof value === "string" ||
-      typeof value === "number" ||
-      typeof value === "boolean"
-    ) {
-      content = parseFakeString(value);
-      const returnValue: PropertyValueContent<"string"> = {
-        content,
-        label: null,
-        dataType: "string",
-        isUncertain: false,
-        category: "value",
-        type: null,
-        uuid: null,
-        publicationDateTime: null,
-        unit: null,
-        height: null,
-        width: null,
-        fileSize: null,
-        href: null,
-        slug: null,
-      };
+      if (
+        typeof value === "string" ||
+        typeof value === "number" ||
+        typeof value === "boolean"
+      ) {
+        content = parseFakeString(value);
+        const returnValue: PropertyValueContent<"string"> = {
+          hierarchyLevel: null,
+          content,
+          label: null,
+          dataType: "string",
+          isUncertain: false,
+          category: "value",
+          type: null,
+          uuid: null,
+          publicationDateTime: null,
+          unit: null,
+          height: null,
+          width: null,
+          fileSize: null,
+          href: null,
+          slug: null,
+        };
 
-      return returnValue;
-    } else {
-      let parsedType: PropertyValueContentType = "string";
-      if (value.dataType != null) {
-        const { data, error } = propertyValueContentTypeSchema.safeParse(
-          value.dataType,
-        );
-        if (error) {
-          throw new Error(
-            `Invalid property value content type: "${value.dataType}"`,
+        return returnValue;
+      } else {
+        let parsedType: PropertyValueContentType = "string";
+        if (value.dataType != null) {
+          const { data, error } = propertyValueContentTypeSchema.safeParse(
+            value.dataType,
           );
+          if (error) {
+            throw new Error(
+              `Invalid property value content type: "${value.dataType}"`,
+            );
+          }
+
+          parsedType = data;
         }
 
-        parsedType = data;
-      }
-
-      switch (parsedType) {
-        case "integer":
-        case "decimal":
-        case "time": {
-          if (value.rawValue != null) {
-            content = Number(value.rawValue);
-            label =
-              value.content ?
-                parseStringContent({ content: value.content })
-              : null;
-          } else {
-            content = Number(value.content);
-            label = null;
-          }
-          break;
-        }
-        // case "date":
-        // case "dateTime": {
-        //   if (value.rawValue != null) {
-        //     content = new Date(parseFakeString(value.rawValue));
-        //     label =
-        //       value.content ?
-        //         parseStringContent({ content: value.content })
-        //       : null;
-        //   } else {
-        //     content =
-        //       value.content ?
-        //         typeof value.content === "string" ?
-        //           new Date(value.content)
-        //         : new Date(parseStringContent({ content: value.content }))
-        //       : null;
-        //   }
-        //   break;
-        // }
-        case "boolean": {
-          if (value.rawValue != null) {
-            content = value.rawValue === "true";
-            label =
-              value.content ?
-                parseStringContent({ content: value.content })
-              : null;
-          } else {
-            content = value.content === true;
-            label = null;
-          }
-          break;
-        }
-        default: {
-          if ("slug" in value && value.slug != null) {
-            content = parseFakeString(value.slug);
-          } else if (value.content != null) {
+        switch (parsedType) {
+          case "integer":
+          case "decimal":
+          case "time": {
             if (value.rawValue != null) {
-              content = parseFakeString(value.rawValue);
+              content = Number(value.rawValue);
               label =
                 value.content ?
                   parseStringContent({ content: value.content })
                 : null;
             } else {
-              content = parseStringContent({ content: value.content });
+              content = Number(value.content);
               label = null;
             }
+            break;
           }
+          // case "date":
+          // case "dateTime": {
+          //   if (value.rawValue != null) {
+          //     content = new Date(parseFakeString(value.rawValue));
+          //     label =
+          //       value.content ?
+          //         parseStringContent({ content: value.content })
+          //       : null;
+          //   } else {
+          //     content =
+          //       value.content ?
+          //         typeof value.content === "string" ?
+          //           new Date(value.content)
+          //         : new Date(parseStringContent({ content: value.content }))
+          //       : null;
+          //   }
+          //   break;
+          // }
+          case "boolean": {
+            if (value.rawValue != null) {
+              content = value.rawValue === "true";
+              label =
+                value.content ?
+                  parseStringContent({ content: value.content })
+                : null;
+            } else {
+              content = value.content === true;
+              label = null;
+            }
+            break;
+          }
+          default: {
+            if ("slug" in value && value.slug != null) {
+              content = parseFakeString(value.slug);
+            } else if (value.content != null) {
+              if (value.rawValue != null) {
+                content = parseFakeString(value.rawValue);
+                label =
+                  value.content ?
+                    parseStringContent({ content: value.content })
+                  : null;
+              } else {
+                content = parseStringContent({ content: value.content });
+                label = null;
+              }
+            }
 
-          break;
+            break;
+          }
         }
+
+        const returnValue: PropertyValueContent<typeof parsedType> = {
+          hierarchyLevel: value.i ?? null,
+          content,
+          dataType: parsedType,
+          isUncertain: value.isUncertain ?? false,
+          label,
+          category: value.category ?? null,
+          type: value.type ?? null,
+          uuid: value.uuid ?? null,
+          publicationDateTime:
+            value.publicationDateTime != null ?
+              new Date(value.publicationDateTime)
+            : null,
+          unit: value.unit ?? null,
+          height: value.height ?? null,
+          width: value.width ?? null,
+          fileSize: value.fileSize ?? null,
+          href: value.href ?? null,
+          slug: value.slug ?? null,
+        };
+
+        return returnValue;
+      }
+    })
+    .toSorted((a, b) => {
+      if (a.hierarchyLevel != null && b.hierarchyLevel != null) {
+        return b.hierarchyLevel - a.hierarchyLevel;
       }
 
-      const returnValue: PropertyValueContent<typeof parsedType> = {
-        content,
-        dataType: parsedType,
-        isUncertain: value.isUncertain ?? false,
-        label,
-        category: value.category ?? null,
-        type: value.type ?? null,
-        uuid: value.uuid ?? null,
-        publicationDateTime:
-          value.publicationDateTime != null ?
-            new Date(value.publicationDateTime)
-          : null,
-        unit: value.unit ?? null,
-        height: value.height ?? null,
-        width: value.width ?? null,
-        fileSize: value.fileSize ?? null,
-        href: value.href ?? null,
-        slug: value.slug ?? null,
-      };
-
-      return returnValue;
-    }
-  });
+      return 0;
+    });
 
   return {
-    hierarchyLevel: property.i ?? null,
     uuid: property.label.uuid,
     label: parseStringContent(property.label, language)
       .replace(/\s*\.{3}$/, "")

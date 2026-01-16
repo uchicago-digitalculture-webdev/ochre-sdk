@@ -340,6 +340,7 @@ export type OchreConcept = {
  * Raw property value structure corresponding to the parsed PropertyValue type
  */
 export type OchrePropertyValueContent = {
+  i?: number;
   uuid?: string;
   publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
   dataType?: string;
@@ -360,7 +361,6 @@ export type OchrePropertyValueContent = {
  * Raw property structure corresponding to the parsed Property type
  */
 export type OchreProperty = {
-  i?: number;
   label: OchreStringContent & { uuid: string };
   value?:
     | OchrePropertyValueContent
