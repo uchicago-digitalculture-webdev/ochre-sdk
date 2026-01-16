@@ -100,6 +100,7 @@ export type OchreData = {
     belongsTo: FakeString;
     publicationDateTime: string; // YYYY-MM-DDThh:mm:ssZ
     metadata: OchreMetadata;
+    persistentUrl?: string;
     languages?: string; // ISO 639-3 3 character codes, semicolon separated
   } & (
     | { resource: OchreResource }

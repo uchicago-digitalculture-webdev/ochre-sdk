@@ -10,6 +10,7 @@ export type Data<
   uuid: string;
   belongsTo: { uuid: string; abbreviation: string };
   publicationDateTime: Date;
+  persistentUrl: string | null;
   item: Item<T, U>;
 };
 
@@ -123,6 +124,7 @@ export type Person = {
   category: "person";
   metadata: Metadata | null;
   publicationDateTime: Date | null;
+  persistentUrl: string | null;
   type: string | null;
   number: number | null;
   context: Context | null;
@@ -357,6 +359,7 @@ export type Resource = {
   category: "resource";
   metadata: Metadata | null;
   publicationDateTime: Date | null;
+  persistentUrl: string | null;
   type: string;
   number: number;
   context: Context | null;
@@ -391,6 +394,7 @@ export type SpatialUnit = {
   category: "spatialUnit";
   metadata: Metadata | null;
   publicationDateTime: Date | null;
+  persistentUrl: string | null;
   number: number;
   context: Context | null;
   license: License | null;
@@ -413,6 +417,7 @@ export type Concept = {
   category: "concept";
   metadata: Metadata | null;
   publicationDateTime: Date | null;
+  persistentUrl: string | null;
   number: number;
   license: License | null;
   context: Context | null;
@@ -434,6 +439,7 @@ export type Set<U extends DataCategory = DataCategory> = {
   metadata: Metadata | null;
   itemCategories: Array<U>;
   publicationDateTime: Date | null;
+  persistentUrl: string | null;
   type: string;
   number: number;
   date: string | null;
@@ -464,6 +470,7 @@ export type Bibliography = {
   category: "bibliography";
   metadata: Metadata | null;
   publicationDateTime: Date | null;
+  persistentUrl: string | null;
   type: string | null;
   number: number | null;
   identification: Identification | null;
@@ -504,6 +511,7 @@ export type Period = {
   category: "period";
   metadata: Metadata | null;
   publicationDateTime: Date | null;
+  persistentUrl: string | null;
   type: string | null;
   number: number | null;
   identification: Identification;
@@ -518,6 +526,7 @@ export type PropertyValue = {
   uuid: string;
   category: "propertyValue";
   metadata: Metadata | null;
+  persistentUrl: string | null;
   number: number;
   publicationDateTime: Date | null;
   context: Context | null;
@@ -591,6 +600,7 @@ export type Text = {
   category: "text";
   metadata: Metadata | null;
   publicationDateTime: Date | null;
+  persistentUrl: string | null;
   type: string | null;
   language: string | null;
   number: number;
@@ -634,6 +644,7 @@ export type Tree<
   category: "tree";
   metadata: Metadata | null;
   publicationDateTime: Date | null;
+  persistentUrl: string | null;
   type: string;
   number: number;
   date: string | null;

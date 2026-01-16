@@ -294,7 +294,11 @@ export function parseLicense(license: OchreLicense): License | null {
  * @param person - Raw person data from OCHRE format
  * @returns Parsed Person object
  */
-export function parsePerson(person: OchrePerson, metadata?: Metadata): Person {
+export function parsePerson(
+  person: OchrePerson,
+  metadata?: Metadata,
+  persistentUrl?: string | null,
+): Person {
   return {
     uuid: person.uuid,
     category: "person",
@@ -303,6 +307,7 @@ export function parsePerson(person: OchrePerson, metadata?: Metadata): Person {
       person.publicationDateTime != null ?
         new Date(person.publicationDateTime)
       : null,
+    persistentUrl: persistentUrl ?? null,
     type: person.type ?? null,
     number: person.n ?? null,
     context: person.context ? parseContext(person.context) : null,
@@ -1132,7 +1137,11 @@ export function parseImageMap(imageMap: OchreImageMap): ImageMap {
  * @param period - Raw period data in OCHRE format
  * @returns Parsed Period object
  */
-export function parsePeriod(period: OchrePeriod, metadata?: Metadata): Period {
+export function parsePeriod(
+  period: OchrePeriod,
+  metadata?: Metadata,
+  persistentUrl?: string | null,
+): Period {
   return {
     uuid: period.uuid,
     category: "period",
@@ -1141,6 +1150,7 @@ export function parsePeriod(period: OchrePeriod, metadata?: Metadata): Period {
       period.publicationDateTime != null ?
         new Date(period.publicationDateTime)
       : null,
+    persistentUrl: persistentUrl ?? null,
     type: period.type ?? null,
     number: period.n ?? null,
     identification: parseIdentification(period.identification),
@@ -1173,6 +1183,7 @@ export function parsePeriods(periods: Array<OchrePeriod>): Array<Period> {
 export function parseBibliography(
   bibliography: OchreBibliography,
   metadata?: Metadata,
+  persistentUrl?: string | null,
 ): Bibliography {
   const sourceResources: Bibliography["sourceResources"] = [];
   if (bibliography.source?.resource) {
@@ -1226,6 +1237,7 @@ export function parseBibliography(
       bibliography.publicationDateTime != null ?
         new Date(bibliography.publicationDateTime)
       : null,
+    persistentUrl: persistentUrl ?? null,
     type: bibliography.type ?? null,
     number: bibliography.n ?? null,
     identification:
@@ -1342,6 +1354,7 @@ export function parseBibliographies(
 export function parsePropertyValue(
   propertyValue: OchrePropertyValue,
   metadata?: Metadata,
+  persistentUrl?: string | null,
 ): PropertyValue {
   return {
     uuid: propertyValue.uuid,
@@ -1352,6 +1365,7 @@ export function parsePropertyValue(
       propertyValue.publicationDateTime ?
         new Date(propertyValue.publicationDateTime)
       : null,
+    persistentUrl: persistentUrl ?? null,
     context: propertyValue.context ? parseContext(propertyValue.context) : null,
     availability:
       propertyValue.availability ?
@@ -1419,13 +1433,18 @@ export function parsePropertyValues(
  * @param text - Raw text data in OCHRE format
  * @returns Parsed Text object
  */
-export function parseText(text: OchreText, metadata?: Metadata): Text {
+export function parseText(
+  text: OchreText,
+  metadata?: Metadata,
+  persistentUrl?: string | null,
+): Text {
   return {
     uuid: text.uuid,
     category: "text",
     metadata: metadata ?? null,
     publicationDateTime:
       text.publicationDateTime ? new Date(text.publicationDateTime) : null,
+    persistentUrl: persistentUrl ?? null,
     type: text.type ?? null,
     language: text.language ?? null,
     number: text.n ?? 0,
@@ -1596,6 +1615,7 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
   tree: OchreTree,
   itemCategory?: Exclude<DataCategory, "tree">,
   metadata?: Metadata,
+  persistentUrl?: string | null,
 ): Tree<U> {
   if (typeof tree.items === "string") {
     throw new TypeError("Invalid OCHRE data: Tree has no items");
@@ -1741,6 +1761,7 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
     category: "tree",
     metadata: metadata ?? null,
     publicationDateTime: new Date(tree.publicationDateTime),
+    persistentUrl: persistentUrl ?? null,
     identification: parseIdentification(tree.identification),
     creators,
     license: parseLicense(tree.availability),
@@ -1787,6 +1808,7 @@ export function parseSet<U extends DataCategory>(
   set: OchreSet,
   itemCategories?: Array<U>,
   metadata?: Metadata,
+  persistentUrl?: string | null,
 ): Set<U> {
   if (typeof set.items === "string") {
     throw new TypeError("Invalid OCHRE data: Set has no items");
@@ -1909,6 +1931,7 @@ export function parseSet<U extends DataCategory>(
     itemCategories: parsedItemCategories as Array<U>,
     publicationDateTime:
       set.publicationDateTime ? new Date(set.publicationDateTime) : null,
+    persistentUrl: persistentUrl ?? null,
     date: set.date ?? null,
     license: parseLicense(set.availability),
     identification: parseIdentification(set.identification),
@@ -1958,6 +1981,7 @@ export function parseSets<U extends DataCategory>(
 export function parseResource(
   resource: OchreResource,
   metadata?: Metadata,
+  persistentUrl?: string | null,
 ): Resource {
   const returnResource: Resource = {
     uuid: resource.uuid,
@@ -1967,6 +1991,7 @@ export function parseResource(
       resource.publicationDateTime ?
         new Date(resource.publicationDateTime)
       : null,
+    persistentUrl: persistentUrl ?? null,
     type: resource.type,
     number: resource.n,
     fileFormat: (resource.fileFormat as FileFormat | undefined) ?? null,
@@ -2099,6 +2124,7 @@ export function parseResources(
 export function parseSpatialUnit(
   spatialUnit: OchreSpatialUnit,
   metadata?: Metadata,
+  persistentUrl?: string | null,
 ): SpatialUnit {
   const returnSpatialUnit: SpatialUnit = {
     uuid: spatialUnit.uuid,
@@ -2108,6 +2134,7 @@ export function parseSpatialUnit(
       spatialUnit.publicationDateTime != null ?
         new Date(spatialUnit.publicationDateTime)
       : null,
+    persistentUrl: persistentUrl ?? null,
     number: spatialUnit.n,
     context:
       "context" in spatialUnit && spatialUnit.context ?
@@ -2198,6 +2225,7 @@ export function parseSpatialUnits(
 export function parseConcept(
   concept: OchreConcept,
   metadata?: Metadata,
+  persistentUrl?: string | null,
 ): Concept {
   const returnConcept: Concept = {
     uuid: concept.uuid,
@@ -2207,6 +2235,7 @@ export function parseConcept(
       concept.publicationDateTime ?
         new Date(concept.publicationDateTime)
       : null,
+    persistentUrl: persistentUrl ?? null,
     number: concept.n,
     license:
       "availability" in concept && concept.availability ?
