@@ -360,6 +360,7 @@ export type OchrePropertyValueContent = {
  * Raw property structure corresponding to the parsed Property type
  */
 export type OchreProperty = {
+  i?: number;
   label: OchreStringContent & { uuid: string };
   value?:
     | OchrePropertyValueContent

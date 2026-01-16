@@ -585,6 +585,7 @@ export type PropertyValueContent<T extends PropertyValueContentType> = {
 export type Property<
   T extends PropertyValueContentType = PropertyValueContentType,
 > = {
+  hierarchyLevel: number | null;
   uuid: string;
   label: string;
   values: Array<PropertyValueContent<T>>;

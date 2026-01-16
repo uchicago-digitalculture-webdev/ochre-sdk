@@ -1014,6 +1014,7 @@ export function parseProperty(
   });
 
   return {
+    hierarchyLevel: property.i ?? null,
     uuid: property.label.uuid,
     label: parseStringContent(property.label, language)
       .replace(/\s*\.{3}$/, "")
