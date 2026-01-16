@@ -3058,7 +3058,7 @@ function parseWebElementProperties(
 
       let captionSource = getPropertyValueByLabel(
         componentProperty.properties,
-        "caption-source",
+        "source-caption",
       );
       captionSource ??= "name";
 
