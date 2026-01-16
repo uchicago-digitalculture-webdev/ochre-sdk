@@ -684,7 +684,7 @@ export type PropertyQueryItem = {
     uuid: string | null;
     category: string | null;
     type: string | null;
-    dataType: string;
+    dataType: string | null; // this should not be optional
     publicationDateTime: string | null;
     content: string;
     label: string | null;

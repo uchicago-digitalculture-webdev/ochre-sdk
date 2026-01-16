@@ -26,7 +26,7 @@ const responseItemSchema = z.object({
     uuid: z.string().refine(isUUID).optional(),
     category: z.string().optional(),
     type: z.string().optional(),
-    dataType: z.string(),
+    dataType: z.string().optional(), // this should not be optional
     publicationDateTime: z.string().optional(),
     content: z.string().optional(),
     rawValue: z.string().optional(),
@@ -151,7 +151,7 @@ export async function fetchPropertyQuery(
             uuid: valueUuid ?? null,
             category: item.value.category ?? null,
             type: item.value.type ?? null,
-            dataType: item.value.dataType,
+            dataType: item.value.dataType ?? null,
             publicationDateTime: item.value.publicationDateTime ?? null,
             content: item.value.rawValue ?? item.value.content ?? "",
             label:
