@@ -779,7 +779,7 @@ export type Website = {
     itemPage: {
       iiifViewer: "universal-viewer" | "clover";
       isPropertyValuesGrouped: boolean;
-      options: { contexts: PropertyContexts };
+      options: { contexts: PropertyContexts | null };
     };
   };
 };
@@ -918,7 +918,7 @@ export type WebElementComponent =
           type: string;
           identification: Identification;
         }>;
-        contexts: PropertyContexts;
+        contexts: PropertyContexts | null;
       };
     }
   | { component: "empty-space"; height: string | null; width: string | null }

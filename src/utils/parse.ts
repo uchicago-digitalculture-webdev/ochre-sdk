@@ -2833,16 +2833,7 @@ function parseWebElementProperties(
               identification: parseIdentification(scope.identification),
             }))
           : [],
-        contexts: {
-          flatten: [],
-          filter: [],
-          sort: [],
-          detail: [],
-          download: [],
-          label: [],
-          suppress: [],
-          prominent: [],
-        },
+        contexts: null,
       };
 
       if ("options" in elementResource && elementResource.options) {
@@ -4787,16 +4778,7 @@ function parseWebsiteProperties(
     privacy: validatedPrivacy,
   } = result.data;
 
-  let contexts: Website["properties"]["itemPage"]["options"]["contexts"] = {
-    flatten: [],
-    suppress: [],
-    filter: [],
-    sort: [],
-    detail: [],
-    download: [],
-    label: [],
-    prominent: [],
-  };
+  let contexts: Website["properties"]["itemPage"]["options"]["contexts"] = null;
 
   if ("options" in websiteTree && websiteTree.options) {
     const flattenContextsRaw =
