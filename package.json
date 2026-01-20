@@ -54,7 +54,7 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^7.0.1",
+    "@antfu/eslint-config": "^7.1.0",
     "@types/node": "^24.10.9",
     "bumpp": "^10.4.0",
     "eslint": "^9.39.2",
@@ -63,5 +63,5 @@
     "typescript": "^5.9.3",
     "vitest": "^4.0.17"
   },
-  "packageManager": "pnpm@10.28.0"
+  "packageManager": "pnpm@10.28.1"
 }
