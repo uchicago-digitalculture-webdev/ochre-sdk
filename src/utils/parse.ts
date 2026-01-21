@@ -2845,7 +2845,7 @@ function parseWebElementProperties(
               type: scope.uuid.type,
               identification: parseIdentification(scope.identification),
             }))
-          : [],
+          : null,
         contexts: null,
       };
 
