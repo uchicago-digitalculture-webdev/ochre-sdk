@@ -988,6 +988,7 @@ export type WebElementComponent =
     }
   | {
       component: "search-bar";
+      queryVariant: "submit" | "change";
       placeholder: string | null;
       baseFilterQueries: string | null;
       boundElementUuid: string | null;

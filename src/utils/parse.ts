@@ -3385,6 +3385,15 @@ function parseWebElementProperties(
       break;
     }
     case "search-bar": {
+      let queryVariant: "submit" | "change" = "submit";
+      const queryVariantProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "query-variant",
+      );
+      if (queryVariantProperty !== null) {
+        queryVariant = queryVariantProperty as "submit" | "change";
+      }
+
       const boundElementPropertyUuid = getPropertyByLabel(
         componentProperty.properties,
         "bound-element",
@@ -3415,6 +3424,7 @@ function parseWebElementProperties(
         "base-filter-queries",
       );
 
+      properties.queryVariant = queryVariant;
       properties.placeholder =
         placeholder !== null ? String(placeholder) : null;
       properties.baseFilterQueries =
