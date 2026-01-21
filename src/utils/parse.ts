@@ -53,10 +53,12 @@ import type {
   Period,
   Person,
   Property,
+  PropertyContexts,
   PropertyValue,
   PropertyValueContent,
   PropertyValueContentType,
   Resource,
+  Scope,
   Section,
   Set,
   SpatialUnit,
@@ -3357,20 +3359,7 @@ function parseWebElementProperties(
         });
       }
 
-      const scopes =
-        elementResource.options?.scopes != null ?
-          (Array.isArray(elementResource.options.scopes.scope) ?
-            elementResource.options.scopes.scope
-          : [elementResource.options.scopes.scope]
-          ).map((scope) => ({
-            uuid: scope.uuid.content,
-            type: scope.uuid.type,
-            identification: parseIdentification(scope.identification),
-          }))
-        : [];
-
       properties.queries = queries;
-      properties.scopes = scopes;
       break;
     }
     case "table": {
@@ -4801,9 +4790,22 @@ function parseWebsiteProperties(
     privacy: validatedPrivacy,
   } = result.data;
 
-  let contexts: Website["properties"]["itemPage"]["options"]["contexts"] = null;
+  let contexts: PropertyContexts | null = null;
+  let scopes: Array<Scope> | null = null;
 
   if ("options" in websiteTree && websiteTree.options) {
+    scopes =
+      websiteTree.options.scopes != null ?
+        (Array.isArray(websiteTree.options.scopes.scope) ?
+          websiteTree.options.scopes.scope
+        : [websiteTree.options.scopes.scope]
+        ).map((scope) => ({
+          uuid: scope.uuid.content,
+          type: scope.uuid.type,
+          identification: parseIdentification(scope.identification),
+        }))
+      : null;
+
     const flattenContextsRaw =
       websiteTree.options.flattenContexts != null ?
         Array.isArray(websiteTree.options.flattenContexts) ?
@@ -4883,7 +4885,11 @@ function parseWebsiteProperties(
       logoUuid !== null ?
         `https://ochre.lib.uchicago.edu/ochre?uuid=${logoUuid}&load`
       : null,
-    itemPage: { iiifViewer, isPropertyValuesGrouped, options: { contexts } },
+    itemPage: {
+      iiifViewer,
+      isPropertyValuesGrouped,
+      options: { contexts, scopes },
+    },
   };
 }
 

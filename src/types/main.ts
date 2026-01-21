@@ -731,6 +731,15 @@ export type PropertyContexts = {
 };
 
 /**
+ * Represents a scope with its UUID, type and identification
+ */
+export type Scope = {
+  uuid: string;
+  type: string;
+  identification: Identification;
+};
+
+/**
  * Represents a website with its properties and elements
  */
 export type Website = {
@@ -779,7 +788,10 @@ export type Website = {
     itemPage: {
       iiifViewer: "universal-viewer" | "clover";
       isPropertyValuesGrouped: boolean;
-      options: { contexts: PropertyContexts | null };
+      options: {
+        contexts: PropertyContexts | null;
+        scopes: Array<Scope> | null;
+      };
     };
   };
 };
@@ -914,11 +926,7 @@ export type WebElementComponent =
       };
       options: {
         attributeFilters: { bibliographies: boolean; periods: boolean };
-        scopes: Array<{
-          uuid: string;
-          type: string;
-          identification: Identification;
-        }>;
+        scopes: Array<Scope> | null;
         contexts: PropertyContexts | null;
       };
     }
@@ -979,11 +987,6 @@ export type WebElementComponent =
         propertyUuids: Array<string>;
         startIcon: string | null;
         endIcon: string | null;
-      }>;
-      scopes: Array<{
-        uuid: string;
-        type: string;
-        identification: Identification;
       }>;
     }
   | {

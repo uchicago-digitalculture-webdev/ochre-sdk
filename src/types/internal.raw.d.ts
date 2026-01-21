@@ -188,6 +188,9 @@ export type OchreTree = {
   date?: string; // YYYY-MM-DD
   creators?: { creator: OchrePerson | Array<OchrePerson> };
   options?: {
+    scopes?: {
+      scope: OchreTreeSearchOptionScope | Array<OchreTreeSearchOptionScope>;
+    };
     flattenContexts?: OchreLevelContext | Array<OchreLevelContext>;
     suppressContexts?: OchreLevelContext | Array<OchreLevelContext>;
     filterContexts?: OchreLevelContext | Array<OchreLevelContext>;
