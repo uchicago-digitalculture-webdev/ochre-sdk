@@ -7,22 +7,19 @@ import type {
 } from "../types/internal.raw.js";
 import type { Style } from "../types/main.js";
 import {
+  PRESENTATION_ITEM_UUID,
+  TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID,
+  TEXT_ANNOTATION_HOVER_CARD_UUID,
+  TEXT_ANNOTATION_ITEM_PAGE_VARIANT_UUID,
+  TEXT_ANNOTATION_TEXT_STYLING_UUID,
+  TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
+  TEXT_ANNOTATION_UUID,
+} from "../constants.js";
+import {
   emailSchema,
   renderOptionsSchema,
   whitespaceSchema,
 } from "../schemas.js";
-
-const PRESENTATION_ITEM_UUID = "f1c131b6-1498-48a4-95bf-a9edae9fd518";
-const TEXT_ANNOTATION_UUID = "b9ca2732-78f4-416e-b77f-dae7647e68a9";
-const TEXT_ANNOTATION_HOVER_CARD_UUID = "c7f6a08a-f07b-49b6-bcb1-af485da3c58f";
-const TEXT_ANNOTATION_ITEM_PAGE_VARIANT_UUID =
-  "bf4476ab-6bc8-40d0-a001-1446213c72ce";
-const TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID =
-  "9d52db95-a9cf-45f7-a0bf-fc9ba9f0aae0";
-const TEXT_ANNOTATION_TEXT_STYLING_UUID =
-  "3e6f86ab-df81-45ae-8257-e2867357df56";
-const TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID =
-  "e1647bef-d801-4100-bdde-d081c422f763";
 
 /**
  * Finds a string item in an array by language code
