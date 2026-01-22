@@ -6,16 +6,7 @@ import type {
   WebElementComponent,
   Website,
 } from "./types/main.js";
-
-/**
- * Validates a pseudo-UUID string
- * @param value - The string to validate
- * @returns True if the string is a valid pseudo-UUID, false otherwise
- * @internal
- */
-export function isPseudoUuid(value: string): boolean {
-  return /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(value);
-}
+import { isPseudoUuid } from "./utils/internal.js";
 
 /**
  * Schema for validating UUIDs
@@ -23,7 +14,7 @@ export function isPseudoUuid(value: string): boolean {
  */
 export const uuidSchema = z
   .string()
-  .refine(isPseudoUuid, { error: "Invalid UUID" });
+  .refine(isPseudoUuid, { error: "Invalid pseudo-UUID" });
 
 /**
  * Schema for validating filters

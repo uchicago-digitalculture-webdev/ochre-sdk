@@ -1,29 +1,17 @@
 import * as z from "zod";
 import type { PropertyQueryItem } from "../../types/main.js";
-
-// Hard-coded to UChicago Node (for now)
-const PROJECT_SCOPE = "0c0aae37-7246-495b-9547-e25dbf5b99a3";
-const BELONG_TO_COLLECTION_UUID = "30054cb2-909a-4f34-8db9-8fe7369d691d";
-
-/**
- * Check if a string is a valid UUID
- * @param value - The string to check
- * @returns True if the string is a valid UUID, false otherwise
- */
-function isUUID(value: string): boolean {
-  const uuidRegex = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
-  return uuidRegex.test(value);
-}
+import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
+import { uuidSchema } from "../../schemas.js";
 
 /**
  * Schema for a single item in the OCHRE API response
  */
 
 const responseItemSchema = z.object({
-  property: z.string().refine(isUUID),
-  category: z.object({ uuid: z.string().refine(isUUID), content: z.string() }),
+  property: uuidSchema,
+  category: z.object({ uuid: uuidSchema, content: z.string() }),
   value: z.object({
-    uuid: z.string().refine(isUUID).optional(),
+    uuid: uuidSchema.optional(),
     category: z.string().optional(),
     type: z.string().optional(),
     dataType: z.string().optional(), // this should not be optional
@@ -43,14 +31,16 @@ const responseSchema = z.object({
 });
 
 /**
- * Build an XQuery string to fetch properties from the OCHRE API
+ * Build an XQuery string to fetch property query items from the OCHRE API
  * @param scopeUuids - An array of scope UUIDs to filter by
  * @param propertyUuids - An array of property UUIDs to fetch
+ * @param projectScopeUuid - The UUID of the project scope
  * @returns An XQuery string
  */
 function buildXQuery(
   scopeUuids: Array<string>,
   propertyUuids: Array<string>,
+  projectScopeUuid: string,
 ): string {
   let collectionScopeFilter = "";
 
@@ -66,7 +56,7 @@ function buildXQuery(
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
 
-  const xquery = `for $q in input()/ochre[@uuidBelongsTo="${PROJECT_SCOPE}"]/*${collectionScopeFilter}/properties//property[label[${propertyFilters}]]
+  const xquery = `for $q in input()/ochre[@uuidBelongsTo="${projectScopeUuid}"]/*${collectionScopeFilter}/properties//property[label[${propertyFilters}]]
 return <item>
 <property>{xs:string($q/label/@uuid)}</property>
 <value> {$q/*[2]/@*} {$q/*[2]/content[1]/string/text()} </value>
@@ -79,8 +69,10 @@ return <item>
 /**
  * Fetches and parses a property query from the OCHRE API
  *
- * @param scopeUuids - The scope UUIDs to filter by
- * @param propertyUuids - The property UUIDs to query by
+ * @param params - The parameters for the fetch
+ * @param params.scopeUuids - The scope UUIDs to filter by
+ * @param params.propertyUuids - The property UUIDs to query by
+ * @param params.projectScopeUuid - The UUID of the project scope
  * @param options - Options for the fetch
  * @param options.customFetch - A custom fetch function to use instead of the default fetch
  * @param options.isVersion2 - Whether to use the v2 API
@@ -101,8 +93,11 @@ return <item>
  * - Property items
  */
 export async function fetchPropertyQuery(
-  scopeUuids: Array<string>,
-  propertyUuids: Array<string>,
+  params: {
+    scopeUuids: Array<string>;
+    propertyUuids: Array<string>;
+    projectScopeUuid: string;
+  },
   options?: {
     customFetch?: (
       input: string | URL | globalThis.Request,
@@ -118,7 +113,9 @@ export async function fetchPropertyQuery(
     const customFetch = options?.customFetch;
     const isVersion2 = options?.isVersion2 ?? false;
 
-    const xquery = buildXQuery(scopeUuids, propertyUuids);
+    const { scopeUuids, propertyUuids, projectScopeUuid } = params;
+
+    const xquery = buildXQuery(scopeUuids, propertyUuids, projectScopeUuid);
 
     const response = await (customFetch ?? fetch)(
       isVersion2 ?
