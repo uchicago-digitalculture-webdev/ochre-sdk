@@ -3497,7 +3497,23 @@ function parseWebElementProperties(
         variant = { name: variantName };
       }
 
+      let headingLevel: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | null = null;
+      const headingLevelProperty = getPropertyValueByLabel(
+        componentProperty.properties,
+        "heading-level",
+      );
+      if (headingLevelProperty !== null) {
+        headingLevel = headingLevelProperty as
+          | "h1"
+          | "h2"
+          | "h3"
+          | "h4"
+          | "h5"
+          | "h6";
+      }
+
       properties.variant = variant;
+      properties.headingLevel = headingLevel;
       properties.content = content;
       break;
     }

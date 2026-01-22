@@ -4,6 +4,7 @@ import type {
   OchreStringContent,
   OchreStringItem,
   OchreStringRichTextItem,
+  OchreStringRichTextItemContent,
 } from "../types/internal.raw.js";
 import type { Style } from "../types/main.js";
 import {
@@ -11,6 +12,7 @@ import {
   TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID,
   TEXT_ANNOTATION_HOVER_CARD_UUID,
   TEXT_ANNOTATION_ITEM_PAGE_VARIANT_UUID,
+  TEXT_ANNOTATION_TEXT_STYLING_HEADING_LEVEL_UUID,
   TEXT_ANNOTATION_TEXT_STYLING_UUID,
   TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
   TEXT_ANNOTATION_UUID,
@@ -182,6 +184,286 @@ export function parseFakeString(string: FakeString): string {
 }
 
 /**
+ * Result type for parseRichTextItemString containing styled content and optional whitespace
+ * @internal
+ */
+type RichTextItemStringResult = { content: string; whitespace: string | null };
+
+/**
+ * Parses a rich text item's string field, applying rend styling and preserving whitespace
+ *
+ * @param stringField - The string field from a rich text item (FakeString or OchreStringRichTextItemContent)
+ * @returns Object containing styled content and optional whitespace to apply after MDX wrapping
+ * @internal
+ */
+function parseRichTextItemString(
+  stringField: FakeString | OchreStringRichTextItemContent,
+): RichTextItemStringResult {
+  if (
+    typeof stringField === "string" ||
+    typeof stringField === "number" ||
+    typeof stringField === "boolean"
+  ) {
+    return {
+      content: parseFakeString(stringField)
+        .replaceAll("<", String.raw`\<`)
+        .replaceAll("{", String.raw`\{`),
+      whitespace: null,
+    };
+  }
+
+  let content = parseFakeString(stringField.content)
+    .replaceAll("<", String.raw`\<`)
+    .replaceAll("{", String.raw`\{`);
+
+  if (stringField.rend != null) {
+    content = parseRenderOptions(content, stringField.rend);
+  }
+
+  return { content, whitespace: stringField.whitespace ?? null };
+}
+
+/**
+ * Applies whitespace to a result string if whitespace is provided
+ *
+ * @param result - The string to apply whitespace to
+ * @param whitespace - Optional whitespace string to apply
+ * @returns String with whitespace applied, or original string if no whitespace
+ * @internal
+ */
+function applyWhitespaceToResult(
+  result: string,
+  whitespace: string | null,
+): string {
+  if (whitespace != null) {
+    return parseWhitespace(result, whitespace);
+  }
+  return result;
+}
+
+/**
+ * Metadata extracted from text annotation properties
+ * @internal
+ */
+type AnnotationMetadata = {
+  linkVariant: "hover-card" | "item-page" | "entry-page" | null;
+  textStyling: {
+    variant: string;
+    size: string;
+    headingLevel: string | null;
+    cssStyles: Array<Style>;
+  } | null;
+};
+
+/**
+ * Extracts annotation metadata from item properties (link variants and text styling)
+ *
+ * @param item - Rich text item that may contain properties
+ * @returns Annotation metadata including link variant and text styling info
+ * @internal
+ */
+function extractAnnotationMetadata(
+  item: OchreStringRichTextItem,
+): AnnotationMetadata {
+  const result: AnnotationMetadata = { linkVariant: null, textStyling: null };
+
+  if (
+    typeof item === "string" ||
+    typeof item === "number" ||
+    typeof item === "boolean"
+  ) {
+    return result;
+  }
+
+  if (!("properties" in item) || item.properties == null) {
+    return result;
+  }
+
+  const itemProperty =
+    Array.isArray(item.properties.property) ?
+      item.properties.property[0]
+    : item.properties.property;
+
+  if (itemProperty == null) {
+    return result;
+  }
+
+  const itemPropertyLabelUuid = itemProperty.label.uuid;
+  const itemPropertyValueUuid =
+    (
+      typeof itemProperty.value === "object" &&
+      "uuid" in itemProperty.value &&
+      itemProperty.value.uuid != null
+    ) ?
+      itemProperty.value.uuid
+    : null;
+
+  if (
+    itemPropertyLabelUuid !== PRESENTATION_ITEM_UUID ||
+    itemPropertyValueUuid !== TEXT_ANNOTATION_UUID
+  ) {
+    return result;
+  }
+
+  const textAnnotationProperties =
+    itemProperty.property != null ?
+      Array.isArray(itemProperty.property) ?
+        itemProperty.property
+      : [itemProperty.property]
+    : [];
+
+  for (const textAnnotationProperty of textAnnotationProperties) {
+    const textAnnotationPropertyValueUuid =
+      (
+        typeof textAnnotationProperty.value === "object" &&
+        "uuid" in textAnnotationProperty.value &&
+        textAnnotationProperty.value.uuid != null
+      ) ?
+        textAnnotationProperty.value.uuid
+      : null;
+
+    switch (textAnnotationPropertyValueUuid) {
+      case TEXT_ANNOTATION_HOVER_CARD_UUID: {
+        result.linkVariant = "hover-card";
+
+        break;
+      }
+      case TEXT_ANNOTATION_ITEM_PAGE_VARIANT_UUID: {
+        result.linkVariant = "item-page";
+
+        break;
+      }
+      case TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID: {
+        result.linkVariant = "entry-page";
+
+        break;
+      }
+      default: {
+        if (
+          textAnnotationPropertyValueUuid ===
+            TEXT_ANNOTATION_TEXT_STYLING_UUID &&
+          textAnnotationProperty.property != null
+        ) {
+          let textStylingVariant = "block";
+          let textStylingSize = "md";
+          let textStylingHeadingLevel: string | null = null;
+          let textStylingCss: Array<Style> = [];
+
+          const textStylingProperties =
+            Array.isArray(textAnnotationProperty.property) ?
+              textAnnotationProperty.property
+            : [textAnnotationProperty.property];
+
+          const textStylingVariantProperty = textStylingProperties.find(
+            (property) =>
+              property.label.uuid === TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
+          );
+
+          if (textStylingVariantProperty != null) {
+            const textStylingPropertyVariant = parseFakeString(
+              (textStylingVariantProperty.value as OchrePropertyValueContent)
+                .content as FakeString,
+            );
+
+            const textStylingNestedProperties =
+              textStylingVariantProperty.property != null ?
+                Array.isArray(textStylingVariantProperty.property) ?
+                  textStylingVariantProperty.property
+                : [textStylingVariantProperty.property]
+              : [];
+
+            const textStylingSizeProperty = textStylingNestedProperties.find(
+              (prop) => {
+                const label = parseFakeString(prop.label.content as FakeString);
+                return label === "size";
+              },
+            );
+
+            if (textStylingSizeProperty != null) {
+              const textStylingSizePropertyValue = parseFakeString(
+                (textStylingSizeProperty.value as OchrePropertyValueContent)
+                  .content as FakeString,
+              );
+              textStylingSize = textStylingSizePropertyValue;
+            }
+
+            textStylingVariant = textStylingPropertyVariant;
+          }
+
+          const textStylingHeadingLevelProperty = textStylingProperties.find(
+            (property) =>
+              property.label.uuid ===
+              TEXT_ANNOTATION_TEXT_STYLING_HEADING_LEVEL_UUID,
+          );
+
+          if (textStylingHeadingLevelProperty != null) {
+            textStylingHeadingLevel = parseFakeString(
+              (
+                textStylingHeadingLevelProperty.value as OchrePropertyValueContent
+              ).content as FakeString,
+            );
+          }
+
+          const textStylingCssProperties = textStylingProperties.filter(
+            (property) =>
+              property.label.uuid !==
+                TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID &&
+              property.label.uuid !==
+                TEXT_ANNOTATION_TEXT_STYLING_HEADING_LEVEL_UUID,
+          );
+
+          if (textStylingCssProperties.length > 0) {
+            textStylingCss = textStylingCssProperties.map((property) => ({
+              label: parseFakeString(property.label.content as FakeString),
+              value: parseFakeString(
+                (property.value as OchrePropertyValueContent)
+                  .content as FakeString,
+              ),
+            }));
+          }
+
+          result.textStyling = {
+            variant: textStylingVariant,
+            size: textStylingSize,
+            headingLevel: textStylingHeadingLevel,
+            cssStyles: textStylingCss,
+          };
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Wraps content with text styling annotation if provided
+ *
+ * @param content - The content to wrap
+ * @param textStyling - Text styling metadata or null
+ * @returns Content wrapped with Annotation element if styling exists, or original content
+ * @internal
+ */
+function wrapWithTextStyling(
+  content: string,
+  textStyling: AnnotationMetadata["textStyling"],
+): string {
+  if (textStyling == null) {
+    return content;
+  }
+
+  return `<Annotation type="text-styling" variant="${textStyling.variant}" size="${textStyling.size}"${
+    textStyling.headingLevel != null ?
+      ` headingLevel="${textStyling.headingLevel}"`
+    : ""
+  }${
+    textStyling.cssStyles.length > 0 ?
+      ` cssStyles={{default: ${JSON.stringify(textStyling.cssStyles)}, tablet: [], mobile: []}}`
+    : ""
+  }>${content}</Annotation>`;
+}
+
+/**
  * Parses an OchreStringItem into a formatted string
  *
  * @param item - OchreStringItem to parse
@@ -270,14 +552,8 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
   }
 
   if ("links" in item) {
-    let itemString = "";
-    if (typeof item.string === "object") {
-      itemString = parseStringContent(item.string);
-    } else {
-      itemString = parseFakeString(item.string)
-        .replaceAll("<", String.raw`\<`)
-        .replaceAll("{", String.raw`\{`);
-    }
+    const { content: itemString, whitespace: itemWhitespace } =
+      parseRichTextItemString(item.string);
 
     const itemLinks = Array.isArray(item.links) ? item.links : [item.links];
 
@@ -294,99 +570,136 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
         }
 
         switch (linkResource.type) {
+          case "IIIF":
           case "image": {
             if (linkResource.rend === "inline") {
-              return `<InlineImage uuid="${linkResource.uuid}" ${
-                linkContent !== null ? `content="${linkContent}"` : ""
-              } height={${linkResource.height?.toString() ?? "null"}} width={${linkResource.width?.toString() ?? "null"}} />`;
+              return applyWhitespaceToResult(
+                `<InlineImage uuid="${linkResource.uuid}" ${
+                  linkContent !== null ? `content="${linkContent}"` : ""
+                } height={${linkResource.height?.toString() ?? "null"}} width={${linkResource.width?.toString() ?? "null"}} />`,
+                itemWhitespace,
+              );
             } else if (linkResource.publicationDateTime != null) {
-              return `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+              const annotationMetadata = extractAnnotationMetadata(item);
+              let linkElement: string;
+
+              switch (annotationMetadata.linkVariant) {
+                case "hover-card": {
+                  linkElement = `<Annotation type="hover-card" uuid="${linkResource.uuid}">${itemString}</Annotation>`;
+
+                  break;
+                }
+                case "item-page": {
+                  linkElement = `<InternalLink type="item" uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+
+                  break;
+                }
+                case "entry-page": {
+                  linkElement = `<InternalLink type="entry" uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+
+                  break;
+                }
+                default: {
+                  linkElement = `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+                }
+              }
+
+              const wrappedElement = wrapWithTextStyling(
+                linkElement,
+                annotationMetadata.textStyling,
+              );
+
+              return applyWhitespaceToResult(wrappedElement, itemWhitespace);
             } else {
-              return `<TooltipSpan${
-                linkContent !== null ? ` content="${linkContent}"` : ""
-              }>${itemString}</TooltipSpan>`;
+              return applyWhitespaceToResult(
+                `<TooltipSpan${
+                  linkContent !== null ? ` content="${linkContent}"` : ""
+                }>${itemString}</TooltipSpan>`,
+                itemWhitespace,
+              );
             }
           }
           case "internalDocument": {
-            if ("properties" in item && item.properties != null) {
-              const itemProperty =
-                Array.isArray(item.properties.property) ?
-                  item.properties.property[0]
-                : item.properties.property;
-              if (itemProperty != null) {
-                const itemPropertyLabelUuid = itemProperty.label.uuid;
-                const itemPropertyValueUuid =
-                  (
-                    typeof itemProperty.value === "object" &&
-                    "uuid" in itemProperty.value &&
-                    itemProperty.value.uuid != null
-                  ) ?
-                    itemProperty.value.uuid
-                  : null;
-                if (
-                  itemPropertyLabelUuid === PRESENTATION_ITEM_UUID &&
-                  itemPropertyValueUuid === TEXT_ANNOTATION_UUID
-                ) {
-                  const textAnnotationProperty =
-                    itemProperty.property != null ?
-                      Array.isArray(itemProperty.property) ?
-                        itemProperty.property[0]
-                      : itemProperty.property
-                    : null;
+            const annotationMetadata = extractAnnotationMetadata(item);
+            let linkElement: string;
 
-                  if (textAnnotationProperty != null) {
-                    const textAnnotationPropertyValueUuid =
-                      (
-                        typeof textAnnotationProperty.value === "object" &&
-                        "uuid" in textAnnotationProperty.value &&
-                        textAnnotationProperty.value.uuid != null
-                      ) ?
-                        textAnnotationProperty.value.uuid
-                      : null;
+            switch (annotationMetadata.linkVariant) {
+              case "hover-card": {
+                linkElement = `<Annotation type="hover-card" uuid="${linkResource.uuid}">${itemString}</Annotation>`;
 
-                    if (
-                      textAnnotationPropertyValueUuid ===
-                      TEXT_ANNOTATION_HOVER_CARD_UUID
-                    ) {
-                      return `<Annotation type="hover-card" uuid="${linkResource.uuid}">${itemString}</Annotation>`;
-                    } else if (
-                      textAnnotationPropertyValueUuid ===
-                        TEXT_ANNOTATION_ITEM_PAGE_VARIANT_UUID ||
-                      textAnnotationPropertyValueUuid ===
-                        TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID
-                    ) {
-                      return `<InternalLink type="${textAnnotationPropertyValueUuid === TEXT_ANNOTATION_ITEM_PAGE_VARIANT_UUID ? "item" : "entry"}" uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
-                    }
-                  }
-                }
-
-                return `<InternalLink uuid="${linkResource.uuid}" properties="${itemPropertyLabelUuid}"${
-                  itemPropertyValueUuid !== null ?
-                    ` value="${itemPropertyValueUuid}"`
-                  : ""
-                }>${itemString}</InternalLink>`;
-              } else {
-                return `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+                break;
               }
-            } else {
-              return `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+              case "item-page": {
+                linkElement = `<InternalLink type="item" uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+
+                break;
+              }
+              case "entry-page": {
+                linkElement = `<InternalLink type="entry" uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+
+                break;
+              }
+              default: {
+                if ("properties" in item && item.properties != null) {
+                  const itemProperty =
+                    Array.isArray(item.properties.property) ?
+                      item.properties.property[0]
+                    : item.properties.property;
+                  if (itemProperty != null) {
+                    const itemPropertyLabelUuid = itemProperty.label.uuid;
+                    const itemPropertyValueUuid =
+                      (
+                        typeof itemProperty.value === "object" &&
+                        "uuid" in itemProperty.value &&
+                        itemProperty.value.uuid != null
+                      ) ?
+                        itemProperty.value.uuid
+                      : null;
+                    linkElement = `<InternalLink uuid="${linkResource.uuid}" properties="${itemPropertyLabelUuid}"${
+                      itemPropertyValueUuid !== null ?
+                        ` value="${itemPropertyValueUuid}"`
+                      : ""
+                    }>${itemString}</InternalLink>`;
+                  } else {
+                    linkElement = `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+                  }
+                } else {
+                  linkElement = `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+                }
+              }
             }
+
+            const wrappedElement = wrapWithTextStyling(
+              linkElement,
+              annotationMetadata.textStyling,
+            );
+
+            return applyWhitespaceToResult(wrappedElement, itemWhitespace);
           }
           case "externalDocument": {
             if (linkResource.publicationDateTime != null) {
-              return String.raw`<ExternalLink href="https:\/\/ochre.lib.uchicago.edu/ochre?uuid=${linkResource.uuid}&load" ${
-                linkContent !== null ? `content="${linkContent}"` : ""
-              }>${itemString}</ExternalLink>`;
+              return applyWhitespaceToResult(
+                String.raw`<ExternalLink href="https:\/\/ochre.lib.uchicago.edu/ochre?uuid=${linkResource.uuid}&load" ${
+                  linkContent !== null ? `content="${linkContent}"` : ""
+                }>${itemString}</ExternalLink>`,
+                itemWhitespace,
+              );
             } else {
-              return `<TooltipSpan${
-                linkContent !== null ? ` content="${linkContent}"` : ""
-              }>${itemString}</TooltipSpan>`;
+              return applyWhitespaceToResult(
+                `<TooltipSpan${
+                  linkContent !== null ? ` content="${linkContent}"` : ""
+                }>${itemString}</TooltipSpan>`,
+                itemWhitespace,
+              );
             }
           }
           case "webpage": {
-            return `<ExternalLink href="${linkResource.href}" ${
-              linkContent !== null ? `content="${linkContent}"` : ""
-            }>${itemString}</ExternalLink>`;
+            return applyWhitespaceToResult(
+              `<ExternalLink href="${linkResource.href}" ${
+                linkContent !== null ? `content="${linkContent}"` : ""
+              }>${itemString}</ExternalLink>`,
+              itemWhitespace,
+            );
           }
           default: {
             return "";
@@ -399,26 +712,44 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
           : link.spatialUnit;
 
         if (linkSpatialUnit.publicationDateTime != null) {
-          return `<InternalLink uuid="${linkSpatialUnit.uuid}">${itemString}</InternalLink>`;
+          return applyWhitespaceToResult(
+            `<InternalLink uuid="${linkSpatialUnit.uuid}">${itemString}</InternalLink>`,
+            itemWhitespace,
+          );
         } else {
-          return `<TooltipSpan>${itemString}</TooltipSpan>`;
+          return applyWhitespaceToResult(
+            `<TooltipSpan>${itemString}</TooltipSpan>`,
+            itemWhitespace,
+          );
         }
       } else if ("concept" in link) {
         const linkConcept =
           Array.isArray(link.concept) ? link.concept[0]! : link.concept;
 
         if (linkConcept.publicationDateTime != null) {
-          return `<InternalLink uuid="${linkConcept.uuid}">${itemString}</InternalLink>`;
+          return applyWhitespaceToResult(
+            `<InternalLink uuid="${linkConcept.uuid}">${itemString}</InternalLink>`,
+            itemWhitespace,
+          );
         } else {
-          return `<TooltipSpan>${itemString}</TooltipSpan>`;
+          return applyWhitespaceToResult(
+            `<TooltipSpan>${itemString}</TooltipSpan>`,
+            itemWhitespace,
+          );
         }
       } else if ("set" in link) {
         const linkSet = Array.isArray(link.set) ? link.set[0]! : link.set;
 
         if (linkSet.publicationDateTime != null) {
-          return `<InternalLink uuid="${linkSet.uuid}">${itemString}</InternalLink>`;
+          return applyWhitespaceToResult(
+            `<InternalLink uuid="${linkSet.uuid}">${itemString}</InternalLink>`,
+            itemWhitespace,
+          );
         } else {
-          return `<TooltipSpan>${itemString}</TooltipSpan>`;
+          return applyWhitespaceToResult(
+            `<TooltipSpan>${itemString}</TooltipSpan>`,
+            itemWhitespace,
+          );
         }
       } else if ("person" in link) {
         const linkPerson =
@@ -438,11 +769,17 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
           : null;
 
         if (linkPerson.publicationDateTime != null) {
-          return `<InternalLink uuid="${linkPerson.uuid}">${itemString}</InternalLink>`;
+          return applyWhitespaceToResult(
+            `<InternalLink uuid="${linkPerson.uuid}">${itemString}</InternalLink>`,
+            itemWhitespace,
+          );
         } else {
-          return `<TooltipSpan${
-            linkContent !== null ? ` content="${linkContent}"` : ""
-          }>${itemString}</TooltipSpan>`;
+          return applyWhitespaceToResult(
+            `<TooltipSpan${
+              linkContent !== null ? ` content="${linkContent}"` : ""
+            }>${itemString}</TooltipSpan>`,
+            itemWhitespace,
+          );
         }
       } else if ("bibliography" in link) {
         const linkBibliography =
@@ -451,23 +788,23 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
           : link.bibliography;
 
         if (linkBibliography.publicationDateTime != null) {
-          return `<InternalLink uuid="${linkBibliography.uuid}">${itemString}</InternalLink>`;
+          return applyWhitespaceToResult(
+            `<InternalLink uuid="${linkBibliography.uuid}">${itemString}</InternalLink>`,
+            itemWhitespace,
+          );
         } else {
-          return `<TooltipSpan>${itemString}</TooltipSpan>`;
+          return applyWhitespaceToResult(
+            `<TooltipSpan>${itemString}</TooltipSpan>`,
+            itemWhitespace,
+          );
         }
       }
     }
   }
 
   if ("properties" in item && item.properties != null) {
-    let itemString = "";
-    if (typeof item.string === "object") {
-      itemString = parseStringContent(item.string);
-    } else {
-      itemString = parseFakeString(item.string)
-        .replaceAll("<", String.raw`\<`)
-        .replaceAll("{", String.raw`\{`);
-    }
+    const { content: itemString, whitespace: itemWhitespace } =
+      parseRichTextItemString(item.string);
 
     const itemProperty =
       Array.isArray(item.properties.property) ?
@@ -511,6 +848,7 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
             const textStylingType = "text-styling";
             let textStylingVariant = "block";
             let textStylingSize = "md";
+            let textStylingHeadingLevel: string | null = null;
             let textStylingCss: Array<Style> = [];
 
             const textStylingProperties =
@@ -549,10 +887,26 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
                 textStylingVariant = textStylingPropertyVariant;
               }
 
+              const textStylingHeadingLevelProperty =
+                textStylingProperties.find(
+                  (property) =>
+                    property.label.uuid ===
+                    TEXT_ANNOTATION_TEXT_STYLING_HEADING_LEVEL_UUID,
+                );
+              if (textStylingHeadingLevelProperty != null) {
+                textStylingHeadingLevel = parseFakeString(
+                  (
+                    textStylingHeadingLevelProperty.value as OchrePropertyValueContent
+                  ).content as FakeString,
+                );
+              }
+
               const textStylingCssProperties = textStylingProperties.filter(
                 (property) =>
                   property.label.uuid !==
-                  TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
+                    TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID &&
+                  property.label.uuid !==
+                    TEXT_ANNOTATION_TEXT_STYLING_HEADING_LEVEL_UUID,
               );
               if (textStylingCssProperties.length > 0) {
                 textStylingCss = textStylingCssProperties.map((property) => ({
@@ -565,11 +919,18 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
               }
             }
 
-            return `<Annotation type="${textStylingType}" variant="${textStylingVariant}" size="${textStylingSize}"${
-              textStylingCss.length > 0 ?
-                ` cssStyles={{default: ${JSON.stringify(textStylingCss)}, tablet: [], mobile: []}}`
-              : ""
-            }>${itemString}</Annotation>`;
+            return applyWhitespaceToResult(
+              `<Annotation type="${textStylingType}" variant="${textStylingVariant}" size="${textStylingSize}"${
+                textStylingHeadingLevel != null ?
+                  ` headingLevel="${textStylingHeadingLevel}"`
+                : ""
+              }${
+                textStylingCss.length > 0 ?
+                  ` cssStyles={{default: ${JSON.stringify(textStylingCss)}, tablet: [], mobile: []}}`
+                : ""
+              }>${itemString}</Annotation>`,
+              itemWhitespace,
+            );
           }
         }
       }
