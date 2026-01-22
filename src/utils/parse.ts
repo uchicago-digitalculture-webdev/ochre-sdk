@@ -3359,7 +3359,28 @@ function parseWebElementProperties(
         });
       }
 
+      let itemVariant = getPropertyValueByLabel(
+        componentProperty.properties,
+        "item-variant",
+      );
+      itemVariant ??= "detailed";
+
+      let paginationVariant = getPropertyValueByLabel(
+        componentProperty.properties,
+        "pagination-variant",
+      );
+      paginationVariant ??= "default";
+
+      let layout = getPropertyValueByLabel(
+        componentProperty.properties,
+        "layout",
+      );
+      layout ??= "image-start";
+
       properties.queries = queries;
+      properties.itemVariant = itemVariant;
+      properties.paginationVariant = paginationVariant;
+      properties.layout = layout;
       break;
     }
     case "table": {
