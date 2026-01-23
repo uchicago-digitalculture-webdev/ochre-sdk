@@ -1025,6 +1025,7 @@ export type WebElementComponent =
         | { name: "title" | "block" | "banner" }
         | { name: "paragraph"; size: "xs" | "sm" | "md" | "lg" }
         | { name: "label"; size: "xs" | "sm" | "md" | "lg" | "xl" }
+        | { name: "heading"; size: "xs" | "sm" | "md" | "lg" | "xl" | "2xl" }
         | { name: "display"; size: "xs" | "sm" | "md" | "lg" };
       headingLevel: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | null;
       content: string;
