@@ -3384,6 +3384,11 @@ function parseWebElementProperties(
         );
       }
 
+      const displayedProperties = getPropertyByLabel(
+        componentProperty.properties,
+        "use-property",
+      );
+
       let itemVariant = getPropertyValueByLabel(
         componentProperty.properties,
         "item-variant",
@@ -3403,6 +3408,10 @@ function parseWebElementProperties(
       layout ??= "image-start";
 
       properties.queries = queries;
+      properties.displayedProperties =
+        displayedProperties?.values
+          .map((value) => ({ uuid: value.uuid, label: value.content }))
+          .filter(Boolean) ?? null;
       properties.itemVariant = itemVariant;
       properties.paginationVariant = paginationVariant;
       properties.layout = layout;

@@ -1005,6 +1005,7 @@ export type WebElementComponent =
         startIcon: string | null;
         endIcon: string | null;
       }>;
+      displayedProperties: Array<{ uuid: string; label: string }> | null;
       itemVariant: "detailed" | "card" | "tile";
       paginationVariant: "default" | "numeric";
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
