@@ -1,4 +1,6 @@
 import type { OchreData, OchreDataResponse } from "../../types/internal.raw.js";
+import type { ApiVersion } from "../../types/main.js";
+import { DEFAULT_API_VERSION } from "../../constants.js";
 import { uuidSchema } from "../../schemas.js";
 
 /**
@@ -26,17 +28,17 @@ export async function fetchByUuid(
       input: string | URL | globalThis.Request,
       init?: RequestInit,
     ) => Promise<Response>;
-    isVersion2?: boolean;
+    version: ApiVersion;
   },
 ): Promise<[null, OchreData] | [string, null]> {
   try {
     const customFetch = options?.customFetch;
-    const isVersion2 = options?.isVersion2 ?? false;
+    const version = options?.version ?? DEFAULT_API_VERSION;
 
     const parsedUuid = uuidSchema.parse(uuid);
 
     const response = await (customFetch ?? fetch)(
-      isVersion2 ?
+      version === 2 ?
         `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${parsedUuid}&format=json&lang="*"`
       : `https://ochre.lib.uchicago.edu/ochre?uuid=${parsedUuid}&format=json&lang="*"`,
     );
@@ -45,9 +47,9 @@ export async function fetchByUuid(
     }
     const dataRaw = (await response.json()) as OchreDataResponse;
     if (
-      (isVersion2 &&
+      (version === 2 &&
         (!("result" in dataRaw) || !("ochre" in dataRaw.result))) ||
-      (!isVersion2 && !("ochre" in dataRaw))
+      (version !== 2 && !("ochre" in dataRaw))
     ) {
       throw new Error("Invalid OCHRE data: API response missing 'ochre' key");
     }

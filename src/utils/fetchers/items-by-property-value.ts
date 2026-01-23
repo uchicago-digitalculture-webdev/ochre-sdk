@@ -10,8 +10,11 @@ import type {
   OchreText,
   OchreTree,
 } from "../../types/internal.raw.js";
-import type { DataCategory, Item } from "../../types/main.js";
-import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
+import type { ApiVersion, DataCategory, Item } from "../../types/main.js";
+import {
+  BELONG_TO_COLLECTION_UUID,
+  DEFAULT_API_VERSION,
+} from "../../constants.js";
 import {
   parseBibliographies,
   parseConcepts,
@@ -38,9 +41,9 @@ function buildXQuery(
   propertyVariableUuids: Array<string>,
   propertyValueUuids: Array<string>,
   projectScopeUuid: string,
-  options?: { isVersion2?: boolean },
+  options?: { version: ApiVersion },
 ): string {
-  const isVersion2 = options?.isVersion2 ?? false;
+  const version = options?.version ?? DEFAULT_API_VERSION;
 
   let collectionScopeFilter = "";
 
@@ -60,7 +63,7 @@ function buildXQuery(
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
 
-  const xquery = `for $q in ${isVersion2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]/*${collectionScopeFilter}/properties//property[label[${propertyVariables}]][value[${propertyValues}]]
+  const xquery = `for $q in ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]/*${collectionScopeFilter}/properties//property[label[${propertyVariables}]][value[${propertyValues}]]
 
 let $item := $q/ancestor::*[parent::ochre]
 let $category := local-name($item)
@@ -72,23 +75,6 @@ return element { node-name($item) } {
 
   return `<ochre>{${xquery}}</ochre>`;
 }
-
-// <ochre>{
-//   for $q in input()/ochre[@uuidBelongsTo="0c0aae37-7246-495b-9547-e25dbf5b99a3"]
-//       /*[properties/property[label/@uuid="30054cb2-909a-4f34-8db9-8fe7369d691d"]
-//                            [value[@uuid="cab6bdbd-8d9a-4e2d-a4b8-826eee3b19e5"]]]
-//       /properties//property[label[@uuid="d573b8a7-867e-43f9-8b74-b2847896578e"
-//                                 or @uuid="685748eb-e952-4ca9-96b5-549af525823b"]]
-//                            [value/@uuid="4115a64c-8223-425b-97b6-16615cd76485"]
-
-//   let $item := $q/ancestor::*[parent::ochre]
-//   let $category := local-name($item)
-
-//   return element { node-name($item) } {
-//     $item/@*,
-//     $item/node()[not(local-name(.) = $category)]
-//   }
-// }</ochre>
 
 /**
  * Fetches and parses items by property value from the OCHRE API
@@ -103,7 +89,7 @@ return element { node-name($item) } {
  * @param categoryParams.itemCategories - The categories of the items to fetch
  * @param options - Options for the fetch
  * @param options.customFetch - A custom fetch function to use instead of the default fetch
- * @param options.isVersion2 - Whether to use the v2 API
+ * @param options.version - The version of the OCHRE API to use
  * @returns The parsed items by property value or null if the fetch/parse fails
  */
 export async function fetchItemsByPropertyValue<
@@ -125,14 +111,14 @@ export async function fetchItemsByPropertyValue<
       input: string | URL | globalThis.Request,
       init?: RequestInit,
     ) => Promise<Response>;
-    isVersion2?: boolean;
+    version: ApiVersion;
   },
 ): Promise<
   { items: Array<Item<T, U>>; error: null } | { items: null; error: string }
 > {
   try {
     const customFetch = options?.customFetch;
-    const isVersion2 = options?.isVersion2 ?? false;
+    const version = options?.version ?? DEFAULT_API_VERSION;
 
     const {
       scopeUuids,
@@ -147,11 +133,11 @@ export async function fetchItemsByPropertyValue<
       propertyVariableUuids,
       propertyValueUuids,
       projectScopeUuid,
-      { isVersion2 },
+      { version },
     );
 
     const response = await (customFetch ?? fetch)(
-      isVersion2 ?
+      version === 2 ?
         `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(xquery)}&format=json&lang="*"`
       : `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(xquery)}&format=json&lang="*"`,
     );

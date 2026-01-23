@@ -758,12 +758,14 @@ export type Scope = {
   identification: Identification;
 };
 
+export type ApiVersion = 1 | 2;
+
 /**
  * Represents a website with its properties and elements
  */
 export type Website = {
   uuid: string;
-  version: 1 | 2;
+  version: ApiVersion;
   belongsTo: { uuid: string; abbreviation: string } | null;
   metadata: Metadata;
   publicationDateTime: Date | null;

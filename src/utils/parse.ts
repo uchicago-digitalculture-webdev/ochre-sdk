@@ -31,6 +31,7 @@ import type {
   OchreTree,
 } from "../types/internal.raw.d.ts";
 import type {
+  ApiVersion,
   Bibliography,
   Concept,
   Context,
@@ -73,6 +74,7 @@ import type {
   Website,
   WebTitle,
 } from "../types/main.js";
+import { DEFAULT_API_VERSION } from "../constants.js";
 import {
   boundsSchema,
   componentSchema,
@@ -5014,7 +5016,7 @@ export function parseWebsite(
   websiteTree: OchreTree,
   metadata: OchreMetadata,
   belongsTo: { uuid: string; abbreviation: string } | null,
-  { isVersion2 = false }: { isVersion2?: boolean } = {},
+  { version = DEFAULT_API_VERSION }: { version?: ApiVersion } = {},
 ): Website {
   if (!websiteTree.properties) {
     throw new Error("Website properties not found");
@@ -5045,7 +5047,7 @@ export function parseWebsite(
 
   return {
     uuid: websiteTree.uuid,
-    version: isVersion2 ? 2 : 1,
+    version,
     belongsTo: belongsTo ?? null,
     metadata: parseMetadata(metadata),
     publicationDateTime:

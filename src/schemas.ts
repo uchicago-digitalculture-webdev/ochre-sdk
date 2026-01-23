@@ -1,6 +1,7 @@
 import * as z from "zod";
 import type { RenderOption, WhitespaceOption } from "./types/internal.raw.js";
 import type {
+  ApiVersion,
   DataCategory,
   PropertyValueContentType,
   WebElementComponent,
@@ -42,6 +43,10 @@ export const dataOptionsSchema = z
   })
   .optional()
   .default({ filter: "", start: 1, limit: 40 });
+
+export const apiVersionSuffixSchema = z
+  .enum(["-v1", "-v2"])
+  .transform((suffix) => suffix.replace("-v", "") as unknown as ApiVersion);
 
 /**
  * Schema for validating website properties

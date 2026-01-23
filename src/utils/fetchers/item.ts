@@ -1,4 +1,5 @@
-import type { DataCategory, Item } from "../../types/main.js";
+import type { ApiVersion, DataCategory, Item } from "../../types/main.js";
+import { DEFAULT_API_VERSION } from "../../constants.js";
 import { getItemCategory } from "../internal.js";
 import {
   parseBibliography,
@@ -64,7 +65,7 @@ export async function fetchItem<
       input: string | URL | globalThis.Request,
       init?: RequestInit,
     ) => Promise<Response>;
-    isVersion2: boolean;
+    version: ApiVersion;
   },
 ): Promise<
   | { error: null; item: Item<T, U>; category: T; itemCategories: U }
@@ -72,9 +73,9 @@ export async function fetchItem<
 > {
   try {
     const customFetch = options?.customFetch;
-    const isVersion2 = options?.isVersion2 ?? false;
+    const version = options?.version ?? DEFAULT_API_VERSION;
 
-    const [error, data] = await fetchByUuid(uuid, { customFetch, isVersion2 });
+    const [error, data] = await fetchByUuid(uuid, { customFetch, version });
     if (error !== null) {
       throw new Error(error);
     }

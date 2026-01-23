@@ -1,6 +1,9 @@
 import * as z from "zod";
-import type { PropertyQueryItem } from "../../types/main.js";
-import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
+import type { ApiVersion, PropertyQueryItem } from "../../types/main.js";
+import {
+  BELONG_TO_COLLECTION_UUID,
+  DEFAULT_API_VERSION,
+} from "../../constants.js";
 import { uuidSchema } from "../../schemas.js";
 
 /**
@@ -75,7 +78,7 @@ return <item>
  * @param params.projectScopeUuid - The UUID of the project scope
  * @param options - Options for the fetch
  * @param options.customFetch - A custom fetch function to use instead of the default fetch
- * @param options.isVersion2 - Whether to use the v2 API
+ * @param options.version - The version of the OCHRE API to use
  * @returns The parsed property query or null if the fetch/parse fails
  *
  * @example
@@ -103,7 +106,7 @@ export async function fetchPropertyQuery(
       input: string | URL | globalThis.Request,
       init?: RequestInit,
     ) => Promise<Response>;
-    isVersion2?: boolean;
+    version: ApiVersion;
   },
 ): Promise<
   | { items: Array<PropertyQueryItem> | null; error: null }
@@ -111,14 +114,14 @@ export async function fetchPropertyQuery(
 > {
   try {
     const customFetch = options?.customFetch;
-    const isVersion2 = options?.isVersion2 ?? false;
+    const version = options?.version ?? DEFAULT_API_VERSION;
 
     const { scopeUuids, propertyUuids, projectScopeUuid } = params;
 
     const xquery = buildXQuery(scopeUuids, propertyUuids, projectScopeUuid);
 
     const response = await (customFetch ?? fetch)(
-      isVersion2 ?
+      version === 2 ?
         `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(xquery)}&format=json&lang="*"`
       : `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(xquery)}&format=json&lang="*"`,
     );

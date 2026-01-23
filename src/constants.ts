@@ -1,3 +1,5 @@
+export const DEFAULT_API_VERSION = 1;
+
 export const BELONG_TO_COLLECTION_UUID = "30054cb2-909a-4f34-8db9-8fe7369d691d";
 
 export const PRESENTATION_ITEM_UUID = "f1c131b6-1498-48a4-95bf-a9edae9fd518";

@@ -3,7 +3,9 @@ import type {
   OchreMetadata,
   OchreTree,
 } from "../../types/internal.raw.d.ts";
-import type { Website } from "../../types/main.js";
+import type { ApiVersion, Website } from "../../types/main.js";
+import { DEFAULT_API_VERSION } from "../../constants.js";
+import { apiVersionSuffixSchema } from "../../schemas.js";
 import { parseWebsite } from "../parse.js";
 import { parseFakeString } from "../string.js";
 
@@ -17,6 +19,31 @@ const KNOWN_ABBREVIATIONS: Readonly<Record<string, string>> = {
   ssmc: "8ff977dd-d440-40f5-ad93-8ad7e2d39e74",
   "sosc-core-at-smart": "db26c953-9b2a-4691-a909-5e8726b531d7",
 };
+
+/**
+ * Parses the version suffix from an API abbreviation
+ *
+ * @param abbreviation - The API abbreviation to parse
+ * @returns The parsed abbreviation and API version
+ */
+function parseApiVersionSuffix(abbreviation: string): {
+  abbreviation: string;
+  version: ApiVersion;
+} {
+  if (!/-v\d+$/.test(abbreviation)) {
+    return { abbreviation, version: DEFAULT_API_VERSION };
+  }
+
+  const result = apiVersionSuffixSchema.safeParse(abbreviation);
+  if (!result.success) {
+    throw new Error("Invalid API version suffix");
+  }
+
+  return {
+    abbreviation: abbreviation.replace(`-v${result.data}`, ""),
+    version: result.data,
+  };
+}
 
 /**
  * Fetches and parses a website configuration from the OCHRE API
@@ -54,23 +81,27 @@ export async function fetchWebsite(
       input: string | URL | globalThis.Request,
       init?: RequestInit,
     ) => Promise<Response>;
-    isVersion2?: boolean;
+    version: ApiVersion;
   },
 ): Promise<[null, Website] | [string, null]> {
   try {
     const cleanAbbreviation = abbreviation.trim().toLocaleLowerCase("en-US");
 
     const customFetch = options?.customFetch;
-    const isVersion2 =
-      cleanAbbreviation.endsWith("-v2") ? true : (options?.isVersion2 ?? false);
+    const { abbreviation: parsedAbbreviation, version: parsedVersion } =
+      parseApiVersionSuffix(cleanAbbreviation);
+
+    const abbreviationToUse =
+      options?.version != null ? cleanAbbreviation : parsedAbbreviation;
+    const version = options?.version ?? parsedVersion;
 
     let metadata: OchreMetadata | null = null;
     let tree: OchreTree | null = null;
     let belongsTo: { uuid: string; abbreviation: string } | null = null;
 
-    if (isVersion2) {
+    if (version === 2) {
       const response = await (customFetch ?? fetch)(
-        `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(`collection('ochre/tree')/ochre[tree/identification/abbreviation/content/string='${cleanAbbreviation.replace("-v2", "")}']`)}&format=json&lang="*"`,
+        `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(`collection('ochre/tree')/ochre[tree/identification/abbreviation/content/string='${abbreviationToUse}']`)}&format=json&lang="*"`,
       );
       if (!response.ok) {
         throw new Error("Failed to fetch website");
@@ -91,12 +122,12 @@ export async function fetchWebsite(
         abbreviation: parseFakeString(data.result.ochre.belongsTo),
       };
     } else {
-      const uuid = KNOWN_ABBREVIATIONS[cleanAbbreviation];
+      const uuid = KNOWN_ABBREVIATIONS[abbreviationToUse];
 
       const response = await (customFetch ?? fetch)(
         uuid != null ?
           `https://ochre.lib.uchicago.edu/ochre?uuid=${uuid}&format=json`
-        : `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(`for $q in input()/ochre[tree[@type='lesson'][identification/abbreviation='${cleanAbbreviation}']] return $q`)}&format=json`,
+        : `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(`for $q in input()/ochre[tree[@type='lesson'][identification/abbreviation='${abbreviationToUse}']] return $q`)}&format=json`,
       );
       if (!response.ok) {
         throw new Error("Failed to fetch website");
@@ -123,7 +154,7 @@ export async function fetchWebsite(
       };
     }
 
-    const website = parseWebsite(tree, metadata, belongsTo, { isVersion2 });
+    const website = parseWebsite(tree, metadata, belongsTo, { version });
 
     return [null, website];
   } catch (error) {
