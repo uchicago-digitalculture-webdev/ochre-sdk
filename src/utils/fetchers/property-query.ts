@@ -27,7 +27,9 @@ const responseItemSchema = z.object({
  */
 const responseSchema = z.object({
   result: z.object({
-    item: z.union([responseItemSchema, z.array(responseItemSchema)]),
+    ochre: z.object({
+      item: z.union([responseItemSchema, z.array(responseItemSchema)]),
+    }),
   }),
 });
 
@@ -136,9 +138,9 @@ export async function fetchPropertyQuery(
 
     const parsedResultRaw = responseSchema.parse(data);
     const parsedItems =
-      Array.isArray(parsedResultRaw.result.item) ?
-        parsedResultRaw.result.item
-      : [parsedResultRaw.result.item];
+      Array.isArray(parsedResultRaw.result.ochre.item) ?
+        parsedResultRaw.result.ochre.item
+      : [parsedResultRaw.result.ochre.item];
 
     const items: Record<string, PropertyQueryItem> = {};
     for (const item of parsedItems) {
