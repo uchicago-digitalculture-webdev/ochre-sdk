@@ -1,7 +1,7 @@
 import type { DataCategory, Item, Property } from "../types/main.js";
 import { flattenProperties } from "./internal.js";
 
-export const DEFAULT_API_VERSION = 1;
+export const DEFAULT_API_VERSION = 2;
 
 /**
  * Flatten the properties of an item
