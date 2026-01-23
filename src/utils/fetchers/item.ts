@@ -65,20 +65,13 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
 ): Promise<
   | {
       error: null;
-      belongsTo: { uuid: string; abbreviation: string };
       item: Item<T, U>;
       category: T;
       itemCategory: T extends "tree" ? Exclude<U, "tree">
       : T extends "set" ? Array<U>
       : never;
     }
-  | {
-      error: string;
-      belongsTo: never;
-      item: never;
-      category: never;
-      itemCategory: never;
-    }
+  | { error: string; item: never; category: never; itemCategory: never }
 > {
   try {
     const customFetch = options?.customFetch;
@@ -106,6 +99,10 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
           data.ochre.resource,
           metadata,
           data.ochre.persistentUrl,
+          {
+            uuid: data.ochre.uuidBelongsTo,
+            name: parseFakeString(data.ochre.belongsTo),
+          },
         ) as Item<T, U>;
         break;
       }
@@ -119,6 +116,10 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
           data.ochre.spatialUnit,
           metadata,
           data.ochre.persistentUrl,
+          {
+            uuid: data.ochre.uuidBelongsTo,
+            name: parseFakeString(data.ochre.belongsTo),
+          },
         ) as Item<T, U>;
         break;
       }
@@ -132,6 +133,10 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
           data.ochre.concept,
           metadata,
           data.ochre.persistentUrl,
+          {
+            uuid: data.ochre.uuidBelongsTo,
+            name: parseFakeString(data.ochre.belongsTo),
+          },
         ) as Item<T, U>;
         break;
       }
@@ -145,6 +150,10 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
           data.ochre.period,
           metadata,
           data.ochre.persistentUrl,
+          {
+            uuid: data.ochre.uuidBelongsTo,
+            name: parseFakeString(data.ochre.belongsTo),
+          },
         ) as Item<T, U>;
         break;
       }
@@ -158,6 +167,10 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
           data.ochre.bibliography,
           metadata,
           data.ochre.persistentUrl,
+          {
+            uuid: data.ochre.uuidBelongsTo,
+            name: parseFakeString(data.ochre.belongsTo),
+          },
         ) as Item<T, U>;
         break;
       }
@@ -171,6 +184,10 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
           data.ochre.person,
           metadata,
           data.ochre.persistentUrl,
+          {
+            uuid: data.ochre.uuidBelongsTo,
+            name: parseFakeString(data.ochre.belongsTo),
+          },
         ) as Item<T, U>;
         break;
       }
@@ -184,6 +201,10 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
           data.ochre.propertyValue,
           metadata,
           data.ochre.persistentUrl,
+          {
+            uuid: data.ochre.uuidBelongsTo,
+            name: parseFakeString(data.ochre.belongsTo),
+          },
         ) as Item<T, U>;
         break;
       }
@@ -193,11 +214,10 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
             "Invalid OCHRE data: API response missing 'text' key",
           );
         }
-        item = parseText(
-          data.ochre.text,
-          metadata,
-          data.ochre.persistentUrl,
-        ) as Item<T, U>;
+        item = parseText(data.ochre.text, metadata, data.ochre.persistentUrl, {
+          uuid: data.ochre.uuidBelongsTo,
+          name: parseFakeString(data.ochre.belongsTo),
+        }) as Item<T, U>;
         break;
       }
       case "set": {
@@ -209,6 +229,10 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
           itemCategory as Array<U> | undefined,
           metadata,
           data.ochre.persistentUrl,
+          {
+            uuid: data.ochre.uuidBelongsTo,
+            name: parseFakeString(data.ochre.belongsTo),
+          },
         ) as Item<T, U>;
         break;
       }
@@ -223,6 +247,10 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
           itemCategory as Exclude<U, "tree"> | undefined,
           metadata,
           data.ochre.persistentUrl,
+          {
+            uuid: data.ochre.uuidBelongsTo,
+            name: parseFakeString(data.ochre.belongsTo),
+          },
         ) as Item<T, U>;
         break;
       }
@@ -231,14 +259,8 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
       }
     }
 
-    const belongsTo = {
-      uuid: data.ochre.uuidBelongsTo,
-      abbreviation: parseFakeString(data.ochre.belongsTo),
-    };
-
     return {
       error: null as never,
-      belongsTo,
       item,
       category: category!,
       itemCategory: itemCategory!,
@@ -246,7 +268,6 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unknown error",
-      belongsTo: undefined as never,
       item: undefined as never,
       category: undefined as never,
       itemCategory: undefined as never,

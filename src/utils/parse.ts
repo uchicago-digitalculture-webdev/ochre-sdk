@@ -300,10 +300,12 @@ export function parsePerson(
   person: OchrePerson,
   metadata?: Metadata,
   persistentUrl?: string | null,
+  belongsTo?: { uuid: string; name: string },
 ): Person {
   return {
     uuid: person.uuid,
     category: "person",
+    belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
     publicationDateTime:
       person.publicationDateTime != null ?
@@ -1153,10 +1155,12 @@ export function parsePeriod(
   period: OchrePeriod,
   metadata?: Metadata,
   persistentUrl?: string | null,
+  belongsTo?: { uuid: string; name: string },
 ): Period {
   return {
     uuid: period.uuid,
     category: "period",
+    belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
     publicationDateTime:
       period.publicationDateTime != null ?
@@ -1196,6 +1200,7 @@ export function parseBibliography(
   bibliography: OchreBibliography,
   metadata?: Metadata,
   persistentUrl?: string | null,
+  belongsTo?: { uuid: string; name: string },
 ): Bibliography {
   const sourceResources: Bibliography["sourceResources"] = [];
   if (bibliography.source?.resource) {
@@ -1242,6 +1247,7 @@ export function parseBibliography(
 
   return {
     uuid: bibliography.uuid ?? null,
+    belongsTo: belongsTo ?? null,
     zoteroId: bibliography.zoteroId ?? null,
     category: "bibliography",
     metadata: metadata ?? null,
@@ -1367,10 +1373,12 @@ export function parsePropertyValue(
   propertyValue: OchrePropertyValue,
   metadata?: Metadata,
   persistentUrl?: string | null,
+  belongsTo?: { uuid: string; name: string },
 ): PropertyValue {
   return {
     uuid: propertyValue.uuid,
     category: "propertyValue",
+    belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
     number: propertyValue.n,
     publicationDateTime:
@@ -1449,10 +1457,12 @@ export function parseText(
   text: OchreText,
   metadata?: Metadata,
   persistentUrl?: string | null,
+  belongsTo?: { uuid: string; name: string },
 ): Text {
   return {
     uuid: text.uuid,
     category: "text",
+    belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
     publicationDateTime:
       text.publicationDateTime ? new Date(text.publicationDateTime) : null,
@@ -1628,6 +1638,7 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
   itemCategory?: Exclude<DataCategory, "tree">,
   metadata?: Metadata,
   persistentUrl?: string | null,
+  belongsTo?: { uuid: string; name: string },
 ): Tree<U> {
   if (typeof tree.items === "string") {
     throw new TypeError("Invalid OCHRE data: Tree has no items");
@@ -1771,6 +1782,7 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
   const returnTree: Tree<U> = {
     uuid: tree.uuid,
     category: "tree",
+    belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
     publicationDateTime: new Date(tree.publicationDateTime),
     persistentUrl: persistentUrl ?? null,
@@ -1821,6 +1833,7 @@ export function parseSet<U extends DataCategory>(
   itemCategories?: Array<U>,
   metadata?: Metadata,
   persistentUrl?: string | null,
+  belongsTo?: { uuid: string; name: string },
 ): Set<U> {
   if (typeof set.items === "string") {
     throw new TypeError("Invalid OCHRE data: Set has no items");
@@ -1939,6 +1952,7 @@ export function parseSet<U extends DataCategory>(
   return {
     uuid: set.uuid,
     category: "set",
+    belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
     itemCategories: parsedItemCategories as Array<U>,
     publicationDateTime:
@@ -1994,10 +2008,12 @@ export function parseResource(
   resource: OchreResource,
   metadata?: Metadata,
   persistentUrl?: string | null,
+  belongsTo?: { uuid: string; name: string },
 ): Resource {
   const returnResource: Resource = {
     uuid: resource.uuid,
     category: "resource",
+    belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
     publicationDateTime:
       resource.publicationDateTime ?
@@ -2137,10 +2153,12 @@ export function parseSpatialUnit(
   spatialUnit: OchreSpatialUnit,
   metadata?: Metadata,
   persistentUrl?: string | null,
+  belongsTo?: { uuid: string; name: string },
 ): SpatialUnit {
   const returnSpatialUnit: SpatialUnit = {
     uuid: spatialUnit.uuid,
     category: "spatialUnit",
+    belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
     publicationDateTime:
       spatialUnit.publicationDateTime != null ?
@@ -2238,10 +2256,12 @@ export function parseConcept(
   concept: OchreConcept,
   metadata?: Metadata,
   persistentUrl?: string | null,
+  belongsTo?: { uuid: string; name: string },
 ): Concept {
   const returnConcept: Concept = {
     uuid: concept.uuid,
     category: "concept",
+    belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
     publicationDateTime:
       concept.publicationDateTime ?
