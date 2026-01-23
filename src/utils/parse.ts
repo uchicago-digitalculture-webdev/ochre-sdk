@@ -1635,7 +1635,7 @@ export function parseSections(sections: {
  */
 export function parseTree<U extends Exclude<DataCategory, "tree">>(
   tree: OchreTree,
-  itemCategory?: Exclude<DataCategory, "tree">,
+  itemCategories?: Array<Exclude<DataCategory, "tree">>,
   metadata?: Metadata,
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
@@ -1658,8 +1658,8 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
     date = tree.date;
   }
 
-  const parsedItemCategory =
-    itemCategory ?? getItemCategory(Object.keys(tree.items));
+  const parsedItemCategories =
+    itemCategories ?? getItemCategory(Object.keys(tree.items));
 
   let items:
     | Array<Resource>
@@ -1670,9 +1670,9 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
     | Array<Person>
     | Array<PropertyValue>
     | Array<Text>
-    | Array<Set<U>> = [];
+    | Array<Set<Array<U>>> = [];
 
-  switch (parsedItemCategory) {
+  switch (parsedItemCategories) {
     case "resource": {
       if (!("resource" in tree.items)) {
         throw new Error("Invalid OCHRE data: Tree has no resources");
@@ -1764,11 +1764,11 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
         throw new Error("Invalid OCHRE data: Tree has no sets");
       }
 
-      const setItems: Array<Set<U>> = [];
+      const setItems: Array<Set<Array<U>>> = [];
       for (const item of Array.isArray(tree.items.set) ?
         tree.items.set
       : [tree.items.set]) {
-        setItems.push(parseSet<U>(item, [itemCategory as U]));
+        setItems.push(parseSet<Array<U>>(item, itemCategories as Array<U>));
       }
 
       items = setItems;
@@ -1828,9 +1828,9 @@ export function parseTrees<U extends Exclude<DataCategory, "tree">>(
  * @param set - Raw set data in OCHRE format
  * @returns Parsed Set object
  */
-export function parseSet<U extends DataCategory>(
+export function parseSet<U extends Array<DataCategory>>(
   set: OchreSet,
-  itemCategories?: Array<U>,
+  itemCategories?: U,
   metadata?: Metadata,
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
@@ -1954,7 +1954,7 @@ export function parseSet<U extends DataCategory>(
     category: "set",
     belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
-    itemCategories: parsedItemCategories as Array<U>,
+    itemCategories: parsedItemCategories as U,
     publicationDateTime:
       set.publicationDateTime ? new Date(set.publicationDateTime) : null,
     persistentUrl: persistentUrl ?? null,
@@ -1988,7 +1988,7 @@ export function parseSet<U extends DataCategory>(
  * @param sets - Raw sets data in OCHRE format
  * @returns Parsed Sets object
  */
-export function parseSets<U extends DataCategory>(
+export function parseSets<U extends Array<DataCategory>>(
   sets: Array<OchreSet>,
 ): Array<Set<U>> {
   const returnSets: Array<Set<U>> = [];

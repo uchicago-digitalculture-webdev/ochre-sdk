@@ -100,15 +100,18 @@ return element { node-name($item) } {
  * @param params.projectScopeUuid - The UUID of the project scope
  * @param categoryParams - The category parameters for the fetch
  * @param categoryParams.category - The category of the items to fetch
- * @param categoryParams.itemCategory - The category of the items to fetch
+ * @param categoryParams.itemCategories - The categories of the items to fetch
  * @param options - Options for the fetch
  * @param options.customFetch - A custom fetch function to use instead of the default fetch
  * @param options.isVersion2 - Whether to use the v2 API
  * @returns The parsed items by property value or null if the fetch/parse fails
  */
 export async function fetchItemsByPropertyValue<
-  T extends DataCategory,
-  U extends DataCategory,
+  T extends DataCategory = DataCategory,
+  U extends DataCategory | Array<DataCategory> = T extends "tree" ?
+    Exclude<DataCategory, "tree">
+  : T extends "set" ? Array<DataCategory>
+  : never,
 >(
   params: {
     scopeUuids: Array<string>;
@@ -116,12 +119,7 @@ export async function fetchItemsByPropertyValue<
     propertyValueUuids: Array<string>;
     projectScopeUuid: string;
   },
-  categoryParams?: {
-    category?: T;
-    itemCategory?: T extends "tree" ? Exclude<U, "tree">
-    : T extends "set" ? Array<U>
-    : never;
-  },
+  categoryParams?: { category?: T; itemCategories?: U },
   options?: {
     customFetch?: (
       input: string | URL | globalThis.Request,
@@ -142,7 +140,7 @@ export async function fetchItemsByPropertyValue<
       propertyValueUuids,
       projectScopeUuid,
     } = params;
-    const { category, itemCategory } = categoryParams ?? {};
+    const { category, itemCategories } = categoryParams ?? {};
 
     const xquery = buildXQuery(
       scopeUuids,
@@ -188,15 +186,15 @@ export async function fetchItemsByPropertyValue<
 
     if (
       (category === "set" || category === "tree") &&
-      itemCategory != null &&
+      itemCategories != null &&
       "items" in data.result.ochre[category]! &&
       Array.isArray(data.result.ochre[category].items) &&
       data.result.ochre[category].items.every(
-        (item: Item<T, U>) => item.category !== itemCategory,
+        (item: Item<T, U>) => item.category !== itemCategories,
       )
     ) {
       throw new Error(
-        `No items found for category: ${category} and item category: ${itemCategory}`,
+        `No items found for category: ${category} and item categories: ${itemCategories}`,
       );
     }
 

@@ -34,8 +34,9 @@ export type DataCategory =
  */
 export type Item<
   T extends DataCategory = DataCategory,
-  U extends DataCategory = T extends "tree" ? Exclude<DataCategory, "tree">
-  : T extends "set" ? DataCategory
+  U extends DataCategory | Array<DataCategory> = T extends "tree" ?
+    Exclude<DataCategory, "tree">
+  : T extends "set" ? Array<DataCategory>
   : never,
 > =
   T extends "resource" ? Resource
@@ -46,8 +47,12 @@ export type Item<
   : T extends "person" ? Person
   : T extends "propertyValue" ? PropertyValue
   : T extends "text" ? Text
-  : T extends "tree" ? Tree<Exclude<U, "tree">>
-  : T extends "set" ? Set<U>
+  : T extends "tree" ?
+    Tree<
+      U extends Array<DataCategory> ? Exclude<U[number], "tree">
+      : Exclude<U, "tree">
+    >
+  : T extends "set" ? Set<U extends Array<DataCategory> ? U : Array<U>>
   : | Resource
     | SpatialUnit
     | Concept
@@ -55,8 +60,11 @@ export type Item<
     | Bibliography
     | Person
     | PropertyValue
-    | Tree<Exclude<U, "tree">>
-    | Set<U>;
+    | Tree<
+        U extends Array<DataCategory> ? Exclude<U[number], "tree">
+        : Exclude<U, "tree">
+      >
+    | Set<U extends Array<DataCategory> ? U : Array<U>>;
 
 /**
  * Basic identification information used across multiple types
@@ -437,12 +445,12 @@ export type Concept = {
 /**
  * Represents a set that can contain resources, spatial units and concepts
  */
-export type Set<U extends DataCategory = DataCategory> = {
+export type Set<U extends Array<DataCategory> = Array<DataCategory>> = {
   uuid: string;
   category: "set";
   belongsTo: { uuid: string; abbreviation: string } | null;
   metadata: Metadata | null;
-  itemCategories: Array<U>;
+  itemCategories: U;
   publicationDateTime: Date | null;
   persistentUrl: string | null;
   type: string;
@@ -462,7 +470,7 @@ export type Set<U extends DataCategory = DataCategory> = {
   : U extends "person" ? Array<Person>
   : U extends "propertyValue" ? Array<PropertyValue>
   : U extends "tree" ? Array<Tree<Exclude<DataCategory, "tree">>>
-  : U extends "set" ? Array<Set<DataCategory>>
+  : U extends "set" ? Array<Set<U extends Array<DataCategory> ? U : Array<U>>>
   : Array<Item>;
 };
 
@@ -672,7 +680,7 @@ export type Tree<
   : U extends "person" ? Array<Person>
   : U extends "propertyValue" ? Array<PropertyValue>
   : U extends "text" ? Array<Text>
-  : U extends "set" ? Array<Set<DataCategory>>
+  : U extends "set" ? Array<Set<U extends Array<DataCategory> ? U : Array<U>>>
   : Array<Item>;
 };
 

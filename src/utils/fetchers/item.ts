@@ -49,12 +49,16 @@ import { fetchByUuid } from "./uuid.js";
  *
  * If the fetch/parse fails, the returned object will have an `error` property.
  */
-export async function fetchItem<T extends DataCategory, U extends DataCategory>(
+export async function fetchItem<
+  T extends DataCategory = DataCategory,
+  U extends DataCategory | Array<DataCategory> = T extends "tree" ?
+    Exclude<DataCategory, "tree">
+  : T extends "set" ? Array<DataCategory>
+  : never,
+>(
   uuid: string,
   category?: T,
-  itemCategory?: T extends "tree" ? Exclude<U, "tree">
-  : T extends "set" ? Array<U>
-  : never,
+  itemCategories?: U,
   options?: {
     customFetch?: (
       input: string | URL | globalThis.Request,
@@ -63,15 +67,8 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
     isVersion2: boolean;
   },
 ): Promise<
-  | {
-      error: null;
-      item: Item<T, U>;
-      category: T;
-      itemCategory: T extends "tree" ? Exclude<U, "tree">
-      : T extends "set" ? Array<U>
-      : never;
-    }
-  | { error: string; item: never; category: never; itemCategory: never }
+  | { error: null; item: Item<T, U>; category: T; itemCategories: U }
+  | { error: string; item: never; category: never; itemCategories: never }
 > {
   try {
     const customFetch = options?.customFetch;
@@ -213,13 +210,13 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
         if (!("set" in data.ochre)) {
           throw new Error("Invalid OCHRE data: API response missing 'set' key");
         }
-        item = parseSet<U>(
+        item = parseSet(
           data.ochre.set,
-          itemCategory as Array<U> | undefined,
+          itemCategories as Array<DataCategory> | undefined,
           metadata,
           data.ochre.persistentUrl,
           belongsTo,
-        ) as Item<T, U>;
+        ) as unknown as Item<T, U>;
         break;
       }
       case "tree": {
@@ -228,13 +225,13 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
             "Invalid OCHRE data: API response missing 'tree' key",
           );
         }
-        item = parseTree<Exclude<U, "tree">>(
+        item = parseTree(
           data.ochre.tree,
-          itemCategory as Exclude<U, "tree"> | undefined,
+          itemCategories as Array<Exclude<DataCategory, "tree">> | undefined,
           metadata,
           data.ochre.persistentUrl,
           belongsTo,
-        ) as Item<T, U>;
+        ) as unknown as Item<T, U>;
         break;
       }
       default: {
@@ -246,14 +243,14 @@ export async function fetchItem<T extends DataCategory, U extends DataCategory>(
       error: null as never,
       item,
       category: category!,
-      itemCategory: itemCategory!,
+      itemCategories: itemCategories!,
     };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unknown error",
       item: undefined as never,
       category: undefined as never,
-      itemCategory: undefined as never,
+      itemCategories: undefined as never,
     };
   }
 }
