@@ -4,7 +4,8 @@ import type {
   OchreTree,
 } from "../../types/internal.raw.d.ts";
 import type { Website } from "../../types/main.js";
-import { parseIdentification, parseWebsite } from "../parse.js";
+import { parseWebsite } from "../parse.js";
+import { parseFakeString } from "../string.js";
 
 const KNOWN_ABBREVIATIONS: Readonly<Record<string, string>> = {
   "uchicago-node": "60a1e386-7e53-4e14-b8cf-fb4ed953d57e",
@@ -65,6 +66,7 @@ export async function fetchWebsite(
 
     let metadata: OchreMetadata | null = null;
     let tree: OchreTree | null = null;
+    let belongsTo: { uuid: string; abbreviation: string } | null = null;
 
     if (isVersion2) {
       const response = await (customFetch ?? fetch)(
@@ -84,6 +86,10 @@ export async function fetchWebsite(
 
       metadata = data.result.ochre.metadata;
       tree = data.result.ochre.tree;
+      belongsTo = {
+        uuid: data.result.ochre.uuidBelongsTo,
+        abbreviation: parseFakeString(data.result.ochre.belongsTo),
+      };
     } else {
       const uuid = KNOWN_ABBREVIATIONS[cleanAbbreviation];
 
@@ -111,19 +117,13 @@ export async function fetchWebsite(
 
       metadata = result.ochre.metadata;
       tree = result.ochre.tree;
+      belongsTo = {
+        uuid: result.ochre.uuidBelongsTo,
+        abbreviation: parseFakeString(result.ochre.belongsTo),
+      };
     }
 
-    const projectIdentification =
-      metadata.project?.identification ?
-        parseIdentification(metadata.project.identification)
-      : null;
-
-    const website = parseWebsite(
-      tree,
-      projectIdentification?.label ?? "",
-      metadata.project?.identification.website ?? null,
-      { isVersion2 },
-    );
+    const website = parseWebsite(tree, metadata, belongsTo, { isVersion2 });
 
     return [null, website];
   } catch (error) {

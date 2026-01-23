@@ -122,7 +122,7 @@ export type License = { content: string; url: string };
 export type Person = {
   uuid: string;
   category: "person";
-  belongsTo: { uuid: string; name: string } | null;
+  belongsTo: { uuid: string; abbreviation: string } | null;
   metadata: Metadata | null;
   publicationDateTime: Date | null;
   persistentUrl: string | null;
@@ -358,7 +358,7 @@ export type Interpretation = {
 export type Resource = {
   uuid: string;
   category: "resource";
-  belongsTo: { uuid: string; name: string } | null;
+  belongsTo: { uuid: string; abbreviation: string } | null;
   metadata: Metadata | null;
   publicationDateTime: Date | null;
   persistentUrl: string | null;
@@ -394,7 +394,7 @@ export type Resource = {
 export type SpatialUnit = {
   uuid: string;
   category: "spatialUnit";
-  belongsTo: { uuid: string; name: string } | null;
+  belongsTo: { uuid: string; abbreviation: string } | null;
   metadata: Metadata | null;
   publicationDateTime: Date | null;
   persistentUrl: string | null;
@@ -418,7 +418,7 @@ export type SpatialUnit = {
 export type Concept = {
   uuid: string;
   category: "concept";
-  belongsTo: { uuid: string; name: string } | null;
+  belongsTo: { uuid: string; abbreviation: string } | null;
   metadata: Metadata | null;
   publicationDateTime: Date | null;
   persistentUrl: string | null;
@@ -440,7 +440,7 @@ export type Concept = {
 export type Set<U extends DataCategory = DataCategory> = {
   uuid: string;
   category: "set";
-  belongsTo: { uuid: string; name: string } | null;
+  belongsTo: { uuid: string; abbreviation: string } | null;
   metadata: Metadata | null;
   itemCategories: Array<U>;
   publicationDateTime: Date | null;
@@ -473,7 +473,7 @@ export type Bibliography = {
   uuid: string | null;
   zoteroId: string | null;
   category: "bibliography";
-  belongsTo: { uuid: string; name: string } | null;
+  belongsTo: { uuid: string; abbreviation: string } | null;
   metadata: Metadata | null;
   publicationDateTime: Date | null;
   persistentUrl: string | null;
@@ -515,7 +515,7 @@ export type Bibliography = {
 export type Period = {
   uuid: string;
   category: "period";
-  belongsTo: { uuid: string; name: string } | null;
+  belongsTo: { uuid: string; abbreviation: string } | null;
   metadata: Metadata | null;
   publicationDateTime: Date | null;
   persistentUrl: string | null;
@@ -532,7 +532,7 @@ export type Period = {
 export type PropertyValue = {
   uuid: string;
   category: "propertyValue";
-  belongsTo: { uuid: string; name: string } | null;
+  belongsTo: { uuid: string; abbreviation: string } | null;
   metadata: Metadata | null;
   persistentUrl: string | null;
   number: number;
@@ -607,7 +607,7 @@ export type Property<
 export type Text = {
   uuid: string;
   category: "text";
-  belongsTo: { uuid: string; name: string } | null;
+  belongsTo: { uuid: string; abbreviation: string } | null;
   metadata: Metadata | null;
   publicationDateTime: Date | null;
   persistentUrl: string | null;
@@ -652,7 +652,7 @@ export type Tree<
 > = {
   uuid: string;
   category: "tree";
-  belongsTo: { uuid: string; name: string } | null;
+  belongsTo: { uuid: string; abbreviation: string } | null;
   metadata: Metadata | null;
   publicationDateTime: Date | null;
   persistentUrl: string | null;
@@ -755,9 +755,10 @@ export type Scope = {
 export type Website = {
   uuid: string;
   version: 1 | 2;
+  belongsTo: { uuid: string; abbreviation: string } | null;
+  metadata: Metadata;
   publicationDateTime: Date | null;
   identification: Identification;
-  project: { name: string; website: string | null };
   creators: Array<Person>;
   license: License | null;
   pages: Array<Webpage>;

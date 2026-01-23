@@ -300,7 +300,7 @@ export function parsePerson(
   person: OchrePerson,
   metadata?: Metadata,
   persistentUrl?: string | null,
-  belongsTo?: { uuid: string; name: string },
+  belongsTo?: { uuid: string; abbreviation: string },
 ): Person {
   return {
     uuid: person.uuid,
@@ -1155,7 +1155,7 @@ export function parsePeriod(
   period: OchrePeriod,
   metadata?: Metadata,
   persistentUrl?: string | null,
-  belongsTo?: { uuid: string; name: string },
+  belongsTo?: { uuid: string; abbreviation: string },
 ): Period {
   return {
     uuid: period.uuid,
@@ -1200,7 +1200,7 @@ export function parseBibliography(
   bibliography: OchreBibliography,
   metadata?: Metadata,
   persistentUrl?: string | null,
-  belongsTo?: { uuid: string; name: string },
+  belongsTo?: { uuid: string; abbreviation: string },
 ): Bibliography {
   const sourceResources: Bibliography["sourceResources"] = [];
   if (bibliography.source?.resource) {
@@ -1373,7 +1373,7 @@ export function parsePropertyValue(
   propertyValue: OchrePropertyValue,
   metadata?: Metadata,
   persistentUrl?: string | null,
-  belongsTo?: { uuid: string; name: string },
+  belongsTo?: { uuid: string; abbreviation: string },
 ): PropertyValue {
   return {
     uuid: propertyValue.uuid,
@@ -1457,7 +1457,7 @@ export function parseText(
   text: OchreText,
   metadata?: Metadata,
   persistentUrl?: string | null,
-  belongsTo?: { uuid: string; name: string },
+  belongsTo?: { uuid: string; abbreviation: string },
 ): Text {
   return {
     uuid: text.uuid,
@@ -1638,7 +1638,7 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
   itemCategory?: Exclude<DataCategory, "tree">,
   metadata?: Metadata,
   persistentUrl?: string | null,
-  belongsTo?: { uuid: string; name: string },
+  belongsTo?: { uuid: string; abbreviation: string },
 ): Tree<U> {
   if (typeof tree.items === "string") {
     throw new TypeError("Invalid OCHRE data: Tree has no items");
@@ -1833,7 +1833,7 @@ export function parseSet<U extends DataCategory>(
   itemCategories?: Array<U>,
   metadata?: Metadata,
   persistentUrl?: string | null,
-  belongsTo?: { uuid: string; name: string },
+  belongsTo?: { uuid: string; abbreviation: string },
 ): Set<U> {
   if (typeof set.items === "string") {
     throw new TypeError("Invalid OCHRE data: Set has no items");
@@ -2008,7 +2008,7 @@ export function parseResource(
   resource: OchreResource,
   metadata?: Metadata,
   persistentUrl?: string | null,
-  belongsTo?: { uuid: string; name: string },
+  belongsTo?: { uuid: string; abbreviation: string },
 ): Resource {
   const returnResource: Resource = {
     uuid: resource.uuid,
@@ -2153,7 +2153,7 @@ export function parseSpatialUnit(
   spatialUnit: OchreSpatialUnit,
   metadata?: Metadata,
   persistentUrl?: string | null,
-  belongsTo?: { uuid: string; name: string },
+  belongsTo?: { uuid: string; abbreviation: string },
 ): SpatialUnit {
   const returnSpatialUnit: SpatialUnit = {
     uuid: spatialUnit.uuid,
@@ -2256,7 +2256,7 @@ export function parseConcept(
   concept: OchreConcept,
   metadata?: Metadata,
   persistentUrl?: string | null,
-  belongsTo?: { uuid: string; name: string },
+  belongsTo?: { uuid: string; abbreviation: string },
 ): Concept {
   const returnConcept: Concept = {
     uuid: concept.uuid,
@@ -5001,8 +5001,8 @@ function parseContexts(
 
 export function parseWebsite(
   websiteTree: OchreTree,
-  projectName: FakeString,
-  website: FakeString | null,
+  metadata: OchreMetadata,
+  belongsTo: { uuid: string; abbreviation: string } | null,
   { isVersion2 = false }: { isVersion2?: boolean } = {},
 ): Website {
   if (!websiteTree.properties) {
@@ -5035,15 +5035,13 @@ export function parseWebsite(
   return {
     uuid: websiteTree.uuid,
     version: isVersion2 ? 2 : 1,
+    belongsTo: belongsTo ?? null,
+    metadata: parseMetadata(metadata),
     publicationDateTime:
       websiteTree.publicationDateTime ?
         new Date(websiteTree.publicationDateTime)
       : null,
     identification: parseIdentification(websiteTree.identification),
-    project: {
-      name: parseFakeString(projectName),
-      website: website !== null ? parseFakeString(website) : null,
-    },
     creators:
       websiteTree.creators ?
         parsePersons(
