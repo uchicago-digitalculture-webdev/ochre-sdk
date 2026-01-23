@@ -4942,11 +4942,8 @@ function parseWebsiteProperties(
       logoUuid !== null ?
         `https://ochre.lib.uchicago.edu/ochre?uuid=${logoUuid}&load`
       : null,
-    itemPage: {
-      iiifViewer,
-      isPropertyValuesGrouped,
-      options: { contexts, scopes },
-    },
+    itemPage: { iiifViewer, isPropertyValuesGrouped },
+    options: { contexts, scopes },
   };
 }
 

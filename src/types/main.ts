@@ -470,7 +470,7 @@ export type Set<U extends Array<DataCategory> = Array<DataCategory>> = {
   : U extends "person" ? Array<Person>
   : U extends "propertyValue" ? Array<PropertyValue>
   : U extends "tree" ? Array<Tree<Exclude<DataCategory, "tree">>>
-  : U extends "set" ? Array<Set<U extends Array<DataCategory> ? U : Array<U>>>
+  : U extends "set" ? Array<Set<Array<DataCategory>>>
   : Array<Item>;
 };
 
@@ -807,11 +807,8 @@ export type Website = {
     itemPage: {
       iiifViewer: "universal-viewer" | "clover";
       isPropertyValuesGrouped: boolean;
-      options: {
-        contexts: PropertyContexts | null;
-        scopes: Array<Scope> | null;
-      };
     };
+    options: { contexts: PropertyContexts | null; scopes: Array<Scope> | null };
   };
 };
 
