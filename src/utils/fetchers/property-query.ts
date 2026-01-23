@@ -42,7 +42,10 @@ function buildXQuery(
   scopeUuids: Array<string>,
   propertyUuids: Array<string>,
   projectScopeUuid: string,
+  options?: { version: ApiVersion },
 ): string {
+  const version = options?.version ?? DEFAULT_API_VERSION;
+
   let collectionScopeFilter = "";
 
   if (scopeUuids.length > 0) {
@@ -57,14 +60,14 @@ function buildXQuery(
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
 
-  const xquery = `for $q in input()/ochre[@uuidBelongsTo="${projectScopeUuid}"]/*${collectionScopeFilter}/properties//property[label[${propertyFilters}]]
+  const xquery = `for $q in ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]/*${collectionScopeFilter}/properties//property[label[${propertyFilters}]]
 return <item>
 <property>{xs:string($q/label/@uuid)}</property>
 <value> {$q/*[2]/@*} {$q/*[2]/content[1]/string/text()} </value>
 <category> {$q/ancestor::node()[local-name(.)="properties"]/../@uuid}  {local-name($q/ancestor::node()[local-name(.)="properties"]/../self::node())} </category>
 </item>`;
 
-  return xquery;
+  return `<ochre>{${xquery}}</ochre>`;
 }
 
 /**
@@ -116,7 +119,9 @@ export async function fetchPropertyQuery(
 
     const { scopeUuids, propertyUuids, projectScopeUuid } = params;
 
-    const xquery = buildXQuery(scopeUuids, propertyUuids, projectScopeUuid);
+    const xquery = buildXQuery(scopeUuids, propertyUuids, projectScopeUuid, {
+      version,
+    });
 
     const response = await (customFetch ?? fetch)(
       version === 2 ?
