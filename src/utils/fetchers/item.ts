@@ -1,5 +1,5 @@
 import type { ApiVersion, DataCategory, Item } from "../../types/main.js";
-import { DEFAULT_API_VERSION } from "../../constants.js";
+import { DEFAULT_API_VERSION } from "../helpers.js";
 import { getItemCategory } from "../internal.js";
 import {
   parseBibliography,

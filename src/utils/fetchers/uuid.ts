@@ -1,7 +1,7 @@
 import type { OchreData, OchreDataResponse } from "../../types/internal.raw.js";
 import type { ApiVersion } from "../../types/main.js";
-import { DEFAULT_API_VERSION } from "../../constants.js";
 import { uuidSchema } from "../../schemas.js";
+import { DEFAULT_API_VERSION } from "../helpers.js";
 
 /**
  * Fetches raw OCHRE data by UUID from the OCHRE API

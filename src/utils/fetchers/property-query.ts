@@ -1,10 +1,8 @@
 import * as z from "zod";
 import type { ApiVersion, PropertyQueryItem } from "../../types/main.js";
-import {
-  BELONG_TO_COLLECTION_UUID,
-  DEFAULT_API_VERSION,
-} from "../../constants.js";
+import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
 import { uuidSchema } from "../../schemas.js";
+import { DEFAULT_API_VERSION } from "../helpers.js";
 
 /**
  * Schema for a single item in the OCHRE API response

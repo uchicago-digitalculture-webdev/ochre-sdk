@@ -1,6 +1,8 @@
 import type { DataCategory, Item, Property } from "../types/main.js";
 import { flattenProperties } from "./internal.js";
 
+export const DEFAULT_API_VERSION = 1;
+
 /**
  * Flatten the properties of an item
  * @param item - The item whose properties to flatten

@@ -4,8 +4,8 @@ import type {
   OchreTree,
 } from "../../types/internal.raw.d.ts";
 import type { ApiVersion, Website } from "../../types/main.js";
-import { DEFAULT_API_VERSION } from "../../constants.js";
 import { apiVersionSuffixSchema } from "../../schemas.js";
+import { DEFAULT_API_VERSION } from "../helpers.js";
 import { parseWebsite } from "../parse.js";
 import { parseFakeString } from "../string.js";
 

@@ -11,10 +11,8 @@ import type {
   OchreTree,
 } from "../../types/internal.raw.js";
 import type { ApiVersion, DataCategory, Item } from "../../types/main.js";
-import {
-  BELONG_TO_COLLECTION_UUID,
-  DEFAULT_API_VERSION,
-} from "../../constants.js";
+import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
+import { DEFAULT_API_VERSION } from "../helpers.js";
 import {
   parseBibliographies,
   parseConcepts,

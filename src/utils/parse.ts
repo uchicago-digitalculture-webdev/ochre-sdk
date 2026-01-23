@@ -74,7 +74,6 @@ import type {
   Website,
   WebTitle,
 } from "../types/main.js";
-import { DEFAULT_API_VERSION } from "../constants.js";
 import {
   boundsSchema,
   componentSchema,
@@ -91,6 +90,7 @@ import {
   parseStringContent,
   parseStringDocumentItem,
 } from "../utils/string.js";
+import { DEFAULT_API_VERSION } from "./helpers.js";
 import { getItemCategories, getItemCategory } from "./internal.js";
 
 /**
