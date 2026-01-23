@@ -3,8 +3,9 @@
  */
 export type Data<
   T extends DataCategory = DataCategory,
-  U extends DataCategory = T extends "tree" ? Exclude<DataCategory, "tree">
-  : T extends "set" ? DataCategory
+  U extends DataCategory | Array<DataCategory> = T extends "tree" ?
+    Exclude<DataCategory, "tree">
+  : T extends "set" ? Array<DataCategory>
   : never,
 > = {
   uuid: string;

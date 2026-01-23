@@ -7,8 +7,11 @@ import { flattenProperties } from "./internal.js";
  * @returns The item with the properties flattened
  */
 export function flattenItemProperties<
-  T extends DataCategory,
-  U extends DataCategory,
+  T extends DataCategory = DataCategory,
+  U extends DataCategory | Array<DataCategory> = T extends "tree" ?
+    Exclude<DataCategory, "tree">
+  : T extends "set" ? Array<DataCategory>
+  : never,
 >(item: Item<T, U>): Item<T, U> {
   if ("properties" in item) {
     return { ...item, properties: flattenProperties(item.properties) };

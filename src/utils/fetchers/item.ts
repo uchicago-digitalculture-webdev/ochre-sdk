@@ -1,5 +1,5 @@
 import type { DataCategory, Item } from "../../types/main.js";
-import { getItemCategory } from "../helpers.js";
+import { getItemCategory } from "../internal.js";
 import {
   parseBibliography,
   parseConcept,

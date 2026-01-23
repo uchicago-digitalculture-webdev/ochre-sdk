@@ -89,7 +89,7 @@ import {
   parseStringContent,
   parseStringDocumentItem,
 } from "../utils/string.js";
-import { getItemCategories, getItemCategory } from "./helpers.js";
+import { getItemCategories, getItemCategory } from "./internal.js";
 
 /**
  * Parses raw identification data into the standardized Identification type
