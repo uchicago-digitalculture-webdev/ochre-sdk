@@ -197,8 +197,12 @@ type RichTextItemStringResult = { content: string; whitespace: string | null };
  * @internal
  */
 function parseRichTextItemString(
-  stringField: FakeString | OchreStringRichTextItemContent,
+  stringField: FakeString | OchreStringRichTextItemContent | undefined,
 ): RichTextItemStringResult {
+  if (stringField == null) {
+    return { content: "", whitespace: null };
+  }
+
   if (
     typeof stringField === "string" ||
     typeof stringField === "number" ||
