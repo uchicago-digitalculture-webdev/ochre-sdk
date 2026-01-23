@@ -3353,10 +3353,9 @@ function parseWebElementProperties(
           querySubProperties,
           "query-prompt",
         );
+
         if (label === null) {
-          throw new Error(
-            `Query prompt not found for the following component: “${componentName}”`,
-          );
+          continue;
         }
 
         const propertyUuids =
@@ -3377,6 +3376,12 @@ function parseWebElementProperties(
           startIcon: startIcon !== null ? String(startIcon) : null,
           endIcon: endIcon !== null ? String(endIcon) : null,
         });
+      }
+
+      if (queries.length === 0) {
+        throw new Error(
+          `No queries found for the following component: “${componentName}”`,
+        );
       }
 
       let itemVariant = getPropertyValueByLabel(
