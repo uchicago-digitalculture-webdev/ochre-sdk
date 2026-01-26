@@ -3341,6 +3341,11 @@ function parseWebElementProperties(
         endIcon: string | null;
       }> = [];
 
+      const itemCategory = getPropertyValueByLabel(
+        componentProperty.properties,
+        "item-category",
+      );
+
       const queryProperties = componentProperty.properties;
       if (queryProperties.length === 0) {
         throw new Error(
@@ -3409,6 +3414,11 @@ function parseWebElementProperties(
       );
       layout ??= "image-start";
 
+      properties.itemCategory = itemCategory as
+        | "resource"
+        | "spatialUnit"
+        | "concept"
+        | "text";
       properties.queries = queries;
       properties.displayedProperties =
         displayedProperties?.values
