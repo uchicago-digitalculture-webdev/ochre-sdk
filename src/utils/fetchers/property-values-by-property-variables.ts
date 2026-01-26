@@ -5,7 +5,7 @@ import { uuidSchema } from "../../schemas.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
 
 /**
- * Schema for a single item in the OCHRE API response
+ * Schema for a single property value by property variable item in the OCHRE API response
  */
 
 const responseItemSchema = z.object({
@@ -23,7 +23,7 @@ const responseItemSchema = z.object({
 });
 
 /**
- * Schema for the OCHRE API response
+ * Schema for the property values by property variables OCHRE API response
  */
 const responseSchema = z.object({
   result: z.object({
@@ -34,7 +34,7 @@ const responseSchema = z.object({
 });
 
 /**
- * Build an XQuery string to fetch property query items from the OCHRE API
+ * Build an XQuery string to fetch property values by property variables from the OCHRE API
  * @param scopeUuids - An array of scope UUIDs to filter by
  * @param propertyUuids - An array of property UUIDs to fetch
  * @param projectScopeUuid - The UUID of the project scope
@@ -65,7 +65,7 @@ function buildXQuery(
   const xquery = `for $q in ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]/*${collectionScopeFilter}/properties//property[label[${propertyFilters}]]
 return <item>
 <property>{xs:string($q/label/@uuid)}</property>
-<value> {$q/*[2]/@*} {$q/*[2]/content[1]/string/text()} </value>
+<value> {$q/*[2]/@*} {$q/*[2]/text()} {$q/*[2]/content} </value>
 <category> {$q/ancestor::node()[local-name(.)="properties"]/../@uuid}  {local-name($q/ancestor::node()[local-name(.)="properties"]/../self::node())} </category>
 </item>`;
 
@@ -73,7 +73,7 @@ return <item>
 }
 
 /**
- * Fetches and parses a property query from the OCHRE API
+ * Fetches and parses property values by property variables from the OCHRE API
  *
  * @param params - The parameters for the fetch
  * @param params.scopeUuids - The scope UUIDs to filter by
@@ -82,23 +82,9 @@ return <item>
  * @param options - Options for the fetch
  * @param options.customFetch - A custom fetch function to use instead of the default fetch
  * @param options.version - The version of the OCHRE API to use
- * @returns The parsed property query or null if the fetch/parse fails
- *
- * @example
- * ```ts
- * const propertyQuery = await fetchPropertyQuery(["0c0aae37-7246-495b-9547-e25dbf5b99a3"], ["9c4da06b-f15e-40af-a747-0933eaf3587e"]);
- * if (propertyQuery === null) {
- *   console.error("Failed to fetch property query");
- *   return;
- * }
- * console.log(`Fetched property query: ${propertyQuery.item}`);
- * ```
- *
- * @remarks
- * The returned property query includes:
- * - Property items
+ * @returns The parsed property values by property variables or null if the fetch/parse fails
  */
-export async function fetchPropertyQuery(
+export async function fetchPropertyValuesByPropertyVariables(
   params: {
     scopeUuids: Array<string>;
     propertyUuids: Array<string>;
@@ -184,7 +170,7 @@ export async function fetchPropertyQuery(
       error:
         error instanceof Error ?
           error.message
-        : "Failed to fetch property query",
+        : "Failed to fetch property values by property variables",
     };
   }
 }
