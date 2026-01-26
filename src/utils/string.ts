@@ -585,35 +585,36 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
               );
             } else if (linkResource.publicationDateTime != null) {
               const annotationMetadata = extractAnnotationMetadata(item);
+
+              const innerContent = wrapWithTextStyling(
+                itemString,
+                annotationMetadata.textStyling,
+              );
+
               let linkElement: string;
 
               switch (annotationMetadata.linkVariant) {
                 case "hover-card": {
-                  linkElement = `<Annotation type="hover-card" uuid="${linkResource.uuid}">${itemString}</Annotation>`;
+                  linkElement = `<Annotation type="hover-card" uuid="${linkResource.uuid}">${innerContent}</Annotation>`;
 
                   break;
                 }
                 case "item-page": {
-                  linkElement = `<InternalLink type="item" uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+                  linkElement = `<InternalLink type="item" uuid="${linkResource.uuid}">${innerContent}</InternalLink>`;
 
                   break;
                 }
                 case "entry-page": {
-                  linkElement = `<InternalLink type="entry" uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+                  linkElement = `<InternalLink type="entry" uuid="${linkResource.uuid}">${innerContent}</InternalLink>`;
 
                   break;
                 }
                 default: {
-                  linkElement = `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+                  linkElement = `<InternalLink uuid="${linkResource.uuid}">${innerContent}</InternalLink>`;
                 }
               }
 
-              const wrappedElement = wrapWithTextStyling(
-                linkElement,
-                annotationMetadata.textStyling,
-              );
-
-              return applyWhitespaceToResult(wrappedElement, itemWhitespace);
+              return applyWhitespaceToResult(linkElement, itemWhitespace);
             } else {
               return applyWhitespaceToResult(
                 `<TooltipSpan${
@@ -625,21 +626,27 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
           }
           case "internalDocument": {
             const annotationMetadata = extractAnnotationMetadata(item);
+
+            const innerContent = wrapWithTextStyling(
+              itemString,
+              annotationMetadata.textStyling,
+            );
+
             let linkElement: string;
 
             switch (annotationMetadata.linkVariant) {
               case "hover-card": {
-                linkElement = `<Annotation type="hover-card" uuid="${linkResource.uuid}">${itemString}</Annotation>`;
+                linkElement = `<Annotation type="hover-card" uuid="${linkResource.uuid}">${innerContent}</Annotation>`;
 
                 break;
               }
               case "item-page": {
-                linkElement = `<InternalLink type="item" uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+                linkElement = `<InternalLink type="item" uuid="${linkResource.uuid}">${innerContent}</InternalLink>`;
 
                 break;
               }
               case "entry-page": {
-                linkElement = `<InternalLink type="entry" uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+                linkElement = `<InternalLink type="entry" uuid="${linkResource.uuid}">${innerContent}</InternalLink>`;
 
                 break;
               }
@@ -663,22 +670,17 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
                       itemPropertyValueUuid !== null ?
                         ` value="${itemPropertyValueUuid}"`
                       : ""
-                    }>${itemString}</InternalLink>`;
+                    }>${innerContent}</InternalLink>`;
                   } else {
-                    linkElement = `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+                    linkElement = `<InternalLink uuid="${linkResource.uuid}">${innerContent}</InternalLink>`;
                   }
                 } else {
-                  linkElement = `<InternalLink uuid="${linkResource.uuid}">${itemString}</InternalLink>`;
+                  linkElement = `<InternalLink uuid="${linkResource.uuid}">${innerContent}</InternalLink>`;
                 }
               }
             }
 
-            const wrappedElement = wrapWithTextStyling(
-              linkElement,
-              annotationMetadata.textStyling,
-            );
-
-            return applyWhitespaceToResult(wrappedElement, itemWhitespace);
+            return applyWhitespaceToResult(linkElement, itemWhitespace);
           }
           case "externalDocument": {
             if (linkResource.publicationDateTime != null) {
