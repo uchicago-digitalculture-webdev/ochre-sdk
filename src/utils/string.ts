@@ -424,6 +424,22 @@ function extractAnnotationMetadata(
                   .content as FakeString,
               ),
             }));
+
+            // Auto-add text-decoration-color when color is present
+            const colorStyle = textStylingCss.find(
+              (style) => style.label === "color",
+            );
+            if (colorStyle != null) {
+              const hasTextDecorationColor = textStylingCss.some(
+                (style) => style.label === "text-decoration-color",
+              );
+              if (!hasTextDecorationColor) {
+                textStylingCss.push({
+                  label: "text-decoration-color",
+                  value: colorStyle.value,
+                });
+              }
+            }
           }
 
           result.textStyling = {
@@ -922,6 +938,22 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
                       .content as FakeString,
                   ),
                 }));
+
+                // Auto-add text-decoration-color when color is present
+                const colorStyle = textStylingCss.find(
+                  (style) => style.label === "color",
+                );
+                if (colorStyle != null) {
+                  const hasTextDecorationColor = textStylingCss.some(
+                    (style) => style.label === "text-decoration-color",
+                  );
+                  if (!hasTextDecorationColor) {
+                    textStylingCss.push({
+                      label: "text-decoration-color",
+                      value: colorStyle.value,
+                    });
+                  }
+                }
               }
             }
 
