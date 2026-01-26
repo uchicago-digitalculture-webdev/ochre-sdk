@@ -425,17 +425,17 @@ function extractAnnotationMetadata(
               ),
             }));
 
-            // Auto-add text-decoration-color when color is present
+            // Auto-add textDecorationColor when color is present
             const colorStyle = textStylingCss.find(
               (style) => style.label === "color",
             );
             if (colorStyle != null) {
               const hasTextDecorationColor = textStylingCss.some(
-                (style) => style.label === "text-decoration-color",
+                (style) => style.label === "textDecorationColor",
               );
               if (!hasTextDecorationColor) {
                 textStylingCss.push({
-                  label: "text-decoration-color",
+                  label: "textDecorationColor",
                   value: colorStyle.value,
                 });
               }
@@ -939,17 +939,17 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
                   ),
                 }));
 
-                // Auto-add text-decoration-color when color is present
+                // Auto-add textDecorationColor when color is present
                 const colorStyle = textStylingCss.find(
                   (style) => style.label === "color",
                 );
                 if (colorStyle != null) {
                   const hasTextDecorationColor = textStylingCss.some(
-                    (style) => style.label === "text-decoration-color",
+                    (style) => style.label === "textDecorationColor",
                   );
                   if (!hasTextDecorationColor) {
                     textStylingCss.push({
-                      label: "text-decoration-color",
+                      label: "textDecorationColor",
                       value: colorStyle.value,
                     });
                   }
