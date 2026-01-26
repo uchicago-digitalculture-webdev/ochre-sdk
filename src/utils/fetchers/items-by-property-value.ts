@@ -10,7 +10,12 @@ import type {
   OchreText,
   OchreTree,
 } from "../../types/internal.raw.js";
-import type { ApiVersion, DataCategory, Item } from "../../types/main.js";
+import type {
+  ApiVersion,
+  DataCategory,
+  Item,
+  PropertyValueContentType,
+} from "../../types/main.js";
 import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
 import {
@@ -30,14 +35,17 @@ import {
  * Build an XQuery string to fetch items by property value from the OCHRE API
  * @param scopeUuids - An array of scope UUIDs to filter by
  * @param propertyVariableUuids - An array of property variable UUIDs to fetch
- * @param propertyValueUuids - An array of property value UUIDs to fetch
+ * @param propertyValues - An array of property values to fetch
  * @param projectScopeUuid - The UUID of the project scope
  * @returns An XQuery string
  */
 function buildXQuery(
   scopeUuids: Array<string>,
   propertyVariableUuids: Array<string>,
-  propertyValueUuids: Array<string>,
+  propertyValues: Array<{
+    dataType: Exclude<PropertyValueContentType, "coordinate">;
+    value: string;
+  }>,
   projectScopeUuid: string,
   options?: { version: ApiVersion },
 ): string {
@@ -57,11 +65,26 @@ function buildXQuery(
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
 
-  const propertyValues = propertyValueUuids
-    .map((uuid) => `@uuid="${uuid}"`)
+  const propertyValuesFilters = propertyValues
+    .map(({ dataType, value }) => {
+      if (dataType === "IDREF") {
+        return `value[@uuid="${value}"]`;
+      }
+      if (
+        dataType === "date" ||
+        dataType === "dateTime" ||
+        dataType === "time" ||
+        dataType === "integer" ||
+        dataType === "decimal" ||
+        dataType === "boolean"
+      ) {
+        return `value[@rawValue="${value}"]`;
+      }
+      return `value="${value}"`;
+    })
     .join(" or ");
 
-  const xquery = `for $q in ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]/*${collectionScopeFilter}/properties//property[label[${propertyVariables}]][value[${propertyValues}]]
+  const xquery = `for $q in ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]/*${collectionScopeFilter}/properties//property[label[${propertyVariables}]][${propertyValuesFilters}]
 
 let $item := $q/ancestor::*[parent::ochre]
 let $category := local-name($item)
@@ -80,7 +103,7 @@ return element { node-name($item) } {
  * @param params - The parameters for the fetch
  * @param params.scopeUuids - The scope UUIDs to filter by
  * @param params.propertyVariableUuids - The property variable UUIDs to query by
- * @param params.propertyValueUuids - The property value UUIDs to query by
+ * @param params.propertyValues - The property values to query by
  * @param params.projectScopeUuid - The UUID of the project scope
  * @param categoryParams - The category parameters for the fetch
  * @param categoryParams.category - The category of the items to fetch
@@ -100,7 +123,10 @@ export async function fetchItemsByPropertyValue<
   params: {
     scopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
-    propertyValueUuids: Array<string>;
+    propertyValues: Array<{
+      dataType: Exclude<PropertyValueContentType, "coordinate">;
+      value: string;
+    }>;
     projectScopeUuid: string;
   },
   categoryParams?: { category?: T; itemCategories?: U },
@@ -121,7 +147,7 @@ export async function fetchItemsByPropertyValue<
     const {
       scopeUuids,
       propertyVariableUuids,
-      propertyValueUuids,
+      propertyValues,
       projectScopeUuid,
     } = params;
     const { category, itemCategories } = categoryParams ?? {};
@@ -129,7 +155,7 @@ export async function fetchItemsByPropertyValue<
     const xquery = buildXQuery(
       scopeUuids,
       propertyVariableUuids,
-      propertyValueUuids,
+      propertyValues,
       projectScopeUuid,
       { version },
     );
