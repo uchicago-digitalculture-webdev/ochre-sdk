@@ -32,7 +32,7 @@ import {
 } from "../parse.js";
 
 /**
- * Build an XQuery string to fetch items by property value from the OCHRE API
+ * Build an XQuery string to fetch items by property values from the OCHRE API
  * @param scopeUuids - An array of scope UUIDs to filter by
  * @param propertyVariableUuids - An array of property variable UUIDs to fetch
  * @param propertyValues - An array of property values to fetch
@@ -98,7 +98,7 @@ return element { node-name($item) } {
 }
 
 /**
- * Fetches and parses items by property value from the OCHRE API
+ * Fetches and parses items by property values from the OCHRE API
  *
  * @param params - The parameters for the fetch
  * @param params.scopeUuids - The scope UUIDs to filter by
@@ -111,9 +111,9 @@ return element { node-name($item) } {
  * @param options - Options for the fetch
  * @param options.customFetch - A custom fetch function to use instead of the default fetch
  * @param options.version - The version of the OCHRE API to use
- * @returns The parsed items by property value or null if the fetch/parse fails
+ * @returns The parsed items by property values or null if the fetch/parse fails
  */
-export async function fetchItemsByPropertyValue<
+export async function fetchItemsByPropertyValues<
   T extends DataCategory = DataCategory,
   U extends DataCategory | Array<DataCategory> = T extends "tree" ?
     Exclude<DataCategory, "tree">
@@ -334,7 +334,7 @@ export async function fetchItemsByPropertyValue<
       error:
         error instanceof Error ?
           error.message
-        : "Failed to fetch items by property value",
+        : "Failed to fetch items by property values",
     };
   }
 }
