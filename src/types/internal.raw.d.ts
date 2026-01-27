@@ -344,6 +344,7 @@ export type OchreConcept = {
  */
 export type OchrePropertyValueContent = {
   i?: number;
+  inherited?: boolean;
   uuid?: string;
   publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
   dataType?: string;

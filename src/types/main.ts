@@ -572,7 +572,7 @@ export type PropertyValueContentType =
  * Represents a property value with type information
  */
 export type PropertyValueContent<T extends PropertyValueContentType> = {
-  hierarchyLevel: number | null;
+  hierarchy: { isLeaf: boolean; level: number | null };
   content:
     | (T extends "integer" ? number
       : T extends "decimal" ? number
