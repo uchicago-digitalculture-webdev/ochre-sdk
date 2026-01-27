@@ -940,7 +940,7 @@ export type WebElementComponent =
         isMapDisplayed: boolean;
         isInputDisplayed: boolean;
         isLimitedToTitleQuery: boolean;
-        isLimitedToHighestHierarchyLevel: boolean;
+        isLimitedToLeafPropertyValues: boolean;
         sidebarSort: "default" | "alphabetical";
       };
       options: {

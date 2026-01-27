@@ -2803,15 +2803,15 @@ function parseWebElementProperties(
           isFilterLimitedToTitleQueryProperty === true;
       }
 
-      let isFilterLimitedToHighestHierarchyLevel = false;
-      const isFilterLimitedToHighestHierarchyLevelProperty =
+      let isFilterLimitedToLeafPropertyValues = false;
+      const isFilterLimitedToLeafPropertyValuesProperty =
         getPropertyValueByLabel(
           componentProperty.properties,
-          "filter-limit-to-highest-hierarchy-level",
+          "filter-limit-to-leaf-property-values",
         );
-      if (isFilterLimitedToHighestHierarchyLevelProperty !== null) {
-        isFilterLimitedToHighestHierarchyLevel =
-          isFilterLimitedToHighestHierarchyLevelProperty === true;
+      if (isFilterLimitedToLeafPropertyValuesProperty !== null) {
+        isFilterLimitedToLeafPropertyValues =
+          isFilterLimitedToLeafPropertyValuesProperty === true;
       }
 
       let isSortDisplayed = false;
@@ -2945,8 +2945,7 @@ function parseWebElementProperties(
         isMapDisplayed: isFilterMapDisplayed,
         isInputDisplayed: isFilterInputDisplayed,
         isLimitedToTitleQuery: isFilterLimitedToTitleQuery,
-        isLimitedToHighestHierarchyLevel:
-          isFilterLimitedToHighestHierarchyLevel,
+        isLimitedToLeafPropertyValues: isFilterLimitedToLeafPropertyValues,
         sidebarSort: filterSidebarSort,
       };
       properties.isSortDisplayed = isSortDisplayed;
