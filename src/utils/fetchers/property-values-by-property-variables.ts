@@ -1,8 +1,9 @@
 import * as z from "zod";
 import type { ApiVersion, PropertyQueryItem } from "../../types/main.js";
 import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
-import { stringContentSchema, uuidSchema } from "../../schemas.js";
+import { richTextStringSchema, uuidSchema } from "../../schemas.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
+import { parseFakeString, parseStringContent } from "../string.js";
 
 /**
  * Schema for a single property value by property variable item in the OCHRE API response
@@ -22,8 +23,8 @@ const responseItemSchema = z.object({
         z.string(),
         z.number(),
         z.boolean(),
-        stringContentSchema,
-        z.array(stringContentSchema),
+        richTextStringSchema,
+        z.array(richTextStringSchema),
       ])
       .optional(),
     rawValue: z.union([z.string(), z.number(), z.boolean()]).optional(),
@@ -151,18 +152,16 @@ export async function fetchPropertyValuesByPropertyVariables(
       const categoryUuid = item.category.uuid;
       const valueUuid = item.value.uuid;
       const valueContent =
+        item.value.rawValue?.toString() ??
         ((
-          (item.value.rawValue ??
-          (typeof item.value.content === "string" ||
-            typeof item.value.content === "number" ||
-            typeof item.value.content === "boolean"))
+          typeof item.value.content === "string" ||
+          typeof item.value.content === "number" ||
+          typeof item.value.content === "boolean"
         ) ?
-          item.value.content?.toString()
-        : Array.isArray(item.value.content) ?
-          item.value.content
-            .find((content) => content.lang === "eng")
-            ?.string.toString()
-        : item.value.content?.string.toString()) ?? "";
+          parseFakeString(item.value.content)
+        : item.value.content != null ?
+          parseStringContent({ content: item.value.content })
+        : "");
 
       if (valueContent in items) {
         items[valueContent]!.resultUuids.push(categoryUuid);
@@ -195,12 +194,14 @@ export async function fetchPropertyValuesByPropertyVariables(
       }
     }
 
-    const returnedItems = Object.values(items).toSorted((a, b) => {
-      const aValue = a.value.label ?? a.value.content;
-      const bValue = b.value.label ?? b.value.content;
+    const returnedItems = Object.values(items)
+      .toSorted((a, b) => {
+        const aValue = a.value.label ?? a.value.content;
+        const bValue = b.value.label ?? b.value.content;
 
-      return aValue.localeCompare(bValue, "en-US");
-    });
+        return aValue.localeCompare(bValue, "en-US");
+      })
+      .filter((item) => item.value.content !== "");
 
     return { items: returnedItems, error: null };
   } catch (error) {
