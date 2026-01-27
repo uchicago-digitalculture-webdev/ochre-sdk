@@ -10,12 +10,7 @@ import type {
   OchreText,
   OchreTree,
 } from "../../types/internal.raw.js";
-import type {
-  ApiVersion,
-  DataCategory,
-  Item,
-  PropertyValueContentType,
-} from "../../types/main.js";
+import type { ApiVersion, DataCategory, Item } from "../../types/main.js";
 import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
 import {
@@ -36,8 +31,9 @@ import {
  * @param params - The parameters for the fetch
  * @param params.projectScopeUuid - The UUID of the project scope
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
- * @param params.propertyVariableUuids - An array of property variable UUIDs to fetch
- * @param params.propertyValues - An array of property values to fetch
+ * @param params.itemCategory - The category of the items to fetch
+ * @param params.itemUuids - The UUIDs of the items to fetch
+ * @param params.linkUuids - The UUIDs of the links to fetch
  * @param options - Options for the fetch
  * @param options.version - The version of the OCHRE API to use
  * @returns An XQuery string
@@ -46,21 +42,20 @@ function buildXQuery(
   params: {
     projectScopeUuid: string;
     belongsToCollectionScopeUuids: Array<string>;
-    propertyVariableUuids: Array<string>;
-    propertyValues: Array<{
-      dataType: Exclude<PropertyValueContentType, "coordinate">;
-      value: string;
-    }>;
+    itemCategory: "resource" | "spatialUnit" | "concept" | "text" | null;
+    itemUuids: Array<string>;
+    linkUuids: Array<string>;
   },
   options?: { version: ApiVersion },
 ): string {
   const version = options?.version ?? DEFAULT_API_VERSION;
 
   const {
-    propertyVariableUuids,
-    propertyValues,
     projectScopeUuid,
     belongsToCollectionScopeUuids,
+    itemCategory,
+    itemUuids,
+    linkUuids,
   } = params;
 
   let belongsToCollectionScopeFilter = "";
@@ -70,39 +65,36 @@ function buildXQuery(
       .map((uuid) => `@uuid="${uuid}"`)
       .join(" or ");
 
-    belongsToCollectionScopeFilter = `[properties/property[label/@uuid="${BELONG_TO_COLLECTION_UUID}"][value[${belongsToCollectionScopeValues}]]]`;
+    belongsToCollectionScopeFilter = `properties/property[label/@uuid="${BELONG_TO_COLLECTION_UUID}"][value[${belongsToCollectionScopeValues}]]`;
   }
 
-  const propertyVariables = propertyVariableUuids
-    .map((uuid) => `@uuid="${uuid}"`)
-    .join(" or ");
+  let itemCategoryFilter = "";
 
-  const propertyValuesFilters = propertyValues
-    .map(({ dataType, value }) => {
-      if (dataType === "IDREF") {
-        return `value[@uuid="${value}"]`;
-      }
-      if (
-        dataType === "date" ||
-        dataType === "dateTime" ||
-        dataType === "time" ||
-        dataType === "integer" ||
-        dataType === "decimal" ||
-        dataType === "boolean"
-      ) {
-        return `value[@rawValue="${value}"]`;
-      }
-      return `value="${value}"`;
-    })
-    .join(" or ");
+  const filterParts: Array<string> = [];
 
-  const xquery = `let $matches := ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]/*${belongsToCollectionScopeFilter}/properties//property[label[${propertyVariables}]][${propertyValuesFilters}]
+  if (itemUuids.length > 0) {
+    filterParts.push(itemUuids.map((uuid) => `@uuid="${uuid}"`).join(" or "));
+  }
 
-let $items := $matches/ancestor::*[parent::ochre]
-let $unique-uuids := distinct-values($items/@uuid)
+  if (linkUuids.length > 0) {
+    filterParts.push(
+      linkUuids
+        .map(
+          (uuid) =>
+            `bibliographies/bibliography/@uuid="${uuid}" or links/*/@uuid="${uuid}"`,
+        )
+        .join(" or "),
+    );
+  }
+
+  itemCategoryFilter = filterParts.join(" or ");
+
+  const xquery = `let $matches := ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]/${itemCategory ?? "*"}[${belongsToCollectionScopeFilter} and (${itemCategoryFilter})]
+
+let $unique-uuids := distinct-values($matches/@uuid)
 
 for $uuid in $unique-uuids
-let $item := $items[@uuid = $uuid][1]
+let $item := $matches[@uuid = $uuid][1]
 let $category := local-name($item)
 
 return element { node-name($item) } {
@@ -114,22 +106,23 @@ return element { node-name($item) } {
 }
 
 /**
- * Fetches and parses items by property values from the OCHRE API
+ * Fetches and parses items by UUIDs and links from the OCHRE API
  *
  * @param params - The parameters for the fetch
- * @param params.propertyVariableUuids - The property variable UUIDs to query by
- * @param params.propertyValues - The property values to query by
  * @param params.projectScopeUuid - The UUID of the project scope
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
+ * @param params.itemCategory - The category of the items to fetch
+ * @param params.itemUuids - The UUIDs of the items to fetch
+ * @param params.linkUuids - The UUIDs of the links to fetch
  * @param categoryParams - The category parameters for the fetch
  * @param categoryParams.category - The category of the items to fetch
  * @param categoryParams.itemCategories - The categories of the items to fetch
  * @param options - Options for the fetch
  * @param options.customFetch - A custom fetch function to use instead of the default fetch
  * @param options.version - The version of the OCHRE API to use
- * @returns The parsed items by property values or null if the fetch/parse fails
+ * @returns The parsed items by UUIDs and links or null if the fetch/parse fails
  */
-export async function fetchItemsByPropertyValues<
+export async function fetchItemsByUuidsAndLinks<
   T extends DataCategory = DataCategory,
   U extends DataCategory | Array<DataCategory> = T extends "tree" ?
     Exclude<DataCategory, "tree">
@@ -137,13 +130,11 @@ export async function fetchItemsByPropertyValues<
   : never,
 >(
   params: {
-    propertyVariableUuids: Array<string>;
-    propertyValues: Array<{
-      dataType: Exclude<PropertyValueContentType, "coordinate">;
-      value: string;
-    }>;
     projectScopeUuid: string;
     belongsToCollectionScopeUuids: Array<string>;
+    itemCategory: "resource" | "spatialUnit" | "concept" | "text" | null;
+    itemUuids: Array<string>;
+    linkUuids: Array<string>;
   },
   categoryParams?: { category?: T; itemCategories?: U },
   options?: {
@@ -161,10 +152,11 @@ export async function fetchItemsByPropertyValues<
     const version = options?.version ?? DEFAULT_API_VERSION;
 
     const {
-      propertyVariableUuids,
-      propertyValues,
       projectScopeUuid,
       belongsToCollectionScopeUuids,
+      itemCategory,
+      itemUuids,
+      linkUuids,
     } = params;
     const { category, itemCategories } = categoryParams ?? {};
 
@@ -172,8 +164,9 @@ export async function fetchItemsByPropertyValues<
       {
         projectScopeUuid,
         belongsToCollectionScopeUuids,
-        propertyVariableUuids,
-        propertyValues,
+        itemCategory,
+        itemUuids,
+        linkUuids,
       },
       { version },
     );
@@ -228,7 +221,11 @@ export async function fetchItemsByPropertyValues<
 
     const items: Array<Item<T, U>> = [];
 
-    if ("resource" in data.result.ochre && data.result.ochre.resource != null) {
+    if (
+      "resource" in data.result.ochre &&
+      data.result.ochre.resource != null &&
+      (itemCategory === null || itemCategory === "resource")
+    ) {
       const rawResources =
         Array.isArray(data.result.ochre.resource) ?
           data.result.ochre.resource
@@ -240,7 +237,8 @@ export async function fetchItemsByPropertyValues<
     }
     if (
       "spatialUnit" in data.result.ochre &&
-      data.result.ochre.spatialUnit != null
+      data.result.ochre.spatialUnit != null &&
+      (itemCategory === null || itemCategory === "spatialUnit")
     ) {
       const rawSpatialUnits =
         Array.isArray(data.result.ochre.spatialUnit) ?
@@ -253,7 +251,11 @@ export async function fetchItemsByPropertyValues<
 
       items.push(...spatialUnits);
     }
-    if ("concept" in data.result.ochre && data.result.ochre.concept != null) {
+    if (
+      "concept" in data.result.ochre &&
+      data.result.ochre.concept != null &&
+      (itemCategory === null || itemCategory === "concept")
+    ) {
       const rawConcepts =
         Array.isArray(data.result.ochre.concept) ?
           data.result.ochre.concept
@@ -263,7 +265,11 @@ export async function fetchItemsByPropertyValues<
 
       items.push(...concepts);
     }
-    if ("period" in data.result.ochre && data.result.ochre.period != null) {
+    if (
+      "period" in data.result.ochre &&
+      data.result.ochre.period != null &&
+      itemCategory === null
+    ) {
       const rawPeriods =
         Array.isArray(data.result.ochre.period) ?
           data.result.ochre.period
@@ -275,7 +281,8 @@ export async function fetchItemsByPropertyValues<
     }
     if (
       "bibliography" in data.result.ochre &&
-      data.result.ochre.bibliography != null
+      data.result.ochre.bibliography != null &&
+      itemCategory === null
     ) {
       const rawBibliographies =
         Array.isArray(data.result.ochre.bibliography) ?
@@ -288,7 +295,11 @@ export async function fetchItemsByPropertyValues<
 
       items.push(...bibliographies);
     }
-    if ("person" in data.result.ochre && data.result.ochre.person != null) {
+    if (
+      "person" in data.result.ochre &&
+      data.result.ochre.person != null &&
+      itemCategory === null
+    ) {
       const rawPersons =
         Array.isArray(data.result.ochre.person) ?
           data.result.ochre.person
@@ -300,7 +311,8 @@ export async function fetchItemsByPropertyValues<
     }
     if (
       "propertyValue" in data.result.ochre &&
-      data.result.ochre.propertyValue != null
+      data.result.ochre.propertyValue != null &&
+      itemCategory === null
     ) {
       const rawPropertyValues =
         Array.isArray(data.result.ochre.propertyValue) ?
@@ -313,7 +325,11 @@ export async function fetchItemsByPropertyValues<
 
       items.push(...propertyValues);
     }
-    if ("text" in data.result.ochre && data.result.ochre.text != null) {
+    if (
+      "text" in data.result.ochre &&
+      data.result.ochre.text != null &&
+      (itemCategory === null || itemCategory === "text")
+    ) {
       const rawTexts =
         Array.isArray(data.result.ochre.text) ?
           data.result.ochre.text
@@ -323,7 +339,11 @@ export async function fetchItemsByPropertyValues<
 
       items.push(...texts);
     }
-    if ("set" in data.result.ochre && data.result.ochre.set != null) {
+    if (
+      "set" in data.result.ochre &&
+      data.result.ochre.set != null &&
+      itemCategory === null
+    ) {
       const rawSets =
         Array.isArray(data.result.ochre.set) ?
           data.result.ochre.set
@@ -333,7 +353,11 @@ export async function fetchItemsByPropertyValues<
 
       items.push(...sets);
     }
-    if ("tree" in data.result.ochre && data.result.ochre.tree != null) {
+    if (
+      "tree" in data.result.ochre &&
+      data.result.ochre.tree != null &&
+      itemCategory === null
+    ) {
       const rawTrees =
         Array.isArray(data.result.ochre.tree) ?
           data.result.ochre.tree
@@ -344,7 +368,12 @@ export async function fetchItemsByPropertyValues<
       items.push(...trees);
     }
 
-    return { items, error: null };
+    const uniqueItems = items.filter(
+      (item, index, self) =>
+        index === self.findIndex((t) => t.uuid === item.uuid),
+    );
+
+    return { items: uniqueItems, error: null };
   } catch (error) {
     console.error(error);
     return {
@@ -352,7 +381,7 @@ export async function fetchItemsByPropertyValues<
       error:
         error instanceof Error ?
           error.message
-        : "Failed to fetch items by property values",
+        : "Failed to fetch items by UUIDs and links",
     };
   }
 }
