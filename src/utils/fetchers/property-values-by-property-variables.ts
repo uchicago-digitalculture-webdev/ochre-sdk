@@ -1,7 +1,7 @@
 import * as z from "zod";
 import type { ApiVersion, PropertyQueryItem } from "../../types/main.js";
 import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
-import { uuidSchema } from "../../schemas.js";
+import { stringContentSchema, uuidSchema } from "../../schemas.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
 
 /**
@@ -17,8 +17,16 @@ const responseItemSchema = z.object({
     type: z.string().optional(),
     dataType: z.string().optional(), // this should not be optional
     publicationDateTime: z.string().optional(),
-    content: z.string().optional(),
-    rawValue: z.string().optional(),
+    content: z
+      .union([
+        z.string(),
+        z.number(),
+        z.boolean(),
+        stringContentSchema,
+        z.array(stringContentSchema),
+      ])
+      .optional(),
+    rawValue: z.union([z.string(), z.number(), z.boolean()]).optional(),
   }),
 });
 
@@ -142,7 +150,19 @@ export async function fetchPropertyValuesByPropertyVariables(
     for (const item of parsedItems) {
       const categoryUuid = item.category.uuid;
       const valueUuid = item.value.uuid;
-      const valueContent = item.value.rawValue ?? item.value.content ?? "";
+      const valueContent =
+        ((
+          (item.value.rawValue ??
+          (typeof item.value.content === "string" ||
+            typeof item.value.content === "number" ||
+            typeof item.value.content === "boolean"))
+        ) ?
+          item.value.content?.toString()
+        : Array.isArray(item.value.content) ?
+          item.value.content
+            .find((content) => content.lang === "eng")
+            ?.string.toString()
+        : item.value.content?.string.toString()) ?? "";
 
       if (valueContent in items) {
         items[valueContent]!.resultUuids.push(categoryUuid);
@@ -154,10 +174,20 @@ export async function fetchPropertyValuesByPropertyVariables(
             type: item.value.type ?? null,
             dataType: item.value.dataType ?? null,
             publicationDateTime: item.value.publicationDateTime ?? null,
-            content: item.value.rawValue ?? item.value.content ?? "",
+            content: valueContent,
             label:
               item.value.rawValue != null && item.value.content != null ?
-                item.value.content
+                (
+                  typeof item.value.content === "string" ||
+                  typeof item.value.content === "number" ||
+                  typeof item.value.content === "boolean"
+                ) ?
+                  item.value.content.toString()
+                : Array.isArray(item.value.content) ?
+                  (item.value.content
+                    .find((content) => content.lang === "eng")
+                    ?.string.toString() ?? "")
+                : item.value.content.string.toString()
               : null,
           },
           resultUuids: [categoryUuid],

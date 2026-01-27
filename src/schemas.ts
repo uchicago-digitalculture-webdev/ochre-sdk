@@ -18,6 +18,15 @@ export const uuidSchema = z
   .refine(isPseudoUuid, { error: "Invalid pseudo-UUID" });
 
 /**
+ * Schema for validating rich text string content
+ * @internal
+ */
+export const stringContentSchema = z.object({
+  string: z.union([z.string(), z.number(), z.boolean()]),
+  lang: z.string().optional(),
+});
+
+/**
  * Schema for validating filters
  * @internal
  */
