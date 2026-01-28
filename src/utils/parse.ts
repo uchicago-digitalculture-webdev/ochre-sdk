@@ -4786,6 +4786,8 @@ function parseWebsiteProperties(
   let isDescriptionDisplayed = true;
   let isDocumentDisplayed = true;
   let isNotesDisplayed = true;
+  let isEventsDisplayed = true;
+  let isPeriodsDisplayed = true;
   let isPropertiesDisplayed = true;
   let isBibliographyDisplayed = true;
   let isPropertyValuesGrouped = true;
@@ -4884,6 +4886,22 @@ function parseWebsiteProperties(
       )?.values[0];
     if (isItemPageNotesDisplayedProperty) {
       isNotesDisplayed = isItemPageNotesDisplayedProperty.content === true;
+    }
+
+    const isItemPageEventsDisplayedProperty =
+      itemPageTypeProperty.properties.find(
+        (property) => property.label === "item-page-events-displayed",
+      )?.values[0];
+    if (isItemPageEventsDisplayedProperty) {
+      isEventsDisplayed = isItemPageEventsDisplayedProperty.content === true;
+    }
+
+    const isItemPagePeriodsDisplayedProperty =
+      itemPageTypeProperty.properties.find(
+        (property) => property.label === "item-page-periods-displayed",
+      )?.values[0];
+    if (isItemPagePeriodsDisplayedProperty) {
+      isPeriodsDisplayed = isItemPagePeriodsDisplayedProperty.content === true;
     }
 
     const isItemPagePropertiesDisplayedProperty =
@@ -5043,6 +5061,8 @@ function parseWebsiteProperties(
       isDescriptionDisplayed,
       isDocumentDisplayed,
       isNotesDisplayed,
+      isEventsDisplayed,
+      isPeriodsDisplayed,
       isPropertiesDisplayed,
       isBibliographyDisplayed,
       isPropertyValuesGrouped,

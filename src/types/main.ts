@@ -812,6 +812,8 @@ export type Website = {
       isDescriptionDisplayed: boolean;
       isDocumentDisplayed: boolean;
       isNotesDisplayed: boolean;
+      isEventsDisplayed: boolean;
+      isPeriodsDisplayed: boolean;
       isPropertiesDisplayed: boolean;
       isBibliographyDisplayed: boolean;
       isPropertyValuesGrouped: boolean;
