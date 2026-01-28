@@ -821,6 +821,7 @@ export type Website = {
 export type Webpage = {
   title: string;
   slug: string;
+  publicationDateTime: Date | null;
   properties: {
     displayedInHeader: boolean;
     width: "full" | "large" | "narrow" | "default";

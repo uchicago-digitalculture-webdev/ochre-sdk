@@ -1,3 +1,5 @@
+import { UTCDate } from "@date-fns/utc";
+import { parseISO, set } from "date-fns";
 import type {
   FakeString,
   OchreBibliography,
@@ -235,7 +237,7 @@ function parseContextItem(contextItem: OchreContextItem): ContextItem {
     uuid: contextItem.uuid,
     publicationDateTime:
       contextItem.publicationDateTime != null ?
-        new Date(contextItem.publicationDateTime)
+        parseISO(contextItem.publicationDateTime)
       : null,
     number: contextItem.n,
     content: parseFakeString(contextItem.content),
@@ -311,7 +313,7 @@ export function parsePerson(
     metadata: metadata ?? null,
     publicationDateTime:
       person.publicationDateTime != null ?
-        new Date(person.publicationDateTime)
+        parseISO(person.publicationDateTime)
       : null,
     persistentUrl: persistentUrl ?? null,
     type: person.type ?? null,
@@ -467,7 +469,7 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
         : null,
       publicationDateTime:
         link.publicationDateTime != null ?
-          new Date(link.publicationDateTime)
+          parseISO(link.publicationDateTime)
         : null,
     };
 
@@ -557,7 +559,7 @@ export function parseImage(image: OchreImage): Image | null {
   return {
     publicationDateTime:
       image.publicationDateTime != null ?
-        new Date(image.publicationDateTime)
+        parseISO(image.publicationDateTime)
       : null,
     identification:
       image.identification ? parseIdentification(image.identification) : null,
@@ -830,7 +832,7 @@ export function parseEvents(events: Array<OchreEvent>): Array<Event> {
   const returnEvents: Array<Event> = [];
   for (const event of events) {
     returnEvents.push({
-      dateTime: event.dateTime != null ? new Date(event.dateTime) : null,
+      dateTime: event.dateTime != null ? parseISO(event.dateTime) : null,
       date:
         event.partialDates?.year != null ?
           `${event.partialDates.year}-01-01/${event.partialDates.endYear ?? event.partialDates.year}-12-31`
@@ -842,7 +844,7 @@ export function parseEvents(events: Array<OchreEvent>): Array<Event> {
             uuid: event.location.uuid,
             publicationDateTime:
               event.location.publicationDateTime != null ?
-                new Date(event.location.publicationDateTime)
+                parseISO(event.location.publicationDateTime)
               : null,
             content: parseStringContent(event.location),
           }
@@ -853,7 +855,7 @@ export function parseEvents(events: Array<OchreEvent>): Array<Event> {
             uuid: event.agent.uuid,
             publicationDateTime:
               event.agent.publicationDateTime != null ?
-                new Date(event.agent.publicationDateTime)
+                parseISO(event.agent.publicationDateTime)
               : null,
             content: parseStringContent(event.agent),
           }
@@ -948,7 +950,7 @@ export function parseProperty(
         // case "date":
         // case "dateTime": {
         //   if (value.rawValue != null) {
-        //     content = new Date(parseFakeString(value.rawValue));
+        //     content = parseISO(parseFakeString(value.rawValue));
         //     label =
         //       value.content ?
         //         parseStringContent({ content: value.content })
@@ -957,8 +959,8 @@ export function parseProperty(
         //     content =
         //       value.content ?
         //         typeof value.content === "string" ?
-        //           new Date(value.content)
-        //         : new Date(parseStringContent({ content: value.content }))
+        //           parseISO(value.content)
+        //         : parseISO(parseStringContent({ content: value.content }))
         //       : null;
         //   }
         //   break;
@@ -1010,7 +1012,7 @@ export function parseProperty(
         uuid: value.uuid ?? null,
         publicationDateTime:
           value.publicationDateTime != null ?
-            new Date(value.publicationDateTime)
+            parseISO(value.publicationDateTime)
           : null,
         unit: value.unit ?? null,
         height: value.height ?? null,
@@ -1126,7 +1128,7 @@ export function parseImageMap(imageMap: OchreImageMap): ImageMap {
       uuid: area.uuid,
       publicationDateTime:
         area.publicationDateTime != null ?
-          new Date(area.publicationDateTime)
+          parseISO(area.publicationDateTime)
         : null,
       category: area.type,
       title: parseFakeString(area.title),
@@ -1161,7 +1163,7 @@ export function parsePeriod(
     metadata: metadata ?? null,
     publicationDateTime:
       period.publicationDateTime != null ?
-        new Date(period.publicationDateTime)
+        parseISO(period.publicationDateTime)
       : null,
     persistentUrl: persistentUrl ?? null,
     type: period.type ?? null,
@@ -1209,7 +1211,7 @@ export function parseBibliography(
       sourceResources.push({
         uuid: resource.uuid,
         category: "resource",
-        publicationDateTime: new Date(resource.publicationDateTime),
+        publicationDateTime: parseISO(resource.publicationDateTime),
         type: resource.type,
         identification: parseIdentification(resource.identification),
         href: resource.href ?? null,
@@ -1250,7 +1252,7 @@ export function parseBibliography(
     metadata: metadata ?? null,
     publicationDateTime:
       bibliography.publicationDateTime != null ?
-        new Date(bibliography.publicationDateTime)
+        parseISO(bibliography.publicationDateTime)
       : null,
     persistentUrl: persistentUrl ?? null,
     type: bibliography.type ?? null,
@@ -1286,11 +1288,11 @@ export function parseBibliography(
         : [],
       startDate:
         bibliography.publicationInfo?.startDate ?
-          new Date(
-            bibliography.publicationInfo.startDate.year,
-            bibliography.publicationInfo.startDate.month,
-            bibliography.publicationInfo.startDate.day,
-          )
+          set(new UTCDate(0, 0, 0, 0, 0, 0, 0), {
+            year: bibliography.publicationInfo.startDate.year,
+            month: bibliography.publicationInfo.startDate.month,
+            date: bibliography.publicationInfo.startDate.day,
+          })
         : null,
     },
     entryInfo:
@@ -1380,7 +1382,7 @@ export function parsePropertyValue(
     number: propertyValue.n,
     publicationDateTime:
       propertyValue.publicationDateTime ?
-        new Date(propertyValue.publicationDateTime)
+        parseISO(propertyValue.publicationDateTime)
       : null,
     persistentUrl: persistentUrl ?? null,
     context: propertyValue.context ? parseContext(propertyValue.context) : null,
@@ -1462,7 +1464,7 @@ export function parseText(
     belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
     publicationDateTime:
-      text.publicationDateTime ? new Date(text.publicationDateTime) : null,
+      text.publicationDateTime ? parseISO(text.publicationDateTime) : null,
     persistentUrl: persistentUrl ?? null,
     type: text.type ?? null,
     language: text.language ?? null,
@@ -1781,7 +1783,7 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
     category: "tree",
     belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
-    publicationDateTime: new Date(tree.publicationDateTime),
+    publicationDateTime: parseISO(tree.publicationDateTime),
     persistentUrl: persistentUrl ?? null,
     identification: parseIdentification(tree.identification),
     creators,
@@ -1953,7 +1955,7 @@ export function parseSet<U extends Array<DataCategory>>(
     metadata: metadata ?? null,
     itemCategories: parsedItemCategories as U,
     publicationDateTime:
-      set.publicationDateTime ? new Date(set.publicationDateTime) : null,
+      set.publicationDateTime ? parseISO(set.publicationDateTime) : null,
     persistentUrl: persistentUrl ?? null,
     date: set.date ?? null,
     license: parseLicense(set.availability),
@@ -2014,7 +2016,7 @@ export function parseResource(
     metadata: metadata ?? null,
     publicationDateTime:
       resource.publicationDateTime ?
-        new Date(resource.publicationDateTime)
+        parseISO(resource.publicationDateTime)
       : null,
     persistentUrl: persistentUrl ?? null,
     type: resource.type,
@@ -2159,7 +2161,7 @@ export function parseSpatialUnit(
     metadata: metadata ?? null,
     publicationDateTime:
       spatialUnit.publicationDateTime != null ?
-        new Date(spatialUnit.publicationDateTime)
+        parseISO(spatialUnit.publicationDateTime)
       : null,
     persistentUrl: persistentUrl ?? null,
     number: spatialUnit.n,
@@ -2262,7 +2264,7 @@ export function parseConcept(
     metadata: metadata ?? null,
     publicationDateTime:
       concept.publicationDateTime ?
-        new Date(concept.publicationDateTime)
+        parseISO(concept.publicationDateTime)
       : null,
     persistentUrl: persistentUrl ?? null,
     number: concept.n,
@@ -3969,6 +3971,10 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
   return {
     title: identification.label,
     slug,
+    publicationDateTime:
+      webpageResource.publicationDateTime ?
+        parseISO(webpageResource.publicationDateTime)
+      : null,
     items,
     properties: {
       displayedInHeader,
@@ -5056,7 +5062,7 @@ export function parseWebsite(
     metadata: parseMetadata(metadata),
     publicationDateTime:
       websiteTree.publicationDateTime ?
-        new Date(websiteTree.publicationDateTime)
+        parseISO(websiteTree.publicationDateTime)
       : null,
     identification: parseIdentification(websiteTree.identification),
     creators:
