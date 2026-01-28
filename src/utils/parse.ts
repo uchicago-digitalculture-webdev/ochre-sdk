@@ -4784,6 +4784,7 @@ function parseWebsiteProperties(
   let defaultTheme: "light" | "dark" | null = null;
   let isMainContentDisplayed = true;
   let isDescriptionDisplayed = true;
+  let isDocumentDisplayed = true;
   let isNotesDisplayed = true;
   let isPropertiesDisplayed = true;
   let isBibliographyDisplayed = true;
@@ -4866,6 +4867,15 @@ function parseWebsiteProperties(
     if (isItemPageDescriptionDisplayedProperty) {
       isDescriptionDisplayed =
         isItemPageDescriptionDisplayedProperty.content === true;
+    }
+
+    const isItemPageDocumentDisplayedProperty =
+      itemPageTypeProperty.properties.find(
+        (property) => property.label === "item-page-document-displayed",
+      )?.values[0];
+    if (isItemPageDocumentDisplayedProperty) {
+      isDocumentDisplayed =
+        isItemPageDocumentDisplayedProperty.content === true;
     }
 
     const isItemPageNotesDisplayedProperty =
@@ -5031,6 +5041,7 @@ function parseWebsiteProperties(
     itemPage: {
       isMainContentDisplayed,
       isDescriptionDisplayed,
+      isDocumentDisplayed,
       isNotesDisplayed,
       isPropertiesDisplayed,
       isBibliographyDisplayed,
