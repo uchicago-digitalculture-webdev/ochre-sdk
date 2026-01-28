@@ -808,8 +808,13 @@ export type Website = {
     defaultTheme: "light" | "dark" | null;
     logoUrl: string | null;
     itemPage: {
-      iiifViewer: "universal-viewer" | "clover";
+      isMainContentDisplayed: boolean;
+      isDescriptionDisplayed: boolean;
+      isNotesDisplayed: boolean;
+      isPropertiesDisplayed: boolean;
+      isBibliographyDisplayed: boolean;
       isPropertyValuesGrouped: boolean;
+      iiifViewer: "universal-viewer" | "clover";
     };
     options: { contexts: PropertyContexts | null; scopes: Array<Scope> | null };
   };
@@ -1035,7 +1040,7 @@ export type WebElementComponent =
       content: string;
     }
   | { component: "timeline"; timelineId: string }
-  | { component: "video"; isChaptersDislayed: boolean };
+  | { component: "video"; isChaptersDisplayed: boolean };
 
 /**
  * Represents an image used in web elements

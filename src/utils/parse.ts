@@ -3578,14 +3578,14 @@ function parseWebElementProperties(
         );
       }
 
-      let isChaptersDislayed = getPropertyValueByLabel(
+      let isChaptersDisplayed = getPropertyValueByLabel(
         componentProperty.properties,
         "chapters-displayed",
       );
-      isChaptersDislayed ??= true;
+      isChaptersDisplayed ??= true;
 
       properties.videoId = videoLink.uuid;
-      properties.isChaptersDislayed = isChaptersDislayed === true;
+      properties.isChaptersDisplayed = isChaptersDisplayed === true;
       break;
     }
     default: {
@@ -4780,10 +4780,15 @@ function parseWebsiteProperties(
   let isHeaderProjectDisplayed = true;
   let isFooterDisplayed = true;
   let isSidebarDisplayed = false;
-  let iiifViewer: "universal-viewer" | "clover" = "universal-viewer";
-  let isPropertyValuesGrouped = true;
   let supportsThemeToggle = true;
   let defaultTheme: "light" | "dark" | null = null;
+  let isMainContentDisplayed = true;
+  let isDescriptionDisplayed = true;
+  let isNotesDisplayed = true;
+  let isPropertiesDisplayed = true;
+  let isBibliographyDisplayed = true;
+  let isPropertyValuesGrouped = true;
+  let iiifViewer: "universal-viewer" | "clover" = "universal-viewer";
 
   const headerProperty = websiteProperties.find(
     (property) => property.label === "navbar-displayed",
@@ -4839,18 +4844,73 @@ function parseWebsiteProperties(
       (property) => property.label === "bound-element-navbar-search-bar",
     )?.values[0]?.uuid ?? null;
 
-  const iiifViewerProperty = websiteProperties.find(
-    (property) => property.label === "iiif-viewer",
-  )?.values[0];
-  if (iiifViewerProperty) {
-    iiifViewer = iiifViewerProperty.content as "universal-viewer" | "clover";
-  }
+  const itemPageTypeProperty = websiteProperties.find(
+    (property) =>
+      property.label === "page-type" &&
+      property.values[0]?.content === "item-page",
+  );
+  if (itemPageTypeProperty) {
+    const isItemPageMainContentDisplayedProperty =
+      itemPageTypeProperty.properties.find(
+        (property) => property.label === "item-page-main-content-displayed",
+      )?.values[0];
+    if (isItemPageMainContentDisplayedProperty) {
+      isMainContentDisplayed =
+        isItemPageMainContentDisplayedProperty.content === true;
+    }
 
-  const isPropertyValuesGroupedProperty = websiteProperties.find(
-    (property) => property.label === "is-property-values-grouped",
-  )?.values[0];
-  if (isPropertyValuesGroupedProperty) {
-    isPropertyValuesGrouped = isPropertyValuesGroupedProperty.content === true;
+    const isItemPageDescriptionDisplayedProperty =
+      itemPageTypeProperty.properties.find(
+        (property) => property.label === "item-page-description-displayed",
+      )?.values[0];
+    if (isItemPageDescriptionDisplayedProperty) {
+      isDescriptionDisplayed =
+        isItemPageDescriptionDisplayedProperty.content === true;
+    }
+
+    const isItemPageNotesDisplayedProperty =
+      itemPageTypeProperty.properties.find(
+        (property) => property.label === "item-page-notes-displayed",
+      )?.values[0];
+    if (isItemPageNotesDisplayedProperty) {
+      isNotesDisplayed = isItemPageNotesDisplayedProperty.content === true;
+    }
+
+    const isItemPagePropertiesDisplayedProperty =
+      itemPageTypeProperty.properties.find(
+        (property) => property.label === "item-page-properties-displayed",
+      )?.values[0];
+    if (isItemPagePropertiesDisplayedProperty) {
+      isPropertiesDisplayed =
+        isItemPagePropertiesDisplayedProperty.content === true;
+    }
+
+    const isItemPageBibliographyDisplayedProperty =
+      itemPageTypeProperty.properties.find(
+        (property) => property.label === "item-page-bibliography-displayed",
+      )?.values[0];
+    if (isItemPageBibliographyDisplayedProperty) {
+      isBibliographyDisplayed =
+        isItemPageBibliographyDisplayedProperty.content === true;
+    }
+
+    const isItemPagePropertyValuesGroupedProperty =
+      itemPageTypeProperty.properties.find(
+        (property) => property.label === "item-page-property-values-grouped",
+      )?.values[0];
+    if (isItemPagePropertyValuesGroupedProperty) {
+      isPropertyValuesGrouped =
+        isItemPagePropertyValuesGroupedProperty.content === true;
+    }
+
+    const isItemPageIiifViewerProperty = itemPageTypeProperty.properties.find(
+      (property) => property.label === "item-page-iiif-viewer",
+    )?.values[0];
+    if (isItemPageIiifViewerProperty) {
+      iiifViewer = isItemPageIiifViewerProperty.content as
+        | "universal-viewer"
+        | "clover";
+    }
   }
 
   const supportsThemeToggleProperty = websiteProperties.find(
@@ -4968,7 +5028,15 @@ function parseWebsiteProperties(
       logoUuid !== null ?
         `https://ochre.lib.uchicago.edu/ochre?uuid=${logoUuid}&load`
       : null,
-    itemPage: { iiifViewer, isPropertyValuesGrouped },
+    itemPage: {
+      isMainContentDisplayed,
+      isDescriptionDisplayed,
+      isNotesDisplayed,
+      isPropertiesDisplayed,
+      isBibliographyDisplayed,
+      isPropertyValuesGrouped,
+      iiifViewer,
+    },
     options: { contexts, scopes },
   };
 }
