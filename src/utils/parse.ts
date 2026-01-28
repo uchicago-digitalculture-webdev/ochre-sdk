@@ -46,6 +46,7 @@ import type {
   Image,
   ImageMap,
   Interpretation,
+  Item,
   LevelContext,
   LevelContextItem,
   License,
@@ -1841,15 +1842,7 @@ export function parseSet<U extends Array<DataCategory>>(
   const parsedItemCategories =
     itemCategories ?? getItemCategories(Object.keys(set.items));
 
-  let items:
-    | Array<Resource>
-    | Array<SpatialUnit>
-    | Array<Concept>
-    | Array<Period>
-    | Array<Bibliography>
-    | Array<Person>
-    | Array<PropertyValue>
-    | Array<Text> = [];
+  const items: Array<Item<U[number]>> = [];
 
   for (const itemCategory of parsedItemCategories) {
     switch (itemCategory) {
@@ -1857,10 +1850,12 @@ export function parseSet<U extends Array<DataCategory>>(
         if (!("resource" in set.items) || set.items.resource == null) {
           throw new Error("Invalid OCHRE data: Set has no resources");
         }
-        items = parseResources(
-          Array.isArray(set.items.resource) ?
-            set.items.resource
-          : [set.items.resource],
+        items.push(
+          ...(parseResources(
+            Array.isArray(set.items.resource) ?
+              set.items.resource
+            : [set.items.resource],
+          ) as Array<Item<U[number]>>),
         );
         break;
       }
@@ -1868,10 +1863,12 @@ export function parseSet<U extends Array<DataCategory>>(
         if (!("spatialUnit" in set.items) || set.items.spatialUnit == null) {
           throw new Error("Invalid OCHRE data: Set has no spatial units");
         }
-        items = parseSpatialUnits(
-          Array.isArray(set.items.spatialUnit) ?
-            set.items.spatialUnit
-          : [set.items.spatialUnit],
+        items.push(
+          ...(parseSpatialUnits(
+            Array.isArray(set.items.spatialUnit) ?
+              set.items.spatialUnit
+            : [set.items.spatialUnit],
+          ) as Array<Item<U[number]>>),
         );
         break;
       }
@@ -1879,10 +1876,12 @@ export function parseSet<U extends Array<DataCategory>>(
         if (!("concept" in set.items) || set.items.concept == null) {
           throw new Error("Invalid OCHRE data: Set has no concepts");
         }
-        items = parseConcepts(
-          Array.isArray(set.items.concept) ?
-            set.items.concept
-          : [set.items.concept],
+        items.push(
+          ...(parseConcepts(
+            Array.isArray(set.items.concept) ?
+              set.items.concept
+            : [set.items.concept],
+          ) as Array<Item<U[number]>>),
         );
         break;
       }
@@ -1890,10 +1889,12 @@ export function parseSet<U extends Array<DataCategory>>(
         if (!("period" in set.items) || set.items.period == null) {
           throw new Error("Invalid OCHRE data: Set has no periods");
         }
-        items = parsePeriods(
-          Array.isArray(set.items.period) ?
-            set.items.period
-          : [set.items.period],
+        items.push(
+          ...(parsePeriods(
+            Array.isArray(set.items.period) ?
+              set.items.period
+            : [set.items.period],
+          ) as Array<Item<U[number]>>),
         );
         break;
       }
@@ -1901,10 +1902,12 @@ export function parseSet<U extends Array<DataCategory>>(
         if (!("bibliography" in set.items) || set.items.bibliography == null) {
           throw new Error("Invalid OCHRE data: Set has no bibliographies");
         }
-        items = parseBibliographies(
-          Array.isArray(set.items.bibliography) ?
-            set.items.bibliography
-          : [set.items.bibliography],
+        items.push(
+          ...(parseBibliographies(
+            Array.isArray(set.items.bibliography) ?
+              set.items.bibliography
+            : [set.items.bibliography],
+          ) as Array<Item<U[number]>>),
         );
         break;
       }
@@ -1912,10 +1915,12 @@ export function parseSet<U extends Array<DataCategory>>(
         if (!("person" in set.items) || set.items.person == null) {
           throw new Error("Invalid OCHRE data: Set has no persons");
         }
-        items = parsePersons(
-          Array.isArray(set.items.person) ?
-            set.items.person
-          : [set.items.person],
+        items.push(
+          ...(parsePersons(
+            Array.isArray(set.items.person) ?
+              set.items.person
+            : [set.items.person],
+          ) as Array<Item<U[number]>>),
         );
         break;
       }
@@ -1926,10 +1931,12 @@ export function parseSet<U extends Array<DataCategory>>(
         ) {
           throw new Error("Invalid OCHRE data: Set has no property values");
         }
-        items = parsePropertyValues(
-          Array.isArray(set.items.propertyValue) ?
-            set.items.propertyValue
-          : [set.items.propertyValue],
+        items.push(
+          ...(parsePropertyValues(
+            Array.isArray(set.items.propertyValue) ?
+              set.items.propertyValue
+            : [set.items.propertyValue],
+          ) as Array<Item<U[number]>>),
         );
         break;
       }
@@ -1937,8 +1944,10 @@ export function parseSet<U extends Array<DataCategory>>(
         if (!("text" in set.items) || set.items.text == null) {
           throw new Error("Invalid OCHRE data: Set has no texts");
         }
-        items = parseTexts(
-          Array.isArray(set.items.text) ? set.items.text : [set.items.text],
+        items.push(
+          ...(parseTexts(
+            Array.isArray(set.items.text) ? set.items.text : [set.items.text],
+          ) as Array<Item<U[number]>>),
         );
         break;
       }
@@ -1977,7 +1986,7 @@ export function parseSet<U extends Array<DataCategory>>(
       : [],
     type: set.type,
     number: set.n,
-    items: items as Set<U>["items"],
+    items: items as unknown as Set<U>["items"],
   };
 }
 
