@@ -42,10 +42,10 @@
   "scripts": {
     "dev": "tsdown src/index.ts --watch",
     "build": "tsdown",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --check .",
-    "format:fix": "prettier --write --list-different .",
+    "lint": "eslint --cache .",
+    "lint:fix": "eslint --cache . --fix",
+    "format": "prettier --cache --check .",
+    "format:fix": "prettier --cache --write --list-different .",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "release": "bumpp"
