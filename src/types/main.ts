@@ -1004,7 +1004,7 @@ export type WebElementComponent =
   | { component: "network-graph" }
   | {
       component: "query";
-      itemCategory: "resource" | "spatialUnit" | "concept" | "text";
+      itemCategory: "resource" | "spatialUnit" | "concept" | "text" | null;
       queries: Array<{
         label: string;
         propertyUuids: Array<string>;

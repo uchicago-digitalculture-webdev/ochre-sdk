@@ -3423,7 +3423,8 @@ function parseWebElementProperties(
         | "resource"
         | "spatialUnit"
         | "concept"
-        | "text";
+        | "text"
+        | null;
       properties.queries = queries;
       properties.displayedProperties =
         displayedProperties?.values
