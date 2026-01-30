@@ -105,7 +105,7 @@ function buildXQuery(
     projectScopeUuid: string;
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariables: {
-      dataType: PropertyValueContentType;
+      dataType: Exclude<PropertyValueContentType, "coordinate">;
       uuids: Array<string>;
     };
   },
@@ -205,7 +205,7 @@ export async function fetchPropertyValuesByPropertyVariables(
     projectScopeUuid: string;
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariables: {
-      dataType: PropertyValueContentType;
+      dataType: Exclude<PropertyValueContentType, "coordinate">;
       uuids: Array<string>;
     };
   },
