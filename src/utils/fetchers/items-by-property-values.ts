@@ -38,6 +38,7 @@ import {
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - An array of property variable UUIDs to fetch
  * @param params.propertyValues - An array of property values to fetch
+ * @param params.itemCategory - The category of the items to fetch
  * @param options - Options for the fetch
  * @param options.version - The version of the OCHRE API to use
  * @returns An XQuery string
@@ -51,6 +52,7 @@ function buildXQuery(
       dataType: Exclude<PropertyValueContentType, "coordinate">;
       value: string;
     }>;
+    itemCategory?: "resource" | "spatialUnit" | "concept" | "text";
   },
   options?: { version: ApiVersion },
 ): string {
@@ -61,6 +63,7 @@ function buildXQuery(
     propertyValues,
     projectScopeUuid,
     belongsToCollectionScopeUuids,
+    itemCategory,
   } = params;
 
   let belongsToCollectionScopeFilter = "";
@@ -80,7 +83,7 @@ function buildXQuery(
   const propertyValuesFilters = propertyValues
     .map(({ dataType, value }) => {
       if (dataType === "IDREF") {
-        return `value[@uuid="${value}"]`;
+        return `value/@uuid="${value}"`;
       }
       if (
         dataType === "date" ||
@@ -90,25 +93,34 @@ function buildXQuery(
         dataType === "decimal" ||
         dataType === "boolean"
       ) {
-        return `value[@rawValue="${value}"]`;
+        return `value/@rawValue="${value}"`;
       }
       return `value="${value}"`;
     })
     .join(" or ");
 
-  const xquery = `let $matches := ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]/*${belongsToCollectionScopeFilter}/properties//property[label[${propertyVariables}]][${propertyValuesFilters}]
+  const xquery = `let $match-uuids := distinct-values(
+    ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]
+        /*${belongsToCollectionScopeFilter}
+          [properties//property/label[${propertyVariables}]
+                               [${propertyValuesFilters}]]
+        /@uuid
+  )
 
-let $items := $matches/ancestor::*[parent::ochre]
-let $unique-uuids := distinct-values($items/@uuid)
+  let $items := ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]
+      /${itemCategory ?? "*"}[@uuid = $match-uuids
+             or bibliographies/bibliography/@uuid = $match-uuids]
 
-for $uuid in $unique-uuids
-let $item := $items[@uuid = $uuid][1]
-let $category := local-name($item)
+  let $unique-uuids := distinct-values($items/@uuid)
 
-return element { node-name($item) } {
-  $item/@*,
-  $item/node()[not(local-name(.) = $category)]
-}`;
+  for $uuid in $unique-uuids
+  let $item := $items[@uuid = $uuid][1]
+  let $category := local-name($item)
+
+  return element { node-name($item) } {
+    $item/@*,
+    $item/node()[not(local-name(.) = $category)]
+  }`;
 
   return `<ochre>{${xquery}}</ochre>`;
 }
@@ -117,10 +129,11 @@ return element { node-name($item) } {
  * Fetches and parses items by property values from the OCHRE API
  *
  * @param params - The parameters for the fetch
- * @param params.propertyVariableUuids - The property variable UUIDs to query by
- * @param params.propertyValues - The property values to query by
  * @param params.projectScopeUuid - The UUID of the project scope
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
+ * @param params.propertyVariableUuids - The property variable UUIDs to query by
+ * @param params.propertyValues - The property values to query by
+ * @param params.itemCategory - The category of the items to fetch
  * @param categoryParams - The category parameters for the fetch
  * @param categoryParams.category - The category of the items to fetch
  * @param categoryParams.itemCategories - The categories of the items to fetch
@@ -137,13 +150,14 @@ export async function fetchItemsByPropertyValues<
   : never,
 >(
   params: {
+    projectScopeUuid: string;
+    belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
     propertyValues: Array<{
       dataType: Exclude<PropertyValueContentType, "coordinate">;
       value: string;
     }>;
-    projectScopeUuid: string;
-    belongsToCollectionScopeUuids: Array<string>;
+    itemCategory?: "resource" | "spatialUnit" | "concept" | "text";
   },
   categoryParams?: { category?: T; itemCategories?: U },
   options?: {
@@ -165,6 +179,7 @@ export async function fetchItemsByPropertyValues<
       propertyValues,
       projectScopeUuid,
       belongsToCollectionScopeUuids,
+      itemCategory,
     } = params;
     const { category, itemCategories } = categoryParams ?? {};
 
@@ -174,6 +189,7 @@ export async function fetchItemsByPropertyValues<
         belongsToCollectionScopeUuids,
         propertyVariableUuids,
         propertyValues,
+        itemCategory,
       },
       { version },
     );
@@ -188,23 +204,28 @@ export async function fetchItemsByPropertyValues<
     }
 
     const data = (await response.json()) as {
-      result: {
-        ochre: {
-          resource?: OchreResource | Array<OchreResource>;
-          spatialUnit?: OchreSpatialUnit | Array<OchreSpatialUnit>;
-          concept?: OchreConcept | Array<OchreConcept>;
-          period?: OchrePeriod | Array<OchrePeriod>;
-          bibliography?: OchreBibliography | Array<OchreBibliography>;
-          person?: OchrePerson | Array<OchrePerson>;
-          propertyValue?: OchrePropertyValue | Array<OchrePropertyValue>;
-          text?: OchreText | Array<OchreText>;
-          set?: OchreSet | Array<OchreSet>;
-          tree?: OchreTree | Array<OchreTree>;
-        };
-      };
+      result:
+        | {
+            ochre: {
+              resource?: OchreResource | Array<OchreResource>;
+              spatialUnit?: OchreSpatialUnit | Array<OchreSpatialUnit>;
+              concept?: OchreConcept | Array<OchreConcept>;
+              period?: OchrePeriod | Array<OchrePeriod>;
+              bibliography?: OchreBibliography | Array<OchreBibliography>;
+              person?: OchrePerson | Array<OchrePerson>;
+              propertyValue?: OchrePropertyValue | Array<OchrePropertyValue>;
+              text?: OchreText | Array<OchreText>;
+              set?: OchreSet | Array<OchreSet>;
+              tree?: OchreTree | Array<OchreTree>;
+            };
+          }
+        | [];
     };
 
-    if (Object.keys(data.result.ochre).length === 0) {
+    if (
+      Array.isArray(data.result) ||
+      Object.keys(data.result.ochre).length === 0
+    ) {
       throw new Error("No items found");
     }
 

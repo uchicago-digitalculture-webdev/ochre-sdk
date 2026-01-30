@@ -1,35 +1,78 @@
 import * as z from "zod";
-import type { ApiVersion, PropertyQueryItem } from "../../types/main.js";
+import type {
+  ApiVersion,
+  PropertyValueContentType,
+  PropertyValueQueryItem,
+} from "../../types/main.js";
 import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
-import { richTextStringSchema, uuidSchema } from "../../schemas.js";
+import { identificationSchema, uuidSchema } from "../../schemas.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
-import { parseFakeString, parseStringContent } from "../string.js";
+import { parseStringContent } from "../string.js";
 
 /**
- * Schema for a single property value by property variable item in the OCHRE API response
+ * Schema for a single property value query item in the OCHRE API response
  */
-
-const responseItemSchema = z.object({
-  property: uuidSchema,
-  category: z.object({ uuid: uuidSchema, content: z.string() }),
-  value: z.object({
-    uuid: uuidSchema.optional(),
-    category: z.string().optional(),
-    type: z.string().optional(),
-    dataType: z.string().optional(), // this should not be optional
-    publicationDateTime: z.string().optional(),
+const propertyValueQueryItemSchema = z
+  .object({
+    uuid: uuidSchema.optional().transform((val) => val ?? null),
+    count: z.number(),
+    // dataType: propertyValueContentTypeSchema,
+    dataType: z.string(),
+    identification: identificationSchema.optional(),
+    label: z
+      .union([z.string(), z.number(), z.boolean()])
+      .optional()
+      .transform((val) => val?.toString() ?? null),
     content: z
-      .union([
-        z.string(),
-        z.number(),
-        z.boolean(),
-        richTextStringSchema,
-        z.array(richTextStringSchema),
-      ])
-      .optional(),
-    rawValue: z.union([z.string(), z.number(), z.boolean()]).optional(),
-  }),
-});
+      .union([z.string(), z.number(), z.boolean()])
+      .optional()
+      .transform((val) => val ?? null),
+  })
+  .transform((val) => {
+    let value = val;
+
+    switch (val.dataType) {
+      case "IDREF":
+      case "string":
+      case "date":
+      case "dateTime": {
+        value = { ...val, content: val.content?.toString() ?? null };
+        break;
+      }
+      case "integer":
+      case "decimal":
+      case "time": {
+        value = {
+          ...val,
+          content: val.content !== null ? Number(val.content) : null,
+        };
+        break;
+      }
+      case "boolean": {
+        value = {
+          ...val,
+          content: val.content !== null ? Boolean(val.content) : null,
+        };
+        break;
+      }
+      default: {
+        // throw new Error(`Invalid data type: ${val.dataType}`);
+        value = val;
+        break;
+      }
+    }
+
+    if ("identification" in value && value.identification != null) {
+      const { identification, ...rest } = value;
+
+      value = {
+        ...rest,
+        content: parseStringContent({ content: identification.label.content }),
+      };
+    }
+
+    return value;
+  });
 
 /**
  * Schema for the property values by property variables OCHRE API response
@@ -37,7 +80,10 @@ const responseItemSchema = z.object({
 const responseSchema = z.object({
   result: z.object({
     ochre: z.object({
-      item: z.union([responseItemSchema, z.array(responseItemSchema)]),
+      item: z.union([
+        propertyValueQueryItemSchema,
+        z.array(propertyValueQueryItemSchema),
+      ]),
     }),
   }),
 });
@@ -47,7 +93,9 @@ const responseSchema = z.object({
  * @param params - The parameters for the fetch
  * @param params.projectScopeUuid - The UUID of the project scope
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
- * @param params.propertyUuids - An array of property UUIDs to fetch
+ * @param params.propertyVariables - An array of property variables to fetch
+ * @param params.propertyVariables.dataType - The data type of the property variables
+ * @param params.propertyVariables.uuids - The UUIDs of the property variables
  * @param options - Options for the fetch
  * @param options.version - The version of the OCHRE API to use
  * @returns An XQuery string
@@ -56,13 +104,16 @@ function buildXQuery(
   params: {
     projectScopeUuid: string;
     belongsToCollectionScopeUuids: Array<string>;
-    propertyUuids: Array<string>;
+    propertyVariables: {
+      dataType: PropertyValueContentType;
+      uuids: Array<string>;
+    };
   },
   options?: { version: ApiVersion },
 ): string {
   const version = options?.version ?? DEFAULT_API_VERSION;
 
-  const { projectScopeUuid, belongsToCollectionScopeUuids, propertyUuids } =
+  const { projectScopeUuid, belongsToCollectionScopeUuids, propertyVariables } =
     params;
 
   let collectionScopeFilter = "";
@@ -75,16 +126,62 @@ function buildXQuery(
     collectionScopeFilter = `[properties/property[label/@uuid="${BELONG_TO_COLLECTION_UUID}"][value[${belongsToCollectionScopeValues}]]]`;
   }
 
-  const propertyFilters = propertyUuids
+  const propertyVariableFilters = propertyVariables.uuids
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
 
-  const xquery = `for $q in ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]/*${collectionScopeFilter}/properties//property[label[${propertyFilters}]]
-return <item>
-<property>{xs:string($q/label/@uuid)}</property>
-<value> {$q/*[2]/@*} {$q/*[2]/text()} {$q/*[2]/content} </value>
-<category> {$q/ancestor::node()[local-name(.)="properties"]/../@uuid}  {local-name($q/ancestor::node()[local-name(.)="properties"]/../self::node())} </category>
-</item>`;
+  const isIDREF = propertyVariables.dataType === "IDREF";
+
+  const xquery = `let $matching-props := ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]
+      /*${collectionScopeFilter}
+      /properties//property[label[${propertyVariableFilters}]]
+
+  let $pairs :=
+    for $prop in $matching-props
+      return <p
+        v="{$prop/${
+          isIDREF ? "value/@uuid"
+          : (
+            propertyVariables.dataType === "date" ||
+            propertyVariables.dataType === "dateTime" ||
+            propertyVariables.dataType === "time" ||
+            propertyVariables.dataType === "integer" ||
+            propertyVariables.dataType === "decimal" ||
+            propertyVariables.dataType === "boolean"
+          ) ?
+            "value/@rawValue"
+          : "value"
+        }}"
+        r="{$prop/value/@rawValue}"
+        d="{$prop/value/@dataType}"
+        i="{$prop/ancestor::*[parent::ochre]/@uuid}">
+          ${isIDREF ? "{$prop/ancestor::*[parent::ochre]/identification}" : "{$prop/value/content/string()} {$prop/value/text()}"}
+        </p>
+
+  let $distinct-vals := distinct-values($pairs/@v)
+
+  for $val in $distinct-vals
+    let $matching := $pairs[@v = $val][1]
+    let $count := count(distinct-values($pairs[@v = $val]/@i))
+    let $rawValue := string($matching/@r)
+    let $dataType := string($matching/@d)
+    ${
+      isIDREF ?
+        `let $identification := $matching[1]/identification
+    let $sortLabel := string($identification/label/content/string/text())
+    order by $count descending, $sortLabel ascending
+
+  return
+    <item count="{$count}" uuid="{$val}" dataType="IDREF">{$identification}</item>`
+      : `let $content := $matching/text()
+    order by $count descending, $content ascending
+
+  return
+    if ($rawValue != "") then
+      <item count="{$count}" label="{$content}" dataType="{$dataType}">{$rawValue}</item>
+    else
+      <item count="{$count}" dataType="{$dataType}">{$content}</item>`
+    }`;
 
   return `<ochre>{${xquery}}</ochre>`;
 }
@@ -95,7 +192,9 @@ return <item>
  * @param params - The parameters for the fetch
  * @param params.projectScopeUuid - The UUID of the project scope
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
- * @param params.propertyUuids - The property UUIDs to query by
+ * @param params.propertyVariables - The property variables to query by
+ * @param params.propertyVariables.dataType - The data type of the property variables
+ * @param params.propertyVariables.uuids - The UUIDs of the property variables
  * @param options - Options for the fetch
  * @param options.customFetch - A custom fetch function to use instead of the default fetch
  * @param options.version - The version of the OCHRE API to use
@@ -105,7 +204,10 @@ export async function fetchPropertyValuesByPropertyVariables(
   params: {
     projectScopeUuid: string;
     belongsToCollectionScopeUuids: Array<string>;
-    propertyUuids: Array<string>;
+    propertyVariables: {
+      dataType: PropertyValueContentType;
+      uuids: Array<string>;
+    };
   },
   options?: {
     customFetch?: (
@@ -115,18 +217,21 @@ export async function fetchPropertyValuesByPropertyVariables(
     version: ApiVersion;
   },
 ): Promise<
-  | { items: Array<PropertyQueryItem> | null; error: null }
+  | { items: Array<PropertyValueQueryItem> | null; error: null }
   | { items: null; error: string }
 > {
   try {
     const customFetch = options?.customFetch;
     const version = options?.version ?? DEFAULT_API_VERSION;
 
-    const { belongsToCollectionScopeUuids, propertyUuids, projectScopeUuid } =
-      params;
+    const {
+      belongsToCollectionScopeUuids,
+      propertyVariables,
+      projectScopeUuid,
+    } = params;
 
     const xquery = buildXQuery(
-      { projectScopeUuid, belongsToCollectionScopeUuids, propertyUuids },
+      { projectScopeUuid, belongsToCollectionScopeUuids, propertyVariables },
       { version },
     );
 
@@ -147,63 +252,11 @@ export async function fetchPropertyValuesByPropertyVariables(
         parsedResultRaw.result.ochre.item
       : [parsedResultRaw.result.ochre.item];
 
-    const items: Record<string, PropertyQueryItem> = {};
-    for (const item of parsedItems) {
-      const categoryUuid = item.category.uuid;
-      const valueUuid = item.value.uuid;
-      const valueContent =
-        item.value.rawValue?.toString() ??
-        ((
-          typeof item.value.content === "string" ||
-          typeof item.value.content === "number" ||
-          typeof item.value.content === "boolean"
-        ) ?
-          parseFakeString(item.value.content)
-        : item.value.content != null ?
-          parseStringContent({ content: item.value.content })
-        : "");
+    const items = parsedItems.filter(
+      (item) => String(item.content).trim() !== "",
+    );
 
-      if (valueContent in items) {
-        items[valueContent]!.resultUuids.push(categoryUuid);
-      } else {
-        items[valueContent] = {
-          value: {
-            uuid: valueUuid ?? null,
-            category: item.value.category ?? null,
-            type: item.value.type ?? null,
-            dataType: item.value.dataType ?? null,
-            publicationDateTime: item.value.publicationDateTime ?? null,
-            content: valueContent,
-            label:
-              item.value.rawValue != null && item.value.content != null ?
-                (
-                  typeof item.value.content === "string" ||
-                  typeof item.value.content === "number" ||
-                  typeof item.value.content === "boolean"
-                ) ?
-                  item.value.content.toString()
-                : Array.isArray(item.value.content) ?
-                  (item.value.content
-                    .find((content) => content.lang === "eng")
-                    ?.string.toString() ?? "")
-                : item.value.content.string.toString()
-              : null,
-          },
-          resultUuids: [categoryUuid],
-        };
-      }
-    }
-
-    const returnedItems = Object.values(items)
-      .toSorted((a, b) => {
-        const aValue = a.value.label ?? a.value.content;
-        const bValue = b.value.label ?? b.value.content;
-
-        return aValue.localeCompare(bValue, "en-US");
-      })
-      .filter((item) => item.value.content !== "");
-
-    return { items: returnedItems, error: null };
+    return { items, error: null };
   } catch (error) {
     console.error(error);
     return {

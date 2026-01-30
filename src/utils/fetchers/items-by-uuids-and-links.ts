@@ -181,23 +181,28 @@ export async function fetchItemsByUuidsAndLinks<
     }
 
     const data = (await response.json()) as {
-      result: {
-        ochre: {
-          resource?: OchreResource | Array<OchreResource>;
-          spatialUnit?: OchreSpatialUnit | Array<OchreSpatialUnit>;
-          concept?: OchreConcept | Array<OchreConcept>;
-          period?: OchrePeriod | Array<OchrePeriod>;
-          bibliography?: OchreBibliography | Array<OchreBibliography>;
-          person?: OchrePerson | Array<OchrePerson>;
-          propertyValue?: OchrePropertyValue | Array<OchrePropertyValue>;
-          text?: OchreText | Array<OchreText>;
-          set?: OchreSet | Array<OchreSet>;
-          tree?: OchreTree | Array<OchreTree>;
-        };
-      };
+      result:
+        | {
+            ochre: {
+              resource?: OchreResource | Array<OchreResource>;
+              spatialUnit?: OchreSpatialUnit | Array<OchreSpatialUnit>;
+              concept?: OchreConcept | Array<OchreConcept>;
+              period?: OchrePeriod | Array<OchrePeriod>;
+              bibliography?: OchreBibliography | Array<OchreBibliography>;
+              person?: OchrePerson | Array<OchrePerson>;
+              propertyValue?: OchrePropertyValue | Array<OchrePropertyValue>;
+              text?: OchreText | Array<OchreText>;
+              set?: OchreSet | Array<OchreSet>;
+              tree?: OchreTree | Array<OchreTree>;
+            };
+          }
+        | [];
     };
 
-    if (Object.keys(data.result.ochre).length === 0) {
+    if (
+      Array.isArray(data.result) ||
+      Object.keys(data.result.ochre).length === 0
+    ) {
       throw new Error("No items found");
     }
 

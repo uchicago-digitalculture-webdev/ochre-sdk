@@ -696,19 +696,13 @@ export type Gallery = {
 };
 
 /**
- * Represents a property query item with its item and value UUIDs
+ * Represents a property query item with its UUID, raw value, count, and content
  */
-export type PropertyQueryItem = {
-  value: {
-    uuid: string | null;
-    category: string | null;
-    type: string | null;
-    dataType: string | null; // this should not be optional
-    publicationDateTime: string | null;
-    content: string;
-    label: string | null;
-  };
-  resultUuids: Array<string>;
+export type PropertyValueQueryItem = {
+  uuid: string | null;
+  count: number;
+  label: string | null;
+  content: string | number | boolean | null;
 };
 
 /**

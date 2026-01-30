@@ -39,6 +39,16 @@ export const richTextStringSchema = z.object({
 });
 
 /**
+ * Schema for validating identification
+ * @internal
+ */
+export const identificationSchema = z.object({
+  label: z.object({ content: richTextStringSchema }),
+  abbreviation: z.object({ content: richTextStringSchema }).optional(),
+  code: z.string().optional(),
+});
+
+/**
  * Schema for validating filters
  * @internal
  */
