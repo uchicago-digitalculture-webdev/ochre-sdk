@@ -3357,12 +3357,9 @@ function parseWebElementProperties(
       break;
     }
     case "query": {
-      const queries: Array<{
-        label: string;
-        propertyUuids: Array<string>;
-        startIcon: string | null;
-        endIcon: string | null;
-      }> = [];
+      const queries: Array<
+        Extract<WebElementComponent, { component: "query" }>["queries"][number]
+      > = [];
 
       const itemCategory = getPropertyValueByLabel(
         componentProperty.properties,
