@@ -1,9 +1,5 @@
 import * as z from "zod";
-import type {
-  ApiVersion,
-  PropertyValueContentType,
-  PropertyValueQueryItem,
-} from "../../types/main.js";
+import type { ApiVersion, PropertyValueQueryItem } from "../../types/main.js";
 import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
 import { identificationSchema, uuidSchema } from "../../schemas.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
@@ -78,14 +74,17 @@ const propertyValueQueryItemSchema = z
  * Schema for the property values by property variables OCHRE API response
  */
 const responseSchema = z.object({
-  result: z.object({
-    ochre: z.object({
-      item: z.union([
-        propertyValueQueryItemSchema,
-        z.array(propertyValueQueryItemSchema),
-      ]),
+  result: z.union([
+    z.object({
+      ochre: z.object({
+        item: z.union([
+          propertyValueQueryItemSchema,
+          z.array(propertyValueQueryItemSchema),
+        ]),
+      }),
     }),
-  }),
+    z.array(z.unknown()).length(0),
+  ]),
 });
 
 /**
@@ -93,9 +92,7 @@ const responseSchema = z.object({
  * @param params - The parameters for the fetch
  * @param params.projectScopeUuid - The UUID of the project scope
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
- * @param params.propertyVariables - An array of property variables to fetch
- * @param params.propertyVariables.dataType - The data type of the property variables
- * @param params.propertyVariables.uuids - The UUIDs of the property variables
+ * @param params.propertyVariableUuids - An array of property variable UUIDs to fetch
  * @param options - Options for the fetch
  * @param options.version - The version of the OCHRE API to use
  * @returns An XQuery string
@@ -104,17 +101,17 @@ function buildXQuery(
   params: {
     projectScopeUuid: string;
     belongsToCollectionScopeUuids: Array<string>;
-    propertyVariables: {
-      dataType: Exclude<PropertyValueContentType, "coordinate">;
-      uuids: Array<string>;
-    };
+    propertyVariableUuids: Array<string>;
   },
   options?: { version: ApiVersion },
 ): string {
   const version = options?.version ?? DEFAULT_API_VERSION;
 
-  const { projectScopeUuid, belongsToCollectionScopeUuids, propertyVariables } =
-    params;
+  const {
+    projectScopeUuid,
+    belongsToCollectionScopeUuids,
+    propertyVariableUuids,
+  } = params;
 
   let collectionScopeFilter = "";
 
@@ -126,62 +123,48 @@ function buildXQuery(
     collectionScopeFilter = `[properties/property[label/@uuid="${BELONG_TO_COLLECTION_UUID}"][value[${belongsToCollectionScopeValues}]]]`;
   }
 
-  const propertyVariableFilters = propertyVariables.uuids
+  const propertyVariableFilters = propertyVariableUuids
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
 
-  const isIDREF = propertyVariables.dataType === "IDREF";
-
-  const xquery = `let $matching-props := ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]
+  const xquery = `let $props := ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]
       /*${collectionScopeFilter}
       /properties//property[label[${propertyVariableFilters}]]
 
-  let $pairs :=
-    for $prop in $matching-props
-      return <p
-        v="{$prop/${
-          isIDREF ? "value/@uuid"
-          : (
-            propertyVariables.dataType === "date" ||
-            propertyVariables.dataType === "dateTime" ||
-            propertyVariables.dataType === "time" ||
-            propertyVariables.dataType === "integer" ||
-            propertyVariables.dataType === "decimal" ||
-            propertyVariables.dataType === "boolean"
-          ) ?
-            "value/@rawValue"
-          : "value"
-        }}"
-        r="{$prop/value/@rawValue}"
-        d="{$prop/value/@dataType}"
-        i="{$prop/ancestor::*[parent::ochre]/@uuid}">
-          ${isIDREF ? "{$prop/ancestor::*[parent::ochre]/identification}" : "{$prop/value/content/string()} {$prop/value/text()}"}
-        </p>
+  let $values := $props/value
 
-  let $distinct-vals := distinct-values($pairs/@v)
+  let $uuid-values := $values[@uuid]
+  let $uuid-vals := distinct-values($uuid-values/@uuid)
+  let $uuid-dataType := string($uuid-values[1]/@dataType)
+  let $uuid-items :=
+    for $val in $uuid-vals
+    let $matching-prop := ($props[value/@uuid = $val])[1]
+    let $count := count($uuid-values[@uuid = $val])
+    let $identification := $matching-prop/ancestor::*[parent::ochre]/identification
+    let $label := $identification/label/content/string/text())
+    order by $count descending, $label ascending
+    return <item count="{$count}" uuid="{$val}" dataType="{$uuid-dataType}">{$identification}</item>
 
-  for $val in $distinct-vals
-    let $matching := $pairs[@v = $val][1]
-    let $count := count(distinct-values($pairs[@v = $val]/@i))
-    let $rawValue := string($matching/@r)
-    let $dataType := string($matching/@d)
-    ${
-      isIDREF ?
-        `let $identification := $matching[1]/identification
-    let $sortLabel := string($identification/label/content/string/text())
-    order by $count descending, $sortLabel ascending
+  let $raw-values := $values[@rawValue]
+  let $raw-vals := distinct-values($raw-values/@rawValue)
+  let $raw-dataType := string($raw-values[1]/@dataType)
+  let $raw-items :=
+    for $val in $raw-vals
+    let $count := count($raw-values[@rawValue = $val])
+    let $label := string($raw-values[@rawValue = $val][1])
+    order by $count descending, $label ascending
+    return <item count="{$count}" rawValue="{$val}" dataType="{$raw-dataType}" label="{$label}">{$val}</item>
 
-  return
-    <item count="{$count}" uuid="{$val}" dataType="IDREF">{$identification}</item>`
-      : `let $content := $matching/text()
-    order by $count descending, $content ascending
+  let $text-values := $values[not(@uuid) and not(@rawValue)]
+  let $text-vals := distinct-values(for $v in $text-values return string($v))
+  let $text-dataType := string($text-values[1]/@dataType)
+  let $text-items :=
+    for $val in $text-vals
+    let $count := count($text-values[string(.) = $val])
+    order by $count descending, $val ascending
+    return <item count="{$count}" dataType="{$text-dataType}">{$val}</item>
 
-  return
-    if ($rawValue != "") then
-      <item count="{$count}" label="{$content}" dataType="{$dataType}">{$rawValue}</item>
-    else
-      <item count="{$count}" dataType="{$dataType}">{$content}</item>`
-    }`;
+  return ($uuid-items, $raw-items, $text-items)`;
 
   return `<ochre>{${xquery}}</ochre>`;
 }
@@ -192,9 +175,7 @@ function buildXQuery(
  * @param params - The parameters for the fetch
  * @param params.projectScopeUuid - The UUID of the project scope
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
- * @param params.propertyVariables - The property variables to query by
- * @param params.propertyVariables.dataType - The data type of the property variables
- * @param params.propertyVariables.uuids - The UUIDs of the property variables
+ * @param params.propertyVariableUuids - The property variable UUIDs to query by
  * @param options - Options for the fetch
  * @param options.customFetch - A custom fetch function to use instead of the default fetch
  * @param options.version - The version of the OCHRE API to use
@@ -204,10 +185,7 @@ export async function fetchPropertyValuesByPropertyVariables(
   params: {
     projectScopeUuid: string;
     belongsToCollectionScopeUuids: Array<string>;
-    propertyVariables: {
-      dataType: Exclude<PropertyValueContentType, "coordinate">;
-      uuids: Array<string>;
-    };
+    propertyVariableUuids: Array<string>;
   },
   options?: {
     customFetch?: (
@@ -226,12 +204,16 @@ export async function fetchPropertyValuesByPropertyVariables(
 
     const {
       belongsToCollectionScopeUuids,
-      propertyVariables,
+      propertyVariableUuids,
       projectScopeUuid,
     } = params;
 
     const xquery = buildXQuery(
-      { projectScopeUuid, belongsToCollectionScopeUuids, propertyVariables },
+      {
+        projectScopeUuid,
+        belongsToCollectionScopeUuids,
+        propertyVariableUuids,
+      },
       { version },
     );
 
@@ -247,6 +229,10 @@ export async function fetchPropertyValuesByPropertyVariables(
     const data = await response.json();
 
     const parsedResultRaw = responseSchema.parse(data);
+    if (Array.isArray(parsedResultRaw.result)) {
+      throw new TypeError("No items found");
+    }
+
     const parsedItems =
       Array.isArray(parsedResultRaw.result.ochre.item) ?
         parsedResultRaw.result.ochre.item
