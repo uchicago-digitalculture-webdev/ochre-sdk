@@ -4318,13 +4318,7 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
     ),
     items: [],
     properties: {
-      default: {
-        layout: "vertical",
-        spacing: undefined,
-        gap: undefined,
-        alignItems: "start",
-        justifyContent: "stretch",
-      },
+      default: { layout: "vertical", spacing: undefined, gap: undefined },
       mobile: null,
       tablet: null,
     } as WebBlock["properties"],
@@ -4397,31 +4391,6 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
       returnBlock.properties.default.gap = gapProperty.content as string;
     }
 
-    const alignItemsProperty = blockMainProperties.find(
-      (property) => property.label === "align-items",
-    )?.values[0];
-    if (alignItemsProperty) {
-      returnBlock.properties.default.alignItems = alignItemsProperty.content as
-        | "stretch"
-        | "start"
-        | "center"
-        | "end"
-        | "space-between";
-    }
-
-    const justifyContentProperty = blockMainProperties.find(
-      (property) => property.label === "justify-content",
-    )?.values[0];
-    if (justifyContentProperty) {
-      returnBlock.properties.default.justifyContent =
-        justifyContentProperty.content as
-          | "stretch"
-          | "start"
-          | "center"
-          | "end"
-          | "space-between";
-    }
-
     const tabletOverwriteProperty = blockMainProperties.find(
       (property) => property.label === "overwrite-tablet",
     );
@@ -4486,30 +4455,6 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
       )?.values[0];
       if (gapProperty) {
         propertiesTablet.gap = gapProperty.content as string;
-      }
-
-      const alignItemsProperty = tabletOverwriteProperties.find(
-        (property) => property.label === "align-items",
-      )?.values[0];
-      if (alignItemsProperty) {
-        propertiesTablet.alignItems = alignItemsProperty.content as
-          | "stretch"
-          | "start"
-          | "center"
-          | "end"
-          | "space-between";
-      }
-
-      const justifyContentProperty = tabletOverwriteProperties.find(
-        (property) => property.label === "justify-content",
-      )?.values[0];
-      if (justifyContentProperty) {
-        propertiesTablet.justifyContent = justifyContentProperty.content as
-          | "stretch"
-          | "start"
-          | "center"
-          | "end"
-          | "space-between";
       }
 
       returnBlock.properties.tablet = propertiesTablet;
@@ -4579,30 +4524,6 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
       )?.values[0];
       if (gapProperty) {
         propertiesMobile.gap = gapProperty.content as string;
-      }
-
-      const alignItemsProperty = mobileOverwriteProperties.find(
-        (property) => property.label === "align-items",
-      )?.values[0];
-      if (alignItemsProperty) {
-        propertiesMobile.alignItems = alignItemsProperty.content as
-          | "stretch"
-          | "start"
-          | "center"
-          | "end"
-          | "space-between";
-      }
-
-      const justifyContentProperty = mobileOverwriteProperties.find(
-        (property) => property.label === "justify-content",
-      )?.values[0];
-      if (justifyContentProperty) {
-        propertiesMobile.justifyContent = justifyContentProperty.content as
-          | "stretch"
-          | "start"
-          | "center"
-          | "end"
-          | "space-between";
       }
 
       returnBlock.properties.mobile = propertiesMobile;

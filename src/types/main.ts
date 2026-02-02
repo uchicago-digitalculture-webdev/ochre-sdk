@@ -1089,14 +1089,6 @@ export type WebBlock<T extends WebBlockLayout = WebBlockLayout> = {
        * `gap` CSS property value
        */
       gap: string | undefined;
-      /**
-       * `align-items` CSS property value
-       */
-      alignItems: "stretch" | "start" | "center" | "end" | "space-between";
-      /**
-       * `justify-content` CSS property value
-       */
-      justifyContent: "stretch" | "start" | "center" | "end" | "space-between";
       isAccordionEnabled: T extends "accordion" ? boolean : never;
       isAccordionExpandedByDefault: T extends "accordion" ? boolean : never;
       isAccordionSidebarDisplayed: T extends "accordion" ? boolean : never;
