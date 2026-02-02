@@ -128,7 +128,7 @@ export type OchreDataResponse =
  * Raw metadata structure corresponding to the parsed Metadata type
  */
 export type OchreMetadata = {
-  identifier: OchreStringContent;
+  identifier: OchreStringContent | FakeString;
   item?: {
     label?: OchreStringContent; // Faulty, only exists in old items that have not been republished
     abbreviation?: OchreStringContent; // Faulty, only exists in old items that have not been republished
@@ -137,11 +137,11 @@ export type OchreMetadata = {
     type: string;
     maxLength?: number;
   };
-  publisher: OchreStringContent;
-  dataset: OchreStringContent;
+  publisher: OchreStringContent | FakeString;
+  dataset: OchreStringContent | FakeString;
   project?: { identification: OchreIdentification };
-  language?: OchreLanguage | Array<OchreLanguage>;
-  description: OchreStringContent;
+  language?: string | OchreLanguage | Array<string | OchreLanguage>;
+  description: OchreStringContent | FakeString;
 };
 
 type OchreTreeSearchOptionUuid = {

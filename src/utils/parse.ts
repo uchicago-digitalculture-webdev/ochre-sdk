@@ -145,15 +145,21 @@ export function parseIdentification(
  * @returns Array of language codes as strings
  */
 export function parseLanguages(
-  language: OchreLanguage | Array<OchreLanguage> | undefined,
+  language: string | OchreLanguage | Array<string | OchreLanguage> | undefined,
 ): Array<string> {
   if (language == null) {
     // Default to English if no language is provided
     return ["eng"];
   }
 
+  if (typeof language === "string") {
+    return [language];
+  }
+
   if (Array.isArray(language)) {
-    return language.map((lang) => parseStringContent(lang));
+    return language.map((lang) =>
+      typeof lang === "object" ? parseStringContent(lang) : lang,
+    );
   } else {
     return [parseStringContent(language)];
   }
@@ -219,11 +225,23 @@ export function parseMetadata(metadata: OchreMetadata): Metadata {
           maxLength: metadata.item.maxLength ?? null,
         }
       : null,
-    dataset: parseStringContent(metadata.dataset),
-    publisher: parseStringContent(metadata.publisher),
+    dataset:
+      typeof metadata.dataset === "object" ?
+        parseStringContent(metadata.dataset)
+      : parseFakeString(metadata.dataset),
+    publisher:
+      typeof metadata.publisher === "object" ?
+        parseStringContent(metadata.publisher)
+      : parseFakeString(metadata.publisher),
     languages: parseLanguages(metadata.language),
-    identifier: parseStringContent(metadata.identifier),
-    description: parseStringContent(metadata.description),
+    identifier:
+      typeof metadata.identifier === "object" ?
+        parseStringContent(metadata.identifier)
+      : parseFakeString(metadata.identifier),
+    description:
+      typeof metadata.description === "object" ?
+        parseStringContent(metadata.description)
+      : parseFakeString(metadata.description),
   };
 }
 
