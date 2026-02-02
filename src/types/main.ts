@@ -1007,7 +1007,7 @@ export type WebElementComponent =
       itemCategory: "resource" | "spatialUnit" | "concept" | "text" | null;
       queries: Array<{
         label: string;
-        propertyUuids: Array<string>;
+        propertyVariableUuids: Array<string>;
         startIcon: string | null;
         endIcon: string | null;
       }>;

@@ -3385,7 +3385,7 @@ function parseWebElementProperties(
           continue;
         }
 
-        const propertyUuids =
+        const propertyVariableUuids =
           querySubProperties
             .find((property) => property.label === "use-property")
             ?.values.map((value) => value.uuid)
@@ -3399,7 +3399,7 @@ function parseWebElementProperties(
 
         queries.push({
           label: String(label),
-          propertyUuids,
+          propertyVariableUuids,
           startIcon: startIcon !== null ? String(startIcon) : null,
           endIcon: endIcon !== null ? String(endIcon) : null,
         });
