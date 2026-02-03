@@ -141,7 +141,7 @@ function buildXQuery(
     let $matching-prop := ($props[value/@uuid = $val])[1]
     let $count := count($uuid-values[@uuid = $val])
     let $identification := $matching-prop/ancestor::*[parent::ochre]/identification
-    let $label := $identification/label/content/string/text())
+    let $label := string($identification/label/content/string/text())
     order by $count descending, $label ascending
     return <item count="{$count}" uuid="{$val}" dataType="{$uuid-dataType}">{$identification}</item>
 
