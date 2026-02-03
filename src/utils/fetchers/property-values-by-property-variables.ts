@@ -25,45 +25,47 @@ const propertyValueQueryItemSchema = z
       .transform((val) => val ?? null),
   })
   .transform((val) => {
-    let value = val;
+    const { identification, ...rest } = val;
+
+    let value = { ...rest };
 
     switch (val.dataType) {
       case "IDREF":
       case "string":
       case "date":
       case "dateTime": {
-        value = { ...val, content: val.content?.toString() ?? null };
+        value = { ...value, content: val.content?.toString() ?? null };
         break;
       }
       case "integer":
       case "decimal":
       case "time": {
         value = {
-          ...val,
+          ...value,
           content: val.content !== null ? Number(val.content) : null,
         };
         break;
       }
       case "boolean": {
         value = {
-          ...val,
+          ...value,
           content: val.content !== null ? Boolean(val.content) : null,
         };
         break;
       }
       default: {
         // throw new Error(`Invalid data type: ${val.dataType}`);
-        value = val;
         break;
       }
     }
 
     if ("identification" in value && value.identification != null) {
-      const { identification, ...rest } = value;
-
       value = {
-        ...rest,
-        content: parseStringContent({ content: identification.label.content }),
+        ...value,
+        content:
+          identification?.label.content != null ?
+            parseStringContent({ content: identification.label.content })
+          : null,
       };
     }
 
@@ -239,8 +241,8 @@ export async function fetchPropertyValuesByPropertyVariables(
       : [parsedResultRaw.result.ochre.item];
 
     const items = parsedItems.filter(
-      (item) => String(item.content).trim() !== "",
-    );
+      (item) => item.content?.toString().trim() !== "",
+    ) as Array<PropertyValueQueryItem>;
 
     return { items, error: null };
   } catch (error) {

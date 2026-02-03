@@ -701,6 +701,7 @@ export type Gallery = {
 export type PropertyValueQueryItem = {
   uuid: string | null;
   count: number;
+  dataType: Exclude<PropertyValueContentType, "coordinate">;
   label: string | null;
   content: string | number | boolean | null;
 };
