@@ -2893,6 +2893,7 @@ function parseWebElementProperties(
             }))
           : null,
         contexts: null,
+        labels: { title: null },
       };
 
       if ("options" in elementResource && elementResource.options) {
@@ -2955,6 +2956,20 @@ function parseWebElementProperties(
           suppress: parseContexts(suppressContextsRaw),
           prominent: parseContexts(prominentContextsRaw),
         };
+
+        if (
+          "notes" in elementResource.options &&
+          elementResource.options.notes
+        ) {
+          const labelNotes = parseNotes(
+            Array.isArray(elementResource.options.notes.note) ?
+              elementResource.options.notes.note
+            : [elementResource.options.notes.note],
+          );
+          options.labels.title =
+            labelNotes.find((note) => note.title === "Title label")?.content ??
+            null;
+        }
       }
 
       properties.collectionIds = collectionLinks.map((link) => link.uuid);
@@ -4909,6 +4924,7 @@ function parseWebsiteProperties(
 
   let contexts: PropertyContexts | null = null;
   let scopes: Array<Scope> | null = null;
+  const labels: { title: string | null } = { title: null };
 
   if ("options" in websiteTree && websiteTree.options) {
     scopes =
@@ -4982,6 +4998,17 @@ function parseWebsiteProperties(
       label: parseContexts(labelContextsRaw),
       prominent: parseContexts(prominentContextsRaw),
     };
+
+    if ("notes" in websiteTree.options && websiteTree.options.notes != null) {
+      const labelNotes = parseNotes(
+        Array.isArray(websiteTree.options.notes.note) ?
+          websiteTree.options.notes.note
+        : [websiteTree.options.notes.note],
+      );
+      labels.title =
+        labelNotes.find((note) => note.title === "Title label")?.content ??
+        null;
+    }
   }
 
   return {
@@ -5014,7 +5041,7 @@ function parseWebsiteProperties(
       isPropertyValuesGrouped,
       iiifViewer,
     },
-    options: { contexts, scopes },
+    options: { contexts, scopes, labels },
   };
 }
 

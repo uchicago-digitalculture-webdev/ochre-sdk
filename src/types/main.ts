@@ -813,7 +813,11 @@ export type Website = {
       isPropertyValuesGrouped: boolean;
       iiifViewer: "universal-viewer" | "clover";
     };
-    options: { contexts: PropertyContexts | null; scopes: Array<Scope> | null };
+    options: {
+      contexts: PropertyContexts | null;
+      scopes: Array<Scope> | null;
+      labels: { title: string | null };
+    };
   };
 };
 
@@ -950,6 +954,7 @@ export type WebElementComponent =
         attributeFilters: { bibliographies: boolean; periods: boolean };
         scopes: Array<Scope> | null;
         contexts: PropertyContexts | null;
+        labels: { title: string | null };
       };
     }
   | { component: "empty-space"; height: string | null; width: string | null }

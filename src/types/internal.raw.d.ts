@@ -188,6 +188,7 @@ export type OchreTree = {
   date?: string; // YYYY-MM-DD
   creators?: { creator: OchrePerson | Array<OchrePerson> };
   options?: {
+    notes?: { note: OchreNote | Array<OchreNote> };
     scopes?: {
       scope: OchreTreeSearchOptionScope | Array<OchreTreeSearchOptionScope>;
     };
@@ -278,6 +279,7 @@ export type OchreResource = {
   };
   resource?: OchreResource | Array<OchreResource>;
   options?: {
+    notes?: { note: OchreNote | Array<OchreNote> };
     filterBibliography?: boolean;
     filterPeriods?: boolean;
     scopes?: {
