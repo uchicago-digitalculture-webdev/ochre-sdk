@@ -55,9 +55,9 @@ function buildXQuery(
       dataType: Exclude<PropertyValueContentType, "coordinate">;
       value: string;
     }>;
+    page: number;
+    pageSize: number;
     itemCategory?: "resource" | "spatialUnit" | "concept" | "text";
-    page?: number;
-    pageSize?: number;
     includeChildItems?: boolean;
   },
   options?: { version: ApiVersion },
@@ -70,8 +70,8 @@ function buildXQuery(
     projectScopeUuid,
     belongsToCollectionScopeUuids,
     itemCategory,
-    page = 1,
-    pageSize = DEFAULT_PAGE_SIZE,
+    page,
+    pageSize,
     includeChildItems = false,
   } = params;
 
@@ -149,6 +149,8 @@ function buildXQuery(
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - The property variable UUIDs to query by
  * @param params.propertyValues - The property values to query by
+ * @param params.page - The page number (1-indexed)
+ * @param params.pageSize - The number of items per page
  * @param params.itemCategory - The category of the items to fetch
  * @param params.includeChildItems - Whether to include child items of the same category
  * @param categoryParams - The category parameters for the fetch
@@ -174,6 +176,8 @@ export async function fetchItemsByPropertyValues<
       dataType: Exclude<PropertyValueContentType, "coordinate">;
       value: string;
     }>;
+    page: number;
+    pageSize?: number;
     itemCategory?: "resource" | "spatialUnit" | "concept" | "text";
     includeChildItems?: boolean;
   },
@@ -204,6 +208,8 @@ export async function fetchItemsByPropertyValues<
       propertyValues,
       projectScopeUuid,
       belongsToCollectionScopeUuids,
+      page,
+      pageSize = DEFAULT_PAGE_SIZE,
       itemCategory,
       includeChildItems,
     } = params;
@@ -217,6 +223,8 @@ export async function fetchItemsByPropertyValues<
         propertyValues,
         itemCategory,
         includeChildItems,
+        page,
+        pageSize,
       },
       { version },
     );
