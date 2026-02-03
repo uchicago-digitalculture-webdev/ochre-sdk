@@ -43,8 +43,14 @@ export const richTextStringSchema = z.object({
  * @internal
  */
 export const identificationSchema = z.object({
-  label: z.object({ content: richTextStringSchema }),
-  abbreviation: z.object({ content: richTextStringSchema }).optional(),
+  label: z.object({
+    content: z.union([richTextStringSchema, z.array(richTextStringSchema)]),
+  }),
+  abbreviation: z.object({
+    content: z
+      .union([richTextStringSchema, z.array(richTextStringSchema)])
+      .optional(),
+  }),
   code: z.string().optional(),
 });
 

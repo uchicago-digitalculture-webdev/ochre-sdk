@@ -1,7 +1,11 @@
 import * as z from "zod";
-import type { ApiVersion, PropertyValueQueryItem } from "../../types/main.js";
+import type {
+  ApiVersion,
+  PropertyValueContentType,
+  PropertyValueQueryItem,
+} from "../../types/main.js";
 import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
-import { identificationSchema, uuidSchema } from "../../schemas.js";
+import { identificationSchema } from "../../schemas.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
 import { parseStringContent } from "../string.js";
 
@@ -10,66 +14,61 @@ import { parseStringContent } from "../string.js";
  */
 const propertyValueQueryItemSchema = z
   .object({
-    uuid: uuidSchema.optional().transform((val) => val ?? null),
-    count: z.number(),
-    // dataType: propertyValueContentTypeSchema,
+    uuid: z.string().optional(),
     dataType: z.string(),
     identification: identificationSchema.optional(),
-    label: z
-      .union([z.string(), z.number(), z.boolean()])
-      .optional()
-      .transform((val) => val?.toString() ?? null),
-    content: z
-      .union([z.string(), z.number(), z.boolean()])
-      .optional()
-      .transform((val) => val ?? null),
+    rawValue: z.union([z.string(), z.number(), z.boolean()]).optional(),
+    value: z.union([z.string(), z.number(), z.boolean()]).optional(),
   })
   .transform((val) => {
-    const { identification, ...rest } = val;
-
-    let value = { ...rest };
+    const returnValue: {
+      dataType: Exclude<PropertyValueContentType, "coordinate">;
+      content: string | number | boolean | null;
+      label: string | null;
+    } = {
+      dataType: val.dataType as Exclude<PropertyValueContentType, "coordinate">,
+      content: null,
+      label: null,
+    };
 
     switch (val.dataType) {
-      case "IDREF":
+      case "IDREF": {
+        returnValue.content = val.uuid != null ? val.uuid || null : null;
+        returnValue.label =
+          val.identification != null ?
+            parseStringContent({ content: val.identification.label.content })
+          : null;
+        break;
+      }
       case "string":
       case "date":
       case "dateTime": {
-        value = { ...value, content: val.content?.toString() ?? null };
+        returnValue.content = val.rawValue?.toString() ?? null;
+        returnValue.label = val.value?.toString() ?? null;
         break;
       }
       case "integer":
       case "decimal":
       case "time": {
-        value = {
-          ...value,
-          content: val.content !== null ? Number(val.content) : null,
-        };
+        returnValue.content =
+          val.rawValue != null ? Number(val.rawValue) : null;
+        returnValue.label = val.value?.toString() ?? null;
         break;
       }
       case "boolean": {
-        value = {
-          ...value,
-          content: val.content !== null ? Boolean(val.content) : null,
-        };
+        returnValue.content =
+          val.rawValue != null ? Boolean(val.rawValue) : null;
+        returnValue.label = val.value?.toString() ?? null;
         break;
       }
       default: {
-        // throw new Error(`Invalid data type: ${val.dataType}`);
+        returnValue.content = val.rawValue?.toString() ?? null;
+        returnValue.label = val.value?.toString() ?? null;
         break;
       }
     }
 
-    if ("identification" in value && value.identification != null) {
-      value = {
-        ...value,
-        content:
-          identification?.label.content != null ?
-            parseStringContent({ content: identification.label.content })
-          : null,
-      };
-    }
-
-    return value;
+    return returnValue;
   });
 
 /**
@@ -129,44 +128,15 @@ function buildXQuery(
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
 
-  const xquery = `let $props := ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]
+  const xquery = `let $values := ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]
       /*${collectionScopeFilter}
       /properties//property[label[${propertyVariableFilters}]]
+      /value
 
-  let $values := $props/value
-
-  let $uuid-values := $values[@uuid]
-  let $uuid-vals := distinct-values($uuid-values/@uuid)
-  let $uuid-dataType := string($uuid-values[1]/@dataType)
-  let $uuid-items :=
-    for $val in $uuid-vals
-    let $matching-prop := ($props[value/@uuid = $val])[1]
-    let $count := count($uuid-values[@uuid = $val])
-    let $identification := $matching-prop/ancestor::*[parent::ochre]/identification
-    let $label := string($identification/label/content/string/text())
-    order by $count descending, $label ascending
-    return <item count="{$count}" uuid="{$val}" dataType="{$uuid-dataType}">{$identification}</item>
-
-  let $raw-values := $values[@rawValue]
-  let $raw-vals := distinct-values($raw-values/@rawValue)
-  let $raw-dataType := string($raw-values[1]/@dataType)
-  let $raw-items :=
-    for $val in $raw-vals
-    let $count := count($raw-values[@rawValue = $val])
-    let $label := string($raw-values[@rawValue = $val][1])
-    order by $count descending, $label ascending
-    return <item count="{$count}" rawValue="{$val}" dataType="{$raw-dataType}" label="{$label}">{$val}</item>
-
-  let $text-values := $values[not(@uuid) and not(@rawValue)]
-  let $text-vals := distinct-values(for $v in $text-values return string($v))
-  let $text-dataType := string($text-values[1]/@dataType)
-  let $text-items :=
-    for $val in $text-vals
-    let $count := count($text-values[string(.) = $val])
-    order by $count descending, $val ascending
-    return <item count="{$count}" dataType="{$text-dataType}">{$val}</item>
-
-  return ($uuid-items, $raw-items, $text-items)`;
+  for $v in $values
+  return <item uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}" value="{string($v)}">{
+    if (string($v/@uuid) != "") then $v/ancestor::*[parent::ochre]/identification else ()
+  }</item>`;
 
   return `<ochre>{${xquery}}</ochre>`;
 }
@@ -240,11 +210,31 @@ export async function fetchPropertyValuesByPropertyVariables(
         parsedResultRaw.result.ochre.item
       : [parsedResultRaw.result.ochre.item];
 
-    const items = parsedItems.filter(
-      (item) => item.content?.toString().trim() !== "",
-    ) as Array<PropertyValueQueryItem>;
+    const groupedItems: Array<PropertyValueQueryItem> = [];
+    for (const item of parsedItems) {
+      const existingItem = groupedItems.find((i) => i.content === item.content);
+      if (existingItem == null) {
+        groupedItems.push({ count: 1, ...item });
+      } else {
+        existingItem.count++;
+      }
+    }
+    return {
+      items: groupedItems.toSorted((a, b) => {
+        if (a.count !== b.count) {
+          return b.count - a.count;
+        }
 
-    return { items, error: null };
+        if (a.label !== b.label) {
+          return a.label?.localeCompare(b.label ?? "") ?? 0;
+        }
+
+        return (
+          a.content?.toString().localeCompare(b.content?.toString() ?? "") ?? 0
+        );
+      }),
+      error: null,
+    };
   } catch (error) {
     console.error(error);
     return {

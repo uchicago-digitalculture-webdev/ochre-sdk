@@ -699,11 +699,10 @@ export type Gallery = {
  * Represents a property query item with its UUID, raw value, count, and content
  */
 export type PropertyValueQueryItem = {
-  uuid: string | null;
   count: number;
   dataType: Exclude<PropertyValueContentType, "coordinate">;
-  label: string | null;
   content: string | number | boolean | null;
+  label: string | null;
 };
 
 /**

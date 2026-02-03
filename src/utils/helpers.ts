@@ -7,7 +7,22 @@ import type {
 } from "../types/main.js";
 import { flattenProperties } from "./internal.js";
 
+/**
+ * The default API version to use
+ *
+ * @remarks
+ * Version 1 of the OCHRE API is deprecated and will be removed in the future.
+ * It points to the old Tamino server.
+ *
+ * Version 2 of the OCHRE API is the current version and is the default.
+ * It points to the new MarkLogic server.
+ */
 export const DEFAULT_API_VERSION = 2;
+
+/**
+ * The default page size to use for fetching paginated items
+ */
+export const DEFAULT_PAGE_SIZE = 48;
 
 /**
  * Flatten the properties of an item
