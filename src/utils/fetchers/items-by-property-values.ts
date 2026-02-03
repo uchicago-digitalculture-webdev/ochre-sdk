@@ -241,10 +241,10 @@ export async function fetchItemsByPropertyValues<
       result:
         | {
             ochre: {
-              totalCount: number;
-              page: number;
-              pageSize: number;
               items: {
+                totalCount: number;
+                page: number;
+                pageSize: number;
                 resource?: OchreResource | Array<OchreResource>;
                 spatialUnit?: OchreSpatialUnit | Array<OchreSpatialUnit>;
                 concept?: OchreConcept | Array<OchreConcept>;
@@ -426,9 +426,9 @@ export async function fetchItemsByPropertyValues<
     }
 
     return {
-      totalCount: data.result.ochre.totalCount,
-      page: data.result.ochre.page,
-      pageSize: data.result.ochre.pageSize,
+      totalCount: data.result.ochre.items.totalCount,
+      page: data.result.ochre.items.page,
+      pageSize: data.result.ochre.items.pageSize,
       items,
       error: null,
     };
