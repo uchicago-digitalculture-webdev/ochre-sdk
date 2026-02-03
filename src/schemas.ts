@@ -191,7 +191,7 @@ export const gallerySchema = z
     uuid: z.string().refine(isPseudoUuid, { error: "Invalid UUID" }),
     filter: z.string().optional(),
     page: z.number().positive({ error: "Page must be positive" }),
-    perPage: z.number().positive({ error: "Per page must be positive" }),
+    pageSize: z.number().positive({ error: "Page size must be positive" }),
   })
   .strict();
 

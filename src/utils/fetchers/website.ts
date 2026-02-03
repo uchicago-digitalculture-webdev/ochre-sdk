@@ -66,17 +66,16 @@ function parseApiVersionSuffix(abbreviation: string): {
 export async function fetchWebsite(
   abbreviation: string,
   options?: {
-    customFetch?: (
+    fetch?: (
       input: string | URL | globalThis.Request,
       init?: RequestInit,
     ) => Promise<Response>;
-    version: ApiVersion;
+    version?: ApiVersion;
   },
 ): Promise<[null, Website] | [string, null]> {
   try {
     const cleanAbbreviation = abbreviation.trim().toLocaleLowerCase("en-US");
 
-    const customFetch = options?.customFetch;
     const { abbreviation: parsedAbbreviation, version: parsedVersion } =
       parseApiVersionSuffix(cleanAbbreviation);
 
@@ -89,7 +88,7 @@ export async function fetchWebsite(
     let belongsTo: { uuid: string; abbreviation: string } | null = null;
 
     if (version === 2) {
-      const response = await (customFetch ?? fetch)(
+      const response = await (options?.fetch ?? fetch)(
         `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(`collection('ochre/tree')/ochre[tree/identification/abbreviation/content/string='${abbreviationToUse}']`)}&format=json&lang="*"`,
       );
       if (!response.ok) {
@@ -111,7 +110,7 @@ export async function fetchWebsite(
         abbreviation: parseFakeString(data.result.ochre.belongsTo),
       };
     } else {
-      const response = await (customFetch ?? fetch)(
+      const response = await (options?.fetch ?? fetch)(
         `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(`for $q in input()/ochre[tree[@type='lesson'][identification/abbreviation='${abbreviationToUse}']] return $q`)}&format=json`,
       );
       if (!response.ok) {

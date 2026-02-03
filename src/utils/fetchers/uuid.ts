@@ -24,20 +24,19 @@ import { DEFAULT_API_VERSION } from "../helpers.js";
 export async function fetchByUuid(
   uuid: string,
   options?: {
-    customFetch?: (
+    fetch?: (
       input: string | URL | globalThis.Request,
       init?: RequestInit,
     ) => Promise<Response>;
-    version: ApiVersion;
+    version?: ApiVersion;
   },
 ): Promise<[null, OchreData] | [string, null]> {
   try {
-    const customFetch = options?.customFetch;
     const version = options?.version ?? DEFAULT_API_VERSION;
 
     const parsedUuid = uuidSchema.parse(uuid);
 
-    const response = await (customFetch ?? fetch)(
+    const response = await (options?.fetch ?? fetch)(
       version === 2 ?
         `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${parsedUuid}&format=json&lang="*"`
       : `https://ochre.lib.uchicago.edu/ochre?uuid=${parsedUuid}&format=json&lang="*"`,

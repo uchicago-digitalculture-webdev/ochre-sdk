@@ -1,5 +1,5 @@
 import type { GalleryResponse } from "../../types/internal.raw.d.ts";
-import type { Gallery } from "../../types/main.js";
+import type { ApiVersion, Gallery } from "../../types/main.js";
 import { gallerySchema } from "../../schemas.js";
 import { parseIdentification, parseResources } from "../parse.js";
 
@@ -9,7 +9,10 @@ import { parseIdentification, parseResources } from "../parse.js";
  * @param uuid - The UUID of the gallery
  * @param filter - The filter to apply to the gallery
  * @param page - The page number to fetch
- * @param perPage - The number of items per page
+ * @param pageSize - The number of items per page
+ * @param options - The options for the fetch
+ * @param options.fetch - The fetch function to use
+ * @param options.version - The version of the OCHRE API to use
  * @returns The parsed gallery or null if the fetch/parse fails
  *
  * @example
@@ -33,11 +36,14 @@ export async function fetchGallery(
   uuid: string,
   filter: string,
   page: number,
-  perPage: number,
-  customFetch?: (
-    input: string | URL | globalThis.Request,
-    init?: RequestInit,
-  ) => Promise<Response>,
+  pageSize: number,
+  options?: {
+    fetch?: (
+      input: string | URL | globalThis.Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+    version?: ApiVersion;
+  },
 ): Promise<
   { item: Gallery | null; error: null } | { item: null; error: string }
 > {
@@ -46,10 +52,10 @@ export async function fetchGallery(
       uuid: parsedUuid,
       filter: parsedFilter,
       page: parsedPage,
-      perPage: parsedPerPage,
-    } = gallerySchema.parse({ uuid, filter, page, perPage });
+      pageSize: parsedPageSize,
+    } = gallerySchema.parse({ uuid, filter, page, pageSize });
 
-    const response = await (customFetch ?? fetch)(
+    const response = await (options?.fetch ?? fetch)(
       `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(`
         for $q in input()/ochre[@uuid='${parsedUuid}']
         let $filtered := $q//items/resource[contains(lower-case(identification/label), lower-case('${parsedFilter}'))]
@@ -57,7 +63,7 @@ export async function fetchGallery(
         return <gallery maxLength='{$maxLength}'>
           {$q/metadata/project}
           {$q/metadata/item}
-          {$filtered[position() >= ${((parsedPage - 1) * parsedPerPage + 1).toString()} and position() < ${(parsedPage * parsedPerPage + 1).toString()}]}
+          {$filtered[position() >= ${((parsedPage - 1) * parsedPageSize + 1).toString()} and position() < ${(parsedPage * parsedPageSize + 1).toString()}]}
         </gallery>
       `)}&format=json`,
     );

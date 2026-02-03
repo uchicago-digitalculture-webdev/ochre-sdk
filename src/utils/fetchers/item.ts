@@ -61,21 +61,20 @@ export async function fetchItem<
   category?: T,
   itemCategories?: U,
   options?: {
-    customFetch?: (
+    fetch?: (
       input: string | URL | globalThis.Request,
       init?: RequestInit,
     ) => Promise<Response>;
-    version: ApiVersion;
+    version?: ApiVersion;
   },
 ): Promise<
   | { error: null; item: Item<T, U>; category: T; itemCategories: U }
   | { error: string; item: never; category: never; itemCategories: never }
 > {
   try {
-    const customFetch = options?.customFetch;
     const version = options?.version ?? DEFAULT_API_VERSION;
 
-    const [error, data] = await fetchByUuid(uuid, { customFetch, version });
+    const [error, data] = await fetchByUuid(uuid, { fetch, version });
     if (error !== null) {
       throw new Error(error);
     }

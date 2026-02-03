@@ -149,7 +149,7 @@ function buildXQuery(
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - The property variable UUIDs to query by
  * @param options - Options for the fetch
- * @param options.customFetch - A custom fetch function to use instead of the default fetch
+ * @param options.fetch - The fetch function to use
  * @param options.version - The version of the OCHRE API to use
  * @returns The parsed property values by property variables or null if the fetch/parse fails
  */
@@ -160,18 +160,17 @@ export async function fetchPropertyValuesByPropertyVariables(
     propertyVariableUuids: Array<string>;
   },
   options?: {
-    customFetch?: (
+    fetch?: (
       input: string | URL | globalThis.Request,
       init?: RequestInit,
     ) => Promise<Response>;
-    version: ApiVersion;
+    version?: ApiVersion;
   },
 ): Promise<
   | { items: Array<PropertyValueQueryItem> | null; error: null }
   | { items: null; error: string }
 > {
   try {
-    const customFetch = options?.customFetch;
     const version = options?.version ?? DEFAULT_API_VERSION;
 
     const {
@@ -189,7 +188,7 @@ export async function fetchPropertyValuesByPropertyVariables(
       { version },
     );
 
-    const response = await (customFetch ?? fetch)(
+    const response = await (options?.fetch ?? fetch)(
       version === 2 ?
         `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(xquery)}&format=json&lang="*"`
       : `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(xquery)}&format=json&lang="*"`,

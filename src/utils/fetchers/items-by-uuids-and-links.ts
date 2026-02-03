@@ -118,7 +118,7 @@ return element { node-name($item) } {
  * @param categoryParams.category - The category of the items to fetch
  * @param categoryParams.itemCategories - The categories of the items to fetch
  * @param options - Options for the fetch
- * @param options.customFetch - A custom fetch function to use instead of the default fetch
+ * @param options.fetch - The fetch function to use
  * @param options.version - The version of the OCHRE API to use
  * @returns The parsed items by UUIDs and links or null if the fetch/parse fails
  */
@@ -138,17 +138,16 @@ export async function fetchItemsByUuidsAndLinks<
   },
   categoryParams?: { category?: T; itemCategories?: U },
   options?: {
-    customFetch?: (
+    fetch?: (
       input: string | URL | globalThis.Request,
       init?: RequestInit,
     ) => Promise<Response>;
-    version: ApiVersion;
+    version?: ApiVersion;
   },
 ): Promise<
   { items: Array<Item<T, U>>; error: null } | { items: null; error: string }
 > {
   try {
-    const customFetch = options?.customFetch;
     const version = options?.version ?? DEFAULT_API_VERSION;
 
     const {
@@ -171,7 +170,7 @@ export async function fetchItemsByUuidsAndLinks<
       { version },
     );
 
-    const response = await (customFetch ?? fetch)(
+    const response = await (options?.fetch ?? fetch)(
       version === 2 ?
         `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(xquery)}&format=json&lang="*"`
       : `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(xquery)}&format=json&lang="*"`,
