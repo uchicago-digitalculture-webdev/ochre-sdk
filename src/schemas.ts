@@ -18,7 +18,7 @@ export const uuidSchema = z
   .refine(isPseudoUuid, { error: "Invalid pseudo-UUID" });
 
 export const richTextStringContentSchema = z.object({
-  content: z.union([z.string(), z.number(), z.boolean()]),
+  content: z.union([z.string(), z.number(), z.boolean()]).optional(),
   rend: z.string().optional(),
   whitespace: z.string().optional(),
 });
