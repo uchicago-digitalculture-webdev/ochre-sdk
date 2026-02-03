@@ -5,20 +5,27 @@ import type {
   PropertyValueQueryItem,
 } from "../../types/main.js";
 import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
-import { identificationSchema } from "../../schemas.js";
+import { richTextStringSchema } from "../../schemas.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
-import { parseStringContent } from "../string.js";
+import { parseFakeString, parseStringContent } from "../string.js";
 
 /**
  * Schema for a single property value query item in the OCHRE API response
  */
 const propertyValueQueryItemSchema = z
   .object({
-    uuid: z.string().optional(),
+    uuid: z.string(),
     dataType: z.string(),
-    identification: identificationSchema.optional(),
     rawValue: z.union([z.string(), z.number(), z.boolean()]).optional(),
-    value: z.union([z.string(), z.number(), z.boolean()]).optional(),
+    content: z
+      .union([
+        z.string(),
+        z.number(),
+        z.boolean(),
+        richTextStringSchema,
+        z.array(richTextStringSchema),
+      ])
+      .optional(),
   })
   .transform((val) => {
     const returnValue: {
@@ -33,37 +40,48 @@ const propertyValueQueryItemSchema = z
 
     switch (val.dataType) {
       case "IDREF": {
-        returnValue.content = val.uuid != null ? val.uuid || null : null;
+        returnValue.content = val.uuid !== "" ? val.uuid : null;
         returnValue.label =
-          val.identification != null ?
-            parseStringContent({ content: val.identification.label.content })
+          val.content != null && val.content !== "" ?
+            typeof val.content === "object" ?
+              parseStringContent({ content: val.content })
+            : parseFakeString(val.content)
           : null;
-        break;
-      }
-      case "string":
-      case "date":
-      case "dateTime": {
-        returnValue.content = val.rawValue?.toString() ?? null;
-        returnValue.label = val.value?.toString() ?? null;
         break;
       }
       case "integer":
       case "decimal":
       case "time": {
         returnValue.content =
-          val.rawValue != null ? Number(val.rawValue) : null;
-        returnValue.label = val.value?.toString() ?? null;
+          val.rawValue != null && val.rawValue !== "" ?
+            Number(val.rawValue)
+          : null;
+        returnValue.label =
+          val.content != null && val.content !== "" ?
+            val.content.toString()
+          : null;
         break;
       }
       case "boolean": {
         returnValue.content =
-          val.rawValue != null ? Boolean(val.rawValue) : null;
-        returnValue.label = val.value?.toString() ?? null;
+          val.rawValue != null && val.rawValue !== "" ?
+            Boolean(val.rawValue)
+          : null;
+        returnValue.label =
+          val.content != null && val.content !== "" ?
+            val.content.toString()
+          : null;
         break;
       }
       default: {
-        returnValue.content = val.rawValue?.toString() ?? null;
-        returnValue.label = val.value?.toString() ?? null;
+        returnValue.content =
+          val.rawValue != null && val.rawValue !== "" ?
+            val.rawValue.toString()
+          : null;
+        returnValue.label =
+          val.content != null && val.content !== "" ?
+            val.content.toString()
+          : null;
         break;
       }
     }
@@ -78,7 +96,7 @@ const responseSchema = z.object({
   result: z.union([
     z.object({
       ochre: z.object({
-        item: z.union([
+        propertyValue: z.union([
           propertyValueQueryItemSchema,
           z.array(propertyValueQueryItemSchema),
         ]),
@@ -134,9 +152,9 @@ function buildXQuery(
       /value
 
   for $v in $values
-  return <item uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}" value="{string($v)}">{
-    if (string($v/@uuid) != "") then $v/ancestor::*[parent::ochre]/identification else ()
-  }</item>`;
+  return <propertyValue uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}">{
+    if ($v/content) then $v/content else $v/text()
+  }</propertyValue>`;
 
   return `<ochre>{${xquery}}</ochre>`;
 }
@@ -205,9 +223,9 @@ export async function fetchPropertyValuesByPropertyVariables(
     }
 
     const parsedItems =
-      Array.isArray(parsedResultRaw.result.ochre.item) ?
-        parsedResultRaw.result.ochre.item
-      : [parsedResultRaw.result.ochre.item];
+      Array.isArray(parsedResultRaw.result.ochre.propertyValue) ?
+        parsedResultRaw.result.ochre.propertyValue
+      : [parsedResultRaw.result.ochre.propertyValue];
 
     const groupedItems: Array<PropertyValueQueryItem> = [];
     for (const item of parsedItems) {
