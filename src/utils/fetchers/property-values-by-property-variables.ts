@@ -139,19 +139,18 @@ function buildXQuery(
       .map((uuid) => `@uuid="${uuid}"`)
       .join(" or ");
 
-    collectionScopeFilter = `[properties/property[label/@uuid="${BELONG_TO_COLLECTION_UUID}"][value[${belongsToCollectionScopeValues}]]]`;
+    collectionScopeFilter = `//properties[property[label/@uuid="${BELONG_TO_COLLECTION_UUID}" and value/(${belongsToCollectionScopeValues})]]`;
   }
 
   const propertyVariableFilters = propertyVariableUuids
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
 
-  const xquery = `let $values := ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]
-      /*${collectionScopeFilter}
-      /properties//property[label[${propertyVariableFilters}]]
-      /value
+  const xquery = `let $matching-props := ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]
+      ${collectionScopeFilter}
+      //property[label/(${propertyVariableFilters})]
 
-  for $v in $values
+  for $v in $matching-props/value
   return <propertyValue uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}">{
     if ($v/content) then $v/content else $v/text()
   }</propertyValue>`;
