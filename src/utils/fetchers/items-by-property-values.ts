@@ -85,7 +85,7 @@ function buildXQuery(
       .map((uuid) => `@uuid="${uuid}"`)
       .join(" or ");
 
-    belongsToCollectionScopeFilter = `[properties/property[label/@uuid="${BELONG_TO_COLLECTION_UUID}"][value[${belongsToCollectionScopeValues}]]]`;
+    belongsToCollectionScopeFilter = `[.//properties[property[label/@uuid="${BELONG_TO_COLLECTION_UUID}" and value/(${belongsToCollectionScopeValues})]]`;
   }
 
   const propertyVariables = propertyVariableUuids
@@ -113,8 +113,8 @@ function buildXQuery(
 
   const xquery = `let $match-uuids := distinct-values(
     ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]
-        /*${belongsToCollectionScopeFilter}
-          [properties//property[label[${propertyVariables}]][${propertyValuesFilters}]]
+        ${belongsToCollectionScopeFilter}
+          //property[label[${propertyVariables}]][${propertyValuesFilters}]]
         /@uuid
   )
 
@@ -127,15 +127,15 @@ function buildXQuery(
 
   return <items totalCount="{$totalCount}" page="${page}" pageSize="${pageSize}">{
     for $uuid in $unique-uuids[position() ge ${startPos} and position() le ${endPos}]
-    let $item := ($items[@uuid = $uuid])[1]
-    let $category := local-name($item)
-    return element { node-name($item) } {
-      $item/@*, ${
-        includeChildItems ? "$item/node()" : (
-          "$item/node()[not(local-name(.) = $category)]"
-        )
+      let $item := ($items[@uuid = $uuid])[1]
+      let $category := local-name($item)
+      return element { node-name($item) } {
+        $item/@*, ${
+          includeChildItems ? "$item/node()" : (
+            "$item/node()[not(local-name(.) = $category)]"
+          )
+        }
       }
-    }
   }</items>`;
 
   return `<ochre>{${xquery}}</ochre>`;
