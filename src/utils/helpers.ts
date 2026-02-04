@@ -36,45 +36,31 @@ export function flattenItemProperties<
   : T extends "set" ? Array<DataCategory>
   : never,
 >(item: Item<T, U>): Item<T, U> {
+  const allProperties: Array<Property> = [];
+
   if ("properties" in item) {
-    return { ...item, properties: flattenProperties(item.properties) };
+    allProperties.push(...item.properties);
   }
 
-  // Check for observations, interpretations, or bibliographies
-  function collectPropertiesFromSubNodes(): Array<Property> {
-    const allProperties: Array<Property> = [];
-
-    if ("observations" in item) {
-      const typedItem = item as {
-        observations: Array<{ properties: Array<Property> }>;
-      };
-      for (const observation of typedItem.observations) {
-        allProperties.push(...observation.properties);
-      }
+  if ("observations" in item) {
+    for (const observation of item.observations) {
+      allProperties.push(...observation.properties);
     }
-
-    if ("interpretations" in item) {
-      const typedItem = item as {
-        interpretations: Array<{ properties: Array<Property> }>;
-      };
-      for (const interpretation of typedItem.interpretations) {
-        allProperties.push(...interpretation.properties);
-      }
-    }
-
-    if ("bibliographies" in item) {
-      const typedItem = item as {
-        bibliographies: Array<{ properties: Array<Property> }>;
-      };
-      for (const bibliography of typedItem.bibliographies) {
-        allProperties.push(...bibliography.properties);
-      }
-    }
-
-    return flattenProperties(allProperties);
   }
 
-  return { ...item, properties: collectPropertiesFromSubNodes() };
+  if ("interpretations" in item) {
+    for (const interpretation of item.interpretations) {
+      allProperties.push(...interpretation.properties);
+    }
+  }
+
+  if ("bibliographies" in item) {
+    for (const bibliography of item.bibliographies) {
+      allProperties.push(...bibliography.properties);
+    }
+  }
+
+  return { ...item, properties: flattenProperties(allProperties) };
 }
 
 /**
