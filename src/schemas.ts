@@ -83,7 +83,9 @@ export const dataOptionsSchema = z
 
 export const apiVersionSuffixSchema = z
   .enum(["-v1", "-v2"])
-  .transform((suffix) => suffix.replace("-v", "") as unknown as ApiVersion);
+  .transform(
+    (suffix) => Number.parseInt(suffix.replace("-v", ""), 10) as ApiVersion,
+  );
 
 /**
  * Schema for validating website properties

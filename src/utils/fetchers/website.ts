@@ -23,7 +23,7 @@ function parseApiVersionSuffix(abbreviation: string): {
     return { abbreviation, version: DEFAULT_API_VERSION };
   }
 
-  const result = apiVersionSuffixSchema.safeParse(abbreviation);
+  const result = apiVersionSuffixSchema.safeParse(abbreviation.slice(-3));
   if (!result.success) {
     throw new Error("Invalid API version suffix");
   }
