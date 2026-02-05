@@ -15,6 +15,7 @@ import { parseFakeString, parseStringContent } from "../string.js";
 const propertyValueQueryItemSchema = z
   .object({
     uuid: z.string(),
+    itemUuid: z.string().optional(),
     dataType: z.string(),
     rawValue: z.union([z.string(), z.number(), z.boolean()]).optional(),
     content: z
@@ -29,10 +30,13 @@ const propertyValueQueryItemSchema = z
   })
   .transform((val) => {
     const returnValue: {
+      itemUuid: string | null;
       dataType: Exclude<PropertyValueContentType, "coordinate">;
       content: string | number | boolean | null;
       label: string | null;
     } = {
+      itemUuid:
+        val.itemUuid != null && val.itemUuid !== "" ? val.itemUuid : null,
       dataType: val.dataType as Exclude<PropertyValueContentType, "coordinate">,
       content: null,
       label: null,
@@ -151,9 +155,10 @@ function buildXQuery(
       //property[label/(${propertyVariableFilters})]
 
   for $v in $matching-props/value
-  return <propertyValue uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}">{
-    if ($v/content) then $v/content else $v/text()
-  }</propertyValue>`;
+    let $item-uuid := $v/ancestor::*[parent::ochre]/@uuid
+    return <propertyValue uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}" itemUuid="{$item-uuid}">{
+      if ($v/content) then $v/content else $v/text()
+    }</propertyValue>`;
 
   return `<ochre>{${xquery}}</ochre>`;
 }
@@ -226,15 +231,40 @@ export async function fetchPropertyValuesByPropertyVariables(
         parsedResultRaw.result.ochre.propertyValue
       : [parsedResultRaw.result.ochre.propertyValue];
 
-    const groupedItems: Array<PropertyValueQueryItem> = [];
+    const groupedItemsMap = new Map<
+      string | number | boolean | null,
+      {
+        dataType: Exclude<PropertyValueContentType, "coordinate">;
+        content: string | number | boolean | null;
+        label: string | null;
+        itemUuids: Set<string | null>;
+      }
+    >();
+
     for (const item of parsedItems) {
-      const existingItem = groupedItems.find((i) => i.content === item.content);
-      if (existingItem == null) {
-        groupedItems.push({ count: 1, ...item });
+      const existing = groupedItemsMap.get(item.content);
+      if (existing == null) {
+        groupedItemsMap.set(item.content, {
+          dataType: item.dataType,
+          content: item.content,
+          label: item.label,
+          itemUuids: new Set([item.itemUuid]),
+        });
       } else {
-        existingItem.count++;
+        existing.itemUuids.add(item.itemUuid);
       }
     }
+
+    const groupedItems: Array<PropertyValueQueryItem> = [];
+    for (const group of groupedItemsMap.values()) {
+      groupedItems.push({
+        count: group.itemUuids.size,
+        dataType: group.dataType,
+        content: group.content,
+        label: group.label,
+      });
+    }
+
     return {
       items: groupedItems.toSorted((a, b) => {
         if (a.count !== b.count) {
