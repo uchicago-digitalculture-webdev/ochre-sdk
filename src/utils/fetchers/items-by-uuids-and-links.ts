@@ -11,7 +11,7 @@ import type {
   OchreTree,
 } from "../../types/internal.raw.js";
 import type { ApiVersion, DataCategory, Item } from "../../types/main.js";
-import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
+import { BELONGS_TO_COLLECTION_UUID } from "../../constants.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
 import {
   parseBibliographies,
@@ -65,7 +65,7 @@ function buildXQuery(
       .map((uuid) => `@uuid="${uuid}"`)
       .join(" or ");
 
-    belongsToCollectionScopeFilter = `properties/property[label/@uuid="${BELONG_TO_COLLECTION_UUID}"][value[${belongsToCollectionScopeValues}]]`;
+    belongsToCollectionScopeFilter = `properties/property[label/@uuid="${BELONGS_TO_COLLECTION_UUID}"][value[${belongsToCollectionScopeValues}]]`;
   }
 
   let itemCategoryFilter = "";

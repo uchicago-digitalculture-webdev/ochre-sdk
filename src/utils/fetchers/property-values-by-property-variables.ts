@@ -4,7 +4,7 @@ import type {
   PropertyValueContentType,
   PropertyValueQueryItem,
 } from "../../types/main.js";
-import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
+import { BELONGS_TO_COLLECTION_UUID } from "../../constants.js";
 import { richTextStringSchema } from "../../schemas.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
 import { parseFakeString, parseStringContent } from "../string.js";
@@ -139,7 +139,7 @@ function buildXQuery(
       .map((uuid) => `@uuid="${uuid}"`)
       .join(" or ");
 
-    collectionScopeFilter = `//properties[property[label/@uuid="${BELONG_TO_COLLECTION_UUID}" and value/(${belongsToCollectionScopeValues})]]`;
+    collectionScopeFilter = `//properties[property[label/@uuid="${BELONGS_TO_COLLECTION_UUID}" and value/(${belongsToCollectionScopeValues})]]`;
   }
 
   const propertyVariableFilters = propertyVariableUuids

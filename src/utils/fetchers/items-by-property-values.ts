@@ -16,7 +16,7 @@ import type {
   Item,
   PropertyValueContentType,
 } from "../../types/main.js";
-import { BELONG_TO_COLLECTION_UUID } from "../../constants.js";
+import { BELONGS_TO_COLLECTION_UUID } from "../../constants.js";
 import { DEFAULT_API_VERSION, DEFAULT_PAGE_SIZE } from "../helpers.js";
 import {
   parseBibliographies,
@@ -85,7 +85,7 @@ function buildXQuery(
       .map((uuid) => `@uuid="${uuid}"`)
       .join(" or ");
 
-    belongsToCollectionScopeFilter = `[.//properties[property[label/@uuid="${BELONG_TO_COLLECTION_UUID}" and value/(${belongsToCollectionScopeValues})]]`;
+    belongsToCollectionScopeFilter = `[.//properties[property[label/@uuid="${BELONGS_TO_COLLECTION_UUID}" and value/(${belongsToCollectionScopeValues})]]`;
   }
 
   const propertyVariables = propertyVariableUuids
