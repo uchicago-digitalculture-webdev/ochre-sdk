@@ -222,17 +222,35 @@ export function parseMetadata(metadata: OchreMetadata): Metadata {
     );
   }
 
+  let publicationIdentification: Identification | null = null;
+  if (metadata.publication) {
+    publicationIdentification = parseIdentification(
+      metadata.publication.identification,
+    );
+  }
+
   return {
     project:
       projectIdentification ?
         {
           identification: projectIdentification,
           dateFormat: metadata.project?.dateFormat ?? null,
+          page: metadata.project?.page ?? null,
         }
       : null,
     collection:
-      collectionIdentification ?
-        { identification: collectionIdentification }
+      metadata.collection != null && collectionIdentification ?
+        {
+          identification: collectionIdentification,
+          page: metadata.collection.page,
+        }
+      : null,
+    publication:
+      metadata.publication != null && publicationIdentification ?
+        {
+          identification: publicationIdentification,
+          page: metadata.publication.page,
+        }
       : null,
     item:
       metadata.item ?
