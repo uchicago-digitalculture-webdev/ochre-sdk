@@ -213,9 +213,20 @@ export function parseMetadata(metadata: OchreMetadata): Metadata {
     };
   }
 
+  let collectionIdentification: Identification | null = null;
+  if (metadata.collection) {
+    collectionIdentification = parseIdentification(
+      metadata.collection.identification,
+    );
+  }
+
   return {
     project:
       projectIdentification ? { identification: projectIdentification } : null,
+    collection:
+      collectionIdentification ?
+        { identification: collectionIdentification }
+      : null,
     item:
       metadata.item ?
         {

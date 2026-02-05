@@ -83,6 +83,7 @@ export type Metadata = {
   project: {
     identification: Identification & { website: string | null };
   } | null;
+  collection: { identification: Identification } | null;
   item: {
     identification: Identification;
     category: string;

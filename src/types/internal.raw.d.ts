@@ -140,6 +140,7 @@ export type OchreMetadata = {
   publisher: OchreStringContent | FakeString;
   dataset: OchreStringContent | FakeString;
   project?: { identification: OchreIdentification };
+  collection?: { identification: OchreIdentification };
   language?: string | OchreLanguage | Array<string | OchreLanguage>;
   description: OchreStringContent | FakeString;
 };
