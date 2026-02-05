@@ -152,6 +152,7 @@ function buildXQuery(
 
   const xquery = `let $matching-props := ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]
       ${collectionScopeFilter}
+      /*[not(self::set)]
       //property[label/(${propertyVariableFilters})]
 
   for $v in $matching-props/value
