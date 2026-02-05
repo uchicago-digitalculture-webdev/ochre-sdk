@@ -41,7 +41,7 @@ export async function fetchItem<
     ) => Promise<Response>;
     version?: ApiVersion;
   },
-): Promise<{ error: null; item: Item<T, U> } | { error: string; item: null }> {
+): Promise<{ error: null; item: Item<T, U> } | { error: string; item: never }> {
   try {
     const version = options?.version ?? DEFAULT_API_VERSION;
 
@@ -224,11 +224,11 @@ export async function fetchItem<
       }
     }
 
-    return { error: null, item };
+    return { error: null as never, item };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unknown error",
-      item: null,
+      item: undefined as never,
     };
   }
 }
