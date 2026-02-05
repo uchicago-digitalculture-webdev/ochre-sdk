@@ -139,7 +139,7 @@ export type OchreMetadata = {
   };
   publisher: OchreStringContent | FakeString;
   dataset: OchreStringContent | FakeString;
-  project?: { identification: OchreIdentification };
+  project?: { identification: OchreIdentification; dateFormat?: string };
   collection?: { identification: OchreIdentification };
   language?: string | OchreLanguage | Array<string | OchreLanguage>;
   description: OchreStringContent | FakeString;
@@ -668,8 +668,8 @@ export type OchreCoordinates = {
  * Raw event structure corresponding to the parsed Event type
  */
 export type OchreEvent = {
-  dateTime?: string; // YYYY-MM-DD
-  partialDates?: { year: number; endYear?: number };
+  dateTime?: string;
+  endDateTime?: string;
   agent?: { uuid: string; publicationDateTime?: string } & OchreStringContent;
   location?: {
     uuid: string;
@@ -685,8 +685,8 @@ export type OchreEvent = {
  * Raw interpretation structure corresponding to the parsed Interpretation type
  */
 export type OchreInterpretation = {
-  date: string; // YYYY-MM-DD
   interpretationNo: number;
+  date?: string; // YYYY-MM-DD
   links?: OchreLink | Array<OchreLink>;
   properties?: { property: OchreProperty | Array<OchreProperty> };
   bibliographies?: {

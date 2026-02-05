@@ -222,7 +222,12 @@ export function parseMetadata(metadata: OchreMetadata): Metadata {
 
   return {
     project:
-      projectIdentification ? { identification: projectIdentification } : null,
+      projectIdentification ?
+        {
+          identification: projectIdentification,
+          dateFormat: metadata.project?.dateFormat ?? null,
+        }
+      : null,
     collection:
       collectionIdentification ?
         { identification: collectionIdentification }
@@ -862,11 +867,10 @@ export function parseEvents(events: Array<OchreEvent>): Array<Event> {
   const returnEvents: Array<Event> = [];
   for (const event of events) {
     returnEvents.push({
-      dateTime: event.dateTime != null ? parseISO(event.dateTime) : null,
-      date:
-        event.partialDates?.year != null ?
-          `${event.partialDates.year}-01-01/${event.partialDates.endYear ?? event.partialDates.year}-12-31`
-        : null,
+      dateTime:
+        event.endDateTime != null ?
+          `${event.dateTime}/${event.endDateTime}`
+        : (event.dateTime ?? null),
       label: parseStringContent(event.label),
       location:
         event.location ?
@@ -1106,7 +1110,7 @@ export function parseInterpretations(
   const returnInterpretations: Array<Interpretation> = [];
   for (const interpretation of interpretations) {
     returnInterpretations.push({
-      date: interpretation.date,
+      date: interpretation.date ?? null,
       number: interpretation.interpretationNo,
       links:
         interpretation.links ?

@@ -82,6 +82,7 @@ export type Identification = {
 export type Metadata = {
   project: {
     identification: Identification & { website: string | null };
+    dateFormat: string | null;
   } | null;
   collection: { identification: Identification } | null;
   item: {
@@ -329,8 +330,7 @@ export type Observation = {
  * Represents an event with date, label and optional agent
  */
 export type Event = {
-  dateTime: Date | null;
-  date: string | null;
+  dateTime: string | null;
   label: string;
   agent: {
     uuid: string;
