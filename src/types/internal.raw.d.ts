@@ -109,6 +109,7 @@ export type OchreData = {
     | { period: OchrePeriod }
     | { bibliography: OchreBibliography }
     | { person: OchrePerson }
+    | { propertyVariable: OchrePropertyVariable }
     | { propertyValue: OchrePropertyValue }
     | { text: OchreText }
     | { tree: OchreTree }
@@ -139,8 +140,13 @@ export type OchreMetadata = {
   };
   publisher: OchreStringContent | FakeString;
   dataset: OchreStringContent | FakeString;
-  project?: { identification: OchreIdentification; dateFormat?: string };
-  collection?: { identification: OchreIdentification };
+  project?: {
+    identification: OchreIdentification;
+    dateFormat?: string;
+    page?: "item" | "entry";
+  };
+  collection?: { identification: OchreIdentification; page: "item" | "entry" };
+  publication?: { identification: OchreIdentification; page: "item" | "entry" };
   language?: string | OchreLanguage | Array<string | OchreLanguage>;
   description: OchreStringContent | FakeString;
 };
@@ -210,6 +216,7 @@ export type OchreTree = {
     | { period: OchrePeriod | Array<OchrePeriod> }
     | { bibliography: OchreBibliography | Array<OchreBibliography> }
     | { person: OchrePerson | Array<OchrePerson> }
+    | { propertyVariable: OchrePropertyVariable | Array<OchrePropertyVariable> }
     | { propertyValue: OchrePropertyValue | Array<OchrePropertyValue> }
     | { text: OchreText | Array<OchreText> }
     | { set: OchreSet | Array<OchreSet> };
@@ -239,6 +246,7 @@ export type OchreSet = {
         period?: OchrePeriod | Array<OchrePeriod>;
         bibliography?: OchreBibliography | Array<OchreBibliography>;
         person?: OchrePerson | Array<OchrePerson>;
+        propertyVariable?: OchrePropertyVariable | Array<OchrePropertyVariable>;
         propertyValue?: OchrePropertyValue | Array<OchrePropertyValue>;
         text?: OchreText | Array<OchreText>;
       };
@@ -439,6 +447,7 @@ export type OchreLink =
   | { concept: OchreLinkItem | Array<OchreLinkItem> }
   | { person: OchreLinkItem | Array<OchreLinkItem> }
   | { bibliography: OchreBibliography | Array<OchreBibliography> }
+  | { propertyVariable: OchreLinkItem | Array<OchreLinkItem> }
   | { propertyValue: OchreLinkItem | Array<OchreLinkItem> }
   | { text: OchreLinkItem | Array<OchreLinkItem> }
   | { tree: OchreLinkItem | Array<OchreLinkItem> }
@@ -694,6 +703,16 @@ export type OchreInterpretation = {
   };
 };
 
+export type OchrePropertyVariable = {
+  uuid: string;
+  publicationDateTime?: string; // YYYY-MM-DDThh:mm:ssZ
+  type: string;
+  n: number;
+  context?: OchreContext;
+  availability?: OchreLicense;
+  identification: OchreIdentification;
+};
+
 /**
  * Raw property value structure corresponding to the parsed PropertyValue type
  */
@@ -772,6 +791,11 @@ export type PaginatedSetsResponse = {
             | { period: OchrePeriod | Array<OchrePeriod> }
             | { bibliography: OchreBibliography | Array<OchreBibliography> }
             | { person: OchrePerson | Array<OchrePerson> }
+            | {
+                propertyVariable:
+                  | OchrePropertyVariable
+                  | Array<OchrePropertyVariable>;
+              }
             | { propertyValue: OchrePropertyValue | Array<OchrePropertyValue> }
             | { text: OchreText | Array<OchreText> }
             | { tree: OchreTree | Array<OchreTree> }

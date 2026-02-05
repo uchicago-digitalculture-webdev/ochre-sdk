@@ -4,6 +4,7 @@ import type {
   OchrePeriod,
   OchrePerson,
   OchrePropertyValue,
+  OchrePropertyVariable,
   OchreResource,
   OchreSet,
   OchreSpatialUnit,
@@ -24,6 +25,7 @@ import {
   parsePeriods,
   parsePersons,
   parsePropertyValues,
+  parsePropertyVariables,
   parseResources,
   parseSets,
   parseSpatialUnits,
@@ -251,6 +253,9 @@ export async function fetchItemsByPropertyValues<
                 period?: OchrePeriod | Array<OchrePeriod>;
                 bibliography?: OchreBibliography | Array<OchreBibliography>;
                 person?: OchrePerson | Array<OchrePerson>;
+                propertyVariable?:
+                  | OchrePropertyVariable
+                  | Array<OchrePropertyVariable>;
                 propertyValue?: OchrePropertyValue | Array<OchrePropertyValue>;
                 text?: OchreText | Array<OchreText>;
                 set?: OchreSet | Array<OchreSet>;
@@ -369,6 +374,19 @@ export async function fetchItemsByPropertyValues<
       const persons = parsePersons(rawPersons) as Array<Item<T, U>>;
 
       items.push(...persons);
+    }
+    if (
+      "propertyVariable" in data.result.ochre.items &&
+      data.result.ochre.items.propertyVariable != null
+    ) {
+      const rawPropertyVariables =
+        Array.isArray(data.result.ochre.items.propertyVariable) ?
+          data.result.ochre.items.propertyVariable
+        : [data.result.ochre.items.propertyVariable];
+      const propertyVariables = parsePropertyVariables(
+        rawPropertyVariables,
+      ) as Array<Item<T, U>>;
+      items.push(...propertyVariables);
     }
     if (
       "propertyValue" in data.result.ochre.items &&

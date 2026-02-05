@@ -23,6 +23,7 @@ import type {
   OchrePerson,
   OchreProperty,
   OchrePropertyValue,
+  OchrePropertyVariable,
   OchreResource,
   OchreSection,
   OchreSet,
@@ -61,6 +62,7 @@ import type {
   PropertyValue,
   PropertyValueContent,
   PropertyValueContentType,
+  PropertyVariable,
   Resource,
   Scope,
   Section,
@@ -449,6 +451,7 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
     : "tree" in linkRaw ? linkRaw.tree
     : "person" in linkRaw ? linkRaw.person
     : "bibliography" in linkRaw ? linkRaw.bibliography
+    : "propertyVariable" in linkRaw ? linkRaw.propertyVariable
     : "propertyValue" in linkRaw ? linkRaw.propertyValue
     : null;
   if (!links) {
@@ -470,6 +473,7 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
         : "person" in linkRaw ? "person"
         : "tree" in linkRaw ? "tree"
         : "bibliography" in linkRaw ? "bibliography"
+        : "propertyVariable" in linkRaw ? "propertyVariable"
         : "propertyValue" in linkRaw ? "propertyValue"
         : null,
       content:
@@ -1381,6 +1385,56 @@ export function parseBibliography(
 }
 
 /**
+ * Parses raw property variable data into a standardized PropertyVariable structure
+ *
+ * @param propertyVariable - Raw property variable data in OCHRE format
+ * @returns Parsed PropertyVariable object
+ */
+export function parsePropertyVariable(
+  propertyVariable: OchrePropertyVariable,
+  metadata?: Metadata,
+  persistentUrl?: string | null,
+  belongsTo?: { uuid: string; abbreviation: string },
+): PropertyVariable {
+  return {
+    uuid: propertyVariable.uuid,
+    category: "propertyVariable",
+    belongsTo: belongsTo ?? null,
+    metadata: metadata ?? null,
+    persistentUrl: persistentUrl ?? null,
+    type: propertyVariable.type,
+    number: propertyVariable.n,
+    publicationDateTime:
+      propertyVariable.publicationDateTime ?
+        parseISO(propertyVariable.publicationDateTime)
+      : null,
+    context:
+      propertyVariable.context ? parseContext(propertyVariable.context) : null,
+    availability:
+      propertyVariable.availability ?
+        parseLicense(propertyVariable.availability)
+      : null,
+    identification: parseIdentification(propertyVariable.identification),
+  };
+}
+
+/**
+ * Parses an array of raw property variables into standardized PropertyVariable objects
+ *
+ * @param propertyVariables - Array of raw property variables in OCHRE format
+ * @returns Array of parsed PropertyVariable objects
+ */
+export function parsePropertyVariables(
+  propertyVariables: Array<OchrePropertyVariable>,
+): Array<PropertyVariable> {
+  const returnPropertyVariables: Array<PropertyVariable> = [];
+  for (const propertyVariable of propertyVariables) {
+    returnPropertyVariables.push(parsePropertyVariable(propertyVariable));
+  }
+  return returnPropertyVariables;
+}
+
+/**
  * Parses an array of raw bibliographies into standardized Bibliography objects
  *
  * @param bibliographies - Array of raw bibliographies in OCHRE format
@@ -1701,6 +1755,7 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
     | Array<Period>
     | Array<Bibliography>
     | Array<Person>
+    | Array<PropertyVariable>
     | Array<PropertyValue>
     | Array<Text>
     | Array<Set<Array<U>>> = [];
@@ -1769,6 +1824,17 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
         Array.isArray(tree.items.person) ?
           tree.items.person
         : [tree.items.person],
+      );
+      break;
+    }
+    case "propertyVariable": {
+      if (!("propertyVariable" in tree.items)) {
+        throw new Error("Invalid OCHRE data: Tree has no property variables");
+      }
+      items = parsePropertyVariables(
+        Array.isArray(tree.items.propertyVariable) ?
+          tree.items.propertyVariable
+        : [tree.items.propertyVariable],
       );
       break;
     }
@@ -1953,6 +2019,22 @@ export function parseSet<U extends Array<DataCategory>>(
             Array.isArray(set.items.person) ?
               set.items.person
             : [set.items.person],
+          ) as Array<Item<U[number]>>),
+        );
+        break;
+      }
+      case "propertyVariable": {
+        if (
+          !("propertyVariable" in set.items) ||
+          set.items.propertyVariable == null
+        ) {
+          throw new Error("Invalid OCHRE data: Set has no property variables");
+        }
+        items.push(
+          ...(parsePropertyVariables(
+            Array.isArray(set.items.propertyVariable) ?
+              set.items.propertyVariable
+            : [set.items.propertyVariable],
           ) as Array<Item<U[number]>>),
         );
         break;

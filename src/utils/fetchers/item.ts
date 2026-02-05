@@ -8,6 +8,7 @@ import {
   parsePeriod,
   parsePerson,
   parsePropertyValue,
+  parsePropertyVariable,
   parseResource,
   parseSet,
   parseSpatialUnit,
@@ -142,6 +143,20 @@ export async function fetchItem<
         }
         item = parsePerson(
           data.ochre.person,
+          metadata,
+          data.ochre.persistentUrl,
+          belongsTo,
+        ) as Item<T, U>;
+        break;
+      }
+      case "propertyVariable": {
+        if (!("propertyVariable" in data.ochre)) {
+          throw new Error(
+            "Invalid OCHRE data: API response missing 'propertyVariable' key",
+          );
+        }
+        item = parsePropertyVariable(
+          data.ochre.propertyVariable,
           metadata,
           data.ochre.persistentUrl,
           belongsTo,

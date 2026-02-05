@@ -162,6 +162,7 @@ export const categorySchema = z.enum([
   "period",
   "bibliography",
   "person",
+  "propertyVariable",
   "propertyValue",
   "text",
   "tree",

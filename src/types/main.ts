@@ -25,6 +25,7 @@ export type DataCategory =
   | "period"
   | "bibliography"
   | "person"
+  | "propertyVariable"
   | "propertyValue"
   | "text"
   | "tree"
@@ -46,6 +47,7 @@ export type Item<
   : T extends "period" ? Period
   : T extends "bibliography" ? Bibliography
   : T extends "person" ? Person
+  : T extends "propertyVariable" ? PropertyVariable
   : T extends "propertyValue" ? PropertyValue
   : T extends "text" ? Text
   : T extends "tree" ?
@@ -60,6 +62,7 @@ export type Item<
     | Period
     | Bibliography
     | Person
+    | PropertyVariable
     | PropertyValue
     | Tree<
         U extends Array<DataCategory> ? Exclude<U[number], "tree">
@@ -470,6 +473,7 @@ export type Set<U extends Array<DataCategory> = Array<DataCategory>> = {
   : U extends "period" ? Array<Period>
   : U extends "bibliography" ? Array<Bibliography>
   : U extends "person" ? Array<Person>
+  : U extends "propertyVariable" ? Array<PropertyVariable>
   : U extends "propertyValue" ? Array<PropertyValue>
   : U extends "tree" ? Array<Tree<Exclude<DataCategory, "tree">>>
   : U extends "set" ? Array<Set<Array<DataCategory>>>
@@ -534,6 +538,23 @@ export type Period = {
   identification: Identification;
   coordinates: Array<Coordinate>;
   description: string | null;
+};
+
+/**
+ * Represents a property variable
+ */
+export type PropertyVariable = {
+  uuid: string;
+  category: "propertyVariable";
+  belongsTo: { uuid: string; abbreviation: string } | null;
+  metadata: Metadata | null;
+  persistentUrl: string | null;
+  type: string;
+  number: number;
+  publicationDateTime: Date | null;
+  context: Context | null;
+  availability: License | null;
+  identification: Identification;
 };
 
 /**
@@ -680,6 +701,7 @@ export type Tree<
   : U extends "period" ? Array<Period>
   : U extends "bibliography" ? Array<Bibliography>
   : U extends "person" ? Array<Person>
+  : U extends "propertyVariable" ? Array<PropertyVariable>
   : U extends "propertyValue" ? Array<PropertyValue>
   : U extends "text" ? Array<Text>
   : U extends "set" ? Array<Set<U extends Array<DataCategory> ? U : Array<U>>>
