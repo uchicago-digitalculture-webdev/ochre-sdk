@@ -13,24 +13,7 @@ import { parseIdentification, parseResources } from "../parse.js";
  * @param options - The options for the fetch
  * @param options.fetch - The fetch function to use
  * @param options.version - The version of the OCHRE API to use
- * @returns The parsed gallery or null if the fetch/parse fails
- *
- * @example
- * ```ts
- * const gallery = await fetchGallery("9c4da06b-f15e-40af-a747-0933eaf3587e", "1978", 1, 12);
- * if (gallery === null) {
- *   console.error("Failed to fetch gallery");
- *   return;
- * }
- * console.log(`Fetched gallery: ${gallery.identification.label}`);
- * console.log(`Contains ${gallery.resources.length.toLocaleString()} resources`);
- * ```
- *
- * @remarks
- * The returned gallery includes:
- * - Gallery metadata and identification
- * - Project identification
- * - Resources (gallery items)
+ * @returns The parsed gallery or an error message if the fetch/parse fails
  */
 export async function fetchGallery(
   uuid: string,

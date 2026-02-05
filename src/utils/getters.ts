@@ -17,14 +17,6 @@ const DEFAULT_OPTIONS: PropertyOptions = { includeNestedProperties: false };
  * @param uuid - The UUID to search for
  * @param options - Search options, including whether to include nested properties
  * @returns The matching Property object, or null if not found
- *
- * @example
- * ```ts
- * const property = getPropertyByUuid(properties, "123e4567-e89b-12d3-a456-426614174000", { includeNestedProperties: true });
- * if (property) {
- *   console.log(property.values);
- * }
- * ```
  */
 export function getPropertyByUuid(
   properties: Array<Property>,
@@ -60,16 +52,6 @@ export function getPropertyByUuid(
  * @param uuid - The UUID to search for
  * @param options - Search options, including whether to include nested properties
  * @returns Array of property values as strings, or null if property not found
- *
- * @example
- * ```ts
- * const values = getPropertyValuesByUuid(properties, "123e4567-e89b-12d3-a456-426614174000");
- * if (values) {
- *   for (const value of values) {
- *     console.log(value);
- *   }
- * }
- * ```
  */
 export function getPropertyValuesByUuid(
   properties: Array<Property>,
@@ -108,14 +90,6 @@ export function getPropertyValuesByUuid(
  * @param uuid - The UUID to search for
  * @param options - Search options, including whether to include nested properties
  * @returns The first property value as string, or null if property not found
- *
- * @example
- * ```ts
- * const title = getPropertyValueByUuid(properties, "123e4567-e89b-12d3-a456-426614174000");
- * if (title) {
- *   console.log(`Document title: ${title}`);
- * }
- * ```
  */
 export function getPropertyValueByUuid(
   properties: Array<Property>,
@@ -153,14 +127,6 @@ export function getPropertyValueByUuid(
  * @param label - The label to search for
  * @param options - Search options, including whether to include nested properties
  * @returns The matching Property object, or null if not found
- *
- * @example
- * ```ts
- * const property = getPropertyByLabel(properties, "author", { includeNestedProperties: true });
- * if (property) {
- *   console.log(property.values);
- * }
- * ```
  */
 export function getPropertyByLabel(
   properties: Array<Property>,
@@ -196,16 +162,6 @@ export function getPropertyByLabel(
  * @param label - The label to search for
  * @param options - Search options, including whether to include nested properties
  * @returns Array of property values as strings, or null if property not found
- *
- * @example
- * ```ts
- * const values = getPropertyValuesByLabel(properties, "keywords");
- * if (values) {
- *   for (const value of values) {
- *     console.log(value);
- *   }
- * }
- * ```
  */
 export function getPropertyValuesByLabel(
   properties: Array<Property>,
@@ -244,14 +200,6 @@ export function getPropertyValuesByLabel(
  * @param label - The label to search for
  * @param options - Search options, including whether to include nested properties
  * @returns The first property value as string, or null if property not found
- *
- * @example
- * ```ts
- * const title = getPropertyValueByLabel(properties, "title");
- * if (title) {
- *   console.log(`Document title: ${title}`);
- * }
- * ```
  */
 export function getPropertyValueByLabel(
   properties: Array<Property>,
@@ -290,12 +238,6 @@ export function getPropertyValueByLabel(
  * @param properties - Array of properties to get unique properties from
  * @param options - Search options, including whether to include nested properties
  * @returns Array of unique properties
- *
- * @example
- * ```ts
- * const properties = getAllUniqueProperties(properties, { includeNestedProperties: true });
- * console.log(`Available properties: ${properties.map((p) => p.label).join(", ")}`);
- * ```
  */
 export function getUniqueProperties(
   properties: Array<Property>,
@@ -334,12 +276,6 @@ export function getUniqueProperties(
  * @param properties - Array of properties to get unique property labels from
  * @param options - Search options, including whether to include nested properties
  * @returns Array of unique property labels
- *
- * @example
- * ```ts
- * const properties = getAllUniquePropertyLabels(properties, { includeNestedProperties: true });
- * console.log(`Available properties: ${properties.join(", ")}`);
- * ```
  */
 export function getUniquePropertyLabels(
   properties: Array<Property>,
@@ -381,17 +317,6 @@ export function getUniquePropertyLabels(
  * @param filter.value - The value to filter by
  * @param options - Search options, including whether to include nested properties
  * @returns True if the property matches the filter criteria, false otherwise
- *
- * @example
- * ```ts
- * const matches = filterProperties(property, {
- *   label: "category",
- *   value: "book"
- * });
- * if (matches) {
- *   console.log("Property matches filter criteria");
- * }
- * ```
  */
 export function filterProperties(
   property: Property,

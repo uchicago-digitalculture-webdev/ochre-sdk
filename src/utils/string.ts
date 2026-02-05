@@ -44,12 +44,6 @@ function getStringItemByLanguage(
  *
  * @param string - Input string to parse
  * @returns String with emails converted to HTML links
- *
- * @example
- * ```ts
- * const parsed = parseEmail("Contact us at info@example.com");
- * // Returns: "Contact us at <ExternalLink href="mailto:info@example.com">info@example.com</ExternalLink>"
- * ```
  */
 export function parseEmail(string: string): string {
   const splitString = string.split(" ");
@@ -168,13 +162,6 @@ function parseWhitespace(contentString: string, whitespace: string): string {
  *
  * @param string - FakeString value to convert
  * @returns Converted string value
- *
- * @example
- * ```ts
- * parseFakeString(true); // Returns "Yes"
- * parseFakeString(123); // Returns "123"
- * parseFakeString("test"); // Returns "test"
- * ```
  */
 export function parseFakeString(string: FakeString): string {
   return String(string)

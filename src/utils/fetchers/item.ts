@@ -21,34 +21,7 @@ import { fetchByUuid } from "./uuid.js";
  * Fetches and parses an OCHRE item from the OCHRE API
  *
  * @param uuid - The UUID of the OCHRE item to fetch
- * @returns Object containing the parsed OCHRE item and its metadata, or null if the fetch/parse fails
- *
- * @example
- * ```ts
- * const result = await fetchItem("123e4567-e89b-12d3-a456-426614174000");
- * if (result === null) {
- *   console.error("Failed to fetch OCHRE item");
- *   return;
- * }
- * const { metadata, belongsTo, item, category } = result;
- * console.log(`Fetched OCHRE item: ${item.identification.label} with category ${category}`);
- * ```
- *
- * Or, if you want to fetch a specific category, you can do so by passing the category as an argument:
- * ```ts
- * const result = await fetchItem("123e4567-e89b-12d3-a456-426614174000", "resource");
- * const { metadata, belongsTo, item, category } = result;
- * console.log(item.category); // "resource"
- * ```
- *
- * @remarks
- * The returned OCHRE item includes:
- * - Item metadata
- * - Item belongsTo information
- * - Item content
- * - Item category
- *
- * If the fetch/parse fails, the returned object will have an `error` property.
+ * @returns Object containing the parsed OCHRE item, or an error message if the fetch/parse fails
  */
 export async function fetchItem<
   T extends DataCategory = DataCategory,
@@ -67,10 +40,7 @@ export async function fetchItem<
     ) => Promise<Response>;
     version?: ApiVersion;
   },
-): Promise<
-  | { error: null; item: Item<T, U>; category: T; itemCategories: U }
-  | { error: string; item: never; category: never; itemCategories: never }
-> {
+): Promise<{ error: null; item: Item<T, U> } | { error: string; item: null }> {
   try {
     const version = options?.version ?? DEFAULT_API_VERSION;
 
@@ -79,7 +49,7 @@ export async function fetchItem<
       throw new Error(error);
     }
 
-    const categoryKey = getItemCategory(Object.keys(data.ochre));
+    const categoryKey = category ?? getItemCategory(Object.keys(data.ochre));
 
     const belongsTo = {
       uuid: data.ochre.uuidBelongsTo,
@@ -239,18 +209,11 @@ export async function fetchItem<
       }
     }
 
-    return {
-      error: null as never,
-      item,
-      category: category!,
-      itemCategories: itemCategories!,
-    };
+    return { error: null, item };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unknown error",
-      item: undefined as never,
-      category: undefined as never,
-      itemCategories: undefined as never,
+      item: null,
     };
   }
 }
