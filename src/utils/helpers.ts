@@ -1,10 +1,4 @@
-import type {
-  DataCategory,
-  Item,
-  Property,
-  PropertyValueContent,
-  PropertyValueContentType,
-} from "../types/main.js";
+import type { DataCategory, Item, Property } from "../types/main.js";
 import { flattenProperties } from "./internal.js";
 
 /**
@@ -61,17 +55,4 @@ export function flattenItemProperties<
   }
 
   return { ...item, properties: flattenProperties(allProperties) };
-}
-
-/**
- * Get the leaf property values from an array of property values
- * @param propertyValues - The array of property values to get the leaf property values from
- * @returns The array of leaf property values
- */
-export function getLeafPropertyValues<
-  T extends PropertyValueContentType = PropertyValueContentType,
->(
-  propertyValues: Array<PropertyValueContent<T>>,
-): Array<PropertyValueContent<T>> {
-  return propertyValues.filter((value) => value.hierarchy.isLeaf);
 }
