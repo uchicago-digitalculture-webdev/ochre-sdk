@@ -1,5 +1,5 @@
 {
-  "name": "@digitalculture/ochre-sdk",
+  "name": "ochre-sdk",
   "version": "0.18.21",
   "type": "module",
   "license": "MIT",

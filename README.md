@@ -5,19 +5,19 @@ This is the OCHRE JavaScript/TypeScript SDK for interacting with OCHRE (Online C
 ## Installation
 
 ```bash
-pnpm add @digitalculture/ochre-sdk
+pnpm add ochre-sdk
 ```
 
 or
 
 ```bash
-npm install @digitalculture/ochre-sdk
+npm install ochre-sdk
 ```
 
 or
 
 ```bash
-bun add @digitalculture/ochre-sdk
+bun add ochre-sdk
 ```
 
 ## Start development server

@@ -1,4 +1,4 @@
-# @digitalculture/ochre-sdk
+# ochre-sdk
 
 ## 0.11.19
 
