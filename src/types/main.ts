@@ -819,13 +819,13 @@ export type Website = {
     privacy: "public" | "password" | "private";
     status: "development" | "preview" | "production";
     contact: { name: string; email: string | null } | null;
-    isHeaderDisplayed: boolean;
-    headerVariant: "default" | "floating" | "inline";
-    headerAlignment: "start" | "center" | "end";
-    isHeaderProjectDisplayed: boolean;
+    isNavbarDisplayed: boolean;
+    navbarVariant: "default" | "floating" | "inline";
+    navbarAlignment: "start" | "center" | "end";
+    isNavbarProjectDisplayed: boolean;
     isFooterDisplayed: boolean;
     isSidebarDisplayed: boolean;
-    headerSearchBarBoundElementUuid: string | null;
+    navbarSearchBarBoundElementUuid: string | null;
     supportsThemeToggle: boolean;
     defaultTheme: "light" | "dark" | null;
     logoUrl: string | null;
@@ -857,13 +857,13 @@ export type Webpage = {
   slug: string;
   publicationDateTime: Date | null;
   properties: {
-    displayedInHeader: boolean;
+    displayedInNavbar: boolean;
     width: "full" | "large" | "narrow" | "default";
     variant: "default" | "no-background";
     backgroundImageUrl: string | null;
     isBreadcrumbsDisplayed: boolean;
     isSidebarDisplayed: boolean;
-    isHeaderSearchBarDisplayed: boolean;
+    isNavbarSearchBarDisplayed: boolean;
     cssStyles: {
       default: Array<Style>;
       tablet: Array<Style>;

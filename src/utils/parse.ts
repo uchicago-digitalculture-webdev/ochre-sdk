@@ -4020,12 +4020,12 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
       )
     : [];
 
-  let displayedInHeader = true;
+  let displayedInNavbar = true;
   let width: "default" | "full" | "large" | "narrow" = "default";
   let variant: "default" | "no-background" = "default";
   let isSidebarDisplayed = true;
   let isBreadcrumbsDisplayed = false;
-  let isHeaderSearchBarDisplayed = true;
+  let isNavbarSearchBarDisplayed = true;
 
   const webpageSubProperties = webpageProperties.find(
     (property) =>
@@ -4034,11 +4034,11 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
   )?.properties;
 
   if (webpageSubProperties) {
-    const headerProperty = webpageSubProperties.find(
+    const navbarProperty = webpageSubProperties.find(
       (property) => property.label === "displayed-in-navbar",
     )?.values[0];
-    if (headerProperty) {
-      displayedInHeader = headerProperty.content === true;
+    if (navbarProperty) {
+      displayedInNavbar = navbarProperty.content === true;
     }
 
     const widthProperty = webpageSubProperties.find(
@@ -4069,12 +4069,12 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
       isBreadcrumbsDisplayed = isBreadcrumbsDisplayedProperty.content === true;
     }
 
-    const isHeaderSearchBarDisplayedProperty = webpageSubProperties.find(
+    const isNavbarSearchBarDisplayedProperty = webpageSubProperties.find(
       (property) => property.label === "navbar-search-bar-displayed",
     )?.values[0];
-    if (isHeaderSearchBarDisplayedProperty) {
-      isHeaderSearchBarDisplayed =
-        isHeaderSearchBarDisplayedProperty.content === true;
+    if (isNavbarSearchBarDisplayedProperty) {
+      isNavbarSearchBarDisplayed =
+        isNavbarSearchBarDisplayedProperty.content === true;
     }
   }
 
@@ -4132,7 +4132,7 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
       : null,
     items,
     properties: {
-      displayedInHeader,
+      displayedInNavbar,
       width,
       variant,
       backgroundImageUrl:
@@ -4141,7 +4141,7 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
         : null,
       isSidebarDisplayed,
       isBreadcrumbsDisplayed,
-      isHeaderSearchBarDisplayed,
+      isNavbarSearchBarDisplayed,
       cssStyles: {
         default: cssStyles,
         tablet: cssStylesTablet,
@@ -4850,10 +4850,10 @@ function parseWebsiteProperties(
     websiteProperties.find((property) => property.label === "logo")?.values[0]
       ?.uuid ?? null;
 
-  let isHeaderDisplayed = true;
-  let headerVariant: "default" | "floating" | "inline" = "default";
-  let headerAlignment: "start" | "center" | "end" = "start";
-  let isHeaderProjectDisplayed = true;
+  let isNavbarDisplayed = true;
+  let navbarVariant: "default" | "floating" | "inline" = "default";
+  let navbarAlignment: "start" | "center" | "end" = "start";
+  let isNavbarProjectDisplayed = true;
   let isFooterDisplayed = true;
   let isSidebarDisplayed = false;
   let supportsThemeToggle = true;
@@ -4869,39 +4869,39 @@ function parseWebsiteProperties(
   let isPropertyValuesGrouped = true;
   let iiifViewer: "universal-viewer" | "clover" = "universal-viewer";
 
-  const headerProperty = websiteProperties.find(
+  const navbarProperty = websiteProperties.find(
     (property) => property.label === "navbar-displayed",
   )?.values[0];
-  if (headerProperty) {
-    isHeaderDisplayed = headerProperty.content === true;
+  if (navbarProperty) {
+    isNavbarDisplayed = navbarProperty.content === true;
   }
 
-  const headerVariantProperty = websiteProperties.find(
+  const navbarVariantProperty = websiteProperties.find(
     (property) => property.label === "navbar-variant",
   )?.values[0];
-  if (headerVariantProperty) {
-    headerVariant = headerVariantProperty.content as
+  if (navbarVariantProperty) {
+    navbarVariant = navbarVariantProperty.content as
       | "default"
       | "floating"
       | "inline";
   }
 
-  const headerAlignmentProperty = websiteProperties.find(
+  const navbarAlignmentProperty = websiteProperties.find(
     (property) => property.label === "navbar-alignment",
   )?.values[0];
-  if (headerAlignmentProperty) {
-    headerAlignment = headerAlignmentProperty.content as
+  if (navbarAlignmentProperty) {
+    navbarAlignment = navbarAlignmentProperty.content as
       | "start"
       | "center"
       | "end";
   }
 
-  const isHeaderProjectDisplayedProperty = websiteProperties.find(
+  const isNavbarProjectDisplayedProperty = websiteProperties.find(
     (property) => property.label === "navbar-project-displayed",
   )?.values[0];
-  if (isHeaderProjectDisplayedProperty) {
-    isHeaderProjectDisplayed =
-      isHeaderProjectDisplayedProperty.content === true;
+  if (isNavbarProjectDisplayedProperty) {
+    isNavbarProjectDisplayed =
+      isNavbarProjectDisplayedProperty.content === true;
   }
 
   const footerProperty = websiteProperties.find(
@@ -4918,7 +4918,7 @@ function parseWebsiteProperties(
     isSidebarDisplayed = sidebarProperty.content === true;
   }
 
-  const headerSearchBarBoundElementUuid =
+  const navbarSearchBarBoundElementUuid =
     websiteProperties.find(
       (property) => property.label === "bound-element-navbar-search-bar",
     )?.values[0]?.uuid ?? null;
@@ -5131,13 +5131,13 @@ function parseWebsiteProperties(
     privacy: validatedPrivacy,
     status: validatedStatus,
     contact,
-    isHeaderDisplayed,
-    headerVariant,
-    headerAlignment,
-    isHeaderProjectDisplayed,
+    isNavbarDisplayed,
+    navbarVariant,
+    navbarAlignment,
+    isNavbarProjectDisplayed,
     isFooterDisplayed,
     isSidebarDisplayed,
-    headerSearchBarBoundElementUuid,
+    navbarSearchBarBoundElementUuid,
     supportsThemeToggle,
     defaultTheme,
     logoUrl:
