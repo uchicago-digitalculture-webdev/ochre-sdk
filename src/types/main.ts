@@ -794,7 +794,7 @@ export type Website = {
   identification: Identification;
   creators: Array<Person>;
   license: License | null;
-  pages: Array<Webpage>;
+  items: Array<Webpage | WebSegment>;
   sidebar: {
     elements: Array<WebElement>;
     title: WebElement["title"];
@@ -853,6 +853,8 @@ export type Website = {
  * Represents a webpage with its title, slug, properties, items and subpages
  */
 export type Webpage = {
+  uuid: string;
+  type: "page";
   title: string;
   slug: string;
   publicationDateTime: Date | null;
@@ -870,8 +872,32 @@ export type Webpage = {
       mobile: Array<Style>;
     };
   };
-  items: Array<WebElement | WebBlock>;
+  items: Array<WebSegment | WebElement | WebBlock>;
   webpages: Array<Webpage>;
+};
+
+/**
+ * Represents a web segment
+ */
+export type WebSegment = {
+  uuid: string;
+  type: "segment";
+  title: string;
+  slug: string;
+  publicationDateTime: Date | null;
+  items: Array<WebSegmentItem>;
+};
+
+/**
+ * Represents a web segment item
+ */
+export type WebSegmentItem = {
+  uuid: string;
+  type: "segment-item";
+  title: string;
+  slug: string;
+  publicationDateTime: Date | null;
+  items: Array<Webpage | WebSegment>;
 };
 
 /**

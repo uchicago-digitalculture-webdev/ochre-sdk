@@ -76,6 +76,8 @@ import type {
   WebElementComponent,
   WebImage,
   Webpage,
+  WebSegment,
+  WebSegmentItem,
   Website,
   WebTitle,
 } from "../types/main.js";
@@ -447,6 +449,7 @@ export function parsePerson(
  */
 export function parsePersons(persons: Array<OchrePerson>): Array<Person> {
   const returnPersons: Array<Person> = [];
+
   for (const person of persons) {
     returnPersons.push(parsePerson(person));
   }
@@ -873,6 +876,7 @@ export function parseObservations(
   observations: Array<OchreObservation>,
 ): Array<Observation> {
   const returnObservations: Array<Observation> = [];
+
   for (const observation of observations) {
     returnObservations.push(parseObservation(observation));
   }
@@ -887,6 +891,7 @@ export function parseObservations(
  */
 export function parseEvents(events: Array<OchreEvent>): Array<Event> {
   const returnEvents: Array<Event> = [];
+
   for (const event of events) {
     returnEvents.push({
       dateTime:
@@ -1113,6 +1118,7 @@ export function parseProperties(
   language = "eng",
 ): Array<Property> {
   const returnProperties: Array<Property> = [];
+
   for (const property of properties) {
     returnProperties.push(parseProperty(property, language));
   }
@@ -1130,6 +1136,7 @@ export function parseInterpretations(
   interpretations: Array<OchreInterpretation>,
 ): Array<Interpretation> {
   const returnInterpretations: Array<Interpretation> = [];
+
   for (const interpretation of interpretations) {
     returnInterpretations.push({
       date: interpretation.date ?? null,
@@ -1239,9 +1246,11 @@ export function parsePeriod(
  */
 export function parsePeriods(periods: Array<OchrePeriod>): Array<Period> {
   const returnPeriods: Array<Period> = [];
+
   for (const period of periods) {
     returnPeriods.push(parsePeriod(period));
   }
+
   return returnPeriods;
 }
 
@@ -1462,9 +1471,11 @@ export function parseBibliographies(
   bibliographies: Array<OchreBibliography>,
 ): Array<Bibliography> {
   const returnBibliographies: Array<Bibliography> = [];
+
   for (const bibliography of bibliographies) {
     returnBibliographies.push(parseBibliography(bibliography));
   }
+
   return returnBibliographies;
 }
 
@@ -1546,9 +1557,11 @@ export function parsePropertyValues(
   propertyValues: Array<OchrePropertyValue>,
 ): Array<PropertyValue> {
   const returnPropertyValues: Array<PropertyValue> = [];
+
   for (const propertyValue of propertyValues) {
     returnPropertyValues.push(parsePropertyValue(propertyValue));
   }
+
   return returnPropertyValues;
 }
 
@@ -1665,9 +1678,11 @@ export function parseText(
  */
 export function parseTexts(texts: Array<OchreText>): Array<Text> {
   const returnTexts: Array<Text> = [];
+
   for (const text of texts) {
     returnTexts.push(parseText(text));
   }
+
   return returnTexts;
 }
 
@@ -1725,6 +1740,7 @@ export function parseSections(sections: {
   for (const section of translationSections) {
     returnSections.push(parseSection(section, "translation"));
   }
+
   for (const section of phonemicSections) {
     returnSections.push(parseSection(section, "phonemic"));
   }
@@ -1933,9 +1949,11 @@ export function parseTrees<U extends Exclude<DataCategory, "tree">>(
   trees: Array<OchreTree>,
 ): Array<Tree<U>> {
   const returnTrees: Array<Tree<U>> = [];
+
   for (const tree of trees) {
     returnTrees.push(parseTree<U>(tree));
   }
+
   return returnTrees;
 }
 
@@ -2133,9 +2151,11 @@ export function parseSets<U extends Array<DataCategory>>(
   sets: Array<OchreSet>,
 ): Array<Set<U>> {
   const returnSets: Array<Set<U>> = [];
+
   for (const set of sets) {
     returnSets.push(parseSet<U>(set));
   }
+
   return returnSets;
 }
 
@@ -2275,9 +2295,8 @@ export function parseResources(
   resources: Array<OchreResource>,
 ): Array<Resource> {
   const returnResources: Array<Resource> = [];
-  const resourcesToParse = Array.isArray(resources) ? resources : [resources];
 
-  for (const resource of resourcesToParse) {
+  for (const resource of resources) {
     returnResources.push(parseResource(resource));
   }
 
@@ -2377,10 +2396,8 @@ export function parseSpatialUnits(
   spatialUnits: Array<OchreSpatialUnit>,
 ): Array<SpatialUnit> {
   const returnSpatialUnits: Array<SpatialUnit> = [];
-  const spatialUnitsToParse =
-    Array.isArray(spatialUnits) ? spatialUnits : [spatialUnits];
 
-  for (const spatialUnit of spatialUnitsToParse) {
+  for (const spatialUnit of spatialUnits) {
     returnSpatialUnits.push(parseSpatialUnit(spatialUnit));
   }
 
@@ -2542,9 +2559,8 @@ const parseWebpageResources = <T extends "element" | "page" | "block">(
  */
 export function parseConcepts(concepts: Array<OchreConcept>): Array<Concept> {
   const returnConcepts: Array<Concept> = [];
-  const conceptsToParse = Array.isArray(concepts) ? concepts : [concepts];
 
-  for (const concept of conceptsToParse) {
+  for (const concept of concepts) {
     returnConcepts.push(parseConcept(concept));
   }
 
@@ -2556,6 +2572,7 @@ function parseBounds(bounds: string): [[number, number], [number, number]] {
   if (!result.success) {
     throw new Error(`Invalid bounds: ${result.error.message}`);
   }
+
   return result.data;
 }
 
@@ -3930,7 +3947,10 @@ function parseWebElement(elementResource: OchreResource): WebElement {
  * @param webpageResource - Raw webpage resource data in OCHRE format
  * @returns Parsed Webpage object
  */
-function parseWebpage(webpageResource: OchreResource): Webpage | null {
+function parseWebpage(
+  webpageResource: OchreResource,
+  slugPrefix?: string,
+): Webpage | null {
   const webpageProperties =
     webpageResource.properties ?
       parseProperties(
@@ -3945,14 +3965,15 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
     webpageProperties.find((property) => property.label === "presentation")
       ?.values[0]?.content !== "page"
   ) {
-    // Skip global elements
     return null;
   }
 
   const identification = parseIdentification(webpageResource.identification);
 
-  const slug = webpageResource.slug;
-  if (slug === undefined) {
+  // TODO: Remove this once OCHRE is updated to allow segment-unique slugs
+  const slug = webpageResource.slug?.replace(/^\$[^-]*-/, "") ?? null;
+
+  if (slug == null) {
     throw new Error(`Slug not found for page “${identification.label}”`);
   }
 
@@ -3975,7 +3996,7 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
       : [webpageResource.resource]
     : [];
 
-  const items: Array<WebElement | WebBlock> = [];
+  const items: Array<WebSegment | WebElement | WebBlock> = [];
   for (const resource of webpageResources) {
     const resourceProperties =
       resource.properties ?
@@ -3989,12 +4010,19 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
     const resourceType = getPropertyValueByLabel(
       resourceProperties,
       "presentation",
-    ) as "element" | "block" | undefined;
+    ) as "segment" | "element" | "block" | undefined;
     if (resourceType == null) {
       continue;
     }
 
     switch (resourceType) {
+      case "segment": {
+        const segment = parseWebSegment(resource);
+        if (segment) {
+          items.push(segment);
+        }
+        break;
+      }
       case "element": {
         const element = parseWebElement(resource);
         items.push(element);
@@ -4124,8 +4152,11 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
   }
 
   return {
+    uuid: webpageResource.uuid,
+    type: "page",
     title: identification.label,
-    slug,
+    slug:
+      slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
     publicationDateTime:
       webpageResource.publicationDateTime ?
         parseISO(webpageResource.publicationDateTime)
@@ -4158,19 +4189,202 @@ function parseWebpage(webpageResource: OchreResource): Webpage | null {
  * @param webpageResources - Array of raw webpage resources in OCHRE format
  * @returns Array of parsed Webpage objects
  */
-function parseWebpages(webpageResources: Array<OchreResource>): Array<Webpage> {
+function parseWebpages(
+  webpageResources: Array<OchreResource>,
+  slugPrefix?: string,
+): Array<Webpage> {
   const returnPages: Array<Webpage> = [];
-  const pagesToParse =
-    Array.isArray(webpageResources) ? webpageResources : [webpageResources];
 
-  for (const page of pagesToParse) {
-    const webpage = parseWebpage(page);
-    if (webpage) {
+  for (const webpageResource of webpageResources) {
+    const webpage = parseWebpage(webpageResource, slugPrefix);
+    if (webpage !== null) {
       returnPages.push(webpage);
     }
   }
 
   return returnPages;
+}
+
+/**
+ * Parses raw segment resource into a standardized WebSegment object
+ *
+ * @param segmentResource - Raw segment resource in OCHRE format
+ * @returns Parsed WebSegment object
+ */
+function parseWebSegment(
+  segmentResource: OchreResource,
+  slugPrefix?: string,
+): WebSegment | null {
+  const webpageProperties =
+    segmentResource.properties ?
+      parseProperties(
+        Array.isArray(segmentResource.properties.property) ?
+          segmentResource.properties.property
+        : [segmentResource.properties.property],
+      )
+    : [];
+
+  if (
+    webpageProperties.length === 0 ||
+    webpageProperties.find((property) => property.label === "presentation")
+      ?.values[0]?.content !== "segment"
+  ) {
+    return null;
+  }
+
+  const identification = parseIdentification(segmentResource.identification);
+
+  // const slug = segmentResource.slug;
+  const slug =
+    segmentResource.identification.abbreviation != null ?
+      typeof segmentResource.identification.abbreviation === "object" ?
+        parseStringContent(segmentResource.identification.abbreviation)
+      : parseFakeString(segmentResource.identification.abbreviation)
+    : null;
+  if (slug == null) {
+    throw new Error(`Slug not found for segment “${identification.label}”`);
+  }
+
+  const childResources =
+    segmentResource.resource ?
+      Array.isArray(segmentResource.resource) ?
+        segmentResource.resource
+      : [segmentResource.resource]
+    : [];
+
+  const items = parseWebSegmentItems(
+    childResources,
+    slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
+  );
+
+  return {
+    uuid: segmentResource.uuid,
+    type: "segment",
+    title: identification.label,
+    slug,
+    publicationDateTime:
+      segmentResource.publicationDateTime ?
+        parseISO(segmentResource.publicationDateTime)
+      : null,
+    items,
+  };
+}
+
+/**
+ * Parses raw segment resources into an array of WebSegment objects
+ *
+ * @param segmentResources - Array of raw segment resources in OCHRE format
+ * @returns Array of parsed WebSegment objects
+ */
+function parseSegments(
+  segmentResources: Array<OchreResource>,
+  slugPrefix?: string,
+): Array<WebSegment> {
+  const returnSegments: Array<WebSegment> = [];
+
+  for (const segmentResource of segmentResources) {
+    const segment = parseWebSegment(segmentResource, slugPrefix);
+    if (segment !== null) {
+      returnSegments.push(segment);
+    }
+  }
+
+  return returnSegments;
+}
+
+/**
+ * Parses raw segment item into a standardized WebSegmentItem object
+ *
+ * @param segmentItemResource - Raw segment item resource in OCHRE format
+ * @returns Parsed WebSegmentItem object
+ */
+function parseWebSegmentItem(
+  segmentItemResource: OchreResource,
+  slugPrefix?: string,
+): WebSegmentItem | null {
+  const webpageProperties =
+    segmentItemResource.properties ?
+      parseProperties(
+        Array.isArray(segmentItemResource.properties.property) ?
+          segmentItemResource.properties.property
+        : [segmentItemResource.properties.property],
+      )
+    : [];
+
+  if (
+    webpageProperties.length === 0 ||
+    webpageProperties.find((property) => property.label === "presentation")
+      ?.values[0]?.content !== "segment-item"
+  ) {
+    return null;
+  }
+
+  const identification = parseIdentification(
+    segmentItemResource.identification,
+  );
+
+  const slug =
+    segmentItemResource.identification.abbreviation != null ?
+      typeof segmentItemResource.identification.abbreviation === "object" ?
+        parseStringContent(segmentItemResource.identification.abbreviation)
+      : parseFakeString(segmentItemResource.identification.abbreviation)
+    : null;
+  if (slug == null) {
+    throw new Error(
+      `Slug not found for segment item “${identification.label}”`,
+    );
+  }
+
+  const resources =
+    segmentItemResource.resource ?
+      Array.isArray(segmentItemResource.resource) ?
+        segmentItemResource.resource
+      : [segmentItemResource.resource]
+    : [];
+
+  const pages = parseWebpages(
+    resources,
+    slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
+  );
+
+  const segments = parseSegments(
+    resources,
+    slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
+  );
+
+  return {
+    uuid: segmentItemResource.uuid,
+    type: "segment-item",
+    title: identification.label,
+    slug,
+    publicationDateTime:
+      segmentItemResource.publicationDateTime ?
+        parseISO(segmentItemResource.publicationDateTime)
+      : null,
+    items: [...pages, ...segments],
+  };
+}
+
+/**
+ * Parses raw segment items into an array of WebSegmentItem objects
+ *
+ * @param segmentItems - Array of raw segment items in OCHRE format
+ * @returns Array of parsed WebSegmentItem objects
+ */
+function parseWebSegmentItems(
+  segmentItems: Array<OchreResource>,
+  slugPrefix?: string,
+): Array<WebSegmentItem> {
+  const returnItems: Array<WebSegmentItem> = [];
+
+  for (const segmentItem of segmentItems) {
+    const segmentItemParsed = parseWebSegmentItem(segmentItem, slugPrefix);
+    if (segmentItemParsed !== null) {
+      returnItems.push(segmentItemParsed);
+    }
+  }
+
+  return returnItems;
 }
 
 /**
@@ -5164,6 +5378,7 @@ function parseContexts(
   contexts: Array<OchreLevelContext>,
 ): Array<LevelContext> {
   const contextsParsed: Array<LevelContext> = [];
+
   for (const mainContext of contexts) {
     const contextItemsToParse =
       Array.isArray(mainContext.context) ?
@@ -5240,6 +5455,8 @@ export function parseWebsite(
 
   const pages = parseWebpages(resources);
 
+  const segments = parseSegments(resources);
+
   const sidebar = parseSidebar(resources);
 
   return {
@@ -5262,7 +5479,7 @@ export function parseWebsite(
       : [],
     license: parseLicense(websiteTree.availability),
     sidebar,
-    pages,
+    items: [...pages, ...segments],
     properties,
   };
 }
