@@ -6,7 +6,7 @@ export default antfu({
   node: true,
   typescript: {
     parserOptions: {
-      tsconfigRootDir: import.meta.dir,
+      tsconfigRootDir: import.meta.dirname,
       project: "tsconfig.json",
     },
     overrides: {
