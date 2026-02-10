@@ -781,7 +781,23 @@ export type Scope = {
   identification: Identification;
 };
 
+/**
+ * Represents the OCHRE API version
+ */
 export type ApiVersion = 1 | 2;
+
+/**
+ * Represents the OCHRE website type
+ */
+export type WebsiteType =
+  | "traditional"
+  | "digital-collection"
+  | "plum"
+  | "cedar"
+  | "elm"
+  | "maple"
+  | "oak"
+  | "palm";
 
 /**
  * Represents a website with its properties and elements
@@ -796,40 +812,44 @@ export type Website = {
   creators: Array<Person>;
   license: License | null;
   items: Array<Webpage | WebSegment>;
-  sidebar: {
-    elements: Array<WebElement>;
-    title: WebElement["title"];
-    layout: "start" | "end";
-    mobileLayout: "default" | "inline";
-    cssStyles: {
-      default: Array<Style>;
-      tablet: Array<Style>;
-      mobile: Array<Style>;
-    };
-  } | null;
   properties: {
-    type:
-      | "traditional"
-      | "digital-collection"
-      | "plum"
-      | "cedar"
-      | "elm"
-      | "maple"
-      | "oak"
-      | "palm";
-    privacy: "public" | "password" | "private";
+    type: WebsiteType;
     status: "development" | "preview" | "production";
+    privacy: "public" | "password" | "private";
     contact: { name: string; email: string | null } | null;
-    isNavbarDisplayed: boolean;
-    navbarVariant: "default" | "floating" | "inline";
-    navbarAlignment: "start" | "center" | "end";
-    isNavbarProjectDisplayed: boolean;
-    isFooterDisplayed: boolean;
-    isSidebarDisplayed: boolean;
-    navbarSearchBarBoundElementUuid: string | null;
-    supportsThemeToggle: boolean;
-    defaultTheme: "light" | "dark" | null;
-    logoUrl: string | null;
+    theme: {
+      isThemeToggleDisplayed: boolean;
+      defaultTheme: "light" | "dark" | "system";
+    };
+    icon: {
+      logoUuid: string | null;
+      faviconUuid: string | null;
+      appleTouchIconUuid: string | null;
+    };
+    navbar: {
+      isDisplayed: boolean;
+      variant: "default" | "floating" | "inline";
+      alignment: "start" | "center" | "end";
+      isProjectDisplayed: boolean;
+      searchBarBoundElementUuid: string | null;
+      items: Array<WebElement | WebBlock> | null;
+    };
+    footer: {
+      isDisplayed: boolean;
+      items: Array<WebElement | WebBlock> | null;
+    };
+    sidebar: {
+      isDisplayed: boolean;
+      items: Array<WebElement | WebBlock>;
+      title: WebElement["title"];
+      layout: "start" | "end";
+      mobileLayout: "default" | "inline";
+      cssStyles: {
+        default: Array<Style>;
+        tablet: Array<Style>;
+        mobile: Array<Style>;
+      };
+    } | null;
     itemPage: {
       isMainContentDisplayed: boolean;
       isDescriptionDisplayed: boolean;
@@ -859,21 +879,21 @@ export type Webpage = {
   title: string;
   slug: string;
   publicationDateTime: Date | null;
+  items: Array<WebSegment | WebElement | WebBlock>;
   properties: {
-    displayedInNavbar: boolean;
     width: "full" | "large" | "narrow" | "default";
     variant: "default" | "no-background";
-    backgroundImageUrl: string | null;
     isBreadcrumbsDisplayed: boolean;
     isSidebarDisplayed: boolean;
+    isDisplayedInNavbar: boolean;
     isNavbarSearchBarDisplayed: boolean;
+    backgroundImage: WebImage | null;
     cssStyles: {
       default: Array<Style>;
       tablet: Array<Style>;
       mobile: Array<Style>;
     };
   };
-  items: Array<WebSegment | WebElement | WebBlock>;
   webpages: Array<Webpage>;
 };
 
@@ -936,7 +956,7 @@ export type WebElement = {
 export type WebElementComponent =
   | {
       component: "3d-viewer";
-      resourceId: string;
+      linkUuid: string;
       fileSize: number | null;
       isInteractive: boolean;
       isControlsDisplayed: boolean;
@@ -946,10 +966,10 @@ export type WebElementComponent =
       boundElementUuid: string | null;
       href: string | null;
     }
-  | { component: "annotated-document"; documentId: string }
+  | { component: "annotated-document"; linkUuid: string }
   | {
       component: "annotated-image";
-      imageUuid: string;
+      linkUuid: string;
       isFilterInputDisplayed: boolean;
       isOptionsDisplayed: boolean;
       isAnnotationHighlightsDisplayed: boolean;
@@ -957,21 +977,21 @@ export type WebElementComponent =
     }
   | {
       component: "audio-player";
-      audioId: string;
+      linkUuid: string;
       isSpeedControlsDisplayed: boolean;
       isVolumeControlsDisplayed: boolean;
       isSeekBarDisplayed: boolean;
     }
   | {
       component: "bibliography";
-      itemUuids: Array<string>;
+      linkUuids: Array<string>;
       bibliographies: Array<Bibliography>;
       layout: "long" | "short";
       isSourceDocumentDisplayed: boolean;
     }
   | {
       component: "entries";
-      entriesId: string;
+      linkUuid: string;
       variant: "entry" | "item";
       isFilterInputDisplayed: boolean;
     }
@@ -980,14 +1000,14 @@ export type WebElementComponent =
       variant: "default" | "transparent" | "link";
       href: string;
       isExternal: boolean;
-      label: string;
+      label: string | null;
       startIcon: string | null;
       endIcon: string | null;
       image: WebImage | null;
     }
   | {
       component: "collection";
-      collectionIds: Array<string>;
+      linkUuids: Array<string>;
       displayedProperties: Array<{ uuid: string; label: string }> | null;
       variant: "full" | "highlights";
       itemVariant: "detailed" | "card" | "tile";
@@ -1021,7 +1041,7 @@ export type WebElementComponent =
     }
   | {
       component: "iiif-viewer";
-      iiifId: string;
+      linkUuid: string;
       variant: "universal-viewer" | "clover";
     }
   | {
@@ -1046,12 +1066,12 @@ export type WebElementComponent =
     }
   | {
       component: "image-gallery";
-      galleryId: string;
+      linkUuid: string;
       isFilterInputDisplayed: boolean;
     }
   | {
       component: "map";
-      mapId: string;
+      linkUuid: string;
       customBasemap: string | null;
       initialBounds: [[number, number], [number, number]] | null;
       maximumBounds: [[number, number], [number, number]] | null;
@@ -1061,7 +1081,6 @@ export type WebElementComponent =
       isUsingPins: boolean;
       isFullHeight: boolean;
     }
-  | { component: "network-graph" }
   | {
       component: "query";
       itemCategory: "resource" | "spatialUnit" | "concept" | "text" | null;
@@ -1084,7 +1103,7 @@ export type WebElementComponent =
       boundElementUuid: string | null;
       href: string | null;
     }
-  | { component: "table"; tableId: string }
+  | { component: "table"; linkUuid: string }
   | {
       component: "text";
       variant:
@@ -1096,19 +1115,19 @@ export type WebElementComponent =
       headingLevel: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | null;
       content: string;
     }
-  | { component: "timeline"; timelineId: string }
-  | { component: "video"; isChaptersDisplayed: boolean };
+  | { component: "timeline"; linkUuid: string }
+  | { component: "video"; linkUuid: string; isChaptersDisplayed: boolean };
 
 /**
  * Represents an image used in web elements
  */
 export type WebImage = {
   uuid: string | null;
-  url: string;
   label: string | null;
   description: string | null;
   width: number;
   height: number;
+  quality: "low" | "high";
 };
 
 /**
@@ -1144,11 +1163,11 @@ export type WebBlock<T extends WebBlockLayout = WebBlockLayout> = {
       /**
        * valid `gridTemplateColumns` or `gridTemplateRows` CSS property value
        */
-      spacing: string | undefined;
+      spacing: string | null;
       /**
        * `gap` CSS property value
        */
-      gap: string | undefined;
+      gap: string | null;
       isAccordionEnabled: T extends "accordion" ? boolean : never;
       isAccordionExpandedByDefault: T extends "accordion" ? boolean : never;
       isAccordionSidebarDisplayed: T extends "accordion" ? boolean : never;

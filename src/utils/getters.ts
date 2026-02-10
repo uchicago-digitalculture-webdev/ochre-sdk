@@ -1,3 +1,4 @@
+import { deepEqual } from "fast-equals";
 import type {
   Property,
   PropertyValueContent,
@@ -149,6 +150,93 @@ export function getPropertyByLabel(
         const nestedResult = getPropertyByLabel(property.properties, label, {
           includeNestedProperties,
         });
+        if (nestedResult) {
+          return nestedResult;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Finds a property by its label and all values in an array of properties
+ *
+ * @param properties - Array of properties to search through
+ * @param label - The label to search for
+ * @param values - The values to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns The matching Property object, or null if not found or all values do not match
+ */
+export function getPropertyByLabelAndValues(
+  properties: Array<Property>,
+  label: string,
+  values: Array<string | number | boolean | Date | null>,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): Property | null {
+  const { includeNestedProperties } = options;
+  const property = properties.find(
+    (property) =>
+      property.label === label && deepEqual(property.values, values),
+  );
+  if (property) {
+    return property;
+  }
+
+  if (includeNestedProperties) {
+    for (const property of properties) {
+      if (property.properties.length > 0) {
+        const nestedResult = getPropertyByLabelAndValues(
+          property.properties,
+          label,
+          values,
+          { includeNestedProperties },
+        );
+        if (nestedResult) {
+          return nestedResult;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Finds a property by its label and value in an array of properties
+ *
+ * @param properties - Array of properties to search through
+ * @param label - The label to search for
+ * @param value - The value to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns The matching Property object, or null if not found or value does not match
+ */
+export function getPropertyByLabelAndValue(
+  properties: Array<Property>,
+  label: string,
+  value: string | number | boolean | Date | null,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): Property | null {
+  const { includeNestedProperties } = options;
+  const property = properties.find(
+    (property) =>
+      property.label === label &&
+      property.values.some((v) => v.content === value),
+  );
+  if (property) {
+    return property;
+  }
+
+  if (includeNestedProperties) {
+    for (const property of properties) {
+      if (property.properties.length > 0) {
+        const nestedResult = getPropertyByLabelAndValue(
+          property.properties,
+          label,
+          value,
+          { includeNestedProperties },
+        );
         if (nestedResult) {
           return nestedResult;
         }

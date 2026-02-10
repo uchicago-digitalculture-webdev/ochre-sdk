@@ -58,13 +58,11 @@ import type {
   Period,
   Person,
   Property,
-  PropertyContexts,
   PropertyValue,
   PropertyValueContent,
   PropertyValueContentType,
   PropertyVariable,
   Resource,
-  Scope,
   Section,
   Set,
   SpatialUnit,
@@ -85,10 +83,10 @@ import {
   boundsSchema,
   componentSchema,
   propertyValueContentTypeSchema,
-  websiteSchema,
 } from "../schemas.js";
 import {
   getPropertyByLabel,
+  getPropertyByLabelAndValue,
   getPropertyValueByLabel,
 } from "../utils/getters.js";
 import {
@@ -2502,12 +2500,14 @@ const parseWebpageResources = <T extends "element" | "page" | "block">(
         )
       : [];
 
-    const resourceProperty = resourceProperties.find(
-      (property) =>
-        property.label === "presentation" &&
-        property.values[0]!.content === type,
+    const resourceProperty = getPropertyByLabelAndValue(
+      resourceProperties,
+      "presentation",
+      type,
     );
-    if (!resourceProperty) continue;
+    if (resourceProperty === null) {
+      continue;
+    }
 
     switch (type) {
       case "element": {
@@ -2592,7 +2592,7 @@ function parseWebElementProperties(
     unparsedComponentName,
   );
 
-  const properties: Record<string, unknown> = { component: componentName };
+  let properties: WebElementComponent | null = null;
 
   const links =
     elementResource.links ?
@@ -2609,41 +2609,47 @@ function parseWebElementProperties(
         (link) =>
           link.category === "resource" && link.fileFormat === "model/obj",
       );
-      if (!resourceLink) {
+      if (resourceLink?.uuid == null) {
         throw new Error(
           `Resource link not found for the following component: “${componentName}”`,
         );
       }
 
-      let isInteractive = true;
-      const isInteractiveProperty = getPropertyValueByLabel(
+      let isInteractive = getPropertyValueByLabel(
         componentProperty.properties,
         "is-interactive",
-      );
-      if (isInteractiveProperty !== null) {
-        isInteractive = isInteractiveProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "3d-viewer" }
+          >["isInteractive"]
+        | null;
+      isInteractive ??= true;
 
-      let isControlsDisplayed = true;
-      const isControlsDisplayedProperty = getPropertyValueByLabel(
+      let isControlsDisplayed = getPropertyValueByLabel(
         componentProperty.properties,
         "controls-displayed",
-      );
-      if (isControlsDisplayedProperty !== null) {
-        isControlsDisplayed = isControlsDisplayedProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "3d-viewer" }
+          >["isControlsDisplayed"]
+        | null;
+      isControlsDisplayed ??= true;
 
-      properties.resourceId = resourceLink.uuid;
-      properties.fileSize = resourceLink.fileSize;
-      properties.isInteractive = isInteractive;
-      properties.isControlsDisplayed = isControlsDisplayed;
+      properties = {
+        component: "3d-viewer",
+        linkUuid: resourceLink.uuid,
+        fileSize: resourceLink.fileSize,
+        isInteractive,
+        isControlsDisplayed,
+      };
       break;
     }
     case "advanced-search": {
-      const boundElementPropertyUuid = getPropertyByLabel(
-        componentProperty.properties,
-        "bound-element",
-      )?.values[0]?.uuid;
+      const boundElementPropertyUuid =
+        getPropertyByLabel(componentProperty.properties, "bound-element")
+          ?.values[0]?.uuid ?? null;
 
       const linkToProperty = getPropertyByLabel(
         componentProperty.properties,
@@ -2654,27 +2660,33 @@ function parseWebElementProperties(
         linkToProperty?.values[0]?.slug ??
         null;
 
-      if (!boundElementPropertyUuid && !href) {
+      if (boundElementPropertyUuid == null && href == null) {
         throw new Error(
           `Bound element or href not found for the following component: “${componentName}”`,
         );
       }
 
-      properties.boundElementUuid = boundElementPropertyUuid;
-      properties.href = href;
+      properties = {
+        component: "advanced-search",
+        boundElementUuid: boundElementPropertyUuid,
+        href,
+      };
       break;
     }
     case "annotated-document": {
       const documentLink = links.find(
         (link) => link.type === "internalDocument",
       );
-      if (!documentLink) {
+      if (documentLink?.uuid == null) {
         throw new Error(
           `Document link not found for the following component: “${componentName}”`,
         );
       }
 
-      properties.documentId = documentLink.uuid;
+      properties = {
+        component: "annotated-document",
+        linkUuid: documentLink.uuid,
+      };
       break;
     }
     case "annotated-image": {
@@ -2682,83 +2694,114 @@ function parseWebElementProperties(
         (link) => link.type === "image" || link.type === "IIIF",
       );
 
-      if (imageLinks.length === 0) {
+      if (imageLinks.length === 0 || imageLinks[0]!.uuid == null) {
         throw new Error(
           `Image link not found for the following component: “${componentName}”`,
         );
       }
 
-      const isFilterInputDisplayed =
-        getPropertyValueByLabel(
-          componentProperty.properties,
-          "filter-input-displayed",
-        ) === true;
+      let isFilterInputDisplayed = getPropertyValueByLabel(
+        componentProperty.properties,
+        "filter-input-displayed",
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "annotated-image" }
+          >["isFilterInputDisplayed"]
+        | null;
+      isFilterInputDisplayed ??= true;
 
-      const isOptionsDisplayed =
-        getPropertyValueByLabel(
-          componentProperty.properties,
-          "options-displayed",
-        ) !== false;
+      let isOptionsDisplayed = getPropertyValueByLabel(
+        componentProperty.properties,
+        "options-displayed",
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "annotated-image" }
+          >["isOptionsDisplayed"]
+        | null;
+      isOptionsDisplayed ??= true;
 
-      const isAnnotationHighlightsDisplayed =
-        getPropertyValueByLabel(
-          componentProperty.properties,
-          "annotation-highlights-displayed",
-        ) !== false;
+      let isAnnotationHighlightsDisplayed = getPropertyValueByLabel(
+        componentProperty.properties,
+        "annotation-highlights-displayed",
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "annotated-image" }
+          >["isAnnotationHighlightsDisplayed"]
+        | null;
+      isAnnotationHighlightsDisplayed ??= true;
 
-      const isAnnotationTooltipsDisplayed =
-        getPropertyValueByLabel(
-          componentProperty.properties,
-          "annotation-tooltips-displayed",
-        ) !== false;
+      let isAnnotationTooltipsDisplayed = getPropertyValueByLabel(
+        componentProperty.properties,
+        "annotation-tooltips-displayed",
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "annotated-image" }
+          >["isAnnotationTooltipsDisplayed"]
+        | null;
+      isAnnotationTooltipsDisplayed ??= true;
 
-      properties.imageUuid = imageLinks[0]!.uuid;
-      properties.isFilterInputDisplayed = isFilterInputDisplayed;
-      properties.isOptionsDisplayed = isOptionsDisplayed;
-      properties.isAnnotationHighlightsDisplayed =
-        isAnnotationHighlightsDisplayed;
-      properties.isAnnotationTooltipsDisplayed = isAnnotationTooltipsDisplayed;
+      properties = {
+        component: "annotated-image",
+        linkUuid: imageLinks[0]!.uuid,
+        isFilterInputDisplayed,
+        isOptionsDisplayed,
+        isAnnotationHighlightsDisplayed,
+        isAnnotationTooltipsDisplayed,
+      };
       break;
     }
     case "audio-player": {
       const audioLink = links.find((link) => link.type === "audio");
-      if (!audioLink) {
+      if (audioLink?.uuid == null) {
         throw new Error(
           `Audio link not found for the following component: “${componentName}”`,
         );
       }
 
-      let isSpeedControlsDisplayed = false;
-      const isSpeedControlsDisplayedProperty = getPropertyValueByLabel(
+      let isSpeedControlsDisplayed = getPropertyValueByLabel(
         componentProperty.properties,
         "speed-controls-displayed",
-      );
-      if (isSpeedControlsDisplayedProperty !== null) {
-        isSpeedControlsDisplayed = isSpeedControlsDisplayedProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "audio-player" }
+          >["isSpeedControlsDisplayed"]
+        | null;
+      isSpeedControlsDisplayed ??= true;
 
-      let isVolumeControlsDisplayed = false;
-      const isVolumeControlsDisplayedProperty = getPropertyValueByLabel(
+      let isVolumeControlsDisplayed = getPropertyValueByLabel(
         componentProperty.properties,
         "volume-controls-displayed",
-      );
-      if (isVolumeControlsDisplayedProperty !== null) {
-        isVolumeControlsDisplayed = isVolumeControlsDisplayedProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "audio-player" }
+          >["isVolumeControlsDisplayed"]
+        | null;
+      isVolumeControlsDisplayed ??= true;
 
-      let isSeekBarDisplayed = false;
-      const isSeekBarDisplayedProperty = getPropertyValueByLabel(
+      let isSeekBarDisplayed = getPropertyValueByLabel(
         componentProperty.properties,
         "seek-bar-displayed",
-      );
-      if (isSeekBarDisplayedProperty !== null) {
-        isSeekBarDisplayed = isSeekBarDisplayedProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "audio-player" }
+          >["isSeekBarDisplayed"]
+        | null;
+      isSeekBarDisplayed ??= true;
 
-      properties.audioId = audioLink.uuid;
-      properties.isSpeedControlsDisplayed = isSpeedControlsDisplayed;
-      properties.isVolumeControlsDisplayed = isVolumeControlsDisplayed;
-      properties.isSeekBarDisplayed = isSeekBarDisplayed;
+      properties = {
+        component: "audio-player",
+        linkUuid: audioLink.uuid,
+        isSpeedControlsDisplayed,
+        isVolumeControlsDisplayed,
+        isSeekBarDisplayed,
+      };
       break;
     }
     case "bibliography": {
@@ -2777,32 +2820,40 @@ function parseWebElementProperties(
       let layout = getPropertyValueByLabel(
         componentProperty.properties,
         "layout",
-      );
+      ) as
+        | Extract<WebElementComponent, { component: "bibliography" }>["layout"]
+        | null;
       layout ??= "long";
 
-      let isSourceDocumentDisplayed = true;
-      const isSourceDocumentDisplayedProperty = getPropertyValueByLabel(
+      let isSourceDocumentDisplayed = getPropertyValueByLabel(
         componentProperty.properties,
         "source-document-displayed",
-      );
-      if (isSourceDocumentDisplayedProperty !== null) {
-        isSourceDocumentDisplayed = isSourceDocumentDisplayedProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "bibliography" }
+          >["isSourceDocumentDisplayed"]
+        | null;
+      isSourceDocumentDisplayed ??= true;
 
-      properties.itemUuids = itemLinks
-        .map((link) => link.uuid)
-        .filter((uuid) => uuid !== null);
-      properties.bibliographies = bibliographyLink?.bibliographies ?? [];
-      properties.layout = layout;
-      properties.isSourceDocumentDisplayed = isSourceDocumentDisplayed;
-
+      properties = {
+        component: "bibliography",
+        linkUuids: itemLinks
+          .map((link) => link.uuid)
+          .filter((uuid) => uuid !== null),
+        bibliographies: bibliographyLink?.bibliographies ?? [],
+        layout,
+        isSourceDocumentDisplayed,
+      };
       break;
     }
     case "button": {
       let variant = getPropertyValueByLabel(
         componentProperty.properties,
         "variant",
-      );
+      ) as
+        | Extract<WebElementComponent, { component: "button" }>["variant"]
+        | null;
       variant ??= "default";
 
       let isExternal = false;
@@ -2835,23 +2886,21 @@ function parseWebElementProperties(
         }
       }
 
-      let startIcon = null;
-      const startIconProperty = getPropertyValueByLabel(
+      let startIcon = getPropertyValueByLabel(
         componentProperty.properties,
         "start-icon",
-      );
-      if (startIconProperty !== null) {
-        startIcon = startIconProperty;
-      }
+      ) as
+        | Extract<WebElementComponent, { component: "button" }>["startIcon"]
+        | null;
+      startIcon ??= null;
 
-      let endIcon = null;
-      const endIconProperty = getPropertyValueByLabel(
+      let endIcon = getPropertyValueByLabel(
         componentProperty.properties,
         "end-icon",
-      );
-      if (endIconProperty !== null) {
-        endIcon = endIconProperty;
-      }
+      ) as
+        | Extract<WebElementComponent, { component: "button" }>["endIcon"]
+        | null;
+      endIcon ??= null;
 
       let image: WebImage | null = null;
       const imageLink = links.find(
@@ -2860,29 +2909,33 @@ function parseWebElementProperties(
       if (imageLink != null) {
         image = {
           uuid: imageLink.uuid,
-          url: `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`,
           label: imageLink.identification?.label ?? null,
           width: imageLink.image?.width ?? 0,
           height: imageLink.image?.height ?? 0,
           description: imageLink.description ?? null,
+          quality: "high",
         };
       }
 
-      properties.variant = variant;
-      properties.href = href;
-      properties.isExternal = isExternal;
-      properties.label =
-        elementResource.document && "content" in elementResource.document ?
-          parseDocument(elementResource.document.content)
-        : null;
-      properties.startIcon = startIcon;
-      properties.endIcon = endIcon;
-      properties.image = image;
+      properties = {
+        component: "button",
+        variant,
+        href,
+        isExternal,
+        label:
+          elementResource.document && "content" in elementResource.document ?
+            parseDocument(elementResource.document.content)
+          : null,
+        startIcon,
+        endIcon,
+        image,
+      };
+
       break;
     }
     case "collection": {
       const collectionLinks = links.filter((link) => link.category === "set");
-      if (collectionLinks.length === 0) {
+      if (collectionLinks.every((link) => link.uuid === null)) {
         throw new Error(
           `Collection links not found for the following component: “${componentName}”`,
         );
@@ -2896,113 +2949,149 @@ function parseWebElementProperties(
       let variant = getPropertyValueByLabel(
         componentProperty.properties,
         "variant",
-      );
+      ) as
+        | Extract<WebElementComponent, { component: "collection" }>["variant"]
+        | null;
       variant ??= "full";
 
       let itemVariant = getPropertyValueByLabel(
         componentProperty.properties,
         "item-variant",
-      );
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "collection" }
+          >["itemVariant"]
+        | null;
       itemVariant ??= "detailed";
 
       let paginationVariant = getPropertyValueByLabel(
         componentProperty.properties,
         "pagination-variant",
-      );
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "collection" }
+          >["paginationVariant"]
+        | null;
       paginationVariant ??= "default";
 
       let imageQuality = getPropertyValueByLabel(
         componentProperty.properties,
         "image-quality",
-      );
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "collection" }
+          >["imageQuality"]
+        | null;
       imageQuality ??= "low";
 
-      let isUsingQueryParams = false;
-      const isUsingQueryParamsProperty = getPropertyValueByLabel(
+      let isUsingQueryParams = getPropertyValueByLabel(
         componentProperty.properties,
         "is-using-query-params",
-      );
-      if (isUsingQueryParamsProperty !== null) {
-        isUsingQueryParams = isUsingQueryParamsProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "collection" }
+          >["isUsingQueryParams"]
+        | null;
+      isUsingQueryParams ??= false;
 
-      let isFilterResultsBarDisplayed = false;
-      const isFilterResultsBarDisplayedProperty = getPropertyValueByLabel(
+      let isFilterResultsBarDisplayed = getPropertyValueByLabel(
         componentProperty.properties,
         "filter-results-bar-displayed",
-      );
-      if (isFilterResultsBarDisplayedProperty !== null) {
-        isFilterResultsBarDisplayed =
-          isFilterResultsBarDisplayedProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "collection" }
+          >["filter"]["isResultsBarDisplayed"]
+        | null;
+      isFilterResultsBarDisplayed ??= false;
 
-      let isFilterMapDisplayed = false;
-      const isFilterMapDisplayedProperty = getPropertyValueByLabel(
+      let isFilterMapDisplayed = getPropertyValueByLabel(
         componentProperty.properties,
         "filter-map-displayed",
-      );
-      if (isFilterMapDisplayedProperty !== null) {
-        isFilterMapDisplayed = isFilterMapDisplayedProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "collection" }
+          >["filter"]["isMapDisplayed"]
+        | null;
+      isFilterMapDisplayed ??= false;
 
-      let isFilterInputDisplayed = false;
-      const isFilterInputDisplayedProperty = getPropertyValueByLabel(
+      let isFilterInputDisplayed = getPropertyValueByLabel(
         componentProperty.properties,
         "filter-input-displayed",
-      );
-      if (isFilterInputDisplayedProperty !== null) {
-        isFilterInputDisplayed = isFilterInputDisplayedProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "collection" }
+          >["filter"]["isInputDisplayed"]
+        | null;
+      isFilterInputDisplayed ??= false;
 
-      let isFilterLimitedToTitleQuery = false;
-      const isFilterLimitedToTitleQueryProperty = getPropertyValueByLabel(
+      let isFilterLimitedToTitleQuery = getPropertyValueByLabel(
         componentProperty.properties,
         "filter-limit-to-title-query",
-      );
-      if (isFilterLimitedToTitleQueryProperty !== null) {
-        isFilterLimitedToTitleQuery =
-          isFilterLimitedToTitleQueryProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "collection" }
+          >["filter"]["isLimitedToTitleQuery"]
+        | null;
+      isFilterLimitedToTitleQuery ??= false;
 
-      let isFilterLimitedToLeafPropertyValues = false;
-      const isFilterLimitedToLeafPropertyValuesProperty =
-        getPropertyValueByLabel(
-          componentProperty.properties,
-          "filter-limit-to-leaf-property-values",
-        );
-      if (isFilterLimitedToLeafPropertyValuesProperty !== null) {
-        isFilterLimitedToLeafPropertyValues =
-          isFilterLimitedToLeafPropertyValuesProperty === true;
-      }
+      let isFilterLimitedToLeafPropertyValues = getPropertyValueByLabel(
+        componentProperty.properties,
+        "filter-limit-to-leaf-property-values",
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "collection" }
+          >["filter"]["isLimitedToLeafPropertyValues"]
+        | null;
+      isFilterLimitedToLeafPropertyValues ??= false;
 
-      let isSortDisplayed = false;
-      const isSortDisplayedProperty = getPropertyValueByLabel(
+      let isSortDisplayed = getPropertyValueByLabel(
         componentProperty.properties,
         "sort-displayed",
-      );
-      if (isSortDisplayedProperty !== null) {
-        isSortDisplayed = isSortDisplayedProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "collection" }
+          >["isSortDisplayed"]
+        | null;
+      isSortDisplayed ??= false;
 
-      let isFilterSidebarDisplayed = false;
-      const isFilterSidebarDisplayedProperty = getPropertyValueByLabel(
+      let isFilterSidebarDisplayed = getPropertyValueByLabel(
         componentProperty.properties,
         "filter-sidebar-displayed",
-      );
-      if (isFilterSidebarDisplayedProperty !== null) {
-        isFilterSidebarDisplayed = isFilterSidebarDisplayedProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "collection" }
+          >["filter"]["isSidebarDisplayed"]
+        | null;
+      isFilterSidebarDisplayed ??= false;
 
       let filterSidebarSort = getPropertyValueByLabel(
         componentProperty.properties,
         "filter-sidebar-sort",
-      );
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "collection" }
+          >["filter"]["sidebarSort"]
+        | null;
       filterSidebarSort ??= "default";
 
       let layout = getPropertyValueByLabel(
         componentProperty.properties,
         "layout",
-      );
+      ) as
+        | Extract<WebElementComponent, { component: "collection" }>["layout"]
+        | null;
       layout ??= "image-start";
 
       const options: Extract<
@@ -3104,49 +3193,60 @@ function parseWebElementProperties(
         }
       }
 
-      properties.collectionIds = collectionLinks.map((link) => link.uuid);
-      properties.displayedProperties =
-        displayedProperties?.values
-          .map((value) => ({ uuid: value.uuid, label: value.content }))
-          .filter(Boolean) ?? null;
-      properties.variant = variant;
-      properties.itemVariant = itemVariant;
-      properties.paginationVariant = paginationVariant;
-      properties.layout = layout;
-      properties.imageQuality = imageQuality;
-      properties.isUsingQueryParams = isUsingQueryParams;
-      properties.filter = {
-        isSidebarDisplayed: isFilterSidebarDisplayed,
-        isResultsBarDisplayed: isFilterResultsBarDisplayed,
-        isMapDisplayed: isFilterMapDisplayed,
-        isInputDisplayed: isFilterInputDisplayed,
-        isLimitedToTitleQuery: isFilterLimitedToTitleQuery,
-        isLimitedToLeafPropertyValues: isFilterLimitedToLeafPropertyValues,
-        sidebarSort: filterSidebarSort,
+      properties = {
+        component: "collection",
+        linkUuids: collectionLinks
+          .map((link) => link.uuid)
+          .filter((uuid) => uuid !== null),
+        displayedProperties:
+          displayedProperties?.values
+            .filter(({ uuid }) => uuid !== null)
+            .map((value) => ({
+              uuid: value.uuid!,
+              label: value.content?.toString() ?? "",
+            })) ?? null,
+        variant,
+        itemVariant,
+        paginationVariant,
+        layout,
+        imageQuality,
+        isUsingQueryParams,
+        isSortDisplayed,
+        filter: {
+          isSidebarDisplayed: isFilterSidebarDisplayed,
+          isResultsBarDisplayed: isFilterResultsBarDisplayed,
+          isMapDisplayed: isFilterMapDisplayed,
+          isInputDisplayed: isFilterInputDisplayed,
+          isLimitedToTitleQuery: isFilterLimitedToTitleQuery,
+          isLimitedToLeafPropertyValues: isFilterLimitedToLeafPropertyValues,
+          sidebarSort: filterSidebarSort,
+        },
+        options,
       };
-      properties.isSortDisplayed = isSortDisplayed;
-      properties.options = options;
       break;
     }
     case "empty-space": {
       const height = getPropertyValueByLabel(
         componentProperty.properties,
         "height",
-      );
+      ) as string | number | null;
       const width = getPropertyValueByLabel(
         componentProperty.properties,
         "width",
-      );
+      ) as string | number | null;
 
-      properties.height = height;
-      properties.width = width;
+      properties = {
+        component: "empty-space",
+        height: height?.toString() ?? null,
+        width: width?.toString() ?? null,
+      };
       break;
     }
     case "entries": {
       const entriesLink = links.find(
         (link) => link.category === "tree" || link.category === "set",
       );
-      if (!entriesLink) {
+      if (entriesLink?.uuid == null) {
         throw new Error(
           `Entries link not found for the following component: “${componentName}”`,
         );
@@ -3155,25 +3255,34 @@ function parseWebElementProperties(
       let variant = getPropertyValueByLabel(
         componentProperty.properties,
         "variant",
-      ) as "entry" | "item" | null;
+      ) as
+        | Extract<WebElementComponent, { component: "entries" }>["variant"]
+        | null;
       variant ??= "entry";
 
-      let isFilterInputDisplayed = false;
-      const isFilterInputDisplayedProperty = getPropertyValueByLabel(
+      let isFilterInputDisplayed = getPropertyValueByLabel(
         componentProperty.properties,
         "filter-input-displayed",
-      );
-      if (isFilterInputDisplayedProperty !== null) {
-        isFilterInputDisplayed = isFilterInputDisplayedProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "entries" }
+          >["isFilterInputDisplayed"]
+        | null;
+      isFilterInputDisplayed ??= false;
 
-      properties.entriesId = entriesLink.uuid;
-      properties.variant = variant;
-      properties.isFilterInputDisplayed = isFilterInputDisplayed;
+      properties = {
+        component: "entries",
+        linkUuid: entriesLink.uuid,
+        variant,
+        isFilterInputDisplayed,
+      };
       break;
     }
     case "iframe": {
-      const href = links.find((link) => link.type === "webpage")?.href;
+      const href = links.find((link) => link.type === "webpage")?.href as
+        | string
+        | null;
       if (!href) {
         throw new Error(
           `URL not found for the following component: “${componentName}”`,
@@ -3189,14 +3298,17 @@ function parseWebElementProperties(
         "width",
       );
 
-      properties.href = href;
-      properties.height = height;
-      properties.width = width;
+      properties = {
+        component: "iframe",
+        href,
+        height: height?.toString() ?? null,
+        width: width?.toString() ?? null,
+      };
       break;
     }
     case "iiif-viewer": {
       const manifestLink = links.find((link) => link.type === "IIIF");
-      if (!manifestLink) {
+      if (manifestLink?.uuid == null) {
         throw new Error(
           `Manifest link not found for the following component: “${componentName}”`,
         );
@@ -3205,11 +3317,16 @@ function parseWebElementProperties(
       let variant = getPropertyValueByLabel(
         componentProperty.properties,
         "variant",
-      );
+      ) as
+        | Extract<WebElementComponent, { component: "iiif-viewer" }>["variant"]
+        | null;
       variant ??= "universal-viewer";
 
-      properties.iiifId = manifestLink.uuid;
-      properties.variant = variant;
+      properties = {
+        component: "iiif-viewer",
+        linkUuid: manifestLink.uuid,
+        variant,
+      };
       break;
     }
     case "image": {
@@ -3222,38 +3339,48 @@ function parseWebElementProperties(
       let imageQuality = getPropertyValueByLabel(
         componentProperty.properties,
         "image-quality",
-      );
+      ) as
+        | Extract<WebElementComponent, { component: "image" }>["imageQuality"]
+        | null;
       imageQuality ??= "high";
 
       const images: Array<WebImage> = [];
       for (const link of links) {
+        if (link.uuid === null) {
+          continue;
+        }
+
         images.push({
           uuid: link.uuid,
-          url: `https://ochre.lib.uchicago.edu/ochre?uuid=${link.uuid}${imageQuality === "high" && (link.type === "image" || link.type === "IIIF") ? "&load" : "&preview"}`,
           label: link.identification?.label ?? null,
           width: link.image?.width ?? 0,
           height: link.image?.height ?? 0,
           description: link.description ?? null,
+          quality: imageQuality,
         });
       }
 
       let variant = getPropertyValueByLabel(
         componentProperty.properties,
         "variant",
-      );
+      ) as
+        | Extract<WebElementComponent, { component: "image" }>["variant"]
+        | null;
       variant ??= "default";
 
       let captionLayout = getPropertyValueByLabel(
         componentProperty.properties,
         "layout-caption",
-      );
+      ) as
+        | Extract<WebElementComponent, { component: "image" }>["captionLayout"]
+        | null;
       captionLayout ??= "bottom";
 
-      let width = null;
+      let width: number | null = null;
       const widthProperty = getPropertyValueByLabel(
         componentProperty.properties,
         "width",
-      );
+      ) as string | number | null;
       if (widthProperty !== null) {
         if (typeof widthProperty === "number") {
           width = widthProperty;
@@ -3262,11 +3389,11 @@ function parseWebElementProperties(
         }
       }
 
-      let height = null;
+      let height: number | null = null;
       const heightProperty = getPropertyValueByLabel(
         componentProperty.properties,
         "height",
-      );
+      ) as string | number | null;
       if (heightProperty !== null) {
         if (typeof heightProperty === "number") {
           height = heightProperty;
@@ -3275,60 +3402,68 @@ function parseWebElementProperties(
         }
       }
 
-      let isFullWidth = true;
-      const isFullWidthProperty = getPropertyValueByLabel(
+      let isFullWidth = getPropertyValueByLabel(
         componentProperty.properties,
         "is-full-width",
-      );
-      if (isFullWidthProperty !== null) {
-        isFullWidth = isFullWidthProperty === true;
-      }
+      ) as
+        | Extract<WebElementComponent, { component: "image" }>["isFullWidth"]
+        | null;
+      isFullWidth ??= true;
 
-      let isFullHeight = true;
-      const isFullHeightProperty = getPropertyValueByLabel(
+      let isFullHeight = getPropertyValueByLabel(
         componentProperty.properties,
         "is-full-height",
-      );
-      if (isFullHeightProperty !== null) {
-        isFullHeight = isFullHeightProperty === true;
-      }
+      ) as
+        | Extract<WebElementComponent, { component: "image" }>["isFullHeight"]
+        | null;
+      isFullHeight ??= true;
 
       let captionSource = getPropertyValueByLabel(
         componentProperty.properties,
         "source-caption",
-      );
+      ) as
+        | Extract<WebElementComponent, { component: "image" }>["captionSource"]
+        | null;
       captionSource ??= "name";
 
       let altTextSource = getPropertyValueByLabel(
         componentProperty.properties,
         "alt-text-source",
-      );
+      ) as
+        | Extract<WebElementComponent, { component: "image" }>["altTextSource"]
+        | null;
       altTextSource ??= "name";
 
-      let isTransparentBackground = false;
-      const isTransparentBackgroundProperty = getPropertyValueByLabel(
+      let isTransparentBackground = getPropertyValueByLabel(
         componentProperty.properties,
         "is-transparent",
-      );
-      if (isTransparentBackgroundProperty !== null) {
-        isTransparentBackground = isTransparentBackgroundProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "image" }
+          >["isTransparentBackground"]
+        | null;
+      isTransparentBackground ??= false;
 
-      let isCover = false;
-      const isCoverProperty = getPropertyValueByLabel(
+      let isCover = getPropertyValueByLabel(
         componentProperty.properties,
         "is-cover",
-      );
-      if (isCoverProperty !== null) {
-        isCover = isCoverProperty === true;
-      }
+      ) as
+        | Extract<WebElementComponent, { component: "image" }>["isCover"]
+        | null;
+      isCover ??= false;
 
       const variantProperty = getPropertyByLabel(
         componentProperty.properties,
         "variant",
       );
 
-      let carouselOptions: { secondsPerImage: number } | null = null;
+      let carouselOptions:
+        | Extract<
+            WebElementComponent,
+            { component: "image" }
+          >["carouselOptions"]
+        | null = null;
       if (images.length > 1) {
         let secondsPerImage = 5;
 
@@ -3336,7 +3471,7 @@ function parseWebElementProperties(
           const secondsPerImageProperty = getPropertyValueByLabel(
             variantProperty.properties,
             "seconds-per-image",
-          );
+          ) as string | number | null;
           if (secondsPerImageProperty !== null) {
             if (typeof secondsPerImageProperty === "number") {
               secondsPerImage = secondsPerImageProperty;
@@ -3354,153 +3489,177 @@ function parseWebElementProperties(
         { component: "image" }
       >["heroOptions"] = null;
       if (variantProperty?.values[0]!.content === "hero") {
-        const isBackgroundImageDisplayedProperty = getPropertyValueByLabel(
+        let isBackgroundImageDisplayed = getPropertyValueByLabel(
           variantProperty.properties,
           "background-image-displayed",
-        );
-        const isDocumentDisplayedProperty = getPropertyValueByLabel(
+        ) as
+          | NonNullable<
+              Extract<
+                WebElementComponent,
+                { component: "image" }
+              >["heroOptions"]
+            >["isBackgroundImageDisplayed"]
+          | null;
+        isBackgroundImageDisplayed ??= true;
+
+        let isDocumentDisplayed = getPropertyValueByLabel(
           variantProperty.properties,
           "document-displayed",
-        );
+        ) as
+          | NonNullable<
+              Extract<
+                WebElementComponent,
+                { component: "image" }
+              >["heroOptions"]
+            >["isDocumentDisplayed"]
+          | null;
+        isDocumentDisplayed ??= true;
 
-        heroOptions = {
-          isBackgroundImageDisplayed:
-            isBackgroundImageDisplayedProperty !== false,
-          isDocumentDisplayed: isDocumentDisplayedProperty !== false,
-        };
+        heroOptions = { isBackgroundImageDisplayed, isDocumentDisplayed };
       }
 
-      properties.images = images;
-      properties.variant = variant;
-      properties.width = width;
-      properties.height = height;
-      properties.isFullWidth = isFullWidth;
-      properties.isFullHeight = isFullHeight;
-      properties.imageQuality = imageQuality;
-      properties.captionLayout = captionLayout;
-      properties.captionSource = captionSource;
-      properties.altTextSource = altTextSource;
-      properties.isTransparentBackground = isTransparentBackground;
-      properties.isCover = isCover;
-      properties.carouselOptions = carouselOptions;
-      properties.heroOptions = heroOptions;
+      properties = {
+        component: "image",
+        images,
+        variant,
+        width,
+        height,
+        isFullWidth,
+        isFullHeight,
+        imageQuality,
+        captionLayout,
+        captionSource,
+        altTextSource,
+        isTransparentBackground,
+        isCover,
+        carouselOptions,
+        heroOptions,
+      };
       break;
     }
     case "image-gallery": {
       const galleryLink = links.find(
         (link) => link.category === "tree" || link.category === "set",
       );
-      if (!galleryLink) {
+      if (galleryLink?.uuid == null) {
         throw new Error(
           `Image gallery link not found for the following component: “${componentName}”`,
         );
       }
 
-      const isFilterInputDisplayed =
-        getPropertyValueByLabel(
-          componentProperty.properties,
-          "filter-input-displayed",
-        ) === true;
+      let isFilterInputDisplayed = getPropertyValueByLabel(
+        componentProperty.properties,
+        "filter-input-displayed",
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "image-gallery" }
+          >["isFilterInputDisplayed"]
+        | null;
+      isFilterInputDisplayed ??= true;
 
-      properties.galleryId = galleryLink.uuid;
-      properties.isFilterInputDisplayed = isFilterInputDisplayed;
+      properties = {
+        component: "image-gallery",
+        linkUuid: galleryLink.uuid,
+        isFilterInputDisplayed,
+      };
       break;
     }
     case "map": {
       const mapLink = links.find(
         (link) => link.category === "set" || link.category === "tree",
       );
-      if (!mapLink) {
+      if (mapLink?.uuid == null) {
         throw new Error(
           `Map link not found for the following component: “${componentName}”`,
         );
       }
 
-      let isInteractive = true;
-      const isInteractiveProperty = getPropertyValueByLabel(
+      let isInteractive = getPropertyValueByLabel(
         componentProperty.properties,
         "is-interactive",
-      );
-      if (isInteractiveProperty !== null) {
-        isInteractive = isInteractiveProperty === true;
-      }
+      ) as
+        | Extract<WebElementComponent, { component: "map" }>["isInteractive"]
+        | null;
+      isInteractive ??= true;
 
-      let isClustered = false;
-      const isClusteredProperty = getPropertyValueByLabel(
+      let isClustered = getPropertyValueByLabel(
         componentProperty.properties,
         "is-clustered",
-      );
-      if (isClusteredProperty !== null) {
-        isClustered = isClusteredProperty === true;
-      }
+      ) as
+        | Extract<WebElementComponent, { component: "map" }>["isClustered"]
+        | null;
+      isClustered ??= false;
 
-      let isUsingPins = false;
-      const isUsingPinsProperty = getPropertyValueByLabel(
+      let isUsingPins = getPropertyValueByLabel(
         componentProperty.properties,
         "is-using-pins",
-      );
-      if (isUsingPinsProperty !== null) {
-        isUsingPins = isUsingPinsProperty === true;
-      }
+      ) as
+        | Extract<WebElementComponent, { component: "map" }>["isUsingPins"]
+        | null;
+      isUsingPins ??= false;
 
-      let customBasemap: string | null = null;
-      const customBasemapProperty = getPropertyValueByLabel(
+      let customBasemap = getPropertyValueByLabel(
         componentProperty.properties,
         "custom-basemap",
-      );
-      if (customBasemapProperty !== null) {
-        customBasemap = customBasemapProperty as string;
-      }
+      ) as
+        | Extract<WebElementComponent, { component: "map" }>["customBasemap"]
+        | null;
+      customBasemap ??= null;
 
-      let initialBounds: [[number, number], [number, number]] | null = null;
+      let initialBounds:
+        | Extract<WebElementComponent, { component: "map" }>["initialBounds"]
+        | null = null;
       const initialBoundsProperty = getPropertyValueByLabel(
         componentProperty.properties,
         "initial-bounds",
-      );
+      ) as string | number | null;
       if (initialBoundsProperty !== null) {
         initialBounds = parseBounds(String(initialBoundsProperty));
       }
 
-      let maximumBounds: [[number, number], [number, number]] | null = null;
+      let maximumBounds:
+        | Extract<WebElementComponent, { component: "map" }>["maximumBounds"]
+        | null = null;
       const maximumBoundsProperty = getPropertyValueByLabel(
         componentProperty.properties,
         "maximum-bounds",
-      );
+      ) as string | number | null;
       if (maximumBoundsProperty !== null) {
         maximumBounds = parseBounds(String(maximumBoundsProperty));
       }
 
-      let isControlsDisplayed = false;
-      const isControlsDisplayedProperty = getPropertyValueByLabel(
+      let isControlsDisplayed = getPropertyValueByLabel(
         componentProperty.properties,
         "controls-displayed",
-      );
-      if (isControlsDisplayedProperty !== null) {
-        isControlsDisplayed = isControlsDisplayedProperty === true;
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "map" }
+          >["isControlsDisplayed"]
+        | null;
+      isControlsDisplayed ??= false;
 
-      let isFullHeight = false;
-      const isFullHeightProperty = getPropertyValueByLabel(
+      let isFullHeight = getPropertyValueByLabel(
         componentProperty.properties,
         "is-full-height",
-      );
-      if (isFullHeightProperty !== null) {
-        isFullHeight = isFullHeightProperty === true;
-      }
+      ) as
+        | Extract<WebElementComponent, { component: "map" }>["isFullHeight"]
+        | null;
+      isFullHeight ??= false;
 
-      properties.mapId = mapLink.uuid;
-      properties.customBasemap = customBasemap;
-      properties.initialBounds = initialBounds;
-      properties.maximumBounds = maximumBounds;
-      properties.isInteractive = isInteractive;
-      properties.isClustered = isClustered;
-      properties.isUsingPins = isUsingPins;
-      properties.isControlsDisplayed = isControlsDisplayed;
-      properties.isFullHeight = isFullHeight;
-      break;
-    }
-    case "network-graph": {
-      // TODO: Implement network graph
+      properties = {
+        component: "map",
+        linkUuid: mapLink.uuid,
+        customBasemap,
+        initialBounds,
+        maximumBounds,
+        isInteractive,
+        isClustered,
+        isUsingPins,
+        isControlsDisplayed,
+        isFullHeight,
+      };
       break;
     }
     case "query": {
@@ -3508,48 +3667,64 @@ function parseWebElementProperties(
         Extract<WebElementComponent, { component: "query" }>["queries"][number]
       > = [];
 
-      const itemCategory = getPropertyValueByLabel(
+      let itemCategory = getPropertyValueByLabel(
         componentProperty.properties,
         "item-category",
-      );
+      ) as
+        | Extract<WebElementComponent, { component: "query" }>["itemCategory"]
+        | null;
+      itemCategory ??= null;
 
-      const queryProperties = componentProperty.properties;
-      if (queryProperties.length === 0) {
+      if (componentProperty.properties.length === 0) {
         throw new Error(
           `Query properties not found for the following component: “${componentName}”`,
         );
       }
 
-      for (const query of queryProperties) {
+      for (const query of componentProperty.properties) {
         const querySubProperties = query.properties;
 
         const label = getPropertyValueByLabel(
           querySubProperties,
           "query-prompt",
-        );
-
+        ) as
+          | Extract<
+              WebElementComponent,
+              { component: "query" }
+            >["queries"][number]["label"]
+          | null;
         if (label === null) {
           continue;
         }
 
         const propertyVariableUuids =
-          querySubProperties
-            .find((property) => property.label === "use-property")
+          getPropertyByLabel(querySubProperties, "use-property")
             ?.values.map((value) => value.uuid)
             .filter((uuid) => uuid !== null) ?? [];
 
-        const startIcon = getPropertyValueByLabel(
+        let startIcon = getPropertyValueByLabel(
           querySubProperties,
           "start-icon",
-        );
-        const endIcon = getPropertyValueByLabel(querySubProperties, "end-icon");
+        ) as
+          | Extract<
+              WebElementComponent,
+              { component: "query" }
+            >["queries"][number]["startIcon"]
+          | null;
+        startIcon ??= null;
 
-        queries.push({
-          label: String(label),
-          propertyVariableUuids,
-          startIcon: startIcon !== null ? String(startIcon) : null,
-          endIcon: endIcon !== null ? String(endIcon) : null,
-        });
+        let endIcon = getPropertyValueByLabel(
+          querySubProperties,
+          "end-icon",
+        ) as
+          | Extract<
+              WebElementComponent,
+              { component: "query" }
+            >["queries"][number]["endIcon"]
+          | null;
+        endIcon ??= null;
+
+        queries.push({ label, propertyVariableUuids, startIcon, endIcon });
       }
 
       if (queries.length === 0) {
@@ -3566,62 +3741,79 @@ function parseWebElementProperties(
       let itemVariant = getPropertyValueByLabel(
         componentProperty.properties,
         "item-variant",
-      );
+      ) as
+        | Extract<WebElementComponent, { component: "query" }>["itemVariant"]
+        | null;
       itemVariant ??= "detailed";
 
       let paginationVariant = getPropertyValueByLabel(
         componentProperty.properties,
         "pagination-variant",
-      );
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "query" }
+          >["paginationVariant"]
+        | null;
       paginationVariant ??= "default";
 
       let layout = getPropertyValueByLabel(
         componentProperty.properties,
         "layout",
-      );
+      ) as
+        | Extract<WebElementComponent, { component: "query" }>["layout"]
+        | null;
       layout ??= "image-start";
 
-      properties.itemCategory = itemCategory as
-        | "resource"
-        | "spatialUnit"
-        | "concept"
-        | "text"
-        | null;
-      properties.queries = queries;
-      properties.displayedProperties =
-        displayedProperties?.values
-          .map((value) => ({ uuid: value.uuid, label: value.content }))
-          .filter(Boolean) ?? null;
-      properties.itemVariant = itemVariant;
-      properties.paginationVariant = paginationVariant;
-      properties.layout = layout;
+      properties = {
+        component: "query",
+        itemCategory,
+        queries,
+        displayedProperties:
+          displayedProperties?.values
+            .filter((value) => value.uuid !== null)
+            .map((value) => ({
+              uuid: value.uuid!,
+              label: value.content?.toString() ?? "",
+            })) ?? null,
+        itemVariant,
+        paginationVariant,
+        layout,
+      };
       break;
     }
     case "table": {
       const tableLink = links.find((link) => link.category === "set");
-      if (!tableLink) {
+      if (tableLink?.uuid == null) {
         throw new Error(
           `Table link not found for the following component: “${componentName}”`,
         );
       }
 
-      properties.tableId = tableLink.uuid;
+      properties = { component: "table", linkUuid: tableLink.uuid };
       break;
     }
     case "search-bar": {
-      let queryVariant: "submit" | "change" = "submit";
-      const queryVariantProperty = getPropertyValueByLabel(
+      let queryVariant:
+        | Extract<
+            WebElementComponent,
+            { component: "search-bar" }
+          >["queryVariant"]
+        | null = null;
+      queryVariant = getPropertyValueByLabel(
         componentProperty.properties,
         "query-variant",
-      );
-      if (queryVariantProperty !== null) {
-        queryVariant = queryVariantProperty as "submit" | "change";
-      }
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "search-bar" }
+          >["queryVariant"]
+        | null;
+      queryVariant ??= "submit";
 
-      const boundElementPropertyUuid = getPropertyByLabel(
-        componentProperty.properties,
-        "bound-element",
-      )?.values[0]?.uuid;
+      const boundElementUuid =
+        getPropertyByLabel(componentProperty.properties, "bound-element")
+          ?.values[0]?.uuid ?? null;
 
       const linkToProperty = getPropertyByLabel(
         componentProperty.properties,
@@ -3632,33 +3824,45 @@ function parseWebElementProperties(
         linkToProperty?.values[0]?.slug ??
         null;
 
-      if (!boundElementPropertyUuid && !href) {
+      if (!boundElementUuid && !href) {
         throw new Error(
           `Bound element or href not found for the following component: “${componentName}”`,
         );
       }
 
-      const placeholder = getPropertyValueByLabel(
+      let placeholder = getPropertyValueByLabel(
         componentProperty.properties,
         "placeholder-text",
-      );
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "search-bar" }
+          >["placeholder"]
+        | null;
+      placeholder ??= null;
 
-      const baseFilterQueries = getPropertyValueByLabel(
+      let baseFilterQueries = getPropertyValueByLabel(
         componentProperty.properties,
         "base-filter-queries",
-      );
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "search-bar" }
+          >["baseFilterQueries"]
+        | null;
+      baseFilterQueries ??= null;
 
-      properties.queryVariant = queryVariant;
-      properties.placeholder =
-        placeholder !== null ? String(placeholder) : null;
-      properties.baseFilterQueries =
-        baseFilterQueries !== null ?
-          String(baseFilterQueries)
-            .replaceAll(String.raw`\{`, "{")
-            .replaceAll(String.raw`\}`, "}")
-        : null;
-      properties.boundElementUuid = boundElementPropertyUuid;
-      properties.href = href;
+      properties = {
+        component: "search-bar",
+        queryVariant,
+        placeholder,
+        baseFilterQueries:
+          baseFilterQueries
+            ?.replaceAll(String.raw`\{`, "{")
+            .replaceAll(String.raw`\}`, "}") ?? null,
+        boundElementUuid,
+        href,
+      };
       break;
     }
     case "text": {
@@ -3672,22 +3876,24 @@ function parseWebElementProperties(
         );
       }
 
-      let variantName = "block";
-      let variant;
+      let variantName: Extract<
+        WebElementComponent,
+        { component: "text" }
+      >["variant"]["name"] = "block";
+      let variant: Extract<
+        WebElementComponent,
+        { component: "text" }
+      >["variant"];
 
       const variantProperty = getPropertyByLabel(
         componentProperty.properties,
         "variant",
       );
       if (variantProperty !== null) {
-        variantName = variantProperty.values[0]!.content as
-          | "title"
-          | "block"
-          | "banner"
-          | "paragraph"
-          | "label"
-          | "heading"
-          | "display";
+        variantName = variantProperty.values[0]!.content as Extract<
+          WebElementComponent,
+          { component: "text" }
+        >["variant"]["name"];
 
         if (
           variantName === "paragraph" ||
@@ -3695,15 +3901,13 @@ function parseWebElementProperties(
           variantName === "heading" ||
           variantName === "display"
         ) {
-          const size = getPropertyValueByLabel(
+          let size = getPropertyValueByLabel(
             variantProperty.properties,
             "size",
-          );
+          ) as "xs" | "sm" | "md" | "lg" | null;
+          size ??= "md";
 
-          variant = {
-            name: variantName,
-            size: size !== null ? (size as "xs" | "sm" | "md" | "lg") : "md",
-          };
+          variant = { name: variantName, size };
         } else {
           variant = { name: variantName };
         }
@@ -3711,40 +3915,31 @@ function parseWebElementProperties(
         variant = { name: variantName };
       }
 
-      let headingLevel: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | null = null;
-      const headingLevelProperty = getPropertyValueByLabel(
+      let headingLevel = getPropertyValueByLabel(
         componentProperty.properties,
         "heading-level",
-      );
-      if (headingLevelProperty !== null) {
-        headingLevel = headingLevelProperty as
-          | "h1"
-          | "h2"
-          | "h3"
-          | "h4"
-          | "h5"
-          | "h6";
-      }
+      ) as
+        | Extract<WebElementComponent, { component: "text" }>["headingLevel"]
+        | null;
+      headingLevel ??= null;
 
-      properties.variant = variant;
-      properties.headingLevel = headingLevel;
-      properties.content = content;
+      properties = { component: "text", variant, headingLevel, content };
       break;
     }
     case "timeline": {
       const timelineLink = links.find((link) => link.category === "tree");
-      if (!timelineLink) {
+      if (timelineLink?.uuid == null) {
         throw new Error(
           `Timeline link not found for the following component: “${componentName}”`,
         );
       }
 
-      properties.timelineId = timelineLink.uuid;
+      properties = { component: "timeline", linkUuid: timelineLink.uuid };
       break;
     }
     case "video": {
       const videoLink = links.find((link) => link.type === "video");
-      if (!videoLink) {
+      if (videoLink?.uuid == null) {
         throw new Error(
           `Video link not found for the following component: “${componentName}”`,
         );
@@ -3753,16 +3948,24 @@ function parseWebElementProperties(
       let isChaptersDisplayed = getPropertyValueByLabel(
         componentProperty.properties,
         "chapters-displayed",
-      );
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "video" }
+          >["isChaptersDisplayed"]
+        | null;
       isChaptersDisplayed ??= true;
 
-      properties.videoId = videoLink.uuid;
-      properties.isChaptersDisplayed = isChaptersDisplayed === true;
+      properties = {
+        component: "video",
+        linkUuid: videoLink.uuid,
+        isChaptersDisplayed,
+      };
       break;
     }
     default: {
       console.warn(
-        `Invalid or non-implemented component name “${String(unparsedComponentName)}” for the following element: “${parseStringContent(
+        `Invalid or non-implemented component name “${unparsedComponentName?.toString() ?? "(unknown)"}” for the following element: “${parseStringContent(
           elementResource.identification.label as OchreStringContent,
         )}”`,
       );
@@ -3770,63 +3973,68 @@ function parseWebElementProperties(
     }
   }
 
-  return properties as WebElementComponent;
+  if (properties === null) {
+    throw new Error(
+      `Properties not found for the following component: “${componentName}”`,
+    );
+  }
+
+  return properties;
 }
 
 function parseWebTitle(
   properties: Array<Property>,
   identification: Identification,
-  overrides: {
-    isNameDisplayed?: boolean;
-    isDescriptionDisplayed?: boolean;
-    isDateDisplayed?: boolean;
-    isCreatorsDisplayed?: boolean;
-    isCountDisplayed?: boolean;
-  } = {},
+  overrides?: Partial<WebTitle["properties"]>,
 ): WebTitle {
-  const titleProperties = properties.find(
-    (property) =>
-      property.label === "presentation" &&
-      property.values[0]!.content === "title",
-  )?.properties;
-
-  let variant: "default" | "simple" = "default";
-  let isNameDisplayed = overrides.isNameDisplayed ?? false;
-  let isDescriptionDisplayed = false;
-  let isDateDisplayed = false;
-  let isCreatorsDisplayed = false;
-  let isCountDisplayed = overrides.isCountDisplayed ?? false;
-
-  if (titleProperties) {
-    const titleVariant = getPropertyValueByLabel(titleProperties, "variant");
-    if (titleVariant) {
-      variant = titleVariant as "default" | "simple";
-    }
-
-    isNameDisplayed =
-      getPropertyValueByLabel(titleProperties, "name-displayed") === true;
-    isDescriptionDisplayed =
-      getPropertyValueByLabel(titleProperties, "description-displayed") ===
-      true;
-    isDateDisplayed =
-      getPropertyValueByLabel(titleProperties, "date-displayed") === true;
-    isCreatorsDisplayed =
-      getPropertyValueByLabel(titleProperties, "creators-displayed") === true;
-    isCountDisplayed =
-      getPropertyValueByLabel(titleProperties, "count-displayed") === true;
-  }
-
-  return {
+  const title: WebTitle = {
     label: identification.label,
-    variant,
+    variant: "default",
     properties: {
-      isNameDisplayed,
-      isDescriptionDisplayed,
-      isDateDisplayed,
-      isCreatorsDisplayed,
-      isCountDisplayed,
+      isNameDisplayed: overrides?.isNameDisplayed ?? false,
+      isDescriptionDisplayed: overrides?.isDescriptionDisplayed ?? false,
+      isDateDisplayed: overrides?.isDateDisplayed ?? false,
+      isCreatorsDisplayed: overrides?.isCreatorsDisplayed ?? false,
+      isCountDisplayed: overrides?.isCountDisplayed ?? false,
     },
   };
+
+  const titleProperties =
+    getPropertyByLabelAndValue(properties, "presentation", "title")
+      ?.properties ?? [];
+  if (titleProperties.length > 0) {
+    title.variant =
+      (getPropertyValueByLabel(titleProperties, "variant") as
+        | WebTitle["variant"]
+        | null) ?? "default";
+
+    title.properties.isNameDisplayed =
+      (getPropertyValueByLabel(titleProperties, "name-displayed") as
+        | WebTitle["properties"]["isNameDisplayed"]
+        | null) ?? false;
+
+    title.properties.isDescriptionDisplayed =
+      (getPropertyValueByLabel(titleProperties, "description-displayed") as
+        | WebTitle["properties"]["isDescriptionDisplayed"]
+        | null) ?? false;
+
+    title.properties.isDateDisplayed =
+      (getPropertyValueByLabel(titleProperties, "date-displayed") as
+        | WebTitle["properties"]["isDateDisplayed"]
+        | null) ?? false;
+
+    title.properties.isCreatorsDisplayed =
+      (getPropertyValueByLabel(titleProperties, "creators-displayed") as
+        | WebTitle["properties"]["isCreatorsDisplayed"]
+        | null) ?? false;
+
+    title.properties.isCountDisplayed =
+      (getPropertyValueByLabel(titleProperties, "count-displayed") as
+        | WebTitle["properties"]["isCountDisplayed"]
+        | null) ?? false;
+  }
+
+  return title;
 }
 
 /**
@@ -3847,19 +4055,21 @@ function parseWebElement(elementResource: OchreResource): WebElement {
       )
     : [];
 
-  const presentationProperty = elementProperties.find(
-    (property) => property.label === "presentation",
+  const presentationProperty = getPropertyByLabel(
+    elementProperties,
+    "presentation",
   );
-  if (!presentationProperty) {
+  if (presentationProperty === null) {
     throw new Error(
       `Presentation property not found for element “${identification.label}”`,
     );
   }
 
-  const componentProperty = presentationProperty.properties.find(
-    (property) => property.label === "component",
+  const componentProperty = getPropertyByLabel(
+    presentationProperty.properties,
+    "component",
   );
-  if (!componentProperty) {
+  if (componentProperty === null) {
     throw new Error(
       `Component for element “${identification.label}” not found`,
     );
@@ -3880,50 +4090,52 @@ function parseWebElement(elementResource: OchreResource): WebElement {
     : [];
 
   const cssProperties =
-    elementResourceProperties.find(
-      (property) =>
-        property.label === "presentation" &&
-        property.values[0]!.content === "css",
-    )?.properties ?? [];
+    getPropertyByLabelAndValue(elementResourceProperties, "presentation", "css")
+      ?.properties ?? [];
 
   const cssStyles: Array<Style> = [];
   for (const property of cssProperties) {
-    const cssStyle = property.values[0]!.content as string;
-    cssStyles.push({ label: property.label, value: cssStyle });
+    const cssStyle = property.values[0]!.content?.toString();
+    if (cssStyle != null) {
+      cssStyles.push({ label: property.label, value: cssStyle });
+    }
   }
 
   const tabletCssProperties =
-    elementResourceProperties.find(
-      (property) =>
-        property.label === "presentation" &&
-        property.values[0]!.content === "css-tablet",
+    getPropertyByLabelAndValue(
+      elementResourceProperties,
+      "presentation",
+      "css-tablet",
     )?.properties ?? [];
 
   const cssStylesTablet: Array<Style> = [];
   for (const property of tabletCssProperties) {
-    const cssStyle = property.values[0]!.content as string;
-    cssStylesTablet.push({ label: property.label, value: cssStyle });
+    const cssStyle = property.values[0]!.content?.toString();
+    if (cssStyle != null) {
+      cssStylesTablet.push({ label: property.label, value: cssStyle });
+    }
   }
 
   const mobileCssProperties =
-    elementResourceProperties.find(
-      (property) =>
-        property.label === "presentation" &&
-        property.values[0]!.content === "css-mobile",
+    getPropertyByLabelAndValue(
+      elementResourceProperties,
+      "presentation",
+      "css-mobile",
     )?.properties ?? [];
 
   const cssStylesMobile: Array<Style> = [];
   for (const property of mobileCssProperties) {
-    const cssStyle = property.values[0]!.content as string;
-    cssStylesMobile.push({ label: property.label, value: cssStyle });
+    const cssStyle = property.values[0]!.content?.toString();
+    if (cssStyle != null) {
+      cssStylesMobile.push({ label: property.label, value: cssStyle });
+    }
   }
 
   const title = parseWebTitle(elementResourceProperties, identification, {
-    isNameDisplayed: [
-      "annotated-image",
-      "annotated-document",
-      "collection",
-    ].includes(properties.component),
+    isNameDisplayed:
+      properties.component === "annotated-image" ||
+      properties.component === "annotated-document" ||
+      properties.component === "collection",
     isCountDisplayed:
       properties.component === "collection" && properties.variant === "full",
   });
@@ -3962,8 +4174,7 @@ function parseWebpage(
 
   if (
     webpageProperties.length === 0 ||
-    webpageProperties.find((property) => property.label === "presentation")
-      ?.values[0]?.content !== "page"
+    getPropertyValueByLabel(webpageProperties, "presentation") !== "page"
   ) {
     return null;
   }
@@ -3977,8 +4188,32 @@ function parseWebpage(
     throw new Error(`Slug not found for page “${identification.label}”`);
   }
 
+  const returnWebpage: Webpage = {
+    uuid: webpageResource.uuid,
+    type: "page",
+    title: identification.label,
+    slug:
+      slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
+    publicationDateTime:
+      webpageResource.publicationDateTime ?
+        parseISO(webpageResource.publicationDateTime)
+      : null,
+    items: [],
+    properties: {
+      width: "default",
+      variant: "default",
+      isBreadcrumbsDisplayed: false,
+      isSidebarDisplayed: true,
+      isDisplayedInNavbar: true,
+      isNavbarSearchBarDisplayed: true,
+      backgroundImage: null,
+      cssStyles: { default: [], tablet: [], mobile: [] },
+    },
+    webpages: [],
+  };
+
   const links =
-    webpageResource.links ?
+    webpageResource.links != null ?
       parseLinks(
         Array.isArray(webpageResource.links) ?
           webpageResource.links
@@ -3990,7 +4225,7 @@ function parseWebpage(
   );
 
   const webpageResources =
-    webpageResource.resource ?
+    webpageResource.resource != null ?
       Array.isArray(webpageResource.resource) ?
         webpageResource.resource
       : [webpageResource.resource]
@@ -3999,7 +4234,7 @@ function parseWebpage(
   const items: Array<WebSegment | WebElement | WebBlock> = [];
   for (const resource of webpageResources) {
     const resourceProperties =
-      resource.properties ?
+      resource.properties != null ?
         parseProperties(
           Array.isArray(resource.properties.property) ?
             resource.properties.property
@@ -4010,8 +4245,8 @@ function parseWebpage(
     const resourceType = getPropertyValueByLabel(
       resourceProperties,
       "presentation",
-    ) as "segment" | "element" | "block" | undefined;
-    if (resourceType == null) {
+    ) as "segment" | "element" | "block" | null;
+    if (resourceType === null) {
       continue;
     }
 
@@ -4038,8 +4273,8 @@ function parseWebpage(
     }
   }
 
-  const webpages =
-    webpageResource.resource ?
+  returnWebpage.webpages =
+    webpageResource.resource != null ?
       parseWebpageResources(
         Array.isArray(webpageResource.resource) ?
           webpageResource.resource
@@ -4048,139 +4283,89 @@ function parseWebpage(
       )
     : [];
 
-  let displayedInNavbar = true;
-  let width: "default" | "full" | "large" | "narrow" = "default";
-  let variant: "default" | "no-background" = "default";
-  let isSidebarDisplayed = true;
-  let isBreadcrumbsDisplayed = false;
-  let isNavbarSearchBarDisplayed = true;
+  const webpageSubProperties =
+    getPropertyByLabelAndValue(webpageProperties, "presentation", "page")
+      ?.properties ?? [];
 
-  const webpageSubProperties = webpageProperties.find(
-    (property) =>
-      property.label === "presentation" &&
-      property.values[0]?.content === "page",
-  )?.properties;
+  if (webpageSubProperties.length > 0) {
+    returnWebpage.properties.isDisplayedInNavbar =
+      (getPropertyValueByLabel(webpageSubProperties, "displayed-in-navbar") as
+        | Webpage["properties"]["isDisplayedInNavbar"]
+        | null) ?? true;
 
-  if (webpageSubProperties) {
-    const navbarProperty = webpageSubProperties.find(
-      (property) => property.label === "displayed-in-navbar",
-    )?.values[0];
-    if (navbarProperty) {
-      displayedInNavbar = navbarProperty.content === true;
-    }
+    returnWebpage.properties.width =
+      (getPropertyValueByLabel(webpageSubProperties, "width") as
+        | Webpage["properties"]["width"]
+        | null) ?? "default";
 
-    const widthProperty = webpageSubProperties.find(
-      (property) => property.label === "width",
-    )?.values[0];
-    if (widthProperty) {
-      width = widthProperty.content as "default" | "full" | "large" | "narrow";
-    }
+    returnWebpage.properties.variant =
+      (getPropertyValueByLabel(webpageSubProperties, "variant") as
+        | Webpage["properties"]["variant"]
+        | null) ?? "default";
 
-    const variantProperty = webpageSubProperties.find(
-      (property) => property.label === "variant",
-    )?.values[0];
-    if (variantProperty) {
-      variant = variantProperty.content as "default" | "no-background";
-    }
+    returnWebpage.properties.isSidebarDisplayed =
+      (getPropertyValueByLabel(webpageSubProperties, "sidebar-displayed") as
+        | Webpage["properties"]["isSidebarDisplayed"]
+        | null) ?? true;
 
-    const isSidebarDisplayedProperty = webpageSubProperties.find(
-      (property) => property.label === "sidebar-displayed",
-    )?.values[0];
-    if (isSidebarDisplayedProperty) {
-      isSidebarDisplayed = isSidebarDisplayedProperty.content === true;
-    }
+    returnWebpage.properties.isBreadcrumbsDisplayed =
+      (getPropertyValueByLabel(
+        webpageSubProperties,
+        "breadcrumbs-displayed",
+      ) as Webpage["properties"]["isBreadcrumbsDisplayed"] | null) ?? false;
 
-    const isBreadcrumbsDisplayedProperty = webpageSubProperties.find(
-      (property) => property.label === "breadcrumbs-displayed",
-    )?.values[0];
-    if (isBreadcrumbsDisplayedProperty) {
-      isBreadcrumbsDisplayed = isBreadcrumbsDisplayedProperty.content === true;
-    }
-
-    const isNavbarSearchBarDisplayedProperty = webpageSubProperties.find(
-      (property) => property.label === "navbar-search-bar-displayed",
-    )?.values[0];
-    if (isNavbarSearchBarDisplayedProperty) {
-      isNavbarSearchBarDisplayed =
-        isNavbarSearchBarDisplayedProperty.content === true;
-    }
+    returnWebpage.properties.isNavbarSearchBarDisplayed =
+      (getPropertyValueByLabel(
+        webpageSubProperties,
+        "navbar-search-bar-displayed",
+      ) as Webpage["properties"]["isNavbarSearchBarDisplayed"] | null) ?? true;
   }
 
-  const cssStyleSubProperties = webpageProperties.find(
-    (property) =>
-      property.label === "presentation" &&
-      property.values[0]?.content === "css",
-  )?.properties;
+  if (imageLink?.uuid != null) {
+    returnWebpage.properties.backgroundImage = {
+      uuid: imageLink.uuid,
+      label: imageLink.identification?.label ?? null,
+      description: imageLink.description ?? null,
+      width: imageLink.image?.width ?? 0,
+      height: imageLink.image?.height ?? 0,
+      quality: "high",
+    };
+  }
+
+  const cssStyleSubProperties =
+    getPropertyByLabelAndValue(webpageProperties, "presentation", "css")
+      ?.properties ?? [];
   const cssStyles: Array<Style> = [];
-  if (cssStyleSubProperties) {
-    for (const property of cssStyleSubProperties) {
-      cssStyles.push({
-        label: property.label,
-        value: property.values[0]!.content as string,
-      });
+  for (const property of cssStyleSubProperties) {
+    const cssStyle = property.values[0]!.content?.toString();
+    if (cssStyle != null) {
+      cssStyles.push({ label: property.label, value: cssStyle });
     }
   }
 
-  const tabletCssStyleSubProperties = webpageProperties.find(
-    (property) =>
-      property.label === "presentation" &&
-      property.values[0]?.content === "css-tablet",
-  )?.properties;
+  const tabletCssStyleSubProperties =
+    getPropertyByLabelAndValue(webpageProperties, "presentation", "css-tablet")
+      ?.properties ?? [];
   const cssStylesTablet: Array<Style> = [];
-  if (tabletCssStyleSubProperties) {
-    for (const property of tabletCssStyleSubProperties) {
-      cssStylesTablet.push({
-        label: property.label,
-        value: property.values[0]!.content as string,
-      });
+  for (const property of tabletCssStyleSubProperties) {
+    const cssStyle = property.values[0]!.content?.toString();
+    if (cssStyle != null) {
+      cssStylesTablet.push({ label: property.label, value: cssStyle });
     }
   }
 
-  const mobileCssStyleSubProperties = webpageProperties.find(
-    (property) =>
-      property.label === "presentation" &&
-      property.values[0]?.content === "css-mobile",
-  )?.properties;
+  const mobileCssStyleSubProperties =
+    getPropertyByLabelAndValue(webpageProperties, "presentation", "css-mobile")
+      ?.properties ?? [];
   const cssStylesMobile: Array<Style> = [];
-  if (mobileCssStyleSubProperties) {
-    for (const property of mobileCssStyleSubProperties) {
-      cssStylesMobile.push({
-        label: property.label,
-        value: property.values[0]!.content as string,
-      });
+  for (const property of mobileCssStyleSubProperties) {
+    const cssStyle = property.values[0]!.content?.toString();
+    if (cssStyle != null) {
+      cssStylesMobile.push({ label: property.label, value: cssStyle });
     }
   }
 
-  return {
-    uuid: webpageResource.uuid,
-    type: "page",
-    title: identification.label,
-    slug:
-      slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
-    publicationDateTime:
-      webpageResource.publicationDateTime ?
-        parseISO(webpageResource.publicationDateTime)
-      : null,
-    items,
-    properties: {
-      displayedInNavbar,
-      width,
-      variant,
-      backgroundImageUrl:
-        imageLink ?
-          `https://ochre.lib.uchicago.edu/ochre?uuid=${imageLink.uuid}&load`
-        : null,
-      isSidebarDisplayed,
-      isBreadcrumbsDisplayed,
-      isNavbarSearchBarDisplayed,
-      cssStyles: {
-        default: cssStyles,
-        tablet: cssStylesTablet,
-        mobile: cssStylesMobile,
-      },
-    },
-    webpages,
-  };
+  return returnWebpage;
 }
 
 /**
@@ -4226,15 +4411,13 @@ function parseWebSegment(
 
   if (
     webpageProperties.length === 0 ||
-    webpageProperties.find((property) => property.label === "presentation")
-      ?.values[0]?.content !== "segment"
+    getPropertyValueByLabel(webpageProperties, "presentation") !== "segment"
   ) {
     return null;
   }
 
   const identification = parseIdentification(segmentResource.identification);
 
-  // const slug = segmentResource.slug;
   const slug =
     segmentResource.identification.abbreviation != null ?
       typeof segmentResource.identification.abbreviation === "object" ?
@@ -4245,19 +4428,7 @@ function parseWebSegment(
     throw new Error(`Slug not found for segment “${identification.label}”`);
   }
 
-  const childResources =
-    segmentResource.resource ?
-      Array.isArray(segmentResource.resource) ?
-        segmentResource.resource
-      : [segmentResource.resource]
-    : [];
-
-  const items = parseWebSegmentItems(
-    childResources,
-    slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
-  );
-
-  return {
+  const returnSegment: WebSegment = {
     uuid: segmentResource.uuid,
     type: "segment",
     title: identification.label,
@@ -4266,8 +4437,22 @@ function parseWebSegment(
       segmentResource.publicationDateTime ?
         parseISO(segmentResource.publicationDateTime)
       : null,
-    items,
+    items: [],
   };
+
+  const childResources =
+    segmentResource.resource ?
+      Array.isArray(segmentResource.resource) ?
+        segmentResource.resource
+      : [segmentResource.resource]
+    : [];
+
+  returnSegment.items = parseWebSegmentItems(
+    childResources,
+    slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
+  );
+
+  return returnSegment;
 }
 
 /**
@@ -4313,8 +4498,8 @@ function parseWebSegmentItem(
 
   if (
     webpageProperties.length === 0 ||
-    webpageProperties.find((property) => property.label === "presentation")
-      ?.values[0]?.content !== "segment-item"
+    getPropertyValueByLabel(webpageProperties, "presentation") !==
+      "segment-item"
   ) {
     return null;
   }
@@ -4335,24 +4520,7 @@ function parseWebSegmentItem(
     );
   }
 
-  const resources =
-    segmentItemResource.resource ?
-      Array.isArray(segmentItemResource.resource) ?
-        segmentItemResource.resource
-      : [segmentItemResource.resource]
-    : [];
-
-  const pages = parseWebpages(
-    resources,
-    slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
-  );
-
-  const segments = parseSegments(
-    resources,
-    slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
-  );
-
-  return {
+  const returnSegmentItem: WebSegmentItem = {
     uuid: segmentItemResource.uuid,
     type: "segment-item",
     title: identification.label,
@@ -4361,8 +4529,28 @@ function parseWebSegmentItem(
       segmentItemResource.publicationDateTime ?
         parseISO(segmentItemResource.publicationDateTime)
       : null,
-    items: [...pages, ...segments],
+    items: [],
   };
+
+  const resources =
+    segmentItemResource.resource ?
+      Array.isArray(segmentItemResource.resource) ?
+        segmentItemResource.resource
+      : [segmentItemResource.resource]
+    : [];
+
+  returnSegmentItem.items.push(
+    ...parseWebpages(
+      resources,
+      slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
+    ),
+    ...parseSegments(
+      resources,
+      slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
+    ),
+  );
+
+  return returnSegmentItem;
 }
 
 /**
@@ -4395,10 +4583,11 @@ function parseWebSegmentItems(
  */
 function parseSidebar(
   resources: Array<OchreResource>,
-): Website["sidebar"] | null {
-  let sidebar: Website["sidebar"] | null = null;
-  const sidebarElements: Array<WebElement> = [];
-  const sidebarTitle: WebTitle = {
+): Website["properties"]["sidebar"] | null {
+  let returnSidebar: Website["properties"]["sidebar"] | null = null;
+
+  const items: NonNullable<Website["properties"]["sidebar"]>["items"] = [];
+  const title: WebTitle = {
     label: "",
     variant: "default",
     properties: {
@@ -4409,11 +4598,10 @@ function parseSidebar(
       isCountDisplayed: false,
     },
   };
-  let sidebarLayout: "start" | "end" = "start";
-  let sidebarMobileLayout: "default" | "inline" = "default";
-  const sidebarCssStyles: Array<Style> = [];
-  const sidebarCssStylesTablet: Array<Style> = [];
-  const sidebarCssStylesMobile: Array<Style> = [];
+  let layout: "start" | "end" = "start";
+  let mobileLayout: "default" | "inline" = "default";
+  const cssStyles: NonNullable<Website["properties"]["sidebar"]>["cssStyles"] =
+    { default: [], tablet: [], mobile: [] };
 
   const sidebarResource = resources.find((resource) => {
     const resourceProperties =
@@ -4424,16 +4612,18 @@ function parseSidebar(
           : [resource.properties.property],
         )
       : [];
-    return resourceProperties.some(
-      (property) =>
-        property.label === "presentation" &&
-        property.values[0]?.content === "element" &&
-        property.properties[0]?.label === "component" &&
-        property.properties[0].values[0]?.content === "sidebar",
+
+    return (
+      getPropertyValueByLabel(resourceProperties, "presentation") ===
+        "element" &&
+      getPropertyValueByLabel(
+        resourceProperties[0]?.properties ?? [],
+        "component",
+      ) === "sidebar"
     );
   });
-  if (sidebarResource) {
-    sidebarTitle.label =
+  if (sidebarResource != null) {
+    title.label =
       (
         typeof sidebarResource.identification.label === "string" ||
         typeof sidebarResource.identification.label === "number" ||
@@ -4468,16 +4658,14 @@ function parseSidebar(
       (property) => property.label === "layout",
     );
     if (sidebarLayoutProperty) {
-      sidebarLayout = sidebarLayoutProperty.values[0]!.content as
-        | "start"
-        | "end";
+      layout = sidebarLayoutProperty.values[0]!.content as "start" | "end";
     }
 
     const sidebarMobileLayoutProperty = sidebarProperties.find(
       (property) => property.label === "layout-mobile",
     );
     if (sidebarMobileLayoutProperty) {
-      sidebarMobileLayout = sidebarMobileLayoutProperty.values[0]!.content as
+      mobileLayout = sidebarMobileLayoutProperty.values[0]!.content as
         | "default"
         | "inline";
     }
@@ -4490,8 +4678,10 @@ function parseSidebar(
       )?.properties ?? [];
 
     for (const property of cssProperties) {
-      const cssStyle = property.values[0]!.content as string;
-      sidebarCssStyles.push({ label: property.label, value: cssStyle });
+      const cssStyle = property.values[0]!.content?.toString();
+      if (cssStyle != null) {
+        cssStyles.default.push({ label: property.label, value: cssStyle });
+      }
     }
 
     const tabletCssProperties =
@@ -4502,8 +4692,10 @@ function parseSidebar(
       )?.properties ?? [];
 
     for (const property of tabletCssProperties) {
-      const cssStyle = property.values[0]!.content as string;
-      sidebarCssStylesTablet.push({ label: property.label, value: cssStyle });
+      const cssStyle = property.values[0]!.content?.toString();
+      if (cssStyle != null) {
+        cssStyles.tablet.push({ label: property.label, value: cssStyle });
+      }
     }
 
     const mobileCssProperties =
@@ -4514,8 +4706,10 @@ function parseSidebar(
       )?.properties ?? [];
 
     for (const property of mobileCssProperties) {
-      const cssStyle = property.values[0]!.content as string;
-      sidebarCssStylesMobile.push({ label: property.label, value: cssStyle });
+      const cssStyle = property.values[0]!.content?.toString();
+      if (cssStyle != null) {
+        cssStyles.mobile.push({ label: property.label, value: cssStyle });
+      }
     }
 
     const titleProperties = sidebarBaseProperties.find(
@@ -4527,19 +4721,19 @@ function parseSidebar(
     if (titleProperties) {
       const titleVariant = getPropertyValueByLabel(titleProperties, "variant");
       if (titleVariant) {
-        sidebarTitle.variant = titleVariant as "default" | "simple";
+        title.variant = titleVariant as "default" | "simple";
       }
 
-      sidebarTitle.properties.isNameDisplayed =
+      title.properties.isNameDisplayed =
         getPropertyValueByLabel(titleProperties, "name-displayed") === true;
-      sidebarTitle.properties.isDescriptionDisplayed =
+      title.properties.isDescriptionDisplayed =
         getPropertyValueByLabel(titleProperties, "description-displayed") ===
         true;
-      sidebarTitle.properties.isDateDisplayed =
+      title.properties.isDateDisplayed =
         getPropertyValueByLabel(titleProperties, "date-displayed") === true;
-      sidebarTitle.properties.isCreatorsDisplayed =
+      title.properties.isCreatorsDisplayed =
         getPropertyValueByLabel(titleProperties, "creators-displayed") === true;
-      sidebarTitle.properties.isCountDisplayed =
+      title.properties.isCountDisplayed =
         getPropertyValueByLabel(titleProperties, "count-displayed") === true;
     }
 
@@ -4551,26 +4745,52 @@ function parseSidebar(
       : [];
 
     for (const resource of sidebarResources) {
-      const element = parseWebElement(resource);
-      sidebarElements.push(element);
+      const resourceProperties =
+        resource.properties ?
+          parseProperties(
+            Array.isArray(resource.properties.property) ?
+              resource.properties.property
+            : [resource.properties.property],
+          )
+        : [];
+
+      const resourceType = getPropertyValueByLabel(
+        resourceProperties,
+        "presentation",
+      ) as "element" | "block" | null;
+      if (resourceType === null) {
+        continue;
+      }
+
+      switch (resourceType) {
+        case "element": {
+          const element = parseWebElement(resource);
+          items.push(element);
+          break;
+        }
+        case "block": {
+          const block = parseWebBlock(resource);
+          if (block) {
+            items.push(block);
+          }
+          break;
+        }
+      }
     }
   }
 
-  if (sidebarElements.length > 0) {
-    sidebar = {
-      elements: sidebarElements,
-      title: sidebarTitle,
-      layout: sidebarLayout,
-      mobileLayout: sidebarMobileLayout,
-      cssStyles: {
-        default: sidebarCssStyles,
-        tablet: sidebarCssStylesTablet,
-        mobile: sidebarCssStylesMobile,
-      },
+  if (items.length > 0) {
+    returnSidebar = {
+      isDisplayed: true,
+      items,
+      title,
+      layout,
+      mobileLayout,
+      cssStyles,
     };
   }
 
-  return sidebar;
+  return returnSidebar;
 }
 
 /**
@@ -4610,8 +4830,8 @@ function parseWebElementForAccordion(
     const resourceType = getPropertyValueByLabel(
       resourceProperties,
       "presentation",
-    ) as "element" | "block" | undefined;
-    if (resourceType == null) {
+    ) as "element" | "block" | null;
+    if (resourceType === null) {
       continue;
     }
 
@@ -4659,215 +4879,180 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
     ),
     items: [],
     properties: {
-      default: { layout: "vertical", spacing: undefined, gap: undefined },
+      default: { layout: "vertical", spacing: null, gap: null },
       mobile: null,
       tablet: null,
     } as WebBlock["properties"],
     cssStyles: { default: [], tablet: [], mobile: [] },
   };
 
-  const blockMainProperties = blockProperties.find(
-    (property) =>
-      property.label === "presentation" &&
-      property.values[0]?.content === "block",
-  )?.properties;
-  if (blockMainProperties) {
-    const layoutProperty = blockMainProperties.find(
-      (property) => property.label === "layout",
-    )?.values[0];
-    if (layoutProperty) {
-      returnBlock.properties.default.layout = layoutProperty.content as
-        | "vertical"
-        | "horizontal"
-        | "grid"
-        | "vertical-flex"
-        | "horizontal-flex"
-        | "accordion";
-    }
+  const blockMainProperties =
+    getPropertyByLabelAndValue(blockProperties, "presentation", "block")
+      ?.properties ?? [];
+  if (blockMainProperties.length > 0) {
+    returnBlock.properties.default.layout =
+      (getPropertyValueByLabel(blockMainProperties, "layout") as
+        | WebBlock["properties"]["default"]["layout"]
+        | null) ?? "vertical";
 
     if (returnBlock.properties.default.layout === "accordion") {
-      const isAccordionEnabledProperty = blockMainProperties.find(
-        (property) => property.label === "accordion-enabled",
-      )?.values[0];
-      if (isAccordionEnabledProperty) {
-        returnBlock.properties.default.isAccordionEnabled =
-          isAccordionEnabledProperty.content === true;
-      } else {
-        returnBlock.properties.default.isAccordionEnabled = true;
-      }
+      returnBlock.properties.default.isAccordionEnabled =
+        (getPropertyValueByLabel(blockMainProperties, "accordion-enabled") as
+          | WebBlock["properties"]["default"]["isAccordionEnabled"]
+          | null) ?? true;
 
-      const isAccordionExpandedByDefaultProperty = blockMainProperties.find(
-        (property) => property.label === "accordion-expanded",
-      )?.values[0];
-      if (isAccordionExpandedByDefaultProperty) {
-        returnBlock.properties.default.isAccordionExpandedByDefault =
-          isAccordionExpandedByDefaultProperty.content === true;
-      } else {
-        returnBlock.properties.default.isAccordionExpandedByDefault = false;
-      }
+      returnBlock.properties.default.isAccordionExpandedByDefault =
+        (getPropertyValueByLabel(blockMainProperties, "accordion-expanded") as
+          | WebBlock["properties"]["default"]["isAccordionExpandedByDefault"]
+          | null) ?? true;
 
-      const isAccordionSidebarDisplayedProperty = blockMainProperties.find(
-        (property) => property.label === "accordion-sidebar-displayed",
-      )?.values[0];
-      if (isAccordionSidebarDisplayedProperty) {
-        returnBlock.properties.default.isAccordionSidebarDisplayed =
-          isAccordionSidebarDisplayedProperty.content === true;
-      } else {
-        returnBlock.properties.default.isAccordionSidebarDisplayed = false;
-      }
+      returnBlock.properties.default.isAccordionSidebarDisplayed =
+        (getPropertyValueByLabel(
+          blockMainProperties,
+          "accordion-sidebar-displayed",
+        ) as
+          | WebBlock["properties"]["default"]["isAccordionSidebarDisplayed"]
+          | null) ?? false;
     }
 
-    const spacingProperty = blockMainProperties.find(
-      (property) => property.label === "spacing",
-    )?.values[0];
-    if (spacingProperty) {
-      returnBlock.properties.default.spacing =
-        spacingProperty.content as string;
-    }
+    returnBlock.properties.default.spacing =
+      (getPropertyValueByLabel(blockMainProperties, "spacing") as
+        | WebBlock["properties"]["default"]["spacing"]
+        | null) ?? null;
 
-    const gapProperty = blockMainProperties.find(
-      (property) => property.label === "gap",
-    )?.values[0];
-    if (gapProperty) {
-      returnBlock.properties.default.gap = gapProperty.content as string;
-    }
+    returnBlock.properties.default.gap =
+      (getPropertyValueByLabel(blockMainProperties, "gap") as
+        | WebBlock["properties"]["default"]["gap"]
+        | null) ?? null;
 
-    const tabletOverwriteProperty = blockMainProperties.find(
-      (property) => property.label === "overwrite-tablet",
+    const tabletOverwriteProperty = getPropertyByLabel(
+      blockMainProperties,
+      "overwrite-tablet",
     );
-    if (tabletOverwriteProperty) {
+    if (tabletOverwriteProperty !== null) {
       const tabletOverwriteProperties = tabletOverwriteProperty.properties;
 
-      const propertiesTablet: WebBlock["properties"]["tablet"] = {};
-
-      const layoutProperty = tabletOverwriteProperties.find(
-        (property) => property.label === "layout",
-      )?.values[0];
-      if (layoutProperty) {
-        propertiesTablet.layout = layoutProperty.content as
-          | "vertical"
-          | "horizontal"
-          | "grid"
-          | "vertical-flex"
-          | "horizontal-flex"
-          | "accordion";
-      }
+      const propertiesTablet: NonNullable<WebBlock["properties"]["tablet"]> = {
+        layout:
+          (getPropertyValueByLabel(tabletOverwriteProperties, "layout") as
+            | NonNullable<WebBlock["properties"]["tablet"]>["layout"]
+            | null) ?? undefined,
+        spacing:
+          (getPropertyValueByLabel(tabletOverwriteProperties, "spacing") as
+            | NonNullable<WebBlock["properties"]["tablet"]>["spacing"]
+            | null) ?? undefined,
+        gap:
+          (getPropertyValueByLabel(tabletOverwriteProperties, "gap") as
+            | NonNullable<WebBlock["properties"]["tablet"]>["gap"]
+            | null) ?? undefined,
+        isAccordionEnabled: undefined,
+        isAccordionExpandedByDefault: undefined,
+        isAccordionSidebarDisplayed: undefined,
+      };
 
       if (
         propertiesTablet.layout === "accordion" ||
         returnBlock.properties.default.layout === "accordion"
       ) {
-        const isAccordionEnabledProperty = tabletOverwriteProperties.find(
-          (property) => property.label === "accordion-enabled",
-        )?.values[0];
-        if (isAccordionEnabledProperty) {
-          propertiesTablet.isAccordionEnabled =
-            isAccordionEnabledProperty.content === true;
-        }
+        propertiesTablet.isAccordionEnabled =
+          (getPropertyValueByLabel(
+            tabletOverwriteProperties,
+            "accordion-enabled",
+          ) as
+            | NonNullable<
+                WebBlock["properties"]["tablet"]
+              >["isAccordionEnabled"]
+            | null) ?? undefined;
 
-        const isAccordionExpandedByDefaultProperty =
-          tabletOverwriteProperties.find(
-            (property) => property.label === "accordion-expanded",
-          )?.values[0];
-        if (isAccordionExpandedByDefaultProperty) {
-          propertiesTablet.isAccordionExpandedByDefault =
-            isAccordionExpandedByDefaultProperty.content === true;
-        }
+        propertiesTablet.isAccordionExpandedByDefault =
+          (getPropertyValueByLabel(
+            tabletOverwriteProperties,
+            "accordion-expanded",
+          ) as
+            | NonNullable<
+                WebBlock["properties"]["tablet"]
+              >["isAccordionExpandedByDefault"]
+            | null) ?? undefined;
 
-        const isAccordionSidebarDisplayedProperty =
-          tabletOverwriteProperties.find(
-            (property) => property.label === "accordion-sidebar-displayed",
-          )?.values[0];
-        if (isAccordionSidebarDisplayedProperty) {
-          propertiesTablet.isAccordionSidebarDisplayed =
-            isAccordionSidebarDisplayedProperty.content === true;
-        }
+        propertiesTablet.isAccordionSidebarDisplayed =
+          (getPropertyValueByLabel(
+            tabletOverwriteProperties,
+            "accordion-sidebar-displayed",
+          ) as
+            | NonNullable<
+                WebBlock["properties"]["tablet"]
+              >["isAccordionSidebarDisplayed"]
+            | null) ?? undefined;
       }
 
-      const spacingProperty = tabletOverwriteProperties.find(
-        (property) => property.label === "spacing",
-      )?.values[0];
-      if (spacingProperty) {
-        propertiesTablet.spacing = spacingProperty.content as string;
+      if (Object.values(propertiesTablet).every((value) => value != null)) {
+        returnBlock.properties.tablet = propertiesTablet;
       }
-
-      const gapProperty = tabletOverwriteProperties.find(
-        (property) => property.label === "gap",
-      )?.values[0];
-      if (gapProperty) {
-        propertiesTablet.gap = gapProperty.content as string;
-      }
-
-      returnBlock.properties.tablet = propertiesTablet;
     }
 
-    const mobileOverwriteProperty = blockMainProperties.find(
-      (property) => property.label === "overwrite-mobile",
+    const mobileOverwriteProperty = getPropertyByLabel(
+      blockMainProperties,
+      "overwrite-tablet",
     );
-    if (mobileOverwriteProperty) {
+    if (mobileOverwriteProperty !== null) {
       const mobileOverwriteProperties = mobileOverwriteProperty.properties;
 
-      const propertiesMobile: WebBlock["properties"]["mobile"] = {};
-
-      const layoutProperty = mobileOverwriteProperties.find(
-        (property) => property.label === "layout",
-      )?.values[0];
-      if (layoutProperty) {
-        propertiesMobile.layout = layoutProperty.content as
-          | "vertical"
-          | "horizontal"
-          | "grid"
-          | "vertical-flex"
-          | "horizontal-flex"
-          | "accordion";
-      }
+      const propertiesMobile: NonNullable<WebBlock["properties"]["mobile"]> = {
+        layout:
+          (getPropertyValueByLabel(mobileOverwriteProperties, "layout") as
+            | NonNullable<WebBlock["properties"]["default"]>["layout"]
+            | null) ?? undefined,
+        spacing:
+          (getPropertyValueByLabel(mobileOverwriteProperties, "spacing") as
+            | NonNullable<WebBlock["properties"]["default"]>["spacing"]
+            | null) ?? undefined,
+        gap:
+          (getPropertyValueByLabel(mobileOverwriteProperties, "gap") as
+            | NonNullable<WebBlock["properties"]["default"]>["gap"]
+            | null) ?? undefined,
+        isAccordionEnabled: undefined,
+        isAccordionExpandedByDefault: undefined,
+        isAccordionSidebarDisplayed: undefined,
+      };
 
       if (
         propertiesMobile.layout === "accordion" ||
         returnBlock.properties.default.layout === "accordion"
       ) {
-        const isAccordionEnabledProperty = mobileOverwriteProperties.find(
-          (property) => property.label === "accordion-enabled",
-        )?.values[0];
-        if (isAccordionEnabledProperty) {
-          propertiesMobile.isAccordionEnabled =
-            isAccordionEnabledProperty.content === true;
-        }
+        propertiesMobile.isAccordionEnabled =
+          (getPropertyValueByLabel(
+            mobileOverwriteProperties,
+            "accordion-enabled",
+          ) as
+            | NonNullable<
+                WebBlock["properties"]["mobile"]
+              >["isAccordionEnabled"]
+            | null) ?? undefined;
 
-        const isAccordionExpandedByDefaultProperty =
-          mobileOverwriteProperties.find(
-            (property) => property.label === "accordion-expanded",
-          )?.values[0];
-        if (isAccordionExpandedByDefaultProperty) {
-          propertiesMobile.isAccordionExpandedByDefault =
-            isAccordionExpandedByDefaultProperty.content === true;
-        }
+        propertiesMobile.isAccordionExpandedByDefault =
+          (getPropertyValueByLabel(
+            mobileOverwriteProperties,
+            "accordion-expanded",
+          ) as
+            | NonNullable<
+                WebBlock["properties"]["mobile"]
+              >["isAccordionExpandedByDefault"]
+            | null) ?? undefined;
 
-        const isAccordionSidebarDisplayedProperty =
-          mobileOverwriteProperties.find(
-            (property) => property.label === "accordion-sidebar-displayed",
-          )?.values[0];
-        if (isAccordionSidebarDisplayedProperty) {
-          propertiesMobile.isAccordionSidebarDisplayed =
-            isAccordionSidebarDisplayedProperty.content === true;
-        }
+        propertiesMobile.isAccordionSidebarDisplayed =
+          (getPropertyValueByLabel(
+            mobileOverwriteProperties,
+            "accordion-sidebar-displayed",
+          ) as
+            | NonNullable<
+                WebBlock["properties"]["mobile"]
+              >["isAccordionSidebarDisplayed"]
+            | null) ?? undefined;
       }
 
-      const spacingProperty = mobileOverwriteProperties.find(
-        (property) => property.label === "spacing",
-      )?.values[0];
-      if (spacingProperty) {
-        propertiesMobile.spacing = spacingProperty.content as string;
+      if (Object.values(propertiesMobile).every((value) => value != null)) {
+        returnBlock.properties.mobile = propertiesMobile;
       }
-
-      const gapProperty = mobileOverwriteProperties.find(
-        (property) => property.label === "gap",
-      )?.values[0];
-      if (gapProperty) {
-        propertiesMobile.gap = gapProperty.content as string;
-      }
-
-      returnBlock.properties.mobile = propertiesMobile;
     }
   }
 
@@ -4898,7 +5083,7 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
       const resourceType = getPropertyValueByLabel(
         resourceProperties,
         "presentation",
-      ) as "element" | "block" | undefined;
+      ) as "element" | "block" | null;
 
       if (resourceType !== "element") {
         throw new Error(
@@ -4908,13 +5093,14 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
         );
       }
 
-      const presentationProperty = resourceProperties.find(
-        (property) => property.label === "presentation",
+      const presentationProperty = getPropertyByLabel(
+        resourceProperties,
+        "presentation",
       );
-      const componentProperty = presentationProperty?.properties.find(
-        (property) => property.label === "component",
-      );
-      const componentType = componentProperty?.values[0]?.content;
+      const componentType = getPropertyValueByLabel(
+        presentationProperty?.properties ?? [],
+        "component",
+      ) as string | null;
 
       if (componentType !== "text") {
         throw new Error(
@@ -4944,8 +5130,8 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
       const resourceType = getPropertyValueByLabel(
         resourceProperties,
         "presentation",
-      ) as "element" | "block" | undefined;
-      if (resourceType == null) {
+      ) as "element" | "block" | null;
+      if (resourceType === null) {
         continue;
       }
 
@@ -4968,45 +5154,48 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
     returnBlock.items = blockItems;
   }
 
-  const blockCssStyles = blockProperties.find(
-    (property) =>
-      property.label === "presentation" &&
-      property.values[0]?.content === "css",
-  )?.properties;
-  if (blockCssStyles) {
+  const blockCssStyles =
+    getPropertyByLabelAndValue(blockProperties, "presentation", "css")
+      ?.properties ?? [];
+  if (blockCssStyles.length > 0) {
     for (const property of blockCssStyles) {
-      returnBlock.cssStyles.default.push({
-        label: property.label,
-        value: property.values[0]!.content as string,
-      });
+      const cssStyle = property.values[0]!.content?.toString();
+      if (cssStyle != null) {
+        returnBlock.cssStyles.default.push({
+          label: property.label,
+          value: cssStyle,
+        });
+      }
     }
   }
 
-  const blockTabletCssStyles = blockProperties.find(
-    (property) =>
-      property.label === "presentation" &&
-      property.values[0]?.content === "css-tablet",
-  )?.properties;
-  if (blockTabletCssStyles) {
+  const blockTabletCssStyles =
+    getPropertyByLabelAndValue(blockProperties, "presentation", "css-tablet")
+      ?.properties ?? [];
+  if (blockTabletCssStyles.length > 0) {
     for (const property of blockTabletCssStyles) {
-      returnBlock.cssStyles.tablet.push({
-        label: property.label,
-        value: property.values[0]!.content as string,
-      });
+      const cssStyle = property.values[0]!.content?.toString();
+      if (cssStyle != null) {
+        returnBlock.cssStyles.tablet.push({
+          label: property.label,
+          value: cssStyle,
+        });
+      }
     }
   }
 
-  const blockMobileCssStyles = blockProperties.find(
-    (property) =>
-      property.label === "presentation" &&
-      property.values[0]?.content === "css-mobile",
-  )?.properties;
-  if (blockMobileCssStyles) {
+  const blockMobileCssStyles =
+    getPropertyByLabelAndValue(blockProperties, "presentation", "css-mobile")
+      ?.properties ?? [];
+  if (blockMobileCssStyles.length > 0) {
     for (const property of blockMobileCssStyles) {
-      returnBlock.cssStyles.mobile.push({
-        label: property.label,
-        value: property.values[0]!.content as string,
-      });
+      const cssStyle = property.values[0]!.content?.toString();
+      if (cssStyle != null) {
+        returnBlock.cssStyles.mobile.push({
+          label: property.label,
+          value: cssStyle,
+        });
+      }
     }
   }
 
@@ -5022,241 +5211,201 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
 function parseWebsiteProperties(
   properties: Array<OchreProperty>,
   websiteTree: OchreTree,
+  sidebar: Website["properties"]["sidebar"] | null,
 ): Website["properties"] {
   const mainProperties = parseProperties(properties);
-  const websiteProperties = mainProperties.find(
-    (property) => property.label === "presentation",
-  )?.properties;
-  if (!websiteProperties) {
-    throw new Error("Presentation property not found");
-  }
+  const websiteProperties =
+    getPropertyByLabel(mainProperties, "presentation")?.properties ?? [];
 
-  let type = websiteProperties.find((property) => property.label === "webUI")
-    ?.values[0]?.content;
+  let type = getPropertyValueByLabel(websiteProperties, "webUI") as
+    | Website["properties"]["type"]
+    | null;
   type ??= "traditional";
 
-  let status = websiteProperties.find((property) => property.label === "status")
-    ?.values[0]?.content;
+  let status = getPropertyValueByLabel(websiteProperties, "status") as
+    | Website["properties"]["status"]
+    | null;
   status ??= "development";
 
-  let privacy = websiteProperties.find(
-    (property) => property.label === "privacy",
-  )?.values[0]?.content;
+  let privacy = getPropertyValueByLabel(websiteProperties, "privacy") as
+    | Website["properties"]["privacy"]
+    | null;
   privacy ??= "public";
 
-  const result = websiteSchema.safeParse({ type, status, privacy });
-  if (!result.success) {
-    throw new Error(`Invalid website properties: ${result.error.message}`);
+  const returnProperties: Website["properties"] = {
+    type,
+    status,
+    privacy,
+    contact: null,
+    theme: { isThemeToggleDisplayed: true, defaultTheme: "system" },
+    icon: { logoUuid: null, faviconUuid: null, appleTouchIconUuid: null },
+    navbar: {
+      isDisplayed: true,
+      variant: "default",
+      alignment: "start",
+      isProjectDisplayed: true,
+      searchBarBoundElementUuid: null,
+      items: null,
+    },
+    footer: { isDisplayed: true, items: null },
+    sidebar,
+    itemPage: {
+      isMainContentDisplayed: true,
+      isDescriptionDisplayed: true,
+      isDocumentDisplayed: true,
+      isNotesDisplayed: true,
+      isEventsDisplayed: true,
+      isPeriodsDisplayed: true,
+      isPropertiesDisplayed: true,
+      isBibliographyDisplayed: true,
+      isPropertyValuesGrouped: true,
+      iiifViewer: "universal-viewer",
+    },
+    options: { contexts: null, scopes: null, labels: { title: null } },
+  };
+
+  const contactProperty = getPropertyByLabel(websiteProperties, "contact");
+  if (contactProperty !== null) {
+    const contactContent = contactProperty.values[0]?.content
+      ?.toString()
+      .split(";");
+    if (contactContent?.length === 2) {
+      returnProperties.contact = {
+        name: contactContent[0]!,
+        email: contactContent[1] ?? null,
+      };
+    } else {
+      throw new Error(
+        `Contact property must be in the format “name;email”, but got “${contactProperty.values[0]?.content}”`,
+      );
+    }
   }
 
-  let contact: Website["properties"]["contact"] = null;
-  const contactProperty = websiteProperties.find(
-    (property) => property.label === "contact",
+  returnProperties.theme.isThemeToggleDisplayed =
+    (getPropertyValueByLabel(websiteProperties, "supports-theme-toggle") as
+      | Website["properties"]["theme"]["isThemeToggleDisplayed"]
+      | null) ?? true;
+
+  returnProperties.theme.defaultTheme =
+    (getPropertyValueByLabel(websiteProperties, "default-theme") as
+      | Website["properties"]["theme"]["defaultTheme"]
+      | null) ?? "system";
+
+  returnProperties.icon.logoUuid =
+    getPropertyByLabel(websiteProperties, "logo")?.values[0]?.uuid ?? null;
+
+  returnProperties.navbar.isDisplayed =
+    (getPropertyValueByLabel(websiteProperties, "navbar-displayed") as
+      | Website["properties"]["navbar"]["isDisplayed"]
+      | null) ?? true;
+
+  returnProperties.navbar.variant =
+    (getPropertyValueByLabel(websiteProperties, "navbar-variant") as
+      | Website["properties"]["navbar"]["variant"]
+      | null) ?? "default";
+
+  returnProperties.navbar.alignment =
+    (getPropertyValueByLabel(websiteProperties, "navbar-alignment") as
+      | Website["properties"]["navbar"]["alignment"]
+      | null) ?? "start";
+
+  returnProperties.navbar.isProjectDisplayed =
+    (getPropertyValueByLabel(websiteProperties, "navbar-project-displayed") as
+      | Website["properties"]["navbar"]["isProjectDisplayed"]
+      | null) ?? true;
+
+  returnProperties.navbar.searchBarBoundElementUuid =
+    getPropertyByLabel(websiteProperties, "bound-element-navbar-search-bar")
+      ?.values[0]?.uuid ?? null;
+
+  returnProperties.footer.isDisplayed =
+    (getPropertyValueByLabel(websiteProperties, "footer-displayed") as
+      | Website["properties"]["footer"]["isDisplayed"]
+      | null) ?? true;
+
+  const itemPageTypeProperty = getPropertyByLabelAndValue(
+    websiteProperties,
+    "page-type",
+    "item-page",
   );
-  if (contactProperty) {
-    const [name, email] = (contactProperty.values[0]?.content as string).split(
-      ";",
-    );
-    contact = { name: name!, email: email ?? null };
+  if (itemPageTypeProperty !== null) {
+    returnProperties.itemPage.isMainContentDisplayed =
+      (getPropertyValueByLabel(
+        itemPageTypeProperty.properties,
+        "item-page-main-content-displayed",
+      ) as
+        | Website["properties"]["itemPage"]["isMainContentDisplayed"]
+        | null) ?? true;
+
+    returnProperties.itemPage.isDescriptionDisplayed =
+      (getPropertyValueByLabel(
+        itemPageTypeProperty.properties,
+        "item-page-description-displayed",
+      ) as
+        | Website["properties"]["itemPage"]["isDescriptionDisplayed"]
+        | null) ?? true;
+
+    returnProperties.itemPage.isDocumentDisplayed =
+      (getPropertyValueByLabel(
+        itemPageTypeProperty.properties,
+        "item-page-document-displayed",
+      ) as Website["properties"]["itemPage"]["isDocumentDisplayed"] | null) ??
+      true;
+
+    returnProperties.itemPage.isNotesDisplayed =
+      (getPropertyValueByLabel(
+        itemPageTypeProperty.properties,
+        "item-page-notes-displayed",
+      ) as Website["properties"]["itemPage"]["isNotesDisplayed"] | null) ??
+      true;
+
+    returnProperties.itemPage.isEventsDisplayed =
+      (getPropertyValueByLabel(
+        itemPageTypeProperty.properties,
+        "item-page-events-displayed",
+      ) as Website["properties"]["itemPage"]["isEventsDisplayed"] | null) ??
+      true;
+
+    returnProperties.itemPage.isPeriodsDisplayed =
+      (getPropertyValueByLabel(
+        itemPageTypeProperty.properties,
+        "item-page-periods-displayed",
+      ) as Website["properties"]["itemPage"]["isPeriodsDisplayed"] | null) ??
+      true;
+
+    returnProperties.itemPage.isPropertiesDisplayed =
+      (getPropertyValueByLabel(
+        itemPageTypeProperty.properties,
+        "item-page-properties-displayed",
+      ) as Website["properties"]["itemPage"]["isPropertiesDisplayed"] | null) ??
+      true;
+
+    returnProperties.itemPage.isBibliographyDisplayed =
+      (getPropertyValueByLabel(
+        itemPageTypeProperty.properties,
+        "item-page-bibliography-displayed",
+      ) as
+        | Website["properties"]["itemPage"]["isBibliographyDisplayed"]
+        | null) ?? true;
+
+    returnProperties.itemPage.isPropertyValuesGrouped =
+      (getPropertyValueByLabel(
+        itemPageTypeProperty.properties,
+        "item-page-property-values-grouped",
+      ) as
+        | Website["properties"]["itemPage"]["isPropertyValuesGrouped"]
+        | null) ?? true;
+
+    returnProperties.itemPage.iiifViewer =
+      (getPropertyValueByLabel(
+        itemPageTypeProperty.properties,
+        "item-page-iiif-viewer",
+      ) as Website["properties"]["itemPage"]["iiifViewer"] | null) ??
+      "universal-viewer";
   }
-
-  const logoUuid =
-    websiteProperties.find((property) => property.label === "logo")?.values[0]
-      ?.uuid ?? null;
-
-  let isNavbarDisplayed = true;
-  let navbarVariant: "default" | "floating" | "inline" = "default";
-  let navbarAlignment: "start" | "center" | "end" = "start";
-  let isNavbarProjectDisplayed = true;
-  let isFooterDisplayed = true;
-  let isSidebarDisplayed = false;
-  let supportsThemeToggle = true;
-  let defaultTheme: "light" | "dark" | null = null;
-  let isMainContentDisplayed = true;
-  let isDescriptionDisplayed = true;
-  let isDocumentDisplayed = true;
-  let isNotesDisplayed = true;
-  let isEventsDisplayed = true;
-  let isPeriodsDisplayed = true;
-  let isPropertiesDisplayed = true;
-  let isBibliographyDisplayed = true;
-  let isPropertyValuesGrouped = true;
-  let iiifViewer: "universal-viewer" | "clover" = "universal-viewer";
-
-  const navbarProperty = websiteProperties.find(
-    (property) => property.label === "navbar-displayed",
-  )?.values[0];
-  if (navbarProperty) {
-    isNavbarDisplayed = navbarProperty.content === true;
-  }
-
-  const navbarVariantProperty = websiteProperties.find(
-    (property) => property.label === "navbar-variant",
-  )?.values[0];
-  if (navbarVariantProperty) {
-    navbarVariant = navbarVariantProperty.content as
-      | "default"
-      | "floating"
-      | "inline";
-  }
-
-  const navbarAlignmentProperty = websiteProperties.find(
-    (property) => property.label === "navbar-alignment",
-  )?.values[0];
-  if (navbarAlignmentProperty) {
-    navbarAlignment = navbarAlignmentProperty.content as
-      | "start"
-      | "center"
-      | "end";
-  }
-
-  const isNavbarProjectDisplayedProperty = websiteProperties.find(
-    (property) => property.label === "navbar-project-displayed",
-  )?.values[0];
-  if (isNavbarProjectDisplayedProperty) {
-    isNavbarProjectDisplayed =
-      isNavbarProjectDisplayedProperty.content === true;
-  }
-
-  const footerProperty = websiteProperties.find(
-    (property) => property.label === "footer-displayed",
-  )?.values[0];
-  if (footerProperty) {
-    isFooterDisplayed = footerProperty.content === true;
-  }
-
-  const sidebarProperty = websiteProperties.find(
-    (property) => property.label === "sidebar-displayed",
-  )?.values[0];
-  if (sidebarProperty) {
-    isSidebarDisplayed = sidebarProperty.content === true;
-  }
-
-  const navbarSearchBarBoundElementUuid =
-    websiteProperties.find(
-      (property) => property.label === "bound-element-navbar-search-bar",
-    )?.values[0]?.uuid ?? null;
-
-  const itemPageTypeProperty = websiteProperties.find(
-    (property) =>
-      property.label === "page-type" &&
-      property.values[0]?.content === "item-page",
-  );
-  if (itemPageTypeProperty) {
-    const isItemPageMainContentDisplayedProperty =
-      itemPageTypeProperty.properties.find(
-        (property) => property.label === "item-page-main-content-displayed",
-      )?.values[0];
-    if (isItemPageMainContentDisplayedProperty) {
-      isMainContentDisplayed =
-        isItemPageMainContentDisplayedProperty.content === true;
-    }
-
-    const isItemPageDescriptionDisplayedProperty =
-      itemPageTypeProperty.properties.find(
-        (property) => property.label === "item-page-description-displayed",
-      )?.values[0];
-    if (isItemPageDescriptionDisplayedProperty) {
-      isDescriptionDisplayed =
-        isItemPageDescriptionDisplayedProperty.content === true;
-    }
-
-    const isItemPageDocumentDisplayedProperty =
-      itemPageTypeProperty.properties.find(
-        (property) => property.label === "item-page-document-displayed",
-      )?.values[0];
-    if (isItemPageDocumentDisplayedProperty) {
-      isDocumentDisplayed =
-        isItemPageDocumentDisplayedProperty.content === true;
-    }
-
-    const isItemPageNotesDisplayedProperty =
-      itemPageTypeProperty.properties.find(
-        (property) => property.label === "item-page-notes-displayed",
-      )?.values[0];
-    if (isItemPageNotesDisplayedProperty) {
-      isNotesDisplayed = isItemPageNotesDisplayedProperty.content === true;
-    }
-
-    const isItemPageEventsDisplayedProperty =
-      itemPageTypeProperty.properties.find(
-        (property) => property.label === "item-page-events-displayed",
-      )?.values[0];
-    if (isItemPageEventsDisplayedProperty) {
-      isEventsDisplayed = isItemPageEventsDisplayedProperty.content === true;
-    }
-
-    const isItemPagePeriodsDisplayedProperty =
-      itemPageTypeProperty.properties.find(
-        (property) => property.label === "item-page-periods-displayed",
-      )?.values[0];
-    if (isItemPagePeriodsDisplayedProperty) {
-      isPeriodsDisplayed = isItemPagePeriodsDisplayedProperty.content === true;
-    }
-
-    const isItemPagePropertiesDisplayedProperty =
-      itemPageTypeProperty.properties.find(
-        (property) => property.label === "item-page-properties-displayed",
-      )?.values[0];
-    if (isItemPagePropertiesDisplayedProperty) {
-      isPropertiesDisplayed =
-        isItemPagePropertiesDisplayedProperty.content === true;
-    }
-
-    const isItemPageBibliographyDisplayedProperty =
-      itemPageTypeProperty.properties.find(
-        (property) => property.label === "item-page-bibliography-displayed",
-      )?.values[0];
-    if (isItemPageBibliographyDisplayedProperty) {
-      isBibliographyDisplayed =
-        isItemPageBibliographyDisplayedProperty.content === true;
-    }
-
-    const isItemPagePropertyValuesGroupedProperty =
-      itemPageTypeProperty.properties.find(
-        (property) => property.label === "item-page-property-values-grouped",
-      )?.values[0];
-    if (isItemPagePropertyValuesGroupedProperty) {
-      isPropertyValuesGrouped =
-        isItemPagePropertyValuesGroupedProperty.content === true;
-    }
-
-    const isItemPageIiifViewerProperty = itemPageTypeProperty.properties.find(
-      (property) => property.label === "item-page-iiif-viewer",
-    )?.values[0];
-    if (isItemPageIiifViewerProperty) {
-      iiifViewer = isItemPageIiifViewerProperty.content as
-        | "universal-viewer"
-        | "clover";
-    }
-  }
-
-  const supportsThemeToggleProperty = websiteProperties.find(
-    (property) => property.label === "supports-theme-toggle",
-  )?.values[0];
-  if (supportsThemeToggleProperty) {
-    supportsThemeToggle = supportsThemeToggleProperty.content === true;
-  }
-
-  const defaultThemeProperty = websiteProperties.find(
-    (property) => property.label === "default-theme",
-  )?.values[0];
-  if (defaultThemeProperty) {
-    defaultTheme = defaultThemeProperty.content as "light" | "dark";
-  }
-
-  const {
-    type: validatedType,
-    status: validatedStatus,
-    privacy: validatedPrivacy,
-  } = result.data;
-
-  let contexts: PropertyContexts | null = null;
-  let scopes: Array<Scope> | null = null;
-  const labels: { title: string | null } = { title: null };
 
   if ("options" in websiteTree && websiteTree.options) {
-    scopes =
+    returnProperties.options.scopes =
       websiteTree.options.scopes != null ?
         (Array.isArray(websiteTree.options.scopes.scope) ?
           websiteTree.options.scopes.scope
@@ -5317,7 +5466,7 @@ function parseWebsiteProperties(
         : [websiteTree.options.prominentContexts]
       : [];
 
-    contexts = {
+    returnProperties.options.contexts = {
       flatten: parseContexts(flattenContextsRaw),
       suppress: parseContexts(suppressContextsRaw),
       filter: parseContexts(filterContextsRaw),
@@ -5334,44 +5483,14 @@ function parseWebsiteProperties(
           websiteTree.options.notes.note
         : [websiteTree.options.notes.note],
       );
-      labels.title =
+
+      returnProperties.options.labels.title =
         labelNotes.find((note) => note.title === "Title label")?.content ??
         null;
     }
   }
 
-  return {
-    type: validatedType,
-    privacy: validatedPrivacy,
-    status: validatedStatus,
-    contact,
-    isNavbarDisplayed,
-    navbarVariant,
-    navbarAlignment,
-    isNavbarProjectDisplayed,
-    isFooterDisplayed,
-    isSidebarDisplayed,
-    navbarSearchBarBoundElementUuid,
-    supportsThemeToggle,
-    defaultTheme,
-    logoUrl:
-      logoUuid !== null ?
-        `https://ochre.lib.uchicago.edu/ochre?uuid=${logoUuid}&load`
-      : null,
-    itemPage: {
-      isMainContentDisplayed,
-      isDescriptionDisplayed,
-      isDocumentDisplayed,
-      isNotesDisplayed,
-      isEventsDisplayed,
-      isPeriodsDisplayed,
-      isPropertiesDisplayed,
-      isBibliographyDisplayed,
-      isPropertyValuesGrouped,
-      iiifViewer,
-    },
-    options: { contexts, scopes, labels },
-  };
+  return returnProperties;
 }
 
 function parseContexts(
@@ -5434,13 +5553,6 @@ export function parseWebsite(
     throw new Error("Website properties not found");
   }
 
-  const properties = parseWebsiteProperties(
-    Array.isArray(websiteTree.properties.property) ?
-      websiteTree.properties.property
-    : [websiteTree.properties.property],
-    websiteTree,
-  );
-
   if (
     typeof websiteTree.items === "string" ||
     !("resource" in websiteTree.items)
@@ -5453,11 +5565,17 @@ export function parseWebsite(
       websiteTree.items.resource
     : [websiteTree.items.resource];
 
-  const pages = parseWebpages(resources);
-
-  const segments = parseSegments(resources);
+  const items = [...parseWebpages(resources), ...parseSegments(resources)];
 
   const sidebar = parseSidebar(resources);
+
+  const properties = parseWebsiteProperties(
+    Array.isArray(websiteTree.properties.property) ?
+      websiteTree.properties.property
+    : [websiteTree.properties.property],
+    websiteTree,
+    sidebar,
+  );
 
   return {
     uuid: websiteTree.uuid,
@@ -5478,8 +5596,7 @@ export function parseWebsite(
         )
       : [],
     license: parseLicense(websiteTree.availability),
-    sidebar,
-    items: [...pages, ...segments],
+    items,
     properties,
   };
 }

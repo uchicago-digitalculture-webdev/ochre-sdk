@@ -5,7 +5,6 @@ import type {
   DataCategory,
   PropertyValueContentType,
   WebElementComponent,
-  Website,
 } from "./types/main.js";
 import { isPseudoUuid } from "./utils/internal.js";
 
@@ -88,38 +87,6 @@ export const apiVersionSuffixSchema = z
   );
 
 /**
- * Schema for validating website properties
- * @internal
- */
-export const websiteSchema = z.object({
-  type: z.enum(
-    [
-      "traditional",
-      "digital-collection",
-      "plum",
-      "cedar",
-      "elm",
-      "maple",
-      "oak",
-      "palm",
-    ] as const satisfies ReadonlyArray<Website["properties"]["type"]>,
-    { error: "Invalid website type" },
-  ),
-  status: z.enum(
-    ["development", "preview", "production"] as const satisfies ReadonlyArray<
-      Website["properties"]["status"]
-    >,
-    { error: "Invalid website status" },
-  ),
-  privacy: z.enum(
-    ["public", "password", "private"] as const satisfies ReadonlyArray<
-      Website["properties"]["privacy"]
-    >,
-    { error: "Invalid website privacy" },
-  ),
-});
-
-/**
  * Valid component types for web elements
  * @internal
  */
@@ -140,7 +107,6 @@ export const componentSchema = z.enum(
     "image",
     "image-gallery",
     "map",
-    "network-graph",
     "query",
     "search-bar",
     "table",
