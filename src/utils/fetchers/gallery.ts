@@ -1,7 +1,7 @@
 import type { GalleryResponse } from "../../types/internal.raw.d.ts";
 import type { ApiVersion, Gallery } from "../../types/main.js";
 import { gallerySchema } from "../../schemas.js";
-import { parseIdentification, parseResources } from "../parse.js";
+import { parseIdentification, parseResources } from "../parse/index.js";
 
 /**
  * Fetches and parses a gallery from the OCHRE API

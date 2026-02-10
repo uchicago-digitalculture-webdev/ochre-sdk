@@ -14,7 +14,7 @@ import {
   parseSpatialUnit,
   parseText,
   parseTree,
-} from "../parse.js";
+} from "../parse/index.js";
 import { parseFakeString } from "../string.js";
 import { fetchByUuid } from "./uuid.js";
 

@@ -31,7 +31,7 @@ import {
   parseSpatialUnits,
   parseTexts,
   parseTrees,
-} from "../parse.js";
+} from "../parse/index.js";
 
 /**
  * Build an XQuery string to fetch items by property values from the OCHRE API

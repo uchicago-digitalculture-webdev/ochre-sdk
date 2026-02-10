@@ -6,7 +6,7 @@ import type {
   OchreStringRichTextItem,
   OchreStringRichTextItemContent,
 } from "../types/internal.raw.js";
-import type { Style } from "../types/main.js";
+import type { Style } from "../types/website.js";
 import {
   PRESENTATION_ITEM_UUID,
   TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID,
@@ -554,13 +554,13 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
           Array.isArray(link.resource) ? link.resource[0]! : link.resource;
 
         let linkContent: string | null = null;
-        if (linkResource.content != null) {
+        if (linkResource?.content != null) {
           linkContent = parseFakeString(linkResource.content)
             .replaceAll("<", String.raw`\<`)
             .replaceAll("{", String.raw`\{`);
         }
 
-        switch (linkResource.type) {
+        switch (linkResource?.type) {
           case "IIIF":
           case "image": {
             if (linkResource.rend === "inline") {
@@ -704,7 +704,7 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
             link.spatialUnit[0]!
           : link.spatialUnit;
 
-        if (linkSpatialUnit.publicationDateTime != null) {
+        if (linkSpatialUnit?.publicationDateTime != null) {
           return applyWhitespaceToResult(
             `<InternalLink uuid="${linkSpatialUnit.uuid}">${itemString}</InternalLink>`,
             itemWhitespace,
@@ -719,7 +719,7 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
         const linkConcept =
           Array.isArray(link.concept) ? link.concept[0]! : link.concept;
 
-        if (linkConcept.publicationDateTime != null) {
+        if (linkConcept?.publicationDateTime != null) {
           return applyWhitespaceToResult(
             `<InternalLink uuid="${linkConcept.uuid}">${itemString}</InternalLink>`,
             itemWhitespace,
@@ -733,7 +733,7 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
       } else if ("set" in link) {
         const linkSet = Array.isArray(link.set) ? link.set[0]! : link.set;
 
-        if (linkSet.publicationDateTime != null) {
+        if (linkSet?.publicationDateTime != null) {
           return applyWhitespaceToResult(
             `<InternalLink uuid="${linkSet.uuid}">${itemString}</InternalLink>`,
             itemWhitespace,
@@ -749,7 +749,7 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
           Array.isArray(link.person) ? link.person[0]! : link.person;
 
         const linkContent =
-          linkPerson.identification ?
+          linkPerson?.identification != null ?
             (
               ["string", "number", "boolean"].includes(
                 typeof linkPerson.identification.label,
@@ -761,7 +761,7 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
               )
           : null;
 
-        if (linkPerson.publicationDateTime != null) {
+        if (linkPerson?.publicationDateTime != null) {
           return applyWhitespaceToResult(
             `<InternalLink uuid="${linkPerson.uuid}">${itemString}</InternalLink>`,
             itemWhitespace,
@@ -780,7 +780,7 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
             link.bibliography[0]!
           : link.bibliography;
 
-        if (linkBibliography.publicationDateTime != null) {
+        if (linkBibliography?.publicationDateTime != null) {
           return applyWhitespaceToResult(
             `<InternalLink uuid="${linkBibliography.uuid}">${itemString}</InternalLink>`,
             itemWhitespace,

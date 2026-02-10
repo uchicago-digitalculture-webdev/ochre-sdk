@@ -4,8 +4,8 @@ import type {
   ApiVersion,
   DataCategory,
   PropertyValueContentType,
-  WebElementComponent,
 } from "./types/main.js";
+import type { WebElementComponent } from "./types/website.js";
 import { isPseudoUuid } from "./utils/internal.js";
 
 /**

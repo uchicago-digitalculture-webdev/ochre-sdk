@@ -822,18 +822,3 @@ export type GalleryResponse = {
       }
     | [];
 };
-
-/**
- * Raw UUID metadata response structure
- */
-export type UuidMetadataResponse = {
-  result: {
-    item: {
-      identification: OchreIdentification;
-      type: string;
-      category?: string;
-      maxLength?: number;
-    };
-    project: { identification: OchreIdentification };
-  };
-};
