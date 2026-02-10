@@ -3,7 +3,6 @@ import antfu from "@antfu/eslint-config";
 export default antfu({
   stylistic: false,
   markdown: false,
-  node: true,
   typescript: {
     parserOptions: {
       tsconfigRootDir: import.meta.dirname,
@@ -81,8 +80,6 @@ export default antfu({
   rules: {
     "no-console": ["warn"],
     "antfu/no-top-level-await": ["off"],
-    "node/prefer-global/process": ["off"],
-    "node/no-process-env": ["error"],
     "jsonc/sort-keys": "off",
     "pnpm/json-enforce-catalog": "off",
     "pnpm/yaml-enforce-settings": "off",
