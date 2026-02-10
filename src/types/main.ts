@@ -203,6 +203,7 @@ export type FileFormat =
   | "image/bmp"
   | "image/png"
   | "image/svg+xml"
+  | "image/vnd.microsoft.icon"
   | "image/jpeg-imageMap"
   | "image/gif-imageMap"
   | "image/tiff-imageMap"
