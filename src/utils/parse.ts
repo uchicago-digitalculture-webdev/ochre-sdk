@@ -96,7 +96,109 @@ import {
   parseStringDocumentItem,
 } from "../utils/string.js";
 import { DEFAULT_API_VERSION } from "./helpers.js";
-import { getItemCategories, getItemCategory } from "./internal.js";
+import {
+  ensureArray,
+  getItemCategories,
+  getItemCategory,
+  isFakeString,
+  parseCitation,
+  parseFakeStringOrContent,
+  parseOptionalDate,
+} from "./internal.js";
+
+/**
+ * Extracts CSS style properties for a given presentation variant.
+ *
+ * @param properties - Array of properties to parse
+ * @param cssVariant - CSS variant to parse
+ * @returns Array of CSS styles
+ */
+function parseCssStylesFromProperties(
+  properties: Array<Property>,
+  cssVariant?: string,
+): Array<Style> {
+  const label = cssVariant != null ? `css-${cssVariant}` : "css";
+  const cssProperties =
+    getPropertyByLabelAndValue(properties, "presentation", label)?.properties ??
+    [];
+  const styles: Array<Style> = [];
+  for (const property of cssProperties) {
+    const value = property.values[0]?.content?.toString();
+    if (value != null) {
+      styles.push({ label: property.label, value });
+    }
+  }
+  return styles;
+}
+
+/**
+ * Parses responsive CSS styles (default, tablet, mobile) from properties.
+ *
+ * @param properties - Array of properties to parse
+ * @returns Object containing responsive CSS styles
+ */
+function parseResponsiveCssStyles(properties: Array<Property>): {
+  default: Array<Style>;
+  tablet: Array<Style>;
+  mobile: Array<Style>;
+} {
+  return {
+    default: parseCssStylesFromProperties(properties),
+    tablet: parseCssStylesFromProperties(properties, "tablet"),
+    mobile: parseCssStylesFromProperties(properties, "mobile"),
+  };
+}
+
+/**
+ * Parses all context option arrays from an options object.
+ *
+ * @param options - Options object containing context options
+ * @param options.flattenContexts - Flatten contexts
+ * @param options.suppressContexts - Suppress contexts
+ * @param options.filterContexts - Filter contexts
+ * @param options.sortContexts - Sort contexts
+ * @param options.detailContexts - Detail contexts
+ * @param options.downloadContexts - Download contexts
+ * @param options.labelContexts - Label contexts
+ * @param options.prominentContexts - Prominent contexts
+ * @returns Parsed context options
+ */
+function parseAllOptionContexts(options: {
+  flattenContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
+  suppressContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
+  filterContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
+  sortContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
+  detailContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
+  downloadContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
+  labelContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
+  prominentContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
+}): {
+  flatten: Array<LevelContext>;
+  suppress: Array<LevelContext>;
+  filter: Array<LevelContext>;
+  sort: Array<LevelContext>;
+  detail: Array<LevelContext>;
+  download: Array<LevelContext>;
+  label: Array<LevelContext>;
+  prominent: Array<LevelContext>;
+} {
+  function handleContexts(
+    v: OchreLevelContext | Array<OchreLevelContext> | null | undefined,
+  ): Array<LevelContext> {
+    return parseContexts(v != null ? ensureArray(v) : []);
+  }
+
+  return {
+    flatten: handleContexts(options.flattenContexts),
+    suppress: handleContexts(options.suppressContexts),
+    filter: handleContexts(options.filterContexts),
+    sort: handleContexts(options.sortContexts),
+    detail: handleContexts(options.detailContexts),
+    download: handleContexts(options.downloadContexts),
+    label: handleContexts(options.labelContexts),
+    prominent: handleContexts(options.prominentContexts),
+  };
+}
 
 /**
  * Parses raw identification data into the standardized Identification type
@@ -108,34 +210,23 @@ export function parseIdentification(
   identification: OchreIdentification,
 ): Identification {
   try {
-    const returnIdentification: Identification = {
-      label:
-        ["string", "number", "boolean"].includes(typeof identification.label) ?
-          parseFakeString(identification.label as FakeString)
-        : parseStringContent(identification.label as OchreStringContent),
+    const result: Identification = {
+      label: parseFakeStringOrContent(identification.label),
       abbreviation: "",
       code: identification.code ?? null,
     };
 
-    for (const key of Object.keys(identification).filter(
-      (key) => key !== "label" && key !== "code",
-    )) {
-      returnIdentification[key as keyof Identification] =
-        typeof identification[key as keyof OchreIdentification] === "string" ?
-          parseFakeString(
-            identification[key as keyof OchreIdentification]! as FakeString,
-          )
-        : parseStringContent(
-            identification[
-              key as keyof OchreIdentification
-            ]! as OchreStringContent,
-          );
+    for (const key of Object.keys(identification)) {
+      if (key === "label" || key === "code") continue;
+      const raw = identification[key as keyof OchreIdentification]!;
+      result[key as keyof Identification] = parseFakeStringOrContent(
+        raw as FakeString | OchreStringContent,
+      );
     }
 
-    return returnIdentification;
+    return result;
   } catch (error) {
     console.error(error);
-
     return { label: "", abbreviation: "", code: null };
   }
 }
@@ -181,74 +272,52 @@ export function parseMetadata(metadata: OchreMetadata): Metadata {
   };
   if (metadata.item) {
     if (metadata.item.label || metadata.item.abbreviation) {
-      let label = "";
-      let abbreviation = "";
-      let code: string | null = null;
-
-      if (metadata.item.label) {
-        label = parseStringContent(metadata.item.label);
-      }
-      if (metadata.item.abbreviation) {
-        abbreviation = parseStringContent(metadata.item.abbreviation);
-      }
-      if (metadata.item.identification.code) {
-        code = metadata.item.identification.code;
-      }
-
-      identification = { label, abbreviation, code };
+      identification = {
+        label:
+          metadata.item.label ? parseStringContent(metadata.item.label) : "",
+        abbreviation:
+          metadata.item.abbreviation ?
+            parseStringContent(metadata.item.abbreviation)
+          : "",
+        code: metadata.item.identification.code ?? null,
+      };
     } else {
       identification = parseIdentification(metadata.item.identification);
     }
   }
 
-  let projectIdentification:
-    | (Identification & { website: string | null })
-    | null = null;
-  const baseProjectIdentification =
+  const projectId =
     metadata.project?.identification ?
       parseIdentification(metadata.project.identification)
     : null;
-  if (baseProjectIdentification) {
-    projectIdentification = {
-      ...baseProjectIdentification,
-      website: metadata.project?.identification.website ?? null,
-    };
-  }
-
-  let collectionIdentification: Identification | null = null;
-  if (metadata.collection) {
-    collectionIdentification = parseIdentification(
-      metadata.collection.identification,
-    );
-  }
-
-  let publicationIdentification: Identification | null = null;
-  if (metadata.publication) {
-    publicationIdentification = parseIdentification(
-      metadata.publication.identification,
-    );
-  }
 
   return {
     project:
-      projectIdentification ?
+      projectId ?
         {
-          identification: projectIdentification,
+          identification: {
+            ...projectId,
+            website: metadata.project?.identification.website ?? null,
+          },
           dateFormat: metadata.project?.dateFormat ?? null,
           page: metadata.project?.page ?? null,
         }
       : null,
     collection:
-      metadata.collection != null && collectionIdentification ?
+      metadata.collection ?
         {
-          identification: collectionIdentification,
+          identification: parseIdentification(
+            metadata.collection.identification,
+          ),
           page: metadata.collection.page,
         }
       : null,
     publication:
-      metadata.publication != null && publicationIdentification ?
+      metadata.publication ?
         {
-          identification: publicationIdentification,
+          identification: parseIdentification(
+            metadata.publication.identification,
+          ),
           page: metadata.publication.page,
         }
       : null,
@@ -261,23 +330,11 @@ export function parseMetadata(metadata: OchreMetadata): Metadata {
           maxLength: metadata.item.maxLength ?? null,
         }
       : null,
-    dataset:
-      typeof metadata.dataset === "object" ?
-        parseStringContent(metadata.dataset)
-      : parseFakeString(metadata.dataset),
-    publisher:
-      typeof metadata.publisher === "object" ?
-        parseStringContent(metadata.publisher)
-      : parseFakeString(metadata.publisher),
+    dataset: parseFakeStringOrContent(metadata.dataset),
+    publisher: parseFakeStringOrContent(metadata.publisher),
     languages: parseLanguages(metadata.language),
-    identifier:
-      typeof metadata.identifier === "object" ?
-        parseStringContent(metadata.identifier)
-      : parseFakeString(metadata.identifier),
-    description:
-      typeof metadata.description === "object" ?
-        parseStringContent(metadata.description)
-      : parseFakeString(metadata.description),
+    identifier: parseFakeStringOrContent(metadata.identifier),
+    description: parseFakeStringOrContent(metadata.description),
   };
 }
 
@@ -290,10 +347,7 @@ export function parseMetadata(metadata: OchreMetadata): Metadata {
 function parseContextItem(contextItem: OchreContextItem): ContextItem {
   return {
     uuid: contextItem.uuid,
-    publicationDateTime:
-      contextItem.publicationDateTime != null ?
-        parseISO(contextItem.publicationDateTime)
-      : null,
+    publicationDateTime: parseOptionalDate(contextItem.publicationDateTime),
     number: contextItem.n,
     content: parseFakeString(contextItem.content),
   };
@@ -306,33 +360,19 @@ function parseContextItem(contextItem: OchreContextItem): ContextItem {
  * @returns Parsed Context object
  */
 export function parseContext(context: OchreContext): Context {
-  const contexts =
-    Array.isArray(context.context) ? context.context : [context.context];
-
-  const returnContexts: Context = {
-    nodes: contexts.map((context) => {
-      const spatialUnit: Array<ContextItem> = [];
-      if ("spatialUnit" in context && context.spatialUnit) {
-        const contextsToParse =
-          Array.isArray(context.spatialUnit) ?
-            context.spatialUnit
-          : [context.spatialUnit];
-
-        for (const contextItem of contextsToParse) {
-          spatialUnit.push(parseContextItem(contextItem));
-        }
-      }
-
-      return {
-        tree: parseContextItem(context.tree),
-        project: parseContextItem(context.project),
-        spatialUnit,
-      };
-    }),
+  return {
+    nodes: ensureArray(context.context).map((ctx) => ({
+      tree: parseContextItem(ctx.tree),
+      project: parseContextItem(ctx.project),
+      spatialUnit:
+        "spatialUnit" in ctx && ctx.spatialUnit ?
+          ensureArray(ctx.spatialUnit).map((element) =>
+            parseContextItem(element),
+          )
+        : [],
+    })),
     displayPath: context.displayPath,
   };
-
-  return returnContexts;
 }
 
 /**
@@ -366,10 +406,7 @@ export function parsePerson(
     category: "person",
     belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
-    publicationDateTime:
-      person.publicationDateTime != null ?
-        parseISO(person.publicationDateTime)
-      : null,
+    publicationDateTime: parseOptionalDate(person.publicationDateTime),
     persistentUrl: persistentUrl ?? null,
     type: person.type ?? null,
     number: person.n ?? null,
@@ -389,52 +426,19 @@ export function parsePerson(
         }
       : null,
     description:
-      person.description ?
-        (
-          typeof person.description === "string" ||
-          typeof person.description === "number" ||
-          typeof person.description === "boolean"
-        ) ?
-          parseFakeString(person.description)
-        : parseStringContent(person.description)
-      : null,
+      person.description ? parseFakeStringOrContent(person.description) : null,
     coordinates: parseCoordinates(person.coordinates),
     content: person.content != null ? parseFakeString(person.content) : null,
-    notes:
-      person.notes ?
-        parseNotes(
-          Array.isArray(person.notes.note) ?
-            person.notes.note
-          : [person.notes.note],
-        )
-      : [],
-    links:
-      person.links ?
-        parseLinks(Array.isArray(person.links) ? person.links : [person.links])
-      : [],
-    events:
-      person.events ?
-        parseEvents(
-          Array.isArray(person.events.event) ?
-            person.events.event
-          : [person.events.event],
-        )
-      : [],
+    notes: person.notes ? parseNotes(ensureArray(person.notes.note)) : [],
+    links: person.links ? parseLinks(ensureArray(person.links)) : [],
+    events: person.events ? parseEvents(ensureArray(person.events.event)) : [],
     properties:
       person.properties ?
-        parseProperties(
-          Array.isArray(person.properties.property) ?
-            person.properties.property
-          : [person.properties.property],
-        )
+        parseProperties(ensureArray(person.properties.property))
       : [],
     bibliographies:
       person.bibliographies ?
-        parseBibliographies(
-          Array.isArray(person.bibliographies.bibliography) ?
-            person.bibliographies.bibliography
-          : [person.bibliographies.bibliography],
-        )
+        parseBibliographies(ensureArray(person.bibliographies.bibliography))
       : [],
   };
 }
@@ -446,13 +450,7 @@ export function parsePerson(
  * @returns Array of parsed Person objects
  */
 export function parsePersons(persons: Array<OchrePerson>): Array<Person> {
-  const returnPersons: Array<Person> = [];
-
-  for (const person of persons) {
-    returnPersons.push(parsePerson(person));
-  }
-
-  return returnPersons;
+  return persons.map((person) => parsePerson(person));
 }
 
 /**
@@ -462,44 +460,36 @@ export function parsePersons(persons: Array<OchrePerson>): Array<Person> {
  * @returns Parsed Link object
  */
 export function parseLink(linkRaw: OchreLink): Array<Link> {
-  const links =
-    "resource" in linkRaw ? linkRaw.resource
-    : "spatialUnit" in linkRaw ? linkRaw.spatialUnit
-    : "concept" in linkRaw ? linkRaw.concept
-    : "set" in linkRaw ? linkRaw.set
-    : "tree" in linkRaw ? linkRaw.tree
-    : "person" in linkRaw ? linkRaw.person
-    : "bibliography" in linkRaw ? linkRaw.bibliography
-    : "propertyVariable" in linkRaw ? linkRaw.propertyVariable
-    : "propertyValue" in linkRaw ? linkRaw.propertyValue
-    : null;
-  if (!links) {
+  const linkCategoryKeys = [
+    "resource",
+    "spatialUnit",
+    "concept",
+    "set",
+    "tree",
+    "person",
+    "bibliography",
+    "propertyVariable",
+    "propertyValue",
+  ] as const;
+
+  const categoryKey = linkCategoryKeys.find((key) => key in linkRaw);
+  if (!categoryKey) {
     throw new Error(
       `Invalid link provided: ${JSON.stringify(linkRaw, null, 2)}`,
     );
   }
 
-  const linksToParse = Array.isArray(links) ? links : [links];
-  const returnLinks: Array<Link> = [];
+  const links = linkRaw[categoryKey];
+  if (links == null) {
+    return [];
+  }
 
-  for (const link of linksToParse) {
+  return ensureArray(links).map((link) => {
     const returnLink: Link = {
-      category:
-        "resource" in linkRaw ? "resource"
-        : "spatialUnit" in linkRaw ? "spatialUnit"
-        : "concept" in linkRaw ? "concept"
-        : "set" in linkRaw ? "set"
-        : "person" in linkRaw ? "person"
-        : "tree" in linkRaw ? "tree"
-        : "bibliography" in linkRaw ? "bibliography"
-        : "propertyVariable" in linkRaw ? "propertyVariable"
-        : "propertyValue" in linkRaw ? "propertyValue"
-        : null,
+      category: categoryKey,
       content:
-        "content" in link ?
-          link.content != null ?
-            parseFakeString(link.content)
-          : null
+        "content" in link && link.content != null ?
+          parseFakeString(link.content)
         : null,
       href: "href" in link && link.href != null ? link.href : null,
       fileFormat:
@@ -518,17 +508,10 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
         : null,
       image: null,
       bibliographies:
-        "bibliography" in linkRaw ?
-          parseBibliographies(
-            Array.isArray(linkRaw.bibliography) ?
-              linkRaw.bibliography
-            : [linkRaw.bibliography],
-          )
+        "bibliography" in linkRaw && linkRaw.bibliography != null ?
+          parseBibliographies(ensureArray(linkRaw.bibliography))
         : null,
-      publicationDateTime:
-        link.publicationDateTime != null ?
-          parseISO(link.publicationDateTime)
-        : null,
+      publicationDateTime: parseOptionalDate(link.publicationDateTime),
     };
 
     if (
@@ -548,10 +531,8 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
       };
     }
 
-    returnLinks.push(returnLink);
-  }
-
-  return returnLinks;
+    return returnLink;
+  });
 }
 
 /**
@@ -561,13 +542,11 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
  * @returns Array of parsed Link objects
  */
 export function parseLinks(links: Array<OchreLink>): Array<Link> {
-  const returnLinks: Array<Link> = [];
-
+  const result: Array<Link> = [];
   for (const link of links) {
-    returnLinks.push(...parseLink(link));
+    result.push(...parseLink(link));
   }
-
-  return returnLinks;
+  return result;
 }
 
 /**
@@ -581,30 +560,20 @@ export function parseDocument(
   document: OchreStringRichText | Array<OchreStringRichText>,
   language = "eng",
 ): string {
-  let returnString = "";
-  const documentWithLanguage =
+  const doc =
     Array.isArray(document) ?
-      document.find((doc) => doc.lang === language)!
+      document.find((d) => d.lang === language)!
     : document;
 
-  if (
-    typeof documentWithLanguage.string === "string" ||
-    typeof documentWithLanguage.string === "number" ||
-    typeof documentWithLanguage.string === "boolean"
-  ) {
-    returnString += parseEmail(parseFakeString(documentWithLanguage.string));
-  } else {
-    const documentItems =
-      Array.isArray(documentWithLanguage.string) ?
-        documentWithLanguage.string
-      : [documentWithLanguage.string];
-
-    for (const item of documentItems) {
-      returnString += parseStringDocumentItem(item);
-    }
+  if (isFakeString(doc.string)) {
+    return parseEmail(parseFakeString(doc.string));
   }
 
-  return returnString;
+  let result = "";
+  for (const item of ensureArray(doc.string)) {
+    result += parseStringDocumentItem(item);
+  }
+  return result;
 }
 
 /**
@@ -615,10 +584,7 @@ export function parseDocument(
  */
 export function parseImage(image: OchreImage): Image | null {
   return {
-    publicationDateTime:
-      image.publicationDateTime != null ?
-        parseISO(image.publicationDateTime)
-      : null,
+    publicationDateTime: parseOptionalDate(image.publicationDateTime),
     identification:
       image.identification ? parseIdentification(image.identification) : null,
     url:
@@ -649,61 +615,39 @@ export function parseNotes(
   notes: Array<OchreNote>,
   language = "eng",
 ): Array<Note> {
-  const returnNotes: Array<Note> = [];
+  const result: Array<Note> = [];
+
   for (const note of notes) {
     if (typeof note === "string") {
-      if (note === "") {
-        continue;
+      if (note !== "") {
+        result.push({
+          number: -1,
+          title: null,
+          date: null,
+          authors: [],
+          content: note,
+        });
       }
-
-      returnNotes.push({
-        number: -1,
-        title: null,
-        date: null,
-        authors: [],
-        content: note,
-      });
       continue;
     }
 
-    let content = "";
+    const notesToParse = note.content != null ? ensureArray(note.content) : [];
+    if (notesToParse.length === 0) continue;
 
-    const notesToParse =
-      note.content != null ?
-        Array.isArray(note.content) ?
-          note.content
-        : [note.content]
-      : [];
-
-    if (notesToParse.length === 0) {
-      continue;
-    }
-
-    let noteWithLanguage = notesToParse.find((item) => item.lang === language);
+    const noteWithLanguage =
+      notesToParse.find((item) => item.lang === language) ?? notesToParse[0];
     if (!noteWithLanguage) {
-      noteWithLanguage = notesToParse[0];
-      if (!noteWithLanguage) {
-        throw new Error(
-          `Note does not have a valid content item: ${JSON.stringify(
-            note,
-            null,
-            2,
-          )}`,
-        );
-      }
+      throw new Error(
+        `Note does not have a valid content item: ${JSON.stringify(note, null, 2)}`,
+      );
     }
 
-    if (
-      typeof noteWithLanguage.string === "string" ||
-      typeof noteWithLanguage.string === "number" ||
-      typeof noteWithLanguage.string === "boolean"
-    ) {
-      content = parseEmail(parseFakeString(noteWithLanguage.string));
-    } else {
-      content = parseEmail(parseDocument(noteWithLanguage));
-    }
+    const content =
+      isFakeString(noteWithLanguage.string) ?
+        parseEmail(parseFakeString(noteWithLanguage.string))
+      : parseEmail(parseDocument(noteWithLanguage));
 
-    returnNotes.push({
+    result.push({
       number: note.noteNo,
       title:
         noteWithLanguage.title != null ?
@@ -711,18 +655,12 @@ export function parseNotes(
         : null,
       date: note.date ?? null,
       authors:
-        note.authors ?
-          parsePersons(
-            Array.isArray(note.authors.author) ?
-              note.authors.author
-            : [note.authors.author],
-          )
-        : [],
+        note.authors ? parsePersons(ensureArray(note.authors.author)) : [],
       content,
     });
   }
 
-  return returnNotes;
+  return result;
 }
 
 /**
@@ -738,12 +676,9 @@ export function parseCoordinates(
     return [];
   }
 
-  const returnCoordinates: Array<Coordinate> = [];
+  const result: Array<Coordinate> = [];
 
-  const coordsToParse =
-    Array.isArray(coordinates.coord) ? coordinates.coord : [coordinates.coord];
-
-  for (const coord of coordsToParse) {
+  for (const coord of ensureArray(coordinates.coord)) {
     const source: Coordinate["source"] =
       "source" in coord && coord.source ?
         coord.source.context === "self" ?
@@ -772,7 +707,7 @@ export function parseCoordinates(
 
     switch (coord.type) {
       case "point": {
-        returnCoordinates.push({
+        result.push({
           type: coord.type,
           latitude: coord.latitude,
           longitude: coord.longitude,
@@ -782,9 +717,8 @@ export function parseCoordinates(
         break;
       }
       case "plane": {
-        returnCoordinates.push({
+        result.push({
           type: coord.type,
-
           minimum: {
             latitude: coord.minimum.latitude,
             longitude: coord.minimum.longitude,
@@ -800,7 +734,7 @@ export function parseCoordinates(
     }
   }
 
-  return returnCoordinates;
+  return result;
 }
 
 /**
@@ -815,50 +749,23 @@ export function parseObservation(observation: OchreObservation): Observation {
     date: observation.date ?? null,
     observers:
       observation.observers != null ?
-        (
-          typeof observation.observers === "string" ||
-          typeof observation.observers === "number" ||
-          typeof observation.observers === "boolean"
-        ) ?
+        isFakeString(observation.observers) ?
           parseFakeString(observation.observers)
             .split(";")
             .map((observer) => observer.trim())
-        : parsePersons(
-            Array.isArray(observation.observers) ?
-              observation.observers
-            : [observation.observers],
-          )
+        : parsePersons(ensureArray(observation.observers))
       : [],
     notes:
-      observation.notes ?
-        parseNotes(
-          Array.isArray(observation.notes.note) ?
-            observation.notes.note
-          : [observation.notes.note],
-        )
-      : [],
-    links:
-      observation.links ?
-        parseLinks(
-          Array.isArray(observation.links) ?
-            observation.links
-          : [observation.links],
-        )
-      : [],
+      observation.notes ? parseNotes(ensureArray(observation.notes.note)) : [],
+    links: observation.links ? parseLinks(ensureArray(observation.links)) : [],
     properties:
       observation.properties ?
-        parseProperties(
-          Array.isArray(observation.properties.property) ?
-            observation.properties.property
-          : [observation.properties.property],
-        )
+        parseProperties(ensureArray(observation.properties.property))
       : [],
     bibliographies:
       observation.bibliographies ?
         parseBibliographies(
-          Array.isArray(observation.bibliographies.bibliography) ?
-            observation.bibliographies.bibliography
-          : [observation.bibliographies.bibliography],
+          ensureArray(observation.bibliographies.bibliography),
         )
       : [],
   };
@@ -873,12 +780,7 @@ export function parseObservation(observation: OchreObservation): Observation {
 export function parseObservations(
   observations: Array<OchreObservation>,
 ): Array<Observation> {
-  const returnObservations: Array<Observation> = [];
-
-  for (const observation of observations) {
-    returnObservations.push(parseObservation(observation));
-  }
-  return returnObservations;
+  return observations.map((obs) => parseObservation(obs));
 }
 
 /**
@@ -888,51 +790,43 @@ export function parseObservations(
  * @returns Array of parsed Event objects
  */
 export function parseEvents(events: Array<OchreEvent>): Array<Event> {
-  const returnEvents: Array<Event> = [];
-
-  for (const event of events) {
-    returnEvents.push({
-      dateTime:
-        event.endDateTime != null ?
-          `${event.dateTime}/${event.endDateTime}`
-        : (event.dateTime ?? null),
-      label: parseStringContent(event.label),
-      location:
-        event.location ?
-          {
-            uuid: event.location.uuid,
-            publicationDateTime:
-              event.location.publicationDateTime != null ?
-                parseISO(event.location.publicationDateTime)
-              : null,
-            content: parseStringContent(event.location),
-          }
-        : null,
-      agent:
-        event.agent ?
-          {
-            uuid: event.agent.uuid,
-            publicationDateTime:
-              event.agent.publicationDateTime != null ?
-                parseISO(event.agent.publicationDateTime)
-              : null,
-            content: parseStringContent(event.agent),
-          }
-        : null,
-      comment: event.comment ? parseStringContent(event.comment) : null,
-      other:
-        event.other != null ?
-          {
-            uuid: event.other.uuid ?? null,
-            category: event.other.category ?? null,
-            content: parseStringContent(event.other),
-          }
-        : null,
-      value: event.value ? parseFakeString(event.value) : null,
-    });
-  }
-
-  return returnEvents;
+  return events.map((event) => ({
+    dateTime:
+      event.endDateTime != null ?
+        `${event.dateTime}/${event.endDateTime}`
+      : (event.dateTime ?? null),
+    label: parseStringContent(event.label),
+    location:
+      event.location ?
+        {
+          uuid: event.location.uuid,
+          publicationDateTime: parseOptionalDate(
+            event.location.publicationDateTime,
+          ),
+          content: parseStringContent(event.location),
+        }
+      : null,
+    agent:
+      event.agent ?
+        {
+          uuid: event.agent.uuid,
+          publicationDateTime: parseOptionalDate(
+            event.agent.publicationDateTime,
+          ),
+          content: parseStringContent(event.agent),
+        }
+      : null,
+    comment: event.comment ? parseStringContent(event.comment) : null,
+    other:
+      event.other != null ?
+        {
+          uuid: event.other.uuid ?? null,
+          category: event.other.category ?? null,
+          content: parseStringContent(event.other),
+        }
+      : null,
+    value: event.value ? parseFakeString(event.value) : null,
+  }));
 }
 
 export function parseProperty(
@@ -940,21 +834,13 @@ export function parseProperty(
   language = "eng",
 ): Property {
   const valuesToParse =
-    "value" in property && property.value ?
-      Array.isArray(property.value) ?
-        property.value
-      : [property.value]
-    : [];
+    "value" in property && property.value ? ensureArray(property.value) : [];
 
   const values = valuesToParse.map((value) => {
     let content: string | number | boolean | Date | null = null;
     let label: string | null = null;
 
-    if (
-      typeof value === "string" ||
-      typeof value === "number" ||
-      typeof value === "boolean"
-    ) {
+    if (isFakeString(value)) {
       content = parseFakeString(value);
       const returnValue: PropertyValueContent<"string"> = {
         hierarchy: { isLeaf: true, level: null },
@@ -1069,10 +955,7 @@ export function parseProperty(
         category: value.category ?? null,
         type: value.type ?? null,
         uuid: value.uuid ?? null,
-        publicationDateTime:
-          value.publicationDateTime != null ?
-            parseISO(value.publicationDateTime)
-          : null,
+        publicationDateTime: parseOptionalDate(value.publicationDateTime),
         unit: value.unit ?? null,
         height: value.height ?? null,
         width: value.width ?? null,
@@ -1094,13 +977,7 @@ export function parseProperty(
     comment:
       property.comment != null ? parseStringContent(property.comment) : null,
     properties:
-      property.property ?
-        parseProperties(
-          Array.isArray(property.property) ?
-            property.property
-          : [property.property],
-        )
-      : [],
+      property.property ? parseProperties(ensureArray(property.property)) : [],
   };
 }
 
@@ -1115,13 +992,7 @@ export function parseProperties(
   properties: Array<OchreProperty>,
   language = "eng",
 ): Array<Property> {
-  const returnProperties: Array<Property> = [];
-
-  for (const property of properties) {
-    returnProperties.push(parseProperty(property, language));
-  }
-
-  return returnProperties;
+  return properties.map((prop) => parseProperty(prop, language));
 }
 
 /**
@@ -1133,40 +1004,19 @@ export function parseProperties(
 export function parseInterpretations(
   interpretations: Array<OchreInterpretation>,
 ): Array<Interpretation> {
-  const returnInterpretations: Array<Interpretation> = [];
-
-  for (const interpretation of interpretations) {
-    returnInterpretations.push({
-      date: interpretation.date ?? null,
-      number: interpretation.interpretationNo,
-      links:
-        interpretation.links ?
-          parseLinks(
-            Array.isArray(interpretation.links) ?
-              interpretation.links
-            : [interpretation.links],
-          )
-        : [],
-      properties:
-        interpretation.properties ?
-          parseProperties(
-            Array.isArray(interpretation.properties.property) ?
-              interpretation.properties.property
-            : [interpretation.properties.property],
-          )
-        : [],
-      bibliographies:
-        interpretation.bibliographies ?
-          parseBibliographies(
-            Array.isArray(interpretation.bibliographies.bibliography) ?
-              interpretation.bibliographies.bibliography
-            : [interpretation.bibliographies.bibliography],
-          )
-        : [],
-    });
-  }
-
-  return returnInterpretations;
+  return interpretations.map((interp) => ({
+    date: interp.date ?? null,
+    number: interp.interpretationNo,
+    links: interp.links ? parseLinks(ensureArray(interp.links)) : [],
+    properties:
+      interp.properties ?
+        parseProperties(ensureArray(interp.properties.property))
+      : [],
+    bibliographies:
+      interp.bibliographies ?
+        parseBibliographies(ensureArray(interp.bibliographies.bibliography))
+      : [],
+  }));
 }
 
 /**
@@ -1176,21 +1026,12 @@ export function parseInterpretations(
  * @returns Parsed ImageMap object
  */
 export function parseImageMap(imageMap: OchreImageMap): ImageMap {
-  const returnImageMap: ImageMap = {
-    area: [],
+  return {
     width: imageMap.width,
     height: imageMap.height,
-  };
-
-  const imageMapAreasToParse =
-    Array.isArray(imageMap.area) ? imageMap.area : [imageMap.area];
-  for (const area of imageMapAreasToParse) {
-    returnImageMap.area.push({
+    area: ensureArray(imageMap.area).map((area) => ({
       uuid: area.uuid,
-      publicationDateTime:
-        area.publicationDateTime != null ?
-          parseISO(area.publicationDateTime)
-        : null,
+      publicationDateTime: parseOptionalDate(area.publicationDateTime),
       category: area.type,
       title: parseFakeString(area.title),
       shape:
@@ -1199,10 +1040,8 @@ export function parseImageMap(imageMap: OchreImageMap): ImageMap {
         : "polygon",
       coords: area.coords.split(",").map((coord) => Number.parseInt(coord)),
       slug: area.slug ? parseFakeString(area.slug) : null,
-    });
-  }
-
-  return returnImageMap;
+    })),
+  };
 }
 
 /**
@@ -1222,10 +1061,7 @@ export function parsePeriod(
     category: "period",
     belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
-    publicationDateTime:
-      period.publicationDateTime != null ?
-        parseISO(period.publicationDateTime)
-      : null,
+    publicationDateTime: parseOptionalDate(period.publicationDateTime),
     persistentUrl: persistentUrl ?? null,
     type: period.type ?? null,
     number: period.n ?? null,
@@ -1243,13 +1079,7 @@ export function parsePeriod(
  * @returns Array of parsed Period objects
  */
 export function parsePeriods(periods: Array<OchrePeriod>): Array<Period> {
-  const returnPeriods: Array<Period> = [];
-
-  for (const period of periods) {
-    returnPeriods.push(parsePeriod(period));
-  }
-
-  return returnPeriods;
+  return periods.map((period) => parsePeriod(period));
 }
 
 /**
@@ -1264,48 +1094,17 @@ export function parseBibliography(
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
 ): Bibliography {
-  const sourceResources: Bibliography["sourceResources"] = [];
-  if (bibliography.source?.resource) {
-    const resourcesToParse =
-      Array.isArray(bibliography.source.resource) ?
-        bibliography.source.resource
-      : [bibliography.source.resource];
-    for (const resource of resourcesToParse) {
-      sourceResources.push({
+  const sourceResources: Bibliography["sourceResources"] =
+    bibliography.source?.resource ?
+      ensureArray(bibliography.source.resource).map((resource) => ({
         uuid: resource.uuid,
-        category: "resource",
+        category: "resource" as const,
         publicationDateTime: parseISO(resource.publicationDateTime),
         type: resource.type,
         identification: parseIdentification(resource.identification),
         href: resource.href ?? null,
-      });
-    }
-  }
-
-  let shortCitation = null;
-  let longCitation = null;
-  if (bibliography.citationFormatSpan) {
-    try {
-      shortCitation = (
-        JSON.parse(`"${bibliography.citationFormatSpan}"`) as string
-      )
-        .replaceAll("&lt;", "<")
-        .replaceAll("&gt;", ">");
-    } catch {
-      shortCitation = bibliography.citationFormatSpan;
-    }
-  }
-  if (bibliography.referenceFormatDiv) {
-    try {
-      longCitation = (
-        JSON.parse(`"${bibliography.referenceFormatDiv}"`) as string
-      )
-        .replaceAll("&lt;", "<")
-        .replaceAll("&gt;", ">");
-    } catch {
-      longCitation = bibliography.referenceFormatDiv;
-    }
-  }
+      }))
+    : [];
 
   return {
     uuid: bibliography.uuid ?? null,
@@ -1313,10 +1112,7 @@ export function parseBibliography(
     zoteroId: bibliography.zoteroId ?? null,
     category: "bibliography",
     metadata: metadata ?? null,
-    publicationDateTime:
-      bibliography.publicationDateTime != null ?
-        parseISO(bibliography.publicationDateTime)
-      : null,
+    publicationDateTime: parseOptionalDate(bibliography.publicationDateTime),
     persistentUrl: persistentUrl ?? null,
     type: bibliography.type ?? null,
     number: bibliography.n ?? null,
@@ -1333,20 +1129,16 @@ export function parseBibliography(
     citation: {
       details: bibliography.citationDetails ?? null,
       format: bibliography.citationFormat ?? null,
-      short: shortCitation,
-      long: longCitation,
+      short: parseCitation(bibliography.citationFormatSpan),
+      long: parseCitation(bibliography.referenceFormatDiv),
     },
     publicationInfo: {
       publishers:
         bibliography.publicationInfo?.publishers ?
           parsePersons(
-            (
-              Array.isArray(
-                bibliography.publicationInfo.publishers.publishers.person,
-              )
-            ) ?
-              bibliography.publicationInfo.publishers.publishers.person
-            : [bibliography.publicationInfo.publishers.publishers.person],
+            ensureArray(
+              bibliography.publicationInfo.publishers.publishers.person,
+            ),
           )
         : [],
       startDate:
@@ -1368,43 +1160,21 @@ export function parseBibliography(
     sourceResources,
     periods:
       bibliography.periods ?
-        parsePeriods(
-          Array.isArray(bibliography.periods.period) ?
-            bibliography.periods.period
-          : [bibliography.periods.period],
-        )
+        parsePeriods(ensureArray(bibliography.periods.period))
       : [],
     authors:
       bibliography.authors ?
-        parsePersons(
-          Array.isArray(bibliography.authors.person) ?
-            bibliography.authors.person
-          : [bibliography.authors.person],
-        )
+        parsePersons(ensureArray(bibliography.authors.person))
       : [],
     links:
-      bibliography.links ?
-        parseLinks(
-          Array.isArray(bibliography.links) ?
-            bibliography.links
-          : [bibliography.links],
-        )
-      : [],
+      bibliography.links ? parseLinks(ensureArray(bibliography.links)) : [],
     reverseLinks:
       bibliography.reverseLinks ?
-        parseLinks(
-          Array.isArray(bibliography.reverseLinks) ?
-            bibliography.reverseLinks
-          : [bibliography.reverseLinks],
-        )
+        parseLinks(ensureArray(bibliography.reverseLinks))
       : [],
     properties:
       bibliography.properties ?
-        parseProperties(
-          Array.isArray(bibliography.properties.property) ?
-            bibliography.properties.property
-          : [bibliography.properties.property],
-        )
+        parseProperties(ensureArray(bibliography.properties.property))
       : [],
   };
 }
@@ -1429,10 +1199,9 @@ export function parsePropertyVariable(
     persistentUrl: persistentUrl ?? null,
     type: propertyVariable.type,
     number: propertyVariable.n,
-    publicationDateTime:
-      propertyVariable.publicationDateTime ?
-        parseISO(propertyVariable.publicationDateTime)
-      : null,
+    publicationDateTime: parseOptionalDate(
+      propertyVariable.publicationDateTime,
+    ),
     context:
       propertyVariable.context ? parseContext(propertyVariable.context) : null,
     availability:
@@ -1452,11 +1221,7 @@ export function parsePropertyVariable(
 export function parsePropertyVariables(
   propertyVariables: Array<OchrePropertyVariable>,
 ): Array<PropertyVariable> {
-  const returnPropertyVariables: Array<PropertyVariable> = [];
-  for (const propertyVariable of propertyVariables) {
-    returnPropertyVariables.push(parsePropertyVariable(propertyVariable));
-  }
-  return returnPropertyVariables;
+  return propertyVariables.map((pv) => parsePropertyVariable(pv));
 }
 
 /**
@@ -1468,13 +1233,7 @@ export function parsePropertyVariables(
 export function parseBibliographies(
   bibliographies: Array<OchreBibliography>,
 ): Array<Bibliography> {
-  const returnBibliographies: Array<Bibliography> = [];
-
-  for (const bibliography of bibliographies) {
-    returnBibliographies.push(parseBibliography(bibliography));
-  }
-
-  return returnBibliographies;
+  return bibliographies.map((bib) => parseBibliography(bib));
 }
 
 /**
@@ -1495,10 +1254,7 @@ export function parsePropertyValue(
     belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
     number: propertyValue.n,
-    publicationDateTime:
-      propertyValue.publicationDateTime ?
-        parseISO(propertyValue.publicationDateTime)
-      : null,
+    publicationDateTime: parseOptionalDate(propertyValue.publicationDateTime),
     persistentUrl: persistentUrl ?? null,
     context: propertyValue.context ? parseContext(propertyValue.context) : null,
     availability:
@@ -1509,39 +1265,19 @@ export function parsePropertyValue(
     date: propertyValue.date ?? null,
     creators:
       propertyValue.creators ?
-        parsePersons(
-          Array.isArray(propertyValue.creators.creator) ?
-            propertyValue.creators.creator
-          : [propertyValue.creators.creator],
-        )
+        parsePersons(ensureArray(propertyValue.creators.creator))
       : [],
     description:
       propertyValue.description ?
-        (
-          typeof propertyValue.description === "string" ||
-          typeof propertyValue.description === "number" ||
-          typeof propertyValue.description === "boolean"
-        ) ?
-          parseFakeString(propertyValue.description)
-        : parseStringContent(propertyValue.description)
+        parseFakeStringOrContent(propertyValue.description)
       : "",
     coordinates: parseCoordinates(propertyValue.coordinates),
     notes:
       propertyValue.notes ?
-        parseNotes(
-          Array.isArray(propertyValue.notes.note) ?
-            propertyValue.notes.note
-          : [propertyValue.notes.note],
-        )
+        parseNotes(ensureArray(propertyValue.notes.note))
       : [],
     links:
-      propertyValue.links ?
-        parseLinks(
-          Array.isArray(propertyValue.links) ?
-            propertyValue.links
-          : [propertyValue.links],
-        )
-      : [],
+      propertyValue.links ? parseLinks(ensureArray(propertyValue.links)) : [],
   };
 }
 
@@ -1554,13 +1290,7 @@ export function parsePropertyValue(
 export function parsePropertyValues(
   propertyValues: Array<OchrePropertyValue>,
 ): Array<PropertyValue> {
-  const returnPropertyValues: Array<PropertyValue> = [];
-
-  for (const propertyValue of propertyValues) {
-    returnPropertyValues.push(parsePropertyValue(propertyValue));
-  }
-
-  return returnPropertyValues;
+  return propertyValues.map((pv) => parsePropertyValue(pv));
 }
 
 /**
@@ -1580,8 +1310,7 @@ export function parseText(
     category: "text",
     belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
-    publicationDateTime:
-      text.publicationDateTime ? parseISO(text.publicationDateTime) : null,
+    publicationDateTime: parseOptionalDate(text.publicationDateTime),
     persistentUrl: persistentUrl ?? null,
     type: text.type ?? null,
     language: text.language ?? null,
@@ -1602,67 +1331,26 @@ export function parseText(
     identification: parseIdentification(text.identification),
     image: text.image ? parseImage(text.image) : null,
     creators:
-      text.creators ?
-        parsePersons(
-          Array.isArray(text.creators.creator) ?
-            text.creators.creator
-          : [text.creators.creator],
-        )
-      : [],
+      text.creators ? parsePersons(ensureArray(text.creators.creator)) : [],
     editors:
-      text.editions ?
-        parsePersons(
-          Array.isArray(text.editions.editor) ?
-            text.editions.editor
-          : [text.editions.editor],
-        )
-      : [],
-    notes:
-      text.notes ?
-        parseNotes(
-          Array.isArray(text.notes.note) ? text.notes.note : [text.notes.note],
-        )
-      : [],
+      text.editions ? parsePersons(ensureArray(text.editions.editor)) : [],
+    notes: text.notes ? parseNotes(ensureArray(text.notes.note)) : [],
     description:
       text.description ?
         parseStringContent(text.description as OchreStringContent)
       : "",
     coordinates: parseCoordinates(text.coordinates),
-    periods:
-      text.periods ?
-        parsePeriods(
-          Array.isArray(text.periods.period) ?
-            text.periods.period
-          : [text.periods.period],
-        )
-      : [],
-    links:
-      text.links ?
-        parseLinks(Array.isArray(text.links) ? text.links : [text.links])
-      : [],
+    periods: text.periods ? parsePeriods(ensureArray(text.periods.period)) : [],
+    links: text.links ? parseLinks(ensureArray(text.links)) : [],
     reverseLinks:
-      text.reverseLinks ?
-        parseLinks(
-          Array.isArray(text.reverseLinks) ?
-            text.reverseLinks
-          : [text.reverseLinks],
-        )
-      : [],
+      text.reverseLinks ? parseLinks(ensureArray(text.reverseLinks)) : [],
     properties:
       text.properties ?
-        parseProperties(
-          Array.isArray(text.properties.property) ?
-            text.properties.property
-          : [text.properties.property],
-        )
+        parseProperties(ensureArray(text.properties.property))
       : [],
     bibliographies:
       text.bibliographies ?
-        parseBibliographies(
-          Array.isArray(text.bibliographies.bibliography) ?
-            text.bibliographies.bibliography
-          : [text.bibliographies.bibliography],
-        )
+        parseBibliographies(ensureArray(text.bibliographies.bibliography))
       : [],
     sections: text.sections ? parseSections(text.sections) : [],
   };
@@ -1675,13 +1363,7 @@ export function parseText(
  * @returns Array of parsed Text objects
  */
 export function parseTexts(texts: Array<OchreText>): Array<Text> {
-  const returnTexts: Array<Text> = [];
-
-  for (const text of texts) {
-    returnTexts.push(parseText(text));
-  }
-
-  return returnTexts;
+  return texts.map((text) => parseText(text));
 }
 
 /**
@@ -1720,30 +1402,20 @@ export function parseSections(sections: {
   translation?: { section: OchreSection | Array<OchreSection> };
   phonemic?: { section: OchreSection | Array<OchreSection> };
 }): Array<Section> {
-  const returnSections: Array<Section> = [];
-
-  const translationSections =
+  const translation =
     sections.translation ?
-      Array.isArray(sections.translation.section) ?
-        sections.translation.section
-      : [sections.translation.section]
+      ensureArray(sections.translation.section).map((s) =>
+        parseSection(s, "translation"),
+      )
     : [];
-  const phonemicSections =
+  const phonemic =
     sections.phonemic ?
-      Array.isArray(sections.phonemic.section) ?
-        sections.phonemic.section
-      : [sections.phonemic.section]
+      ensureArray(sections.phonemic.section).map((s) =>
+        parseSection(s, "phonemic"),
+      )
     : [];
 
-  for (const section of translationSections) {
-    returnSections.push(parseSection(section, "translation"));
-  }
-
-  for (const section of phonemicSections) {
-    returnSections.push(parseSection(section, "phonemic"));
-  }
-
-  return returnSections;
+  return [...translation, ...phonemic];
 }
 
 /**
@@ -1763,19 +1435,9 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
     throw new TypeError("Invalid OCHRE data: Tree has no items");
   }
 
-  let creators: Array<Person> = [];
-  if (tree.creators) {
-    creators = parsePersons(
-      Array.isArray(tree.creators.creator) ?
-        tree.creators.creator
-      : [tree.creators.creator],
-    );
-  }
-
-  let date = null;
-  if (tree.date != null) {
-    date = tree.date;
-  }
+  const creators =
+    tree.creators ? parsePersons(ensureArray(tree.creators.creator)) : [];
+  const date = tree.date ?? null;
 
   const parsedItemCategories =
     itemCategories ?? getItemCategory(Object.keys(tree.items));
@@ -1797,112 +1459,72 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
       if (!("resource" in tree.items)) {
         throw new Error("Invalid OCHRE data: Tree has no resources");
       }
-      items = parseResources(
-        Array.isArray(tree.items.resource) ?
-          tree.items.resource
-        : [tree.items.resource],
-      );
+      items = parseResources(ensureArray(tree.items.resource));
       break;
     }
     case "spatialUnit": {
       if (!("spatialUnit" in tree.items)) {
         throw new Error("Invalid OCHRE data: Tree has no spatial units");
       }
-      items = parseSpatialUnits(
-        Array.isArray(tree.items.spatialUnit) ?
-          tree.items.spatialUnit
-        : [tree.items.spatialUnit],
-      );
+      items = parseSpatialUnits(ensureArray(tree.items.spatialUnit));
       break;
     }
     case "concept": {
       if (!("concept" in tree.items)) {
         throw new Error("Invalid OCHRE data: Tree has no concepts");
       }
-      items = parseConcepts(
-        Array.isArray(tree.items.concept) ?
-          tree.items.concept
-        : [tree.items.concept],
-      );
+      items = parseConcepts(ensureArray(tree.items.concept));
       break;
     }
     case "period": {
       if (!("period" in tree.items)) {
         throw new Error("Invalid OCHRE data: Tree has no periods");
       }
-      items = parsePeriods(
-        Array.isArray(tree.items.period) ?
-          tree.items.period
-        : [tree.items.period],
-      );
+      items = parsePeriods(ensureArray(tree.items.period));
       break;
     }
     case "bibliography": {
       if (!("bibliography" in tree.items)) {
         throw new Error("Invalid OCHRE data: Tree has no bibliographies");
       }
-      items = parseBibliographies(
-        Array.isArray(tree.items.bibliography) ?
-          tree.items.bibliography
-        : [tree.items.bibliography],
-      );
+      items = parseBibliographies(ensureArray(tree.items.bibliography));
       break;
     }
     case "person": {
       if (!("person" in tree.items)) {
         throw new Error("Invalid OCHRE data: Tree has no persons");
       }
-      items = parsePersons(
-        Array.isArray(tree.items.person) ?
-          tree.items.person
-        : [tree.items.person],
-      );
+      items = parsePersons(ensureArray(tree.items.person));
       break;
     }
     case "propertyVariable": {
       if (!("propertyVariable" in tree.items)) {
         throw new Error("Invalid OCHRE data: Tree has no property variables");
       }
-      items = parsePropertyVariables(
-        Array.isArray(tree.items.propertyVariable) ?
-          tree.items.propertyVariable
-        : [tree.items.propertyVariable],
-      );
+      items = parsePropertyVariables(ensureArray(tree.items.propertyVariable));
       break;
     }
     case "propertyValue": {
       if (!("propertyValue" in tree.items)) {
         throw new Error("Invalid OCHRE data: Tree has no property values");
       }
-      items = parsePropertyValues(
-        Array.isArray(tree.items.propertyValue) ?
-          tree.items.propertyValue
-        : [tree.items.propertyValue],
-      );
+      items = parsePropertyValues(ensureArray(tree.items.propertyValue));
       break;
     }
     case "text": {
       if (!("text" in tree.items)) {
         throw new Error("Invalid OCHRE data: Tree has no texts");
       }
-      items = parseTexts(
-        Array.isArray(tree.items.text) ? tree.items.text : [tree.items.text],
-      );
+      items = parseTexts(ensureArray(tree.items.text));
       break;
     }
     case "set": {
       if (!("set" in tree.items)) {
         throw new Error("Invalid OCHRE data: Tree has no sets");
       }
-
-      const setItems: Array<Set<Array<U>>> = [];
-      for (const item of Array.isArray(tree.items.set) ?
-        tree.items.set
-      : [tree.items.set]) {
-        setItems.push(parseSet<Array<U>>(item, itemCategories as Array<U>));
-      }
-
-      items = setItems;
+      items = ensureArray(tree.items.set).map((item) =>
+        parseSet<Array<U>>(item, itemCategories as Array<U>),
+      );
       break;
     }
     default: {
@@ -1926,11 +1548,7 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
     items: items as Tree<U>["items"],
     properties:
       tree.properties ?
-        parseProperties(
-          Array.isArray(tree.properties.property) ?
-            tree.properties.property
-          : [tree.properties.property],
-        )
+        parseProperties(ensureArray(tree.properties.property))
       : [],
   };
 
@@ -1946,13 +1564,7 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
 export function parseTrees<U extends Exclude<DataCategory, "tree">>(
   trees: Array<OchreTree>,
 ): Array<Tree<U>> {
-  const returnTrees: Array<Tree<U>> = [];
-
-  for (const tree of trees) {
-    returnTrees.push(parseTree<U>(tree));
-  }
-
-  return returnTrees;
+  return trees.map((tree) => parseTree<U>(tree));
 }
 
 /**
@@ -1984,11 +1596,9 @@ export function parseSet<U extends Array<DataCategory>>(
           throw new Error("Invalid OCHRE data: Set has no resources");
         }
         items.push(
-          ...(parseResources(
-            Array.isArray(set.items.resource) ?
-              set.items.resource
-            : [set.items.resource],
-          ) as Array<Item<U[number]>>),
+          ...(parseResources(ensureArray(set.items.resource)) as Array<
+            Item<U[number]>
+          >),
         );
         break;
       }
@@ -1997,11 +1607,9 @@ export function parseSet<U extends Array<DataCategory>>(
           throw new Error("Invalid OCHRE data: Set has no spatial units");
         }
         items.push(
-          ...(parseSpatialUnits(
-            Array.isArray(set.items.spatialUnit) ?
-              set.items.spatialUnit
-            : [set.items.spatialUnit],
-          ) as Array<Item<U[number]>>),
+          ...(parseSpatialUnits(ensureArray(set.items.spatialUnit)) as Array<
+            Item<U[number]>
+          >),
         );
         break;
       }
@@ -2010,11 +1618,9 @@ export function parseSet<U extends Array<DataCategory>>(
           throw new Error("Invalid OCHRE data: Set has no concepts");
         }
         items.push(
-          ...(parseConcepts(
-            Array.isArray(set.items.concept) ?
-              set.items.concept
-            : [set.items.concept],
-          ) as Array<Item<U[number]>>),
+          ...(parseConcepts(ensureArray(set.items.concept)) as Array<
+            Item<U[number]>
+          >),
         );
         break;
       }
@@ -2023,11 +1629,9 @@ export function parseSet<U extends Array<DataCategory>>(
           throw new Error("Invalid OCHRE data: Set has no periods");
         }
         items.push(
-          ...(parsePeriods(
-            Array.isArray(set.items.period) ?
-              set.items.period
-            : [set.items.period],
-          ) as Array<Item<U[number]>>),
+          ...(parsePeriods(ensureArray(set.items.period)) as Array<
+            Item<U[number]>
+          >),
         );
         break;
       }
@@ -2036,11 +1640,9 @@ export function parseSet<U extends Array<DataCategory>>(
           throw new Error("Invalid OCHRE data: Set has no bibliographies");
         }
         items.push(
-          ...(parseBibliographies(
-            Array.isArray(set.items.bibliography) ?
-              set.items.bibliography
-            : [set.items.bibliography],
-          ) as Array<Item<U[number]>>),
+          ...(parseBibliographies(ensureArray(set.items.bibliography)) as Array<
+            Item<U[number]>
+          >),
         );
         break;
       }
@@ -2049,11 +1651,9 @@ export function parseSet<U extends Array<DataCategory>>(
           throw new Error("Invalid OCHRE data: Set has no persons");
         }
         items.push(
-          ...(parsePersons(
-            Array.isArray(set.items.person) ?
-              set.items.person
-            : [set.items.person],
-          ) as Array<Item<U[number]>>),
+          ...(parsePersons(ensureArray(set.items.person)) as Array<
+            Item<U[number]>
+          >),
         );
         break;
       }
@@ -2066,9 +1666,7 @@ export function parseSet<U extends Array<DataCategory>>(
         }
         items.push(
           ...(parsePropertyVariables(
-            Array.isArray(set.items.propertyVariable) ?
-              set.items.propertyVariable
-            : [set.items.propertyVariable],
+            ensureArray(set.items.propertyVariable),
           ) as Array<Item<U[number]>>),
         );
         break;
@@ -2082,9 +1680,7 @@ export function parseSet<U extends Array<DataCategory>>(
         }
         items.push(
           ...(parsePropertyValues(
-            Array.isArray(set.items.propertyValue) ?
-              set.items.propertyValue
-            : [set.items.propertyValue],
+            ensureArray(set.items.propertyValue),
           ) as Array<Item<U[number]>>),
         );
         break;
@@ -2094,9 +1690,9 @@ export function parseSet<U extends Array<DataCategory>>(
           throw new Error("Invalid OCHRE data: Set has no texts");
         }
         items.push(
-          ...(parseTexts(
-            Array.isArray(set.items.text) ? set.items.text : [set.items.text],
-          ) as Array<Item<U[number]>>),
+          ...(parseTexts(ensureArray(set.items.text)) as Array<
+            Item<U[number]>
+          >),
         );
         break;
       }
@@ -2112,27 +1708,16 @@ export function parseSet<U extends Array<DataCategory>>(
     belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
     itemCategories: parsedItemCategories as U,
-    publicationDateTime:
-      set.publicationDateTime ? parseISO(set.publicationDateTime) : null,
+    publicationDateTime: parseOptionalDate(set.publicationDateTime),
     persistentUrl: persistentUrl ?? null,
     date: set.date ?? null,
     license: parseLicense(set.availability),
     identification: parseIdentification(set.identification),
     isSuppressingBlanks: set.suppressBlanks ?? false,
     description:
-      set.description ?
-        ["string", "number", "boolean"].includes(typeof set.description) ?
-          parseFakeString(set.description as FakeString)
-        : parseStringContent(set.description as OchreStringContent)
-      : "",
+      set.description ? parseFakeStringOrContent(set.description) : "",
     creators:
-      set.creators ?
-        parsePersons(
-          Array.isArray(set.creators.creator) ?
-            set.creators.creator
-          : [set.creators.creator],
-        )
-      : [],
+      set.creators ? parsePersons(ensureArray(set.creators.creator)) : [],
     type: set.type,
     number: set.n,
     items: items as unknown as Set<U>["items"],
@@ -2148,13 +1733,7 @@ export function parseSet<U extends Array<DataCategory>>(
 export function parseSets<U extends Array<DataCategory>>(
   sets: Array<OchreSet>,
 ): Array<Set<U>> {
-  const returnSets: Array<Set<U>> = [];
-
-  for (const set of sets) {
-    returnSets.push(parseSet<U>(set));
-  }
-
-  return returnSets;
+  return sets.map((s) => parseSet<U>(s));
 }
 
 /**
@@ -2169,15 +1748,12 @@ export function parseResource(
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
 ): Resource {
-  const returnResource: Resource = {
+  return {
     uuid: resource.uuid,
     category: "resource",
     belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
-    publicationDateTime:
-      resource.publicationDateTime ?
-        parseISO(resource.publicationDateTime)
-      : null,
+    publicationDateTime: parseOptionalDate(resource.publicationDateTime),
     persistentUrl: persistentUrl ?? null,
     type: resource.type,
     number: resource.n,
@@ -2204,25 +1780,12 @@ export function parseResource(
     image: resource.image ? parseImage(resource.image) : null,
     creators:
       resource.creators ?
-        parsePersons(
-          Array.isArray(resource.creators.creator) ?
-            resource.creators.creator
-          : [resource.creators.creator],
-        )
+        parsePersons(ensureArray(resource.creators.creator))
       : [],
-    notes:
-      resource.notes ?
-        parseNotes(
-          Array.isArray(resource.notes.note) ?
-            resource.notes.note
-          : [resource.notes.note],
-        )
-      : [],
+    notes: resource.notes ? parseNotes(ensureArray(resource.notes.note)) : [],
     description:
       resource.description ?
-        ["string", "number", "boolean"].includes(typeof resource.description) ?
-          parseFakeString(resource.description as FakeString)
-        : parseStringContent(resource.description as OchreStringContent)
+        parseFakeStringOrContent(resource.description)
       : "",
     coordinates:
       resource.coordinates ? parseCoordinates(resource.coordinates) : [],
@@ -2234,53 +1797,24 @@ export function parseResource(
     imageMap: resource.imagemap ? parseImageMap(resource.imagemap) : null,
     periods:
       resource.periods ?
-        parsePeriods(
-          Array.isArray(resource.periods.period) ?
-            resource.periods.period
-          : [resource.periods.period],
-        )
+        parsePeriods(ensureArray(resource.periods.period))
       : [],
-    links:
-      resource.links ?
-        parseLinks(
-          Array.isArray(resource.links) ? resource.links : [resource.links],
-        )
-      : [],
+    links: resource.links ? parseLinks(ensureArray(resource.links)) : [],
     reverseLinks:
       resource.reverseLinks ?
-        parseLinks(
-          Array.isArray(resource.reverseLinks) ?
-            resource.reverseLinks
-          : [resource.reverseLinks],
-        )
+        parseLinks(ensureArray(resource.reverseLinks))
       : [],
     properties:
       resource.properties ?
-        parseProperties(
-          Array.isArray(resource.properties.property) ?
-            resource.properties.property
-          : [resource.properties.property],
-        )
+        parseProperties(ensureArray(resource.properties.property))
       : [],
     bibliographies:
       resource.bibliographies ?
-        parseBibliographies(
-          Array.isArray(resource.bibliographies.bibliography) ?
-            resource.bibliographies.bibliography
-          : [resource.bibliographies.bibliography],
-        )
+        parseBibliographies(ensureArray(resource.bibliographies.bibliography))
       : [],
     resources:
-      resource.resource ?
-        parseResources(
-          Array.isArray(resource.resource) ?
-            resource.resource
-          : [resource.resource],
-        )
-      : [],
+      resource.resource ? parseResources(ensureArray(resource.resource)) : [],
   };
-
-  return returnResource;
 }
 
 /**
@@ -2292,13 +1826,7 @@ export function parseResource(
 export function parseResources(
   resources: Array<OchreResource>,
 ): Array<Resource> {
-  const returnResources: Array<Resource> = [];
-
-  for (const resource of resources) {
-    returnResources.push(parseResource(resource));
-  }
-
-  return returnResources;
+  return resources.map((resource) => parseResource(resource));
 }
 
 /**
@@ -2313,15 +1841,12 @@ export function parseSpatialUnit(
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
 ): SpatialUnit {
-  const returnSpatialUnit: SpatialUnit = {
+  return {
     uuid: spatialUnit.uuid,
     category: "spatialUnit",
     belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
-    publicationDateTime:
-      spatialUnit.publicationDateTime != null ?
-        parseISO(spatialUnit.publicationDateTime)
-      : null,
+    publicationDateTime: parseOptionalDate(spatialUnit.publicationDateTime),
     persistentUrl: persistentUrl ?? null,
     number: spatialUnit.n,
     context:
@@ -2336,52 +1861,30 @@ export function parseSpatialUnit(
     image: spatialUnit.image ? parseImage(spatialUnit.image) : null,
     description:
       spatialUnit.description ?
-        (
-          ["string", "number", "boolean"].includes(
-            typeof spatialUnit.description,
-          )
-        ) ?
-          parseFakeString(spatialUnit.description as FakeString)
-        : parseStringContent(spatialUnit.description as OchreStringContent)
+        parseFakeStringOrContent(spatialUnit.description)
       : "",
     coordinates: parseCoordinates(spatialUnit.coordinates),
     mapData: spatialUnit.mapData ?? null,
     observations:
       "observations" in spatialUnit && spatialUnit.observations ?
-        parseObservations(
-          Array.isArray(spatialUnit.observations.observation) ?
-            spatialUnit.observations.observation
-          : [spatialUnit.observations.observation],
-        )
+        parseObservations(ensureArray(spatialUnit.observations.observation))
       : spatialUnit.observation ? [parseObservation(spatialUnit.observation)]
       : [],
     events:
       "events" in spatialUnit && spatialUnit.events ?
-        parseEvents(
-          Array.isArray(spatialUnit.events.event) ?
-            spatialUnit.events.event
-          : [spatialUnit.events.event],
-        )
+        parseEvents(ensureArray(spatialUnit.events.event))
       : [],
     properties:
       "properties" in spatialUnit && spatialUnit.properties ?
-        parseProperties(
-          Array.isArray(spatialUnit.properties.property) ?
-            spatialUnit.properties.property
-          : [spatialUnit.properties.property],
-        )
+        parseProperties(ensureArray(spatialUnit.properties.property))
       : [],
     bibliographies:
       spatialUnit.bibliographies ?
         parseBibliographies(
-          Array.isArray(spatialUnit.bibliographies.bibliography) ?
-            spatialUnit.bibliographies.bibliography
-          : [spatialUnit.bibliographies.bibliography],
+          ensureArray(spatialUnit.bibliographies.bibliography),
         )
       : [],
   };
-
-  return returnSpatialUnit;
 }
 
 /**
@@ -2393,13 +1896,7 @@ export function parseSpatialUnit(
 export function parseSpatialUnits(
   spatialUnits: Array<OchreSpatialUnit>,
 ): Array<SpatialUnit> {
-  const returnSpatialUnits: Array<SpatialUnit> = [];
-
-  for (const spatialUnit of spatialUnits) {
-    returnSpatialUnits.push(parseSpatialUnit(spatialUnit));
-  }
-
-  return returnSpatialUnits;
+  return spatialUnits.map((su) => parseSpatialUnit(su));
 }
 
 /**
@@ -2414,15 +1911,12 @@ export function parseConcept(
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
 ): Concept {
-  const returnConcept: Concept = {
+  return {
     uuid: concept.uuid,
     category: "concept",
     belongsTo: belongsTo ?? null,
     metadata: metadata ?? null,
-    publicationDateTime:
-      concept.publicationDateTime ?
-        parseISO(concept.publicationDateTime)
-      : null,
+    publicationDateTime: parseOptionalDate(concept.publicationDateTime),
     persistentUrl: persistentUrl ?? null,
     number: concept.n,
     license:
@@ -2443,30 +1937,18 @@ export function parseConcept(
     interpretations:
       concept.interpretations ?
         parseInterpretations(
-          Array.isArray(concept.interpretations.interpretation) ?
-            concept.interpretations.interpretation
-          : [concept.interpretations.interpretation],
+          ensureArray(concept.interpretations.interpretation),
         )
       : [],
     properties:
       concept.properties ?
-        parseProperties(
-          Array.isArray(concept.properties.property) ?
-            concept.properties.property
-          : [concept.properties.property],
-        )
+        parseProperties(ensureArray(concept.properties.property))
       : [],
     bibliographies:
       concept.bibliographies ?
-        parseBibliographies(
-          Array.isArray(concept.bibliographies.bibliography) ?
-            concept.bibliographies.bibliography
-          : [concept.bibliographies.bibliography],
-        )
+        parseBibliographies(ensureArray(concept.bibliographies.bibliography))
       : [],
   };
-
-  return returnConcept;
 }
 
 /**
@@ -2493,11 +1975,7 @@ const parseWebpageResources = <T extends "element" | "page" | "block">(
   for (const resource of webpageResources) {
     const resourceProperties =
       resource.properties ?
-        parseProperties(
-          Array.isArray(resource.properties.property) ?
-            resource.properties.property
-          : [resource.properties.property],
-        )
+        parseProperties(ensureArray(resource.properties.property))
       : [];
 
     const resourceProperty = getPropertyByLabelAndValue(
@@ -2558,13 +2036,7 @@ const parseWebpageResources = <T extends "element" | "page" | "block">(
  * @returns Array of parsed Concept objects
  */
 export function parseConcepts(concepts: Array<OchreConcept>): Array<Concept> {
-  const returnConcepts: Array<Concept> = [];
-
-  for (const concept of concepts) {
-    returnConcepts.push(parseConcept(concept));
-  }
-
-  return returnConcepts;
+  return concepts.map((concept) => parseConcept(concept));
 }
 
 function parseBounds(bounds: string): [[number, number], [number, number]] {
@@ -2595,13 +2067,7 @@ function parseWebElementProperties(
   let properties: WebElementComponent | null = null;
 
   const links =
-    elementResource.links ?
-      parseLinks(
-        Array.isArray(elementResource.links) ?
-          elementResource.links
-        : [elementResource.links],
-      )
-    : [];
+    elementResource.links ? parseLinks(ensureArray(elementResource.links)) : [];
 
   switch (componentName) {
     case "3d-viewer": {
@@ -3104,10 +2570,7 @@ function parseWebElementProperties(
         },
         scopes:
           elementResource.options?.scopes != null ?
-            (Array.isArray(elementResource.options.scopes.scope) ?
-              elementResource.options.scopes.scope
-            : [elementResource.options.scopes.scope]
-            ).map((scope) => ({
+            ensureArray(elementResource.options.scopes.scope).map((scope) => ({
               uuid: scope.uuid.content,
               type: scope.uuid.type,
               identification: parseIdentification(scope.identification),
@@ -3118,74 +2581,14 @@ function parseWebElementProperties(
       };
 
       if ("options" in elementResource && elementResource.options) {
-        const flattenContextsRaw =
-          elementResource.options.flattenContexts != null ?
-            Array.isArray(elementResource.options.flattenContexts) ?
-              elementResource.options.flattenContexts
-            : [elementResource.options.flattenContexts]
-          : [];
-        const suppressContextsRaw =
-          elementResource.options.suppressContexts != null ?
-            Array.isArray(elementResource.options.suppressContexts) ?
-              elementResource.options.suppressContexts
-            : [elementResource.options.suppressContexts]
-          : [];
-        const filterContextsRaw =
-          elementResource.options.filterContexts != null ?
-            Array.isArray(elementResource.options.filterContexts) ?
-              elementResource.options.filterContexts
-            : [elementResource.options.filterContexts]
-          : [];
-        const sortContextsRaw =
-          elementResource.options.sortContexts != null ?
-            Array.isArray(elementResource.options.sortContexts) ?
-              elementResource.options.sortContexts
-            : [elementResource.options.sortContexts]
-          : [];
-        const detailContextsRaw =
-          elementResource.options.detailContexts != null ?
-            Array.isArray(elementResource.options.detailContexts) ?
-              elementResource.options.detailContexts
-            : [elementResource.options.detailContexts]
-          : [];
-        const downloadContextsRaw =
-          elementResource.options.downloadContexts != null ?
-            Array.isArray(elementResource.options.downloadContexts) ?
-              elementResource.options.downloadContexts
-            : [elementResource.options.downloadContexts]
-          : [];
-        const labelContextsRaw =
-          elementResource.options.labelContexts != null ?
-            Array.isArray(elementResource.options.labelContexts) ?
-              elementResource.options.labelContexts
-            : [elementResource.options.labelContexts]
-          : [];
-        const prominentContextsRaw =
-          elementResource.options.prominentContexts != null ?
-            Array.isArray(elementResource.options.prominentContexts) ?
-              elementResource.options.prominentContexts
-            : [elementResource.options.prominentContexts]
-          : [];
-
-        options.contexts = {
-          flatten: parseContexts(flattenContextsRaw),
-          filter: parseContexts(filterContextsRaw),
-          sort: parseContexts(sortContextsRaw),
-          detail: parseContexts(detailContextsRaw),
-          download: parseContexts(downloadContextsRaw),
-          label: parseContexts(labelContextsRaw),
-          suppress: parseContexts(suppressContextsRaw),
-          prominent: parseContexts(prominentContextsRaw),
-        };
+        options.contexts = parseAllOptionContexts(elementResource.options);
 
         if (
           "notes" in elementResource.options &&
           elementResource.options.notes
         ) {
           const labelNotes = parseNotes(
-            Array.isArray(elementResource.options.notes.note) ?
-              elementResource.options.notes.note
-            : [elementResource.options.notes.note],
+            ensureArray(elementResource.options.notes.note),
           );
           options.labels.title =
             labelNotes.find((note) => note.title === "Title label")?.content ??
@@ -4080,58 +3483,9 @@ function parseWebElement(elementResource: OchreResource): WebElement {
     elementResource,
   );
 
-  const elementResourceProperties =
-    elementResource.properties?.property ?
-      parseProperties(
-        Array.isArray(elementResource.properties.property) ?
-          elementResource.properties.property
-        : [elementResource.properties.property],
-      )
-    : [];
+  const cssStyles = parseResponsiveCssStyles(elementProperties);
 
-  const cssProperties =
-    getPropertyByLabelAndValue(elementResourceProperties, "presentation", "css")
-      ?.properties ?? [];
-
-  const cssStyles: Array<Style> = [];
-  for (const property of cssProperties) {
-    const cssStyle = property.values[0]!.content?.toString();
-    if (cssStyle != null) {
-      cssStyles.push({ label: property.label, value: cssStyle });
-    }
-  }
-
-  const tabletCssProperties =
-    getPropertyByLabelAndValue(
-      elementResourceProperties,
-      "presentation",
-      "css-tablet",
-    )?.properties ?? [];
-
-  const cssStylesTablet: Array<Style> = [];
-  for (const property of tabletCssProperties) {
-    const cssStyle = property.values[0]!.content?.toString();
-    if (cssStyle != null) {
-      cssStylesTablet.push({ label: property.label, value: cssStyle });
-    }
-  }
-
-  const mobileCssProperties =
-    getPropertyByLabelAndValue(
-      elementResourceProperties,
-      "presentation",
-      "css-mobile",
-    )?.properties ?? [];
-
-  const cssStylesMobile: Array<Style> = [];
-  for (const property of mobileCssProperties) {
-    const cssStyle = property.values[0]!.content?.toString();
-    if (cssStyle != null) {
-      cssStylesMobile.push({ label: property.label, value: cssStyle });
-    }
-  }
-
-  const title = parseWebTitle(elementResourceProperties, identification, {
+  const title = parseWebTitle(elementProperties, identification, {
     isNameDisplayed:
       properties.component === "annotated-image" ||
       properties.component === "annotated-document" ||
@@ -4144,11 +3498,7 @@ function parseWebElement(elementResource: OchreResource): WebElement {
     uuid: elementResource.uuid,
     type: "element",
     title,
-    cssStyles: {
-      default: cssStyles,
-      tablet: cssStylesTablet,
-      mobile: cssStylesMobile,
-    },
+    cssStyles,
     ...properties,
   };
 }
@@ -4165,11 +3515,7 @@ function parseWebpage(
 ): Webpage | null {
   const webpageProperties =
     webpageResource.properties ?
-      parseProperties(
-        Array.isArray(webpageResource.properties.property) ?
-          webpageResource.properties.property
-        : [webpageResource.properties.property],
-      )
+      parseProperties(ensureArray(webpageResource.properties.property))
     : [];
 
   if (
@@ -4194,10 +3540,7 @@ function parseWebpage(
     title: identification.label,
     slug:
       slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
-    publicationDateTime:
-      webpageResource.publicationDateTime ?
-        parseISO(webpageResource.publicationDateTime)
-      : null,
+    publicationDateTime: parseOptionalDate(webpageResource.publicationDateTime),
     items: [],
     properties: {
       width: "default",
@@ -4214,11 +3557,7 @@ function parseWebpage(
 
   const links =
     webpageResource.links != null ?
-      parseLinks(
-        Array.isArray(webpageResource.links) ?
-          webpageResource.links
-        : [webpageResource.links],
-      )
+      parseLinks(ensureArray(webpageResource.links))
     : [];
   const imageLink = links.find(
     (link) => link.type === "image" || link.type === "IIIF",
@@ -4226,20 +3565,14 @@ function parseWebpage(
 
   const webpageResources =
     webpageResource.resource != null ?
-      Array.isArray(webpageResource.resource) ?
-        webpageResource.resource
-      : [webpageResource.resource]
+      ensureArray(webpageResource.resource)
     : [];
 
   const items: Array<WebSegment | WebElement | WebBlock> = [];
   for (const resource of webpageResources) {
     const resourceProperties =
       resource.properties != null ?
-        parseProperties(
-          Array.isArray(resource.properties.property) ?
-            resource.properties.property
-          : [resource.properties.property],
-        )
+        parseProperties(ensureArray(resource.properties.property))
       : [];
 
     const resourceType = getPropertyValueByLabel(
@@ -4275,12 +3608,7 @@ function parseWebpage(
 
   returnWebpage.webpages =
     webpageResource.resource != null ?
-      parseWebpageResources(
-        Array.isArray(webpageResource.resource) ?
-          webpageResource.resource
-        : [webpageResource.resource],
-        "page",
-      )
+      parseWebpageResources(ensureArray(webpageResource.resource), "page")
     : [];
 
   const webpageSubProperties =
@@ -4332,38 +3660,8 @@ function parseWebpage(
     };
   }
 
-  const cssStyleSubProperties =
-    getPropertyByLabelAndValue(webpageProperties, "presentation", "css")
-      ?.properties ?? [];
-  const cssStyles: Array<Style> = [];
-  for (const property of cssStyleSubProperties) {
-    const cssStyle = property.values[0]!.content?.toString();
-    if (cssStyle != null) {
-      cssStyles.push({ label: property.label, value: cssStyle });
-    }
-  }
-
-  const tabletCssStyleSubProperties =
-    getPropertyByLabelAndValue(webpageProperties, "presentation", "css-tablet")
-      ?.properties ?? [];
-  const cssStylesTablet: Array<Style> = [];
-  for (const property of tabletCssStyleSubProperties) {
-    const cssStyle = property.values[0]!.content?.toString();
-    if (cssStyle != null) {
-      cssStylesTablet.push({ label: property.label, value: cssStyle });
-    }
-  }
-
-  const mobileCssStyleSubProperties =
-    getPropertyByLabelAndValue(webpageProperties, "presentation", "css-mobile")
-      ?.properties ?? [];
-  const cssStylesMobile: Array<Style> = [];
-  for (const property of mobileCssStyleSubProperties) {
-    const cssStyle = property.values[0]!.content?.toString();
-    if (cssStyle != null) {
-      cssStylesMobile.push({ label: property.label, value: cssStyle });
-    }
-  }
+  returnWebpage.properties.cssStyles =
+    parseResponsiveCssStyles(webpageProperties);
 
   return returnWebpage;
 }
@@ -4402,11 +3700,7 @@ function parseWebSegment(
 ): WebSegment | null {
   const webpageProperties =
     segmentResource.properties ?
-      parseProperties(
-        Array.isArray(segmentResource.properties.property) ?
-          segmentResource.properties.property
-        : [segmentResource.properties.property],
-      )
+      parseProperties(ensureArray(segmentResource.properties.property))
     : [];
 
   if (
@@ -4420,9 +3714,7 @@ function parseWebSegment(
 
   const slug =
     segmentResource.identification.abbreviation != null ?
-      typeof segmentResource.identification.abbreviation === "object" ?
-        parseStringContent(segmentResource.identification.abbreviation)
-      : parseFakeString(segmentResource.identification.abbreviation)
+      parseFakeStringOrContent(segmentResource.identification.abbreviation)
     : null;
   if (slug == null) {
     throw new Error(`Slug not found for segment “${identification.label}”`);
@@ -4433,19 +3725,12 @@ function parseWebSegment(
     type: "segment",
     title: identification.label,
     slug,
-    publicationDateTime:
-      segmentResource.publicationDateTime ?
-        parseISO(segmentResource.publicationDateTime)
-      : null,
+    publicationDateTime: parseOptionalDate(segmentResource.publicationDateTime),
     items: [],
   };
 
   const childResources =
-    segmentResource.resource ?
-      Array.isArray(segmentResource.resource) ?
-        segmentResource.resource
-      : [segmentResource.resource]
-    : [];
+    segmentResource.resource ? ensureArray(segmentResource.resource) : [];
 
   returnSegment.items = parseWebSegmentItems(
     childResources,
@@ -4489,11 +3774,7 @@ function parseWebSegmentItem(
 ): WebSegmentItem | null {
   const webpageProperties =
     segmentItemResource.properties ?
-      parseProperties(
-        Array.isArray(segmentItemResource.properties.property) ?
-          segmentItemResource.properties.property
-        : [segmentItemResource.properties.property],
-      )
+      parseProperties(ensureArray(segmentItemResource.properties.property))
     : [];
 
   if (
@@ -4510,9 +3791,7 @@ function parseWebSegmentItem(
 
   const slug =
     segmentItemResource.identification.abbreviation != null ?
-      typeof segmentItemResource.identification.abbreviation === "object" ?
-        parseStringContent(segmentItemResource.identification.abbreviation)
-      : parseFakeString(segmentItemResource.identification.abbreviation)
+      parseFakeStringOrContent(segmentItemResource.identification.abbreviation)
     : null;
   if (slug == null) {
     throw new Error(
@@ -4525,18 +3804,15 @@ function parseWebSegmentItem(
     type: "segment-item",
     title: identification.label,
     slug,
-    publicationDateTime:
-      segmentItemResource.publicationDateTime ?
-        parseISO(segmentItemResource.publicationDateTime)
-      : null,
+    publicationDateTime: parseOptionalDate(
+      segmentItemResource.publicationDateTime,
+    ),
     items: [],
   };
 
   const resources =
     segmentItemResource.resource ?
-      Array.isArray(segmentItemResource.resource) ?
-        segmentItemResource.resource
-      : [segmentItemResource.resource]
+      ensureArray(segmentItemResource.resource)
     : [];
 
   returnSegmentItem.items.push(
@@ -4606,11 +3882,7 @@ function parseSidebar(
   const sidebarResource = resources.find((resource) => {
     const resourceProperties =
       resource.properties ?
-        parseProperties(
-          Array.isArray(resource.properties.property) ?
-            resource.properties.property
-          : [resource.properties.property],
-        )
+        parseProperties(ensureArray(resource.properties.property))
       : [];
 
     return (
@@ -4623,22 +3895,13 @@ function parseSidebar(
     );
   });
   if (sidebarResource != null) {
-    title.label =
-      (
-        typeof sidebarResource.identification.label === "string" ||
-        typeof sidebarResource.identification.label === "number" ||
-        typeof sidebarResource.identification.label === "boolean"
-      ) ?
-        parseFakeString(sidebarResource.identification.label)
-      : parseStringContent(sidebarResource.identification.label);
+    title.label = parseFakeStringOrContent(
+      sidebarResource.identification.label,
+    );
 
     const sidebarBaseProperties =
       sidebarResource.properties ?
-        parseProperties(
-          Array.isArray(sidebarResource.properties.property) ?
-            sidebarResource.properties.property
-          : [sidebarResource.properties.property],
-        )
+        parseProperties(ensureArray(sidebarResource.properties.property))
       : [];
 
     const sidebarProperties =
@@ -4670,47 +3933,10 @@ function parseSidebar(
         | "inline";
     }
 
-    const cssProperties =
-      sidebarBaseProperties.find(
-        (property) =>
-          property.label === "presentation" &&
-          property.values[0]!.content === "css",
-      )?.properties ?? [];
-
-    for (const property of cssProperties) {
-      const cssStyle = property.values[0]!.content?.toString();
-      if (cssStyle != null) {
-        cssStyles.default.push({ label: property.label, value: cssStyle });
-      }
-    }
-
-    const tabletCssProperties =
-      sidebarBaseProperties.find(
-        (property) =>
-          property.label === "presentation" &&
-          property.values[0]!.content === "css-tablet",
-      )?.properties ?? [];
-
-    for (const property of tabletCssProperties) {
-      const cssStyle = property.values[0]!.content?.toString();
-      if (cssStyle != null) {
-        cssStyles.tablet.push({ label: property.label, value: cssStyle });
-      }
-    }
-
-    const mobileCssProperties =
-      sidebarBaseProperties.find(
-        (property) =>
-          property.label === "presentation" &&
-          property.values[0]!.content === "css-mobile",
-      )?.properties ?? [];
-
-    for (const property of mobileCssProperties) {
-      const cssStyle = property.values[0]!.content?.toString();
-      if (cssStyle != null) {
-        cssStyles.mobile.push({ label: property.label, value: cssStyle });
-      }
-    }
+    const parsedCssStyles = parseResponsiveCssStyles(sidebarBaseProperties);
+    cssStyles.default = parsedCssStyles.default;
+    cssStyles.tablet = parsedCssStyles.tablet;
+    cssStyles.mobile = parsedCssStyles.mobile;
 
     const titleProperties = sidebarBaseProperties.find(
       (property) =>
@@ -4738,20 +3964,12 @@ function parseSidebar(
     }
 
     const sidebarResources =
-      sidebarResource.resource ?
-        Array.isArray(sidebarResource.resource) ?
-          sidebarResource.resource
-        : [sidebarResource.resource]
-      : [];
+      sidebarResource.resource ? ensureArray(sidebarResource.resource) : [];
 
     for (const resource of sidebarResources) {
       const resourceProperties =
         resource.properties ?
-          parseProperties(
-            Array.isArray(resource.properties.property) ?
-              resource.properties.property
-            : [resource.properties.property],
-          )
+          parseProperties(ensureArray(resource.properties.property))
         : [];
 
       const resourceType = getPropertyValueByLabel(
@@ -4810,21 +4028,13 @@ function parseWebElementForAccordion(
   >;
 
   const childResources =
-    elementResource.resource ?
-      Array.isArray(elementResource.resource) ?
-        elementResource.resource
-      : [elementResource.resource]
-    : [];
+    elementResource.resource ? ensureArray(elementResource.resource) : [];
 
   const items: Array<WebElement | WebBlock> = [];
   for (const resource of childResources) {
     const resourceProperties =
       resource.properties ?
-        parseProperties(
-          Array.isArray(resource.properties.property) ?
-            resource.properties.property
-          : [resource.properties.property],
-        )
+        parseProperties(ensureArray(resource.properties.property))
       : [];
 
     const resourceType = getPropertyValueByLabel(
@@ -4863,11 +4073,7 @@ function parseWebElementForAccordion(
 function parseWebBlock(blockResource: OchreResource): WebBlock | null {
   const blockProperties =
     blockResource.properties ?
-      parseProperties(
-        Array.isArray(blockResource.properties.property) ?
-          blockResource.properties.property
-        : [blockResource.properties.property],
-      )
+      parseProperties(ensureArray(blockResource.properties.property))
     : [];
 
   const returnBlock: WebBlock = {
@@ -5057,11 +4263,7 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
   }
 
   const blockResources =
-    blockResource.resource ?
-      Array.isArray(blockResource.resource) ?
-        blockResource.resource
-      : [blockResource.resource]
-    : [];
+    blockResource.resource ? ensureArray(blockResource.resource) : [];
 
   if (returnBlock.properties.default.layout === "accordion") {
     const accordionItems: Array<
@@ -5073,11 +4275,7 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
     for (const resource of blockResources) {
       const resourceProperties =
         resource.properties ?
-          parseProperties(
-            Array.isArray(resource.properties.property) ?
-              resource.properties.property
-            : [resource.properties.property],
-          )
+          parseProperties(ensureArray(resource.properties.property))
         : [];
 
       const resourceType = getPropertyValueByLabel(
@@ -5120,11 +4318,7 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
     for (const resource of blockResources) {
       const resourceProperties =
         resource.properties ?
-          parseProperties(
-            Array.isArray(resource.properties.property) ?
-              resource.properties.property
-            : [resource.properties.property],
-          )
+          parseProperties(ensureArray(resource.properties.property))
         : [];
 
       const resourceType = getPropertyValueByLabel(
@@ -5154,50 +4348,7 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
     returnBlock.items = blockItems;
   }
 
-  const blockCssStyles =
-    getPropertyByLabelAndValue(blockProperties, "presentation", "css")
-      ?.properties ?? [];
-  if (blockCssStyles.length > 0) {
-    for (const property of blockCssStyles) {
-      const cssStyle = property.values[0]!.content?.toString();
-      if (cssStyle != null) {
-        returnBlock.cssStyles.default.push({
-          label: property.label,
-          value: cssStyle,
-        });
-      }
-    }
-  }
-
-  const blockTabletCssStyles =
-    getPropertyByLabelAndValue(blockProperties, "presentation", "css-tablet")
-      ?.properties ?? [];
-  if (blockTabletCssStyles.length > 0) {
-    for (const property of blockTabletCssStyles) {
-      const cssStyle = property.values[0]!.content?.toString();
-      if (cssStyle != null) {
-        returnBlock.cssStyles.tablet.push({
-          label: property.label,
-          value: cssStyle,
-        });
-      }
-    }
-  }
-
-  const blockMobileCssStyles =
-    getPropertyByLabelAndValue(blockProperties, "presentation", "css-mobile")
-      ?.properties ?? [];
-  if (blockMobileCssStyles.length > 0) {
-    for (const property of blockMobileCssStyles) {
-      const cssStyle = property.values[0]!.content?.toString();
-      if (cssStyle != null) {
-        returnBlock.cssStyles.mobile.push({
-          label: property.label,
-          value: cssStyle,
-        });
-      }
-    }
-  }
+  returnBlock.cssStyles = parseResponsiveCssStyles(blockProperties);
 
   return returnBlock;
 }
@@ -5407,81 +4558,20 @@ function parseWebsiteProperties(
   if ("options" in websiteTree && websiteTree.options) {
     returnProperties.options.scopes =
       websiteTree.options.scopes != null ?
-        (Array.isArray(websiteTree.options.scopes.scope) ?
-          websiteTree.options.scopes.scope
-        : [websiteTree.options.scopes.scope]
-        ).map((scope) => ({
+        ensureArray(websiteTree.options.scopes.scope).map((scope) => ({
           uuid: scope.uuid.content,
           type: scope.uuid.type,
           identification: parseIdentification(scope.identification),
         }))
       : null;
 
-    const flattenContextsRaw =
-      websiteTree.options.flattenContexts != null ?
-        Array.isArray(websiteTree.options.flattenContexts) ?
-          websiteTree.options.flattenContexts
-        : [websiteTree.options.flattenContexts]
-      : [];
-    const suppressContextsRaw =
-      websiteTree.options.suppressContexts != null ?
-        Array.isArray(websiteTree.options.suppressContexts) ?
-          websiteTree.options.suppressContexts
-        : [websiteTree.options.suppressContexts]
-      : [];
-    const filterContextsRaw =
-      websiteTree.options.filterContexts != null ?
-        Array.isArray(websiteTree.options.filterContexts) ?
-          websiteTree.options.filterContexts
-        : [websiteTree.options.filterContexts]
-      : [];
-    const sortContextsRaw =
-      websiteTree.options.sortContexts != null ?
-        Array.isArray(websiteTree.options.sortContexts) ?
-          websiteTree.options.sortContexts
-        : [websiteTree.options.sortContexts]
-      : [];
-    const detailContextsRaw =
-      websiteTree.options.detailContexts != null ?
-        Array.isArray(websiteTree.options.detailContexts) ?
-          websiteTree.options.detailContexts
-        : [websiteTree.options.detailContexts]
-      : [];
-    const downloadContextsRaw =
-      websiteTree.options.downloadContexts != null ?
-        Array.isArray(websiteTree.options.downloadContexts) ?
-          websiteTree.options.downloadContexts
-        : [websiteTree.options.downloadContexts]
-      : [];
-    const labelContextsRaw =
-      websiteTree.options.labelContexts != null ?
-        Array.isArray(websiteTree.options.labelContexts) ?
-          websiteTree.options.labelContexts
-        : [websiteTree.options.labelContexts]
-      : [];
-    const prominentContextsRaw =
-      websiteTree.options.prominentContexts != null ?
-        Array.isArray(websiteTree.options.prominentContexts) ?
-          websiteTree.options.prominentContexts
-        : [websiteTree.options.prominentContexts]
-      : [];
-
-    returnProperties.options.contexts = {
-      flatten: parseContexts(flattenContextsRaw),
-      suppress: parseContexts(suppressContextsRaw),
-      filter: parseContexts(filterContextsRaw),
-      sort: parseContexts(sortContextsRaw),
-      detail: parseContexts(detailContextsRaw),
-      download: parseContexts(downloadContextsRaw),
-      label: parseContexts(labelContextsRaw),
-      prominent: parseContexts(prominentContextsRaw),
-    };
+    returnProperties.options.contexts = parseAllOptionContexts(
+      websiteTree.options,
+    );
 
     if ("notes" in websiteTree.options && websiteTree.options.notes != null) {
       const labelNotes = parseNotes(
-        Array.isArray(websiteTree.options.notes.note) ?
-          websiteTree.options.notes.note
-        : [websiteTree.options.notes.note],
+        ensureArray(websiteTree.options.notes.note),
       );
 
       returnProperties.options.labels.title =
@@ -5499,16 +4589,8 @@ function parseContexts(
   const contextsParsed: Array<LevelContext> = [];
 
   for (const mainContext of contexts) {
-    const contextItemsToParse =
-      Array.isArray(mainContext.context) ?
-        mainContext.context
-      : [mainContext.context];
-
-    for (const contextItemToParse of contextItemsToParse) {
-      const levelsToParse =
-        Array.isArray(contextItemToParse.levels.level) ?
-          contextItemToParse.levels.level
-        : [contextItemToParse.levels.level];
+    for (const contextItemToParse of ensureArray(mainContext.context)) {
+      const levelsToParse = ensureArray(contextItemToParse.levels.level);
 
       let type = "";
 
@@ -5560,19 +4642,14 @@ export function parseWebsite(
     throw new Error("Website pages not found");
   }
 
-  const resources =
-    Array.isArray(websiteTree.items.resource) ?
-      websiteTree.items.resource
-    : [websiteTree.items.resource];
+  const resources = ensureArray(websiteTree.items.resource);
 
   const items = [...parseWebpages(resources), ...parseSegments(resources)];
 
   const sidebar = parseSidebar(resources);
 
   const properties = parseWebsiteProperties(
-    Array.isArray(websiteTree.properties.property) ?
-      websiteTree.properties.property
-    : [websiteTree.properties.property],
+    ensureArray(websiteTree.properties.property),
     websiteTree,
     sidebar,
   );
@@ -5582,18 +4659,11 @@ export function parseWebsite(
     version,
     belongsTo: belongsTo ?? null,
     metadata: parseMetadata(metadata),
-    publicationDateTime:
-      websiteTree.publicationDateTime ?
-        parseISO(websiteTree.publicationDateTime)
-      : null,
+    publicationDateTime: parseOptionalDate(websiteTree.publicationDateTime),
     identification: parseIdentification(websiteTree.identification),
     creators:
       websiteTree.creators ?
-        parsePersons(
-          Array.isArray(websiteTree.creators.creator) ?
-            websiteTree.creators.creator
-          : [websiteTree.creators.creator],
-        )
+        parsePersons(ensureArray(websiteTree.creators.creator))
       : [],
     license: parseLicense(websiteTree.availability),
     items,

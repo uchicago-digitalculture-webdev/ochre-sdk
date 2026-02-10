@@ -441,17 +441,18 @@ export type OchreLinkItem = {
 /**
  * Raw link structure corresponding to the parsed Link type
  */
-export type OchreLink =
-  | { resource: OchreLinkItem | Array<OchreLinkItem> }
-  | { spatialUnit: OchreLinkItem | Array<OchreLinkItem> }
-  | { concept: OchreLinkItem | Array<OchreLinkItem> }
-  | { person: OchreLinkItem | Array<OchreLinkItem> }
-  | { bibliography: OchreBibliography | Array<OchreBibliography> }
-  | { propertyVariable: OchreLinkItem | Array<OchreLinkItem> }
-  | { propertyValue: OchreLinkItem | Array<OchreLinkItem> }
-  | { text: OchreLinkItem | Array<OchreLinkItem> }
-  | { tree: OchreLinkItem | Array<OchreLinkItem> }
-  | { set: OchreLinkItem | Array<OchreLinkItem> };
+export type OchreLink = {
+  resource?: OchreLinkItem | Array<OchreLinkItem>;
+  spatialUnit?: OchreLinkItem | Array<OchreLinkItem>;
+  concept?: OchreLinkItem | Array<OchreLinkItem>;
+  person?: OchreLinkItem | Array<OchreLinkItem>;
+  bibliography?: OchreBibliography | Array<OchreBibliography>;
+  propertyVariable?: OchreLinkItem | Array<OchreLinkItem>;
+  propertyValue?: OchreLinkItem | Array<OchreLinkItem>;
+  text?: OchreLinkItem | Array<OchreLinkItem>;
+  tree?: OchreLinkItem | Array<OchreLinkItem>;
+  set?: OchreLinkItem | Array<OchreLinkItem>;
+};
 
 /**
  * Raw image structure corresponding to the parsed Image type

@@ -1,5 +1,8 @@
+import { parseISO } from "date-fns";
+import type { FakeString, OchreStringContent } from "../types/internal.raw.js";
 import type { DataCategory, Property } from "../types/main.js";
 import { categorySchema } from "../schemas.js";
+import { parseFakeString, parseStringContent } from "./string.js";
 
 /**
  * Get the category of an item from the OCHRE API response
@@ -90,4 +93,74 @@ export function flattenProperties(
   }
 
   return result;
+}
+
+/**
+ * Parses a citation string into a formatted string.
+ *
+ * @param raw - Citation string to parse
+ * @returns Parsed citation string or null
+ */
+export function parseCitation(raw: string | undefined): string | null {
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return (JSON.parse(`"${raw}"`) as string)
+      .replaceAll("&lt;", "<")
+      .replaceAll("&gt;", ">");
+  } catch {
+    return raw;
+  }
+}
+
+/**
+ * Normalizes a value that may be a single item or an array into an array.
+ *
+ * @param value - Value to normalize
+ * @returns Array of values
+ */
+export function ensureArray<T>(value: T | Array<T>): Array<T> {
+  return Array.isArray(value) ? value : [value];
+}
+
+/**
+ * Type guard for FakeString (string | number | boolean).
+ *
+ * @param value - Value to check
+ * @returns True if the value is a FakeString
+ */
+export function isFakeString(value: unknown): value is FakeString {
+  return (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  );
+}
+
+/**
+ * Parses a value that is either a FakeString or OchreStringContent.
+ *
+ * @param value - Value to parse
+ * @returns Parsed value
+ */
+export function parseFakeStringOrContent(
+  value: FakeString | OchreStringContent,
+): string {
+  return isFakeString(value) ?
+      parseFakeString(value)
+    : parseStringContent(value);
+}
+
+/**
+ * Parses an optional ISO date string into a Date or null.
+ *
+ * @param dateTime - Date string to parse
+ * @returns Parsed date or null
+ */
+export function parseOptionalDate(
+  dateTime: string | null | undefined,
+): Date | null {
+  return dateTime != null ? parseISO(dateTime) : null;
 }
