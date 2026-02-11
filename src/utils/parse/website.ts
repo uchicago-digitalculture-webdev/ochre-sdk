@@ -1793,6 +1793,8 @@ function parseWebpage(
     }
   }
 
+  returnWebpage.items = items;
+
   returnWebpage.webpages =
     webpageResource.resource != null ?
       parseWebpageResources(ensureArray(webpageResource.resource), "page")
