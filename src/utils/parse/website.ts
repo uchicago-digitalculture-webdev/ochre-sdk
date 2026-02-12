@@ -2634,6 +2634,14 @@ function parseWebsiteProperties(
   returnProperties.icon.logoUuid =
     getPropertyByLabel(websiteProperties, "logo")?.values[0]?.uuid ?? null;
 
+  returnProperties.icon.faviconUuid =
+    getPropertyByLabel(websiteProperties, "favicon-ico")?.values[0]?.uuid ??
+    null;
+
+  returnProperties.icon.appleTouchIconUuid =
+    getPropertyByLabel(websiteProperties, "favicon-img")?.values[0]?.uuid ??
+    null;
+
   returnProperties.navbar.isDisplayed =
     (getPropertyValueByLabel(websiteProperties, "navbar-displayed") as
       | Website["properties"]["navbar"]["isDisplayed"]
