@@ -44,6 +44,8 @@
     "build": "tsdown",
     "lint": "eslint --cache .",
     "lint:fix": "eslint --cache . --fix",
+    "lint:nocache": "eslint .",
+    "lint:nocache:fix": "eslint . --fix",
     "format": "prettier --cache --check .",
     "format:fix": "prettier --cache --write --list-different .",
     "check-types": "tsc --noEmit",
@@ -57,7 +59,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^7.4.2",
+    "@antfu/eslint-config": "^7.4.3",
     "@types/node": "^24.10.13",
     "bumpp": "^10.4.1",
     "eslint": "^10.0.0",
@@ -66,5 +68,5 @@
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   },
-  "packageManager": "pnpm@10.29.2"
+  "packageManager": "pnpm@10.29.3"
 }
