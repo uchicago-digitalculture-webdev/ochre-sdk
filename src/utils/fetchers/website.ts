@@ -50,7 +50,9 @@ export async function fetchWebsite(
     ) => Promise<Response>;
     version?: ApiVersion;
   },
-): Promise<[null, Website] | [string, null]> {
+): Promise<
+  { error: null; website: Website } | { error: string; website: null }
+> {
   try {
     const cleanAbbreviation = abbreviation.trim().toLocaleLowerCase("en-US");
 
@@ -118,9 +120,12 @@ export async function fetchWebsite(
 
     const website = parseWebsite(tree, metadata, belongsTo, { version });
 
-    return [null, website];
+    return { error: null, website };
   } catch (error) {
     console.error(error);
-    return [error instanceof Error ? error.message : "Unknown error", null];
+    return {
+      error: error instanceof Error ? error.message : "Unknown error",
+      website: null,
+    };
   }
 }

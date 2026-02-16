@@ -152,19 +152,6 @@ export const propertyValueContentTypeSchema = z.enum([
 ] as const satisfies ReadonlyArray<PropertyValueContentType>);
 
 /**
- * Schema for validating gallery parameters
- * @internal
- */
-export const gallerySchema = z
-  .object({
-    uuid: z.string().refine(isPseudoUuid, { error: "Invalid UUID" }),
-    filter: z.string().optional(),
-    page: z.number().positive({ error: "Page must be positive" }),
-    pageSize: z.number().positive({ error: "Page size must be positive" }),
-  })
-  .strict();
-
-/**
  * Schema for validating and parsing render options
  * @internal
  */
