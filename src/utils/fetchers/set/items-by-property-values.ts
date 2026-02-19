@@ -1,4 +1,10 @@
 import type {
+  ApiVersion,
+  DataCategory,
+  Item,
+  PropertyValueContentType,
+} from "../../../types/index.js";
+import type {
   OchreBibliography,
   OchreConcept,
   OchrePeriod,
@@ -10,13 +16,7 @@ import type {
   OchreSpatialUnit,
   OchreText,
   OchreTree,
-} from "../../../types/internal.raw.js";
-import type {
-  ApiVersion,
-  DataCategory,
-  Item,
-  PropertyValueContentType,
-} from "../../../types/index.js";
+} from "../../../types/raw.js";
 import { BELONGS_TO_COLLECTION_UUID } from "../../../constants.js";
 import { setItemsByPropertyValuesParamsSchema } from "../../../schemas.js";
 import { DEFAULT_API_VERSION } from "../../helpers.js";

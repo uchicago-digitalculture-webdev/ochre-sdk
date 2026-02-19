@@ -1,5 +1,5 @@
-import type { OchreData, OchreDataResponse } from "../../types/internal.raw.js";
 import type { ApiVersion } from "../../types/index.js";
+import type { OchreData, OchreDataResponse } from "../../types/raw.js";
 import { uuidSchema } from "../../schemas.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
 

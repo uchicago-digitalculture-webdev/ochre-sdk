@@ -1,9 +1,5 @@
-import type {
-  OchreData,
-  OchreMetadata,
-  OchreTree,
-} from "../../types/internal.raw.d.ts";
 import type { ApiVersion } from "../../types/index.js";
+import type { OchreData, OchreMetadata, OchreTree } from "../../types/raw.js";
 import type { Website } from "../../types/website.js";
 import { apiVersionSuffixSchema } from "../../schemas.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";

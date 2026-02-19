@@ -1,4 +1,9 @@
 import type {
+  ApiVersion,
+  Identification,
+  Property,
+} from "../../types/index.js";
+import type {
   OchreLevelContext,
   OchreMetadata,
   OchreProperty,
@@ -6,12 +11,7 @@ import type {
   OchreStringContent,
   OchreStringRichText,
   OchreTree,
-} from "../../types/internal.raw.d.ts";
-import type {
-  ApiVersion,
-  Identification,
-  Property,
-} from "../../types/index.js";
+} from "../../types/raw.js";
 import type {
   LevelContext,
   LevelContextItem,

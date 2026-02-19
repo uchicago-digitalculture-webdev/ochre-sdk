@@ -5,7 +5,7 @@ import type {
   OchreStringItem,
   OchreStringRichTextItem,
   OchreStringRichTextItemContent,
-} from "../types/internal.raw.js";
+} from "../types/raw.js";
 import type { Style } from "../types/website.js";
 import {
   PRESENTATION_ITEM_UUID,
