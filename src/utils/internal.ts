@@ -164,3 +164,14 @@ export function parseOptionalDate(
 ): Date | null {
   return dateTime != null ? parseISO(dateTime) : null;
 }
+
+/**
+ * Cleans an object by removing null values
+ * @param object - The object to clean
+ * @returns The cleaned object
+ */
+export function cleanObject<T extends Record<string, unknown>>(object: T): T {
+  return Object.fromEntries(
+    Object.entries(object).filter(([_, value]) => value != null),
+  ) as T;
+}

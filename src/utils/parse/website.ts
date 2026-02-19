@@ -31,6 +31,7 @@ import {
 import { parseStringContent } from "../../utils/string.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
 import {
+  cleanObject,
   ensureArray,
   parseFakeStringOrContent,
   parseOptionalDate,
@@ -2380,14 +2381,16 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
             | null) ?? undefined;
       }
 
-      if (Object.values(propertiesTablet).every((value) => value != null)) {
-        returnBlock.properties.tablet = propertiesTablet;
+      const cleanedPropertiesTablet = cleanObject(propertiesTablet);
+
+      if (Object.keys(cleanedPropertiesTablet).length > 0) {
+        returnBlock.properties.tablet = cleanedPropertiesTablet;
       }
     }
 
     const mobileOverwriteProperty = getPropertyByLabel(
       blockMainProperties,
-      "overwrite-tablet",
+      "overwrite-mobile",
     );
     if (mobileOverwriteProperty !== null) {
       const mobileOverwriteProperties = mobileOverwriteProperty.properties;
@@ -2445,8 +2448,10 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
             | null) ?? undefined;
       }
 
-      if (Object.values(propertiesMobile).every((value) => value != null)) {
-        returnBlock.properties.mobile = propertiesMobile;
+      const cleanedPropertiesMobile = cleanObject(propertiesMobile);
+
+      if (Object.keys(cleanedPropertiesMobile).length > 0) {
+        returnBlock.properties.mobile = cleanedPropertiesMobile;
       }
     }
   }
