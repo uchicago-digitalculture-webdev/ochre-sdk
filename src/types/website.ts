@@ -270,7 +270,7 @@ export type WebElementComponent =
       linkUuids: Array<string>;
       displayedProperties: Array<{ uuid: string; label: string }> | null;
       variant: "full" | "highlights";
-      itemVariant: "detailed" | "card" | "tile";
+      itemVariant: "detailed" | "card" | "tile" | "showcase";
       paginationVariant: "default" | "numeric";
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
       imageQuality: "high" | "low";
@@ -343,7 +343,7 @@ export type WebElementComponent =
     }
   | {
       component: "query";
-      itemCategory: "resource" | "spatialUnit" | "concept" | "text" | null;
+      linkUuids: Array<string>;
       queries: Array<{
         label: string;
         propertyVariableUuids: Array<string>;
@@ -351,9 +351,18 @@ export type WebElementComponent =
         endIcon: string | null;
       }>;
       displayedProperties: Array<{ uuid: string; label: string }> | null;
-      itemVariant: "detailed" | "card" | "tile";
-      paginationVariant: "default" | "numeric";
-      layout: "image-top" | "image-bottom" | "image-start" | "image-end";
+      itemVariant: Extract<
+        WebElementComponent,
+        { component: "collection" }
+      >["itemVariant"];
+      paginationVariant: Extract<
+        WebElementComponent,
+        { component: "collection" }
+      >["paginationVariant"];
+      layout: Extract<
+        WebElementComponent,
+        { component: "collection" }
+      >["layout"];
     }
   | {
       component: "search-bar";

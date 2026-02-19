@@ -10,15 +10,16 @@ import type {
   OchreSpatialUnit,
   OchreText,
   OchreTree,
-} from "../../types/internal.raw.js";
+} from "../../../types/internal.raw.js";
 import type {
   ApiVersion,
   DataCategory,
   Item,
   PropertyValueContentType,
-} from "../../types/main.js";
-import { BELONGS_TO_COLLECTION_UUID } from "../../constants.js";
-import { DEFAULT_API_VERSION, DEFAULT_PAGE_SIZE } from "../helpers.js";
+} from "../../../types/main.js";
+import { BELONGS_TO_COLLECTION_UUID } from "../../../constants.js";
+import { setItemsByPropertyValuesParamsSchema } from "../../../schemas.js";
+import { DEFAULT_API_VERSION } from "../../helpers.js";
 import {
   parseBibliographies,
   parseConcepts,
@@ -31,16 +32,15 @@ import {
   parseSpatialUnits,
   parseTexts,
   parseTrees,
-} from "../parse/index.js";
+} from "../../parse/index.js";
 
 /**
  * Build an XQuery string to fetch items by property values from the OCHRE API
  * @param params - The parameters for the fetch
- * @param params.projectScopeUuid - The UUID of the project scope
+ * @param params.setScopeUuids - An array of Set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - An array of property variable UUIDs to fetch
  * @param params.propertyValues - An array of property values to fetch
- * @param params.itemCategory - The category of the items to fetch
  * @param params.page - The page number (1-indexed)
  * @param params.pageSize - The number of items per page
  * @param params.includeChildItems - Whether to include child items of the same category
@@ -50,7 +50,7 @@ import {
  */
 function buildXQuery(
   params: {
-    projectScopeUuid: string;
+    setScopeUuids: Array<string>;
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
     propertyValues: Array<{
@@ -59,7 +59,6 @@ function buildXQuery(
     }>;
     page: number;
     pageSize: number;
-    itemCategory?: "resource" | "spatialUnit" | "concept" | "text";
     includeChildItems?: boolean;
   },
   options?: { version: ApiVersion },
@@ -69,16 +68,24 @@ function buildXQuery(
   const {
     propertyVariableUuids,
     propertyValues,
-    projectScopeUuid,
+    setScopeUuids,
     belongsToCollectionScopeUuids,
-    itemCategory,
     page,
     pageSize,
     includeChildItems = false,
   } = params;
 
-  const startPos = (page - 1) * pageSize + 1;
-  const endPos = page * pageSize;
+  const startPosition = (page - 1) * pageSize + 1;
+  const endPosition = page * pageSize;
+
+  let setScopeFilter = "";
+
+  if (setScopeUuids.length > 0) {
+    const setScopeValues = setScopeUuids
+      .map((uuid) => `@uuid="${uuid}"`)
+      .join(" or ");
+    setScopeFilter = `/set[(${setScopeValues})]/items/*`;
+  }
 
   let belongsToCollectionScopeFilter = "";
 
@@ -113,23 +120,15 @@ function buildXQuery(
     })
     .join(" or ");
 
-  const xquery = `let $match-uuids := distinct-values(
-    ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]
+  const xquery = `let $items := ${version === 2 ? "doc()" : "input()"}/ochre
+        ${setScopeFilter}
         ${belongsToCollectionScopeFilter}
           //property[label[${propertyVariables}]][${propertyValuesFilters}]]
-        /@uuid
-  )
 
-  let $items := ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]
-      /${itemCategory ?? "*"}[@uuid = $match-uuids
-             or bibliographies/bibliography/@uuid = $match-uuids]
-
-  let $unique-uuids := distinct-values($items/@uuid)
-  let $totalCount := count($unique-uuids)
+  let $totalCount := count($items)
 
   return <items totalCount="{$totalCount}" page="${page}" pageSize="${pageSize}">{
-    for $uuid in $unique-uuids[position() ge ${startPos} and position() le ${endPos}]
-      let $item := ($items[@uuid = $uuid])[1]
+    for $item in $items[position() ge ${startPosition} and position() le ${endPosition}]
       let $category := local-name($item)
       return element { node-name($item) } {
         $item/@*, ${
@@ -147,13 +146,12 @@ function buildXQuery(
  * Fetches and parses items by property values from the OCHRE API
  *
  * @param params - The parameters for the fetch
- * @param params.projectScopeUuid - The UUID of the project scope
+ * @param params.setScopeUuids - The Set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - The property variable UUIDs to query by
  * @param params.propertyValues - The property values to query by
  * @param params.page - The page number (1-indexed)
  * @param params.pageSize - The number of items per page
- * @param params.itemCategory - The category of the items to fetch
  * @param params.includeChildItems - Whether to include child items of the same category
  * @param categoryParams - The category parameters for the fetch
  * @param categoryParams.category - The category of the items to fetch
@@ -163,7 +161,7 @@ function buildXQuery(
  * @param options.version - The version of the OCHRE API to use
  * @returns The parsed items by property values or null if the fetch/parse fails
  */
-export async function fetchItemsByPropertyValues<
+export async function fetchSetItemsByPropertyValues<
   T extends DataCategory = DataCategory,
   U extends DataCategory | Array<DataCategory> = T extends "tree" ?
     Exclude<DataCategory, "tree">
@@ -171,7 +169,7 @@ export async function fetchItemsByPropertyValues<
   : never,
 >(
   params: {
-    projectScopeUuid: string;
+    setScopeUuids: Array<string>;
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
     propertyValues: Array<{
@@ -180,7 +178,6 @@ export async function fetchItemsByPropertyValues<
     }>;
     page: number;
     pageSize?: number;
-    itemCategory?: "resource" | "spatialUnit" | "concept" | "text";
     includeChildItems?: boolean;
   },
   categoryParams?: { category?: T; itemCategories?: U },
@@ -205,24 +202,23 @@ export async function fetchItemsByPropertyValues<
     const version = options?.version ?? DEFAULT_API_VERSION;
 
     const {
+      setScopeUuids,
+      belongsToCollectionScopeUuids,
       propertyVariableUuids,
       propertyValues,
-      projectScopeUuid,
-      belongsToCollectionScopeUuids,
       page,
-      pageSize = DEFAULT_PAGE_SIZE,
-      itemCategory,
+      pageSize,
       includeChildItems,
-    } = params;
+    } = setItemsByPropertyValuesParamsSchema.parse(params);
+
     const { category, itemCategories } = categoryParams ?? {};
 
     const xquery = buildXQuery(
       {
-        projectScopeUuid,
+        setScopeUuids,
         belongsToCollectionScopeUuids,
         propertyVariableUuids,
         propertyValues,
-        itemCategory,
         includeChildItems,
         page,
         pageSize,

@@ -510,10 +510,10 @@ function parseWebElementProperties(
       break;
     }
     case "collection": {
-      const collectionLinks = links.filter((link) => link.category === "set");
-      if (collectionLinks.every((link) => link.uuid === null)) {
+      const setLinks = links.filter((link) => link.category === "set");
+      if (setLinks.every((link) => link.uuid === null)) {
         throw new Error(
-          `Collection links not found for the following component: “${componentName}”`,
+          `Set links not found for the following component: “${componentName}”`,
         );
       }
 
@@ -708,7 +708,7 @@ function parseWebElementProperties(
 
       properties = {
         component: "collection",
-        linkUuids: collectionLinks
+        linkUuids: setLinks
           .map((link) => link.uuid)
           .filter((uuid) => uuid !== null),
         displayedProperties:
@@ -1176,17 +1176,16 @@ function parseWebElementProperties(
       break;
     }
     case "query": {
+      const setLinks = links.filter((link) => link.category === "set");
+      if (setLinks.every((link) => link.uuid === null)) {
+        throw new Error(
+          `Set links not found for the following component: “${componentName}”`,
+        );
+      }
+
       const queries: Array<
         Extract<WebElementComponent, { component: "query" }>["queries"][number]
       > = [];
-
-      let itemCategory = getPropertyValueByLabel(
-        componentProperty.properties,
-        "item-category",
-      ) as
-        | Extract<WebElementComponent, { component: "query" }>["itemCategory"]
-        | null;
-      itemCategory ??= null;
 
       if (componentProperty.properties.length === 0) {
         throw new Error(
@@ -1280,7 +1279,9 @@ function parseWebElementProperties(
 
       properties = {
         component: "query",
-        itemCategory,
+        linkUuids: setLinks
+          .map((link) => link.uuid)
+          .filter((uuid) => uuid !== null),
         queries,
         displayedProperties:
           displayedProperties?.values

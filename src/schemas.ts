@@ -6,6 +6,7 @@ import type {
   PropertyValueContentType,
 } from "./types/main.js";
 import type { WebElementComponent } from "./types/website.js";
+import { DEFAULT_PAGE_SIZE } from "./utils/helpers.js";
 import { isPseudoUuid } from "./utils/internal.js";
 
 /**
@@ -228,3 +229,50 @@ export const boundsSchema = z
       { message: "Must contain exactly 2 coordinate pairs" },
     ),
   );
+
+/**
+ * Schema for validating the parameters for the Set property values by property variables fetching function
+ * @internal
+ */
+export const setPropertyValuesByPropertyVariablesParamsSchema = z.object({
+  setScopeUuids: z
+    .array(uuidSchema)
+    .min(1, "At least one set scope UUID is required"),
+  belongsToCollectionScopeUuids: z.array(uuidSchema).default([]),
+  propertyVariableUuids: z
+    .array(uuidSchema)
+    .min(1, "At least one property variable UUID is required"),
+});
+
+export const setItemsByPropertyValuesParamsSchema = z.object({
+  ...setPropertyValuesByPropertyVariablesParamsSchema.shape,
+  propertyValues: z
+    .array(
+      z.object({
+        dataType: z.enum([
+          "string",
+          "integer",
+          "decimal",
+          "boolean",
+          "date",
+          "dateTime",
+          "time",
+
+          "IDREF",
+        ] as const satisfies ReadonlyArray<
+          Exclude<PropertyValueContentType, "coordinate">
+        >),
+        value: z.string(),
+      }),
+    )
+    .min(1, "At least one property value is required"),
+  page: z.number().min(1, "Page must be at least 1").default(1),
+  pageSize: z
+    .number()
+    .min(1, "Page size must be at least 1")
+    .default(DEFAULT_PAGE_SIZE),
+  itemCategory: z
+    .enum(["resource", "spatialUnit", "concept", "text"])
+    .optional(),
+  includeChildItems: z.boolean().optional().default(false),
+});

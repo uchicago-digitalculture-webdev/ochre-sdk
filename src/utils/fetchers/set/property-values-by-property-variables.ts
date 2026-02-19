@@ -3,11 +3,14 @@ import type {
   ApiVersion,
   PropertyValueContentType,
   PropertyValueQueryItem,
-} from "../../types/main.js";
-import { BELONGS_TO_COLLECTION_UUID } from "../../constants.js";
-import { richTextStringSchema } from "../../schemas.js";
-import { DEFAULT_API_VERSION } from "../helpers.js";
-import { parseFakeString, parseStringContent } from "../string.js";
+} from "../../../types/main.js";
+import { BELONGS_TO_COLLECTION_UUID } from "../../../constants.js";
+import {
+  richTextStringSchema,
+  setPropertyValuesByPropertyVariablesParamsSchema,
+} from "../../../schemas.js";
+import { DEFAULT_API_VERSION } from "../../helpers.js";
+import { parseFakeString, parseStringContent } from "../../string.js";
 
 /**
  * Schema for a single property value query item in the OCHRE API response
@@ -113,7 +116,7 @@ const responseSchema = z.object({
 /**
  * Build an XQuery string to fetch property values by property variables from the OCHRE API
  * @param params - The parameters for the fetch
- * @param params.projectScopeUuid - The UUID of the project scope
+ * @param params.setScopeUuids - An array of set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - An array of property variable UUIDs to fetch
  * @param options - Options for the fetch
@@ -122,7 +125,7 @@ const responseSchema = z.object({
  */
 function buildXQuery(
   params: {
-    projectScopeUuid: string;
+    setScopeUuids: Array<string>;
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
   },
@@ -131,11 +134,19 @@ function buildXQuery(
   const version = options?.version ?? DEFAULT_API_VERSION;
 
   const {
-    projectScopeUuid,
+    setScopeUuids,
     belongsToCollectionScopeUuids,
     propertyVariableUuids,
   } = params;
 
+  let setScopeFilter = "";
+
+  if (setScopeUuids.length > 0) {
+    const setScopeValues = setScopeUuids
+      .map((uuid) => `@uuid="${uuid}"`)
+      .join(" or ");
+    setScopeFilter = `/set[(${setScopeValues})]/items`;
+  }
   let collectionScopeFilter = "";
 
   if (belongsToCollectionScopeUuids.length > 0) {
@@ -150,13 +161,13 @@ function buildXQuery(
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
 
-  const xquery = `let $matching-props := ${version === 2 ? "doc()" : "input()"}/ochre[@uuidBelongsTo="${projectScopeUuid}"]
+  const xquery = `let $matching-props := ${version === 2 ? "doc()" : "input()"}/ochre
+      ${setScopeFilter}
       ${collectionScopeFilter}
-      /*[not(self::set)]
       //property[label/(${propertyVariableFilters})]
 
   for $v in $matching-props/value
-    let $item-uuid := $v/ancestor::*[parent::ochre]/@uuid
+    let $item-uuid := $v/ancestor::*[parent::items]/@uuid
     return <propertyValue uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}" itemUuid="{$item-uuid}">{
       if ($v/content) then $v/content else $v/text()
     }</propertyValue>`;
@@ -165,20 +176,20 @@ function buildXQuery(
 }
 
 /**
- * Fetches and parses property values by property variables from the OCHRE API
+ * Fetches and parses Set property values by property variables from the OCHRE API
  *
  * @param params - The parameters for the fetch
- * @param params.projectScopeUuid - The UUID of the project scope
+ * @param params.setScopeUuids - An array of set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - The property variable UUIDs to query by
  * @param options - Options for the fetch
  * @param options.fetch - The fetch function to use
  * @param options.version - The version of the OCHRE API to use
- * @returns The parsed property values by property variables or null if the fetch/parse fails
+ * @returns The parsed Set property values by property variables or null if the fetch/parse fails
  */
-export async function fetchPropertyValuesByPropertyVariables(
+export async function fetchSetPropertyValuesByPropertyVariables(
   params: {
-    projectScopeUuid: string;
+    setScopeUuids: Array<string>;
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
   },
@@ -190,24 +201,20 @@ export async function fetchPropertyValuesByPropertyVariables(
     version?: ApiVersion;
   },
 ): Promise<
-  | { items: Array<PropertyValueQueryItem> | null; error: null }
-  | { items: null; error: string }
+  | { propertyValues: Array<PropertyValueQueryItem> | null; error: null }
+  | { propertyValues: null; error: string }
 > {
   try {
     const version = options?.version ?? DEFAULT_API_VERSION;
 
     const {
+      setScopeUuids,
       belongsToCollectionScopeUuids,
       propertyVariableUuids,
-      projectScopeUuid,
-    } = params;
+    } = setPropertyValuesByPropertyVariablesParamsSchema.parse(params);
 
     const xquery = buildXQuery(
-      {
-        projectScopeUuid,
-        belongsToCollectionScopeUuids,
-        propertyVariableUuids,
-      },
+      { setScopeUuids, belongsToCollectionScopeUuids, propertyVariableUuids },
       { version },
     );
 
@@ -224,15 +231,15 @@ export async function fetchPropertyValuesByPropertyVariables(
 
     const parsedResultRaw = responseSchema.parse(data);
     if (Array.isArray(parsedResultRaw.result)) {
-      throw new TypeError("No items found");
+      throw new TypeError("No property values found");
     }
 
-    const parsedItems =
+    const parsedPropertyValues =
       Array.isArray(parsedResultRaw.result.ochre.propertyValue) ?
         parsedResultRaw.result.ochre.propertyValue
       : [parsedResultRaw.result.ochre.propertyValue];
 
-    const groupedItemsMap = new Map<
+    const groupedPropertyValuesMap = new Map<
       string | number | boolean | null,
       {
         dataType: Exclude<PropertyValueContentType, "coordinate">;
@@ -242,23 +249,23 @@ export async function fetchPropertyValuesByPropertyVariables(
       }
     >();
 
-    for (const item of parsedItems) {
-      const existing = groupedItemsMap.get(item.content);
+    for (const propertyValue of parsedPropertyValues) {
+      const existing = groupedPropertyValuesMap.get(propertyValue.content);
       if (existing == null) {
-        groupedItemsMap.set(item.content, {
-          dataType: item.dataType,
-          content: item.content,
-          label: item.label,
-          itemUuids: new Set([item.itemUuid]),
+        groupedPropertyValuesMap.set(propertyValue.content, {
+          dataType: propertyValue.dataType,
+          content: propertyValue.content,
+          label: propertyValue.label,
+          itemUuids: new Set([propertyValue.itemUuid]),
         });
       } else {
-        existing.itemUuids.add(item.itemUuid);
+        existing.itemUuids.add(propertyValue.itemUuid);
       }
     }
 
-    const groupedItems: Array<PropertyValueQueryItem> = [];
-    for (const group of groupedItemsMap.values()) {
-      groupedItems.push({
+    const groupedPropertyValues: Array<PropertyValueQueryItem> = [];
+    for (const group of groupedPropertyValuesMap.values()) {
+      groupedPropertyValues.push({
         count: group.itemUuids.size,
         dataType: group.dataType,
         content: group.content,
@@ -267,25 +274,28 @@ export async function fetchPropertyValuesByPropertyVariables(
     }
 
     return {
-      items: groupedItems.toSorted((a, b) => {
-        if (a.count !== b.count) {
-          return b.count - a.count;
-        }
+      propertyValues: groupedPropertyValues
+        .filter((propertyValue) => propertyValue.content !== null)
+        .toSorted((a, b) => {
+          if (a.count !== b.count) {
+            return b.count - a.count;
+          }
 
-        if (a.label !== b.label) {
-          return a.label?.localeCompare(b.label ?? "") ?? 0;
-        }
+          if (a.label !== b.label) {
+            return a.label?.localeCompare(b.label ?? "") ?? 0;
+          }
 
-        return (
-          a.content?.toString().localeCompare(b.content?.toString() ?? "") ?? 0
-        );
-      }),
+          return (
+            a.content?.toString().localeCompare(b.content?.toString() ?? "") ??
+            0
+          );
+        }),
       error: null,
     };
   } catch (error) {
     console.error(error);
     return {
-      items: null,
+      propertyValues: null,
       error:
         error instanceof Error ?
           error.message
