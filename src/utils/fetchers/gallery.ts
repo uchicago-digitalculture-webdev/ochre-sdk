@@ -3,7 +3,7 @@ import type {
   OchreIdentification,
   OchreResource,
 } from "../../types/internal.raw.d.ts";
-import type { ApiVersion, Gallery } from "../../types/main.js";
+import type { ApiVersion, Gallery } from "../../types/index.js";
 import { uuidSchema } from "../../schemas.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
 import { parseIdentification, parseResources } from "../parse/index.js";

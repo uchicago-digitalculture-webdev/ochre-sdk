@@ -4,7 +4,7 @@ import type {
   ApiVersion,
   DataCategory,
   PropertyValueContentType,
-} from "./types/main.js";
+} from "./types/index.js";
 import type { WebElementComponent } from "./types/website.js";
 import { DEFAULT_PAGE_SIZE } from "./utils/helpers.js";
 import { isPseudoUuid } from "./utils/internal.js";

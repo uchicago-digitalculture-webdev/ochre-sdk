@@ -3,7 +3,7 @@ import type {
   ApiVersion,
   PropertyValueContentType,
   PropertyValueQueryItem,
-} from "../../../types/main.js";
+} from "../../../types/index.js";
 import { BELONGS_TO_COLLECTION_UUID } from "../../../constants.js";
 import {
   richTextStringSchema,

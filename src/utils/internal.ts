@@ -1,6 +1,6 @@
 import { parseISO } from "date-fns";
 import type { FakeString, OchreStringContent } from "../types/internal.raw.js";
-import type { DataCategory, Property } from "../types/main.js";
+import type { DataCategory, Property } from "../types/index.js";
 import { categorySchema } from "../schemas.js";
 import { parseFakeString, parseStringContent } from "./string.js";
 

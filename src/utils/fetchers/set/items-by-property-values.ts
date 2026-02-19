@@ -16,7 +16,7 @@ import type {
   DataCategory,
   Item,
   PropertyValueContentType,
-} from "../../../types/main.js";
+} from "../../../types/index.js";
 import { BELONGS_TO_COLLECTION_UUID } from "../../../constants.js";
 import { setItemsByPropertyValuesParamsSchema } from "../../../schemas.js";
 import { DEFAULT_API_VERSION } from "../../helpers.js";

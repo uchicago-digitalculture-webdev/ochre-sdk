@@ -5,7 +5,7 @@ import type {
   License,
   Metadata,
   Person,
-} from "./main.js";
+} from "./index.js";
 
 /**
  * Represents a level context item with a variable and value

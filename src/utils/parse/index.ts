@@ -64,7 +64,7 @@ import type {
   SpatialUnit,
   Text,
   Tree,
-} from "../../types/main.js";
+} from "../../types/index.js";
 import { propertyValueContentTypeSchema } from "../../schemas.js";
 import {
   parseEmail,

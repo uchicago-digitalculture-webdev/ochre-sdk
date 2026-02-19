@@ -1,4 +1,4 @@
-import type { DataCategory, Item, Property } from "../types/main.js";
+import type { DataCategory, Item, Property } from "../types/index.js";
 import { flattenProperties } from "./internal.js";
 
 /**

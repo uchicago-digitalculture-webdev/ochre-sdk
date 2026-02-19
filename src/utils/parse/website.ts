@@ -7,7 +7,11 @@ import type {
   OchreStringRichText,
   OchreTree,
 } from "../../types/internal.raw.d.ts";
-import type { ApiVersion, Identification, Property } from "../../types/main.js";
+import type {
+  ApiVersion,
+  Identification,
+  Property,
+} from "../../types/index.js";
 import type {
   LevelContext,
   LevelContextItem,

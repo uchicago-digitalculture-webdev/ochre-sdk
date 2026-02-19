@@ -3,7 +3,7 @@ import type {
   Property,
   PropertyValueContent,
   PropertyValueContentType,
-} from "../types/main.js";
+} from "../types/index.js";
 
 /**
  * Options for property search operations
