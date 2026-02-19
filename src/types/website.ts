@@ -350,6 +350,12 @@ export type WebElementComponent =
         startIcon: string | null;
         endIcon: string | null;
       }>;
+      options: {
+        attributeFilters: { bibliographies: boolean; periods: boolean };
+        scopes: Array<Scope> | null;
+        contexts: PropertyContexts | null;
+        labels: { title: string | null };
+      };
       displayedProperties: Array<{ uuid: string; label: string }> | null;
       itemVariant: Extract<
         WebElementComponent,

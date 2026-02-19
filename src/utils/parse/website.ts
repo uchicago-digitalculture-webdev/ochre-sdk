@@ -1249,6 +1249,42 @@ function parseWebElementProperties(
         );
       }
 
+      const options: Extract<
+        WebElementComponent,
+        { component: "query" }
+      >["options"] = {
+        attributeFilters: {
+          bibliographies: elementResource.options?.filterBibliography ?? false,
+          periods: elementResource.options?.filterPeriods ?? false,
+        },
+        scopes:
+          elementResource.options?.scopes != null ?
+            ensureArray(elementResource.options.scopes.scope).map((scope) => ({
+              uuid: scope.uuid.content,
+              type: scope.uuid.type,
+              identification: parseIdentification(scope.identification),
+            }))
+          : null,
+        contexts: null,
+        labels: { title: null },
+      };
+
+      if ("options" in elementResource && elementResource.options) {
+        options.contexts = parseAllOptionContexts(elementResource.options);
+
+        if (
+          "notes" in elementResource.options &&
+          elementResource.options.notes
+        ) {
+          const labelNotes = parseNotes(
+            ensureArray(elementResource.options.notes.note),
+          );
+          options.labels.title =
+            labelNotes.find((note) => note.title === "Title label")?.content ??
+            null;
+        }
+      }
+
       const displayedProperties = getPropertyByLabel(
         componentProperty.properties,
         "use-property",
@@ -1287,6 +1323,7 @@ function parseWebElementProperties(
           .map((link) => link.uuid)
           .filter((uuid) => uuid !== null),
         queries,
+        options,
         displayedProperties:
           displayedProperties?.values
             .filter((value) => value.uuid !== null)
