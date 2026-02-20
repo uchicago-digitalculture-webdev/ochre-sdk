@@ -1,3 +1,8 @@
+# Overrides for packages that have vulnerability alerts raised by Dependabot
+overrides:
+  ajv: ^8.18.0
+  minimatch: ^10.2.2
+
 onlyBuiltDependencies:
   - esbuild
   - simple-git-hooks
