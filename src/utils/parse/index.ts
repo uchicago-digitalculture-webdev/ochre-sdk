@@ -730,7 +730,7 @@ export function parseProperty(
         label: null,
         dataType: "string",
         isUncertain: false,
-        category: "value",
+        category: "propertyValue",
         type: null,
         uuid: null,
         publicationDateTime: null,
