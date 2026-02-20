@@ -168,17 +168,18 @@ export function parseMetadata(metadata: RawMetadata): Metadata {
     }
   }
 
-  const projectId =
+  const projectIdentification =
     metadata.project?.identification ?
       parseIdentification(metadata.project.identification)
     : null;
 
   return {
     project:
-      projectId ?
+      projectIdentification ?
         {
+          uuid: metadata.project?.uuid ?? "",
           identification: {
-            ...projectId,
+            ...projectIdentification,
             website: metadata.project?.identification.website ?? null,
           },
           dateFormat: metadata.project?.dateFormat ?? null,
@@ -188,6 +189,7 @@ export function parseMetadata(metadata: RawMetadata): Metadata {
     collection:
       metadata.collection ?
         {
+          uuid: metadata.collection?.uuid ?? "",
           identification: parseIdentification(
             metadata.collection.identification,
           ),
@@ -197,6 +199,7 @@ export function parseMetadata(metadata: RawMetadata): Metadata {
     publication:
       metadata.publication ?
         {
+          uuid: metadata.publication?.uuid ?? "",
           identification: parseIdentification(
             metadata.publication.identification,
           ),
@@ -1808,6 +1811,7 @@ export function parseConcept(
         parseContext(concept.context)
       : null,
     identification: parseIdentification(concept.identification),
+    status: concept.status ?? "pending",
     image: concept.image ? parseImage(concept.image) : null,
     description:
       concept.description ?

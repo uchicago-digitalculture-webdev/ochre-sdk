@@ -138,12 +138,21 @@ export type RawMetadata = {
   publisher: RawStringContent | RawFakeString;
   dataset: RawStringContent | RawFakeString;
   project?: {
+    uuid: string;
     identification: RawIdentification;
     dateFormat?: string;
     page?: "item" | "entry";
   };
-  collection?: { identification: RawIdentification; page: "item" | "entry" };
-  publication?: { identification: RawIdentification; page: "item" | "entry" };
+  collection?: {
+    uuid: string;
+    identification: RawIdentification;
+    page: "item" | "entry";
+  };
+  publication?: {
+    uuid: string;
+    identification: RawIdentification;
+    page: "item" | "entry";
+  };
   language?: string | RawLanguage | Array<string | RawLanguage>;
   description: RawStringContent | RawFakeString;
 };
@@ -329,6 +338,7 @@ export type RawConcept = {
   availability?: RawLicense;
   context?: RawContext;
   identification: RawIdentification;
+  status?: "live" | "pending";
   image?: RawImage;
   description?: RawStringContent | RawFakeString;
   coordinates?: RawCoordinates;

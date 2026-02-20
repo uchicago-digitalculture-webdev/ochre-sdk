@@ -89,12 +89,18 @@ export type Identification = {
  */
 export type Metadata = {
   project: {
+    uuid: string;
     identification: Identification & { website: string | null };
     dateFormat: string | null;
     page: "item" | "entry" | null;
   } | null;
-  collection: { identification: Identification; page: "item" | "entry" } | null;
+  collection: {
+    uuid: string;
+    identification: Identification;
+    page: "item" | "entry";
+  } | null;
   publication: {
+    uuid: string;
     identification: Identification;
     page: "item" | "entry";
   } | null;
@@ -450,6 +456,7 @@ export type Concept = {
   license: License | null;
   context: Context | null;
   identification: Identification;
+  status: "live" | "pending";
   image: Image | null;
   description: string | null;
   coordinates: Array<Coordinate>;
