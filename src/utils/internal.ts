@@ -1,6 +1,6 @@
 import { parseISO } from "date-fns";
 import type { DataCategory, Property } from "../types/index.js";
-import type { FakeString, OchreStringContent } from "../types/raw.js";
+import type { RawFakeString, RawStringContent } from "../types/raw.js";
 import { categorySchema } from "../schemas.js";
 import { parseFakeString, parseStringContent } from "./string.js";
 
@@ -131,7 +131,7 @@ export function ensureArray<T>(value: T | Array<T>): Array<T> {
  * @param value - Value to check
  * @returns True if the value is a FakeString
  */
-export function isFakeString(value: unknown): value is FakeString {
+export function isFakeString(value: unknown): value is RawFakeString {
   return (
     typeof value === "string" ||
     typeof value === "number" ||
@@ -146,7 +146,7 @@ export function isFakeString(value: unknown): value is FakeString {
  * @returns Parsed value
  */
 export function parseFakeStringOrContent(
-  value: FakeString | OchreStringContent,
+  value: RawFakeString | RawStringContent,
 ): string {
   return isFakeString(value) ?
       parseFakeString(value)

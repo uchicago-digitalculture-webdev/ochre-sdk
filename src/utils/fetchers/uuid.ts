@@ -1,5 +1,5 @@
 import type { ApiVersion } from "../../types/index.js";
-import type { OchreData, OchreDataResponse } from "../../types/raw.js";
+import type { RawData, RawDataResponse } from "../../types/raw.js";
 import { uuidSchema } from "../../schemas.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
 
@@ -19,7 +19,7 @@ export async function fetchByUuid(
     ) => Promise<Response>;
     version?: ApiVersion;
   },
-): Promise<[null, OchreData] | [string, null]> {
+): Promise<[null, RawData] | [string, null]> {
   try {
     const version = options?.version ?? DEFAULT_API_VERSION;
 
@@ -33,7 +33,7 @@ export async function fetchByUuid(
     if (!response.ok) {
       throw new Error("Failed to fetch OCHRE data");
     }
-    const dataRaw = (await response.json()) as OchreDataResponse;
+    const dataRaw = (await response.json()) as RawDataResponse;
     if (
       (version === 2 &&
         (!("result" in dataRaw) || !("ochre" in dataRaw.result))) ||

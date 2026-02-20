@@ -5,17 +5,17 @@ import type {
   PropertyValueContentType,
 } from "../../../types/index.js";
 import type {
-  OchreBibliography,
-  OchreConcept,
-  OchrePeriod,
-  OchrePerson,
-  OchrePropertyValue,
-  OchrePropertyVariable,
-  OchreResource,
-  OchreSet,
-  OchreSpatialUnit,
-  OchreText,
-  OchreTree,
+  RawBibliography,
+  RawConcept,
+  RawPeriod,
+  RawPerson,
+  RawPropertyValue,
+  RawPropertyVariable,
+  RawResource,
+  RawSet,
+  RawSpatialUnit,
+  RawText,
+  RawTree,
 } from "../../../types/raw.js";
 import { BELONGS_TO_COLLECTION_UUID } from "../../../constants.js";
 import { setItemsByPropertyValuesParamsSchema } from "../../../schemas.js";
@@ -243,19 +243,19 @@ export async function fetchSetItemsByPropertyValues<
                 totalCount: number;
                 page: number;
                 pageSize: number;
-                resource?: OchreResource | Array<OchreResource>;
-                spatialUnit?: OchreSpatialUnit | Array<OchreSpatialUnit>;
-                concept?: OchreConcept | Array<OchreConcept>;
-                period?: OchrePeriod | Array<OchrePeriod>;
-                bibliography?: OchreBibliography | Array<OchreBibliography>;
-                person?: OchrePerson | Array<OchrePerson>;
+                resource?: RawResource | Array<RawResource>;
+                spatialUnit?: RawSpatialUnit | Array<RawSpatialUnit>;
+                concept?: RawConcept | Array<RawConcept>;
+                period?: RawPeriod | Array<RawPeriod>;
+                bibliography?: RawBibliography | Array<RawBibliography>;
+                person?: RawPerson | Array<RawPerson>;
                 propertyVariable?:
-                  | OchrePropertyVariable
-                  | Array<OchrePropertyVariable>;
-                propertyValue?: OchrePropertyValue | Array<OchrePropertyValue>;
-                text?: OchreText | Array<OchreText>;
-                set?: OchreSet | Array<OchreSet>;
-                tree?: OchreTree | Array<OchreTree>;
+                  | RawPropertyVariable
+                  | Array<RawPropertyVariable>;
+                propertyValue?: RawPropertyValue | Array<RawPropertyValue>;
+                text?: RawText | Array<RawText>;
+                set?: RawSet | Array<RawSet>;
+                tree?: RawTree | Array<RawTree>;
               };
             };
           }

@@ -4,13 +4,13 @@ import type {
   Property,
 } from "../../types/index.js";
 import type {
-  OchreLevelContext,
-  OchreMetadata,
-  OchreProperty,
-  OchreResource,
-  OchreStringContent,
-  OchreStringRichText,
-  OchreTree,
+  RawLevelContext,
+  RawMetadata,
+  RawProperty,
+  RawResource,
+  RawStringContent,
+  RawStringRichText,
+  RawTree,
 } from "../../types/raw.js";
 import type {
   LevelContext,
@@ -126,14 +126,14 @@ export function parseBounds(
  * @returns Parsed context options
  */
 function parseAllOptionContexts(options: {
-  flattenContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
-  suppressContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
-  filterContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
-  sortContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
-  detailContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
-  downloadContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
-  labelContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
-  prominentContexts?: OchreLevelContext | Array<OchreLevelContext> | null;
+  flattenContexts?: RawLevelContext | Array<RawLevelContext> | null;
+  suppressContexts?: RawLevelContext | Array<RawLevelContext> | null;
+  filterContexts?: RawLevelContext | Array<RawLevelContext> | null;
+  sortContexts?: RawLevelContext | Array<RawLevelContext> | null;
+  detailContexts?: RawLevelContext | Array<RawLevelContext> | null;
+  downloadContexts?: RawLevelContext | Array<RawLevelContext> | null;
+  labelContexts?: RawLevelContext | Array<RawLevelContext> | null;
+  prominentContexts?: RawLevelContext | Array<RawLevelContext> | null;
 }): {
   flatten: Array<LevelContext>;
   suppress: Array<LevelContext>;
@@ -145,7 +145,7 @@ function parseAllOptionContexts(options: {
   prominent: Array<LevelContext>;
 } {
   function handleContexts(
-    v: OchreLevelContext | Array<OchreLevelContext> | null | undefined,
+    v: RawLevelContext | Array<RawLevelContext> | null | undefined,
   ): Array<LevelContext> {
     return parseContexts(v != null ? ensureArray(v) : []);
   }
@@ -171,7 +171,7 @@ function parseAllOptionContexts(options: {
  */
 function parseWebElementProperties(
   componentProperty: Property,
-  elementResource: OchreResource,
+  elementResource: RawResource,
 ): WebElementComponent {
   const unparsedComponentName = componentProperty.values[0]!.content;
   const { data: componentName } = componentSchema.safeParse(
@@ -1423,7 +1423,7 @@ function parseWebElementProperties(
     case "text": {
       const content =
         elementResource.document && "content" in elementResource.document ?
-          parseDocument(elementResource.document.content as OchreStringRichText)
+          parseDocument(elementResource.document.content as RawStringRichText)
         : null;
       if (!content) {
         throw new Error(
@@ -1521,7 +1521,7 @@ function parseWebElementProperties(
     default: {
       console.warn(
         `Invalid or non-implemented component name “${unparsedComponentName?.toString() ?? "(unknown)"}” for the following element: “${parseStringContent(
-          elementResource.identification.label as OchreStringContent,
+          elementResource.identification.label as RawStringContent,
         )}”`,
       );
       break;
@@ -1598,7 +1598,7 @@ function parseWebTitle(
  * @param elementResource - Raw element resource data in OCHRE format
  * @returns Parsed WebElement object
  */
-function parseWebElement(elementResource: OchreResource): WebElement {
+function parseWebElement(elementResource: RawResource): WebElement {
   const identification = parseIdentification(elementResource.identification);
 
   const elementProperties =
@@ -1663,7 +1663,7 @@ function parseWebElement(elementResource: OchreResource): WebElement {
  * @returns Array of parsed WebElement or Webpage objects
  */
 const parseWebpageResources = <T extends "element" | "page" | "block">(
-  webpageResources: Array<OchreResource>,
+  webpageResources: Array<RawResource>,
   type: T,
 ): Array<
   T extends "element" ? WebElement
@@ -1740,7 +1740,7 @@ const parseWebpageResources = <T extends "element" | "page" | "block">(
  * @returns Parsed Webpage object
  */
 function parseWebpage(
-  webpageResource: OchreResource,
+  webpageResource: RawResource,
   slugPrefix?: string,
 ): Webpage | null {
   const webpageProperties =
@@ -1905,7 +1905,7 @@ function parseWebpage(
  * @returns Array of parsed Webpage objects
  */
 function parseWebpages(
-  webpageResources: Array<OchreResource>,
+  webpageResources: Array<RawResource>,
   slugPrefix?: string,
 ): Array<Webpage> {
   const returnPages: Array<Webpage> = [];
@@ -1927,7 +1927,7 @@ function parseWebpages(
  * @returns Parsed WebSegment object
  */
 function parseWebSegment(
-  segmentResource: OchreResource,
+  segmentResource: RawResource,
   slugPrefix?: string,
 ): WebSegment | null {
   const webpageProperties =
@@ -1979,7 +1979,7 @@ function parseWebSegment(
  * @returns Array of parsed WebSegment objects
  */
 function parseSegments(
-  segmentResources: Array<OchreResource>,
+  segmentResources: Array<RawResource>,
   slugPrefix?: string,
 ): Array<WebSegment> {
   const returnSegments: Array<WebSegment> = [];
@@ -2001,7 +2001,7 @@ function parseSegments(
  * @returns Parsed WebSegmentItem object
  */
 function parseWebSegmentItem(
-  segmentItemResource: OchreResource,
+  segmentItemResource: RawResource,
   slugPrefix?: string,
 ): WebSegmentItem | null {
   const webpageProperties =
@@ -2068,7 +2068,7 @@ function parseWebSegmentItem(
  * @returns Array of parsed WebSegmentItem objects
  */
 function parseWebSegmentItems(
-  segmentItems: Array<OchreResource>,
+  segmentItems: Array<RawResource>,
   slugPrefix?: string,
 ): Array<WebSegmentItem> {
   const returnItems: Array<WebSegmentItem> = [];
@@ -2090,7 +2090,7 @@ function parseWebSegmentItems(
  * @returns Parsed Sidebar object
  */
 function parseSidebar(
-  resources: Array<OchreResource>,
+  resources: Array<RawResource>,
 ): Website["properties"]["sidebar"] | null {
   let returnSidebar: Website["properties"]["sidebar"] | null = null;
 
@@ -2250,7 +2250,7 @@ function parseSidebar(
  * @returns Parsed text WebElement with items array
  */
 function parseWebElementForAccordion(
-  elementResource: OchreResource,
+  elementResource: RawResource,
 ): Extract<WebElement, { component: "text" }> & {
   items: Array<WebElement | WebBlock>;
 } {
@@ -2302,7 +2302,7 @@ function parseWebElementForAccordion(
  * @param blockResource - Raw block resource data in OCHRE format
  * @returns Parsed WebBlock object
  */
-function parseWebBlock(blockResource: OchreResource): WebBlock | null {
+function parseWebBlock(blockResource: RawResource): WebBlock | null {
   const blockProperties =
     blockResource.properties ?
       parseProperties(ensureArray(blockResource.properties.property))
@@ -2522,7 +2522,7 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
       if (resourceType !== "element") {
         throw new Error(
           `Accordion only accepts elements, but got “${resourceType}” for the following resource: “${parseStringContent(
-            resource.identification.label as OchreStringContent,
+            resource.identification.label as RawStringContent,
           )}”`,
         );
       }
@@ -2539,7 +2539,7 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
       if (componentType !== "text") {
         throw new Error(
           `Accordion only accepts text components, but got “${componentType}” for the following resource: “${parseStringContent(
-            resource.identification.label as OchreStringContent,
+            resource.identification.label as RawStringContent,
           )}”`,
         );
       }
@@ -2596,8 +2596,8 @@ function parseWebBlock(blockResource: OchreResource): WebBlock | null {
  * @returns Parsed WebsiteProperties object
  */
 function parseWebsiteProperties(
-  properties: Array<OchreProperty>,
-  websiteTree: OchreTree,
+  properties: Array<RawProperty>,
+  websiteTree: RawTree,
   sidebar: Website["properties"]["sidebar"] | null,
 ): Website["properties"] {
   const mainProperties = parseProperties(properties);
@@ -2827,9 +2827,7 @@ function parseWebsiteProperties(
   return returnProperties;
 }
 
-function parseContexts(
-  contexts: Array<OchreLevelContext>,
-): Array<LevelContext> {
+function parseContexts(contexts: Array<RawLevelContext>): Array<LevelContext> {
   const contextsParsed: Array<LevelContext> = [];
 
   for (const mainContext of contexts) {
@@ -2870,8 +2868,8 @@ function parseContexts(
 }
 
 export function parseWebsite(
-  websiteTree: OchreTree,
-  metadata: OchreMetadata,
+  websiteTree: RawTree,
+  metadata: RawMetadata,
   belongsTo: { uuid: string; abbreviation: string } | null,
   { version = DEFAULT_API_VERSION }: { version?: ApiVersion } = {},
 ): Website {

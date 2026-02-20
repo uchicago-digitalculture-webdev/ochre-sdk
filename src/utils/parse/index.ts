@@ -34,36 +34,36 @@ import type {
   Tree,
 } from "../../types/index.js";
 import type {
-  FakeString,
-  OchreBibliography,
-  OchreConcept,
-  OchreContext,
-  OchreContextItem,
-  OchreCoordinates,
-  OchreEvent,
-  OchreIdentification,
-  OchreImage,
-  OchreImageMap,
-  OchreInterpretation,
-  OchreLanguage,
-  OchreLicense,
-  OchreLink,
-  OchreMetadata,
-  OchreNote,
-  OchreObservation,
-  OchrePeriod,
-  OchrePerson,
-  OchreProperty,
-  OchrePropertyValue,
-  OchrePropertyVariable,
-  OchreResource,
-  OchreSection,
-  OchreSet,
-  OchreSpatialUnit,
-  OchreStringContent,
-  OchreStringRichText,
-  OchreText,
-  OchreTree,
+  RawBibliography,
+  RawConcept,
+  RawContext,
+  RawContextItem,
+  RawCoordinates,
+  RawEvent,
+  RawFakeString,
+  RawIdentification,
+  RawImage,
+  RawImageMap,
+  RawInterpretation,
+  RawLanguage,
+  RawLicense,
+  RawLink,
+  RawMetadata,
+  RawNote,
+  RawObservation,
+  RawPeriod,
+  RawPerson,
+  RawProperty,
+  RawPropertyValue,
+  RawPropertyVariable,
+  RawResource,
+  RawSection,
+  RawSet,
+  RawSpatialUnit,
+  RawStringContent,
+  RawStringRichText,
+  RawText,
+  RawTree,
 } from "../../types/raw.js";
 import { propertyValueContentTypeSchema } from "../../schemas.js";
 import {
@@ -89,7 +89,7 @@ import {
  * @returns Parsed Identification object with label and abbreviation
  */
 export function parseIdentification(
-  identification: OchreIdentification,
+  identification: RawIdentification,
 ): Identification {
   try {
     const result: Identification = {
@@ -100,9 +100,9 @@ export function parseIdentification(
 
     for (const key of Object.keys(identification)) {
       if (key === "label" || key === "code") continue;
-      const raw = identification[key as keyof OchreIdentification]!;
+      const raw = identification[key as keyof RawIdentification]!;
       result[key as keyof Identification] = parseFakeStringOrContent(
-        raw as FakeString | OchreStringContent,
+        raw as RawFakeString | RawStringContent,
       );
     }
 
@@ -120,7 +120,7 @@ export function parseIdentification(
  * @returns Array of language codes as strings
  */
 export function parseLanguages(
-  language: string | OchreLanguage | Array<string | OchreLanguage> | undefined,
+  language: string | RawLanguage | Array<string | RawLanguage> | undefined,
 ): Array<string> {
   if (language == null) {
     // Default to English if no language is provided
@@ -146,7 +146,7 @@ export function parseLanguages(
  * @param metadata - Raw metadata from OCHRE format
  * @returns Parsed Metadata object
  */
-export function parseMetadata(metadata: OchreMetadata): Metadata {
+export function parseMetadata(metadata: RawMetadata): Metadata {
   let identification: Identification = {
     label: "",
     abbreviation: "",
@@ -226,7 +226,7 @@ export function parseMetadata(metadata: OchreMetadata): Metadata {
  * @param contextItem - Raw context item data from OCHRE format
  * @returns Parsed ContextItem object
  */
-function parseContextItem(contextItem: OchreContextItem): ContextItem {
+function parseContextItem(contextItem: RawContextItem): ContextItem {
   return {
     uuid: contextItem.uuid,
     publicationDateTime: parseOptionalDate(contextItem.publicationDateTime),
@@ -241,7 +241,7 @@ function parseContextItem(contextItem: OchreContextItem): ContextItem {
  * @param context - Raw context data from OCHRE format
  * @returns Parsed Context object
  */
-export function parseContext(context: OchreContext): Context {
+export function parseContext(context: RawContext): Context {
   return {
     nodes: ensureArray(context.context).map((ctx) => ({
       tree: parseContextItem(ctx.tree),
@@ -263,7 +263,7 @@ export function parseContext(context: OchreContext): Context {
  * @param license - Raw license data from OCHRE format
  * @returns Parsed License object or null if invalid
  */
-export function parseLicense(license: OchreLicense): License | null {
+export function parseLicense(license: RawLicense): License | null {
   if (typeof license.license === "string") {
     return null;
   }
@@ -278,7 +278,7 @@ export function parseLicense(license: OchreLicense): License | null {
  * @returns Parsed Person object
  */
 export function parsePerson(
-  person: OchrePerson,
+  person: RawPerson,
   metadata?: Metadata,
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
@@ -331,7 +331,7 @@ export function parsePerson(
  * @param persons - Array of raw person data from OCHRE format
  * @returns Array of parsed Person objects
  */
-export function parsePersons(persons: Array<OchrePerson>): Array<Person> {
+export function parsePersons(persons: Array<RawPerson>): Array<Person> {
   return persons.map((person) => parsePerson(person));
 }
 
@@ -341,7 +341,7 @@ export function parsePersons(persons: Array<OchrePerson>): Array<Person> {
  * @param linkRaw - Raw OCHRE link
  * @returns Parsed Link object
  */
-export function parseLink(linkRaw: OchreLink): Array<Link> {
+export function parseLink(linkRaw: RawLink): Array<Link> {
   const linkCategoryKeys = [
     "resource",
     "spatialUnit",
@@ -423,7 +423,7 @@ export function parseLink(linkRaw: OchreLink): Array<Link> {
  * @param links - Array of raw OCHRE links
  * @returns Array of parsed Link objects
  */
-export function parseLinks(links: Array<OchreLink>): Array<Link> {
+export function parseLinks(links: Array<RawLink>): Array<Link> {
   const result: Array<Link> = [];
   for (const link of links) {
     result.push(...parseLink(link));
@@ -439,7 +439,7 @@ export function parseLinks(links: Array<OchreLink>): Array<Link> {
  * @returns Parsed Document object with content and footnotes
  */
 export function parseDocument(
-  document: OchreStringRichText | Array<OchreStringRichText>,
+  document: RawStringRichText | Array<RawStringRichText>,
   language = "eng",
 ): string {
   const doc =
@@ -464,7 +464,7 @@ export function parseDocument(
  * @param image - Raw image data in OCHRE format
  * @returns Parsed Image object or null if invalid
  */
-export function parseImage(image: OchreImage): Image | null {
+export function parseImage(image: RawImage): Image | null {
   return {
     publicationDateTime: parseOptionalDate(image.publicationDateTime),
     identification:
@@ -494,7 +494,7 @@ export function parseImage(image: OchreImage): Image | null {
  * @returns Array of parsed Note objects
  */
 export function parseNotes(
-  notes: Array<OchreNote>,
+  notes: Array<RawNote>,
   language = "eng",
 ): Array<Note> {
   const result: Array<Note> = [];
@@ -552,7 +552,7 @@ export function parseNotes(
  * @returns Parsed array of Coordinate objects
  */
 export function parseCoordinates(
-  coordinates: OchreCoordinates | undefined,
+  coordinates: RawCoordinates | undefined,
 ): Array<Coordinate> {
   if (coordinates == null) {
     return [];
@@ -625,7 +625,7 @@ export function parseCoordinates(
  * @param observation - Raw observation data in OCHRE format
  * @returns Parsed Observation object
  */
-export function parseObservation(observation: OchreObservation): Observation {
+export function parseObservation(observation: RawObservation): Observation {
   return {
     number: observation.observationNo,
     date: observation.date ?? null,
@@ -660,7 +660,7 @@ export function parseObservation(observation: OchreObservation): Observation {
  * @returns Array of parsed Observation objects
  */
 export function parseObservations(
-  observations: Array<OchreObservation>,
+  observations: Array<RawObservation>,
 ): Array<Observation> {
   return observations.map((obs) => parseObservation(obs));
 }
@@ -671,7 +671,7 @@ export function parseObservations(
  * @param events - Array of raw events in OCHRE format
  * @returns Array of parsed Event objects
  */
-export function parseEvents(events: Array<OchreEvent>): Array<Event> {
+export function parseEvents(events: Array<RawEvent>): Array<Event> {
   return events.map((event) => ({
     dateTime:
       event.endDateTime != null ?
@@ -712,7 +712,7 @@ export function parseEvents(events: Array<OchreEvent>): Array<Event> {
 }
 
 export function parseProperty(
-  property: OchreProperty,
+  property: RawProperty,
   language = "eng",
 ): Property {
   const valuesToParse =
@@ -871,7 +871,7 @@ export function parseProperty(
  * @returns Array of parsed Property objects
  */
 export function parseProperties(
-  properties: Array<OchreProperty>,
+  properties: Array<RawProperty>,
   language = "eng",
 ): Array<Property> {
   return properties.map((prop) => parseProperty(prop, language));
@@ -884,7 +884,7 @@ export function parseProperties(
  * @returns Array of parsed Interpretation objects
  */
 export function parseInterpretations(
-  interpretations: Array<OchreInterpretation>,
+  interpretations: Array<RawInterpretation>,
 ): Array<Interpretation> {
   return interpretations.map((interp) => ({
     date: interp.date ?? null,
@@ -907,7 +907,7 @@ export function parseInterpretations(
  * @param imageMap - Raw image map data in OCHRE format
  * @returns Parsed ImageMap object
  */
-export function parseImageMap(imageMap: OchreImageMap): ImageMap {
+export function parseImageMap(imageMap: RawImageMap): ImageMap {
   return {
     width: imageMap.width,
     height: imageMap.height,
@@ -933,7 +933,7 @@ export function parseImageMap(imageMap: OchreImageMap): ImageMap {
  * @returns Parsed Period object
  */
 export function parsePeriod(
-  period: OchrePeriod,
+  period: RawPeriod,
   metadata?: Metadata,
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
@@ -960,7 +960,7 @@ export function parsePeriod(
  * @param periods - Array of raw periods in OCHRE format
  * @returns Array of parsed Period objects
  */
-export function parsePeriods(periods: Array<OchrePeriod>): Array<Period> {
+export function parsePeriods(periods: Array<RawPeriod>): Array<Period> {
   return periods.map((period) => parsePeriod(period));
 }
 
@@ -971,7 +971,7 @@ export function parsePeriods(periods: Array<OchrePeriod>): Array<Period> {
  * @returns Parsed Bibliography object
  */
 export function parseBibliography(
-  bibliography: OchreBibliography,
+  bibliography: RawBibliography,
   metadata?: Metadata,
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
@@ -1068,7 +1068,7 @@ export function parseBibliography(
  * @returns Parsed PropertyVariable object
  */
 export function parsePropertyVariable(
-  propertyVariable: OchrePropertyVariable,
+  propertyVariable: RawPropertyVariable,
   metadata?: Metadata,
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
@@ -1101,7 +1101,7 @@ export function parsePropertyVariable(
  * @returns Array of parsed PropertyVariable objects
  */
 export function parsePropertyVariables(
-  propertyVariables: Array<OchrePropertyVariable>,
+  propertyVariables: Array<RawPropertyVariable>,
 ): Array<PropertyVariable> {
   return propertyVariables.map((pv) => parsePropertyVariable(pv));
 }
@@ -1113,7 +1113,7 @@ export function parsePropertyVariables(
  * @returns Array of parsed Bibliography objects
  */
 export function parseBibliographies(
-  bibliographies: Array<OchreBibliography>,
+  bibliographies: Array<RawBibliography>,
 ): Array<Bibliography> {
   return bibliographies.map((bib) => parseBibliography(bib));
 }
@@ -1125,7 +1125,7 @@ export function parseBibliographies(
  * @returns Parsed PropertyValue object
  */
 export function parsePropertyValue(
-  propertyValue: OchrePropertyValue,
+  propertyValue: RawPropertyValue,
   metadata?: Metadata,
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
@@ -1170,7 +1170,7 @@ export function parsePropertyValue(
  * @returns Array of parsed PropertyValue objects
  */
 export function parsePropertyValues(
-  propertyValues: Array<OchrePropertyValue>,
+  propertyValues: Array<RawPropertyValue>,
 ): Array<PropertyValue> {
   return propertyValues.map((pv) => parsePropertyValue(pv));
 }
@@ -1182,7 +1182,7 @@ export function parsePropertyValues(
  * @returns Parsed Text object
  */
 export function parseText(
-  text: OchreText,
+  text: RawText,
   metadata?: Metadata,
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
@@ -1219,7 +1219,7 @@ export function parseText(
     notes: text.notes ? parseNotes(ensureArray(text.notes.note)) : [],
     description:
       text.description ?
-        parseStringContent(text.description as OchreStringContent)
+        parseStringContent(text.description as RawStringContent)
       : "",
     coordinates: parseCoordinates(text.coordinates),
     periods: text.periods ? parsePeriods(ensureArray(text.periods.period)) : [],
@@ -1244,7 +1244,7 @@ export function parseText(
  * @param texts - Array of raw texts in OCHRE format
  * @returns Array of parsed Text objects
  */
-export function parseTexts(texts: Array<OchreText>): Array<Text> {
+export function parseTexts(texts: Array<RawText>): Array<Text> {
   return texts.map((text) => parseText(text));
 }
 
@@ -1255,7 +1255,7 @@ export function parseTexts(texts: Array<OchreText>): Array<Text> {
  * @returns Parsed Section object
  */
 export function parseSection(
-  section: OchreSection,
+  section: RawSection,
   variant: "translation" | "phonemic",
 ): Section {
   return {
@@ -1281,8 +1281,8 @@ export function parseSection(
  * @returns Parsed Section object
  */
 export function parseSections(sections: {
-  translation?: { section: OchreSection | Array<OchreSection> };
-  phonemic?: { section: OchreSection | Array<OchreSection> };
+  translation?: { section: RawSection | Array<RawSection> };
+  phonemic?: { section: RawSection | Array<RawSection> };
 }): Array<Section> {
   const translation =
     sections.translation ?
@@ -1307,7 +1307,7 @@ export function parseSections(sections: {
  * @returns Parsed Tree object or null if invalid
  */
 export function parseTree<U extends Exclude<DataCategory, "tree">>(
-  tree: OchreTree,
+  tree: RawTree,
   itemCategories?: Array<Exclude<DataCategory, "tree">>,
   metadata?: Metadata,
   persistentUrl?: string | null,
@@ -1444,7 +1444,7 @@ export function parseTree<U extends Exclude<DataCategory, "tree">>(
  * @returns Parsed Trees object
  */
 export function parseTrees<U extends Exclude<DataCategory, "tree">>(
-  trees: Array<OchreTree>,
+  trees: Array<RawTree>,
 ): Array<Tree<U>> {
   return trees.map((tree) => parseTree<U>(tree));
 }
@@ -1456,7 +1456,7 @@ export function parseTrees<U extends Exclude<DataCategory, "tree">>(
  * @returns Parsed Set object
  */
 export function parseSet<U extends Array<DataCategory>>(
-  set: OchreSet,
+  set: RawSet,
   itemCategories?: U,
   metadata?: Metadata,
   persistentUrl?: string | null,
@@ -1613,7 +1613,7 @@ export function parseSet<U extends Array<DataCategory>>(
  * @returns Parsed Sets object
  */
 export function parseSets<U extends Array<DataCategory>>(
-  sets: Array<OchreSet>,
+  sets: Array<RawSet>,
 ): Array<Set<U>> {
   return sets.map((s) => parseSet<U>(s));
 }
@@ -1625,7 +1625,7 @@ export function parseSets<U extends Array<DataCategory>>(
  * @returns Parsed Resource object
  */
 export function parseResource(
-  resource: OchreResource,
+  resource: RawResource,
   metadata?: Metadata,
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
@@ -1705,9 +1705,7 @@ export function parseResource(
  * @param resources - Raw resource data in OCHRE format
  * @returns Parsed Resource object
  */
-export function parseResources(
-  resources: Array<OchreResource>,
-): Array<Resource> {
+export function parseResources(resources: Array<RawResource>): Array<Resource> {
   return resources.map((resource) => parseResource(resource));
 }
 
@@ -1718,7 +1716,7 @@ export function parseResources(
  * @returns Parsed SpatialUnit object
  */
 export function parseSpatialUnit(
-  spatialUnit: OchreSpatialUnit,
+  spatialUnit: RawSpatialUnit,
   metadata?: Metadata,
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
@@ -1776,7 +1774,7 @@ export function parseSpatialUnit(
  * @returns Array of parsed SpatialUnit objects
  */
 export function parseSpatialUnits(
-  spatialUnits: Array<OchreSpatialUnit>,
+  spatialUnits: Array<RawSpatialUnit>,
 ): Array<SpatialUnit> {
   return spatialUnits.map((su) => parseSpatialUnit(su));
 }
@@ -1788,7 +1786,7 @@ export function parseSpatialUnits(
  * @returns Parsed Concept object
  */
 export function parseConcept(
-  concept: OchreConcept,
+  concept: RawConcept,
   metadata?: Metadata,
   persistentUrl?: string | null,
   belongsTo?: { uuid: string; abbreviation: string },
@@ -1813,7 +1811,7 @@ export function parseConcept(
     image: concept.image ? parseImage(concept.image) : null,
     description:
       concept.description ?
-        parseStringContent(concept.description as OchreStringContent)
+        parseStringContent(concept.description as RawStringContent)
       : null,
     coordinates: parseCoordinates(concept.coordinates),
     interpretations:
@@ -1839,6 +1837,6 @@ export function parseConcept(
  * @param concepts - Array of raw concept data in OCHRE format
  * @returns Array of parsed Concept objects
  */
-export function parseConcepts(concepts: Array<OchreConcept>): Array<Concept> {
+export function parseConcepts(concepts: Array<RawConcept>): Array<Concept> {
   return concepts.map((concept) => parseConcept(concept));
 }

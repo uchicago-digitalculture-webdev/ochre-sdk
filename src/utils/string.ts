@@ -1,10 +1,10 @@
 import type {
-  FakeString,
-  OchrePropertyValueContent,
-  OchreStringContent,
-  OchreStringItem,
-  OchreStringRichTextItem,
-  OchreStringRichTextItemContent,
+  RawFakeString,
+  RawPropertyValueContent,
+  RawStringContent,
+  RawStringItem,
+  RawStringRichTextItem,
+  RawStringRichTextItemContent,
 } from "../types/raw.js";
 import type { Style } from "../types/website.js";
 import {
@@ -32,9 +32,9 @@ import {
  * @internal
  */
 function getStringItemByLanguage(
-  content: Array<OchreStringItem>,
+  content: Array<RawStringItem>,
   language: string,
-): OchreStringItem | null {
+): RawStringItem | null {
   const stringItemToFind = content.find((item) => item.lang === language);
   return stringItemToFind ?? null;
 }
@@ -163,7 +163,7 @@ function parseWhitespace(contentString: string, whitespace: string): string {
  * @param string - FakeString value to convert
  * @returns Converted string value
  */
-export function parseFakeString(string: FakeString): string {
+export function parseFakeString(string: RawFakeString): string {
   return String(string)
     .replaceAll("&#39;", "'")
     .replaceAll("{", String.raw`\{`)
@@ -184,7 +184,7 @@ type RichTextItemStringResult = { content: string; whitespace: string | null };
  * @internal
  */
 function parseRichTextItemString(
-  stringField: FakeString | OchreStringRichTextItemContent | undefined,
+  stringField: RawFakeString | RawStringRichTextItemContent | undefined,
 ): RichTextItemStringResult {
   if (stringField == null) {
     return { content: "", whitespace: null };
@@ -254,7 +254,7 @@ type AnnotationMetadata = {
  * @internal
  */
 function extractAnnotationMetadata(
-  item: OchreStringRichTextItem,
+  item: RawStringRichTextItem,
 ): AnnotationMetadata {
   const result: AnnotationMetadata = { linkVariant: null, textStyling: null };
 
@@ -352,8 +352,8 @@ function extractAnnotationMetadata(
 
           if (textStylingVariantProperty != null) {
             const textStylingPropertyVariant = parseFakeString(
-              (textStylingVariantProperty.value as OchrePropertyValueContent)
-                .content as FakeString,
+              (textStylingVariantProperty.value as RawPropertyValueContent)
+                .content as RawFakeString,
             );
 
             const textStylingNestedProperties =
@@ -365,15 +365,17 @@ function extractAnnotationMetadata(
 
             const textStylingSizeProperty = textStylingNestedProperties.find(
               (prop) => {
-                const label = parseFakeString(prop.label.content as FakeString);
+                const label = parseFakeString(
+                  prop.label.content as RawFakeString,
+                );
                 return label === "size";
               },
             );
 
             if (textStylingSizeProperty != null) {
               const textStylingSizePropertyValue = parseFakeString(
-                (textStylingSizeProperty.value as OchrePropertyValueContent)
-                  .content as FakeString,
+                (textStylingSizeProperty.value as RawPropertyValueContent)
+                  .content as RawFakeString,
               );
               textStylingSize = textStylingSizePropertyValue;
             }
@@ -389,9 +391,8 @@ function extractAnnotationMetadata(
 
           if (textStylingHeadingLevelProperty != null) {
             textStylingHeadingLevel = parseFakeString(
-              (
-                textStylingHeadingLevelProperty.value as OchrePropertyValueContent
-              ).content as FakeString,
+              (textStylingHeadingLevelProperty.value as RawPropertyValueContent)
+                .content as RawFakeString,
             );
           }
 
@@ -405,10 +406,10 @@ function extractAnnotationMetadata(
 
           if (textStylingCssProperties.length > 0) {
             textStylingCss = textStylingCssProperties.map((property) => ({
-              label: parseFakeString(property.label.content as FakeString),
+              label: parseFakeString(property.label.content as RawFakeString),
               value: parseFakeString(
-                (property.value as OchrePropertyValueContent)
-                  .content as FakeString,
+                (property.value as RawPropertyValueContent)
+                  .content as RawFakeString,
               ),
             }));
           }
@@ -460,7 +461,7 @@ function wrapWithTextStyling(
  * @param item - OchreStringItem to parse
  * @returns Formatted string with applied rendering and whitespace
  */
-export function parseStringItem(item: OchreStringItem): string {
+export function parseStringItem(item: RawStringItem): string {
   let returnString = "";
 
   switch (typeof item.string) {
@@ -484,7 +485,7 @@ export function parseStringItem(item: OchreStringItem): string {
         } else {
           if ("string" in stringItem) {
             returnString += parseStringDocumentItem(
-              stringItem as OchreStringRichTextItem,
+              stringItem as RawStringRichTextItem,
             );
           } else {
             const renderedText =
@@ -522,7 +523,7 @@ export function parseStringItem(item: OchreStringItem): string {
  * @param item - Rich text item to parse
  * @returns Formatted string with HTML/markdown elements
  */
-export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
+export function parseStringDocumentItem(item: RawStringRichTextItem): string {
   if (
     typeof item === "string" ||
     typeof item === "number" ||
@@ -755,9 +756,9 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
                 typeof linkPerson.identification.label,
               )
             ) ?
-              parseFakeString(linkPerson.identification.label as FakeString)
+              parseFakeString(linkPerson.identification.label as RawFakeString)
             : parseStringContent(
-                linkPerson.identification.label as OchreStringContent,
+                linkPerson.identification.label as RawStringContent,
               )
           : null;
 
@@ -857,9 +858,8 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
               );
               if (textStylingVariantProperty != null) {
                 const textStylingPropertyVariant = parseFakeString(
-                  (
-                    textStylingVariantProperty.value as OchrePropertyValueContent
-                  ).content as FakeString,
+                  (textStylingVariantProperty.value as RawPropertyValueContent)
+                    .content as RawFakeString,
                 );
 
                 const textStylingSizeProperty =
@@ -871,8 +871,8 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
 
                 if (textStylingSizeProperty != null) {
                   const textStylingSizePropertyValue = parseFakeString(
-                    (textStylingSizeProperty.value as OchrePropertyValueContent)
-                      .content as FakeString,
+                    (textStylingSizeProperty.value as RawPropertyValueContent)
+                      .content as RawFakeString,
                   );
                   textStylingSize = textStylingSizePropertyValue;
                 }
@@ -889,8 +889,8 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
               if (textStylingHeadingLevelProperty != null) {
                 textStylingHeadingLevel = parseFakeString(
                   (
-                    textStylingHeadingLevelProperty.value as OchrePropertyValueContent
-                  ).content as FakeString,
+                    textStylingHeadingLevelProperty.value as RawPropertyValueContent
+                  ).content as RawFakeString,
                 );
               }
 
@@ -903,10 +903,12 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
               );
               if (textStylingCssProperties.length > 0) {
                 textStylingCss = textStylingCssProperties.map((property) => ({
-                  label: parseFakeString(property.label.content as FakeString),
+                  label: parseFakeString(
+                    property.label.content as RawFakeString,
+                  ),
                   value: parseFakeString(
-                    (property.value as OchrePropertyValueContent)
-                      .content as FakeString,
+                    (property.value as RawPropertyValueContent)
+                      .content as RawFakeString,
                   ),
                 }));
               }
@@ -968,7 +970,7 @@ export function parseStringDocumentItem(item: OchreStringRichTextItem): string {
  * @returns Parsed and formatted string
  */
 export function parseStringContent(
-  content: OchreStringContent,
+  content: RawStringContent,
   language = "eng",
 ): string {
   switch (typeof content.content) {

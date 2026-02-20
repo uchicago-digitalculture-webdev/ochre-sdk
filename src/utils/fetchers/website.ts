@@ -1,5 +1,5 @@
 import type { ApiVersion } from "../../types/index.js";
-import type { OchreData, OchreMetadata, OchreTree } from "../../types/raw.js";
+import type { RawData, RawMetadata, RawTree } from "../../types/raw.js";
 import type { Website } from "../../types/website.js";
 import { apiVersionSuffixSchema } from "../../schemas.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
@@ -59,8 +59,8 @@ export async function fetchWebsite(
       options?.version != null ? cleanAbbreviation : parsedAbbreviation;
     const version = options?.version ?? parsedVersion;
 
-    let metadata: OchreMetadata | null = null;
-    let tree: OchreTree | null = null;
+    let metadata: RawMetadata | null = null;
+    let tree: RawTree | null = null;
     let belongsTo: { uuid: string; abbreviation: string } | null = null;
 
     if (version === 2) {
@@ -72,7 +72,7 @@ export async function fetchWebsite(
       }
 
       const data = (await response.json()) as
-        | { result: OchreData }
+        | { result: RawData }
         | { result: [] };
 
       if (Array.isArray(data.result) || !("tree" in data.result.ochre)) {
@@ -94,8 +94,8 @@ export async function fetchWebsite(
       }
 
       const data = (await response.json()) as
-        | OchreData
-        | { result: OchreData | [] };
+        | RawData
+        | { result: RawData | [] };
 
       const result =
         "result" in data && !Array.isArray(data.result) ? data.result

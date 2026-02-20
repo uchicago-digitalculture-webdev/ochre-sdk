@@ -1,6 +1,6 @@
 import * as z from "zod";
 import type { ApiVersion, Gallery } from "../../types/index.js";
-import type { OchreIdentification, OchreResource } from "../../types/raw.js";
+import type { RawIdentification, RawResource } from "../../types/raw.js";
 import { uuidSchema } from "../../schemas.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
 import { parseIdentification, parseResources } from "../parse/index.js";
@@ -66,9 +66,9 @@ export async function fetchGallery(
         ochre:
           | {
               gallery: {
-                project: { identification: OchreIdentification };
-                item: { identification: OchreIdentification };
-                resource?: OchreResource | Array<OchreResource>;
+                project: { identification: RawIdentification };
+                item: { identification: RawIdentification };
+                resource?: RawResource | Array<RawResource>;
                 maxLength: number;
               };
             }
