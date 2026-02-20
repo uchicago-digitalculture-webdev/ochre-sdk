@@ -338,7 +338,7 @@ export type RawConcept = {
   availability?: RawLicense;
   context?: RawContext;
   identification: RawIdentification;
-  status?: "live" | "pending";
+  status?: "live";
   image?: RawImage;
   description?: RawStringContent | RawFakeString;
   coordinates?: RawCoordinates;

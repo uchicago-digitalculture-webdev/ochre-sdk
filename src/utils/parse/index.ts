@@ -189,7 +189,7 @@ export function parseMetadata(metadata: RawMetadata): Metadata {
     collection:
       metadata.collection ?
         {
-          uuid: metadata.collection?.uuid ?? "",
+          uuid: metadata.collection.uuid,
           identification: parseIdentification(
             metadata.collection.identification,
           ),
@@ -199,7 +199,7 @@ export function parseMetadata(metadata: RawMetadata): Metadata {
     publication:
       metadata.publication ?
         {
-          uuid: metadata.publication?.uuid ?? "",
+          uuid: metadata.publication.uuid,
           identification: parseIdentification(
             metadata.publication.identification,
           ),
