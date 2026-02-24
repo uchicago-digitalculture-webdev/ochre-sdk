@@ -6,6 +6,7 @@ import type {
 } from "../../../types/index.js";
 import { BELONGS_TO_COLLECTION_UUID } from "../../../constants.js";
 import {
+  fakeStringSchema,
   richTextStringSchema,
   setPropertyValuesByPropertyVariablesParamsSchema,
 } from "../../../schemas.js";
@@ -20,12 +21,10 @@ const propertyValueQueryItemSchema = z
     uuid: z.string(),
     itemUuid: z.string().optional(),
     dataType: z.string(),
-    rawValue: z.union([z.string(), z.number(), z.boolean()]).optional(),
+    rawValue: fakeStringSchema.optional(),
     content: z
       .union([
-        z.string(),
-        z.number(),
-        z.boolean(),
+        fakeStringSchema,
         richTextStringSchema,
         z.array(richTextStringSchema),
       ])

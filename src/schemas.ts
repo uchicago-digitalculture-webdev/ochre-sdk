@@ -17,11 +17,16 @@ export const uuidSchema = z
   .string()
   .refine(isPseudoUuid, { error: "Invalid pseudo-UUID" });
 
-export const richTextStringContentSchema = z.object({
-  content: z.union([z.string(), z.number(), z.boolean()]).optional(),
-  rend: z.string().optional(),
-  whitespace: z.string().optional(),
-});
+export const fakeStringSchema = z.union([z.string(), z.number(), z.boolean()]);
+
+export const richTextStringContentSchema = z.union([
+  fakeStringSchema,
+  z.object({
+    content: fakeStringSchema.optional(),
+    rend: z.string().optional(),
+    whitespace: z.string().optional(),
+  }),
+]);
 
 /**
  * Schema for validating rich text string content
@@ -29,9 +34,7 @@ export const richTextStringContentSchema = z.object({
  */
 export const richTextStringSchema = z.object({
   string: z.union([
-    z.string(),
-    z.number(),
-    z.boolean(),
+    fakeStringSchema,
     richTextStringContentSchema,
     z.array(richTextStringContentSchema),
   ]),
