@@ -1,6 +1,6 @@
 # Overrides for packages that have vulnerability alerts raised by Dependabot
 overrides:
-  minimatch: ^10.2.3
+  minimatch: ^10.2.4
 
 onlyBuiltDependencies:
   - esbuild
