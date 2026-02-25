@@ -247,35 +247,30 @@ export const setPropertyValuesByPropertyVariablesParamsSchema = z.object({
     .min(1, "At least one property variable UUID is required"),
 });
 
-export const setItemsByPropertyValuesParamsSchema = z.object({
+export const setItemsParamsSchema = z.object({
   ...setPropertyValuesByPropertyVariablesParamsSchema.shape,
-  propertyValues: z
-    .array(
-      z.object({
-        dataType: z.enum([
-          "string",
-          "integer",
-          "decimal",
-          "boolean",
-          "date",
-          "dateTime",
-          "time",
+  propertyValues: z.array(
+    z.object({
+      dataType: z.enum([
+        "string",
+        "integer",
+        "decimal",
+        "boolean",
+        "date",
+        "dateTime",
+        "time",
 
-          "IDREF",
-        ] as const satisfies ReadonlyArray<
-          Exclude<PropertyValueContentType, "coordinate">
-        >),
-        value: z.string(),
-      }),
-    )
-    .min(1, "At least one property value is required"),
-  page: z.number().min(1, "Page must be at least 1").default(1),
+        "IDREF",
+      ] as const satisfies ReadonlyArray<
+        Exclude<PropertyValueContentType, "coordinate">
+      >),
+      value: z.string(),
+    }),
+  ),
+  page: z.number().min(1, "Page must be positive").default(1),
   pageSize: z
     .number()
-    .min(1, "Page size must be at least 1")
+    .min(1, "Page size must be positive")
     .default(DEFAULT_PAGE_SIZE),
-  itemCategory: z
-    .enum(["resource", "spatialUnit", "concept", "text"])
-    .optional(),
   includeChildItems: z.boolean().optional().default(false),
 });
