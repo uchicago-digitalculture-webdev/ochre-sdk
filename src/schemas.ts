@@ -247,30 +247,54 @@ export const setPropertyValuesByPropertyVariablesParamsSchema = z.object({
     .min(1, "At least one property variable UUID is required"),
 });
 
-export const setItemsParamsSchema = z.object({
-  ...setPropertyValuesByPropertyVariablesParamsSchema.shape,
-  propertyValues: z.array(
-    z.object({
-      dataType: z.enum([
-        "string",
-        "integer",
-        "decimal",
-        "boolean",
-        "date",
-        "dateTime",
-        "time",
+export const setItemsParamsSchema = z
+  .object({
+    setScopeUuids: z
+      .array(uuidSchema)
+      .min(1, "At least one set scope UUID is required"),
+    belongsToCollectionScopeUuids: z.array(uuidSchema).default([]),
+    propertyVariableUuids: z.array(uuidSchema).default([]),
+    queries: z
+      .array(
+        z.object({
+          target: z.enum([
+            "title",
+            "description",
+            "image",
+            "periods",
+            "bibliography",
+            "propertyValue",
+          ]),
+          value: z.string(),
+          matchMode: z.enum(["includes", "exact"]),
+          isCaseSensitive: z.boolean(),
+          language: z.string().default("eng"),
+          operator: z.enum(["AND", "OR"]).optional(),
+        }),
+      )
+      .default([]),
+    page: z.number().min(1, "Page must be positive").default(1),
+    pageSize: z
+      .number()
+      .min(1, "Page size must be positive")
+      .default(DEFAULT_PAGE_SIZE),
+  })
+  .superRefine((value, ctx) => {
+    for (const [index, query] of value.queries.entries()) {
+      if (index === 0 && query.operator != null) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["queries", index, "operator"],
+          message: "The first query rule must not include an operator",
+        });
+      }
 
-        "IDREF",
-      ] as const satisfies ReadonlyArray<
-        Exclude<PropertyValueContentType, "coordinate">
-      >),
-      value: z.string(),
-    }),
-  ),
-  page: z.number().min(1, "Page must be positive").default(1),
-  pageSize: z
-    .number()
-    .min(1, "Page size must be positive")
-    .default(DEFAULT_PAGE_SIZE),
-  includeChildItems: z.boolean().optional().default(false),
-});
+      if (index > 0 && query.operator == null) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["queries", index, "operator"],
+          message: "Query rules after the first must include an operator",
+        });
+      }
+    }
+  });

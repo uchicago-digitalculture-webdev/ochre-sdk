@@ -175,3 +175,13 @@ export function cleanObject<T extends Record<string, unknown>>(object: T): T {
     Object.entries(object).filter(([_, value]) => value != null),
   ) as T;
 }
+
+/**
+ * Build a string literal for an XQuery string
+ * @param value - The string value to escape
+ * @returns The escaped string literal
+ */
+export function stringLiteral(value: string): string {
+  const escapedDoubleQuote = value.replaceAll('"', '""');
+  return `"${escapedDoubleQuote}"`;
+}

@@ -745,3 +745,21 @@ export type PropertyValueQueryItem = {
   content: string | number | boolean | null;
   label: string | null;
 };
+
+/**
+ * Represents a query for Set items
+ */
+export type Query = {
+  target:
+    | "title"
+    | "description"
+    | "image"
+    | "periods"
+    | "bibliography"
+    | "propertyValue";
+  value: string;
+  matchMode: "includes" | "exact";
+  isCaseSensitive: boolean;
+  language: string;
+  operator?: "AND" | "OR";
+};
