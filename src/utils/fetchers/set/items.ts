@@ -64,6 +64,37 @@ function buildStringMatchPredicate(params: {
 }
 
 /**
+ * Build a property value predicate for an XQuery string
+ * @param query - The propertyValue query
+ * @returns The property value predicate
+ */
+function buildPropertyValuePredicate(
+  query: Extract<Query, { target: "propertyValue" }>,
+): string {
+  if (query.dataType === "IDREF") {
+    return `.//properties//property[value[@uuid=${stringLiteral(query.value)}]]`;
+  }
+
+  if (
+    query.dataType === "date" ||
+    query.dataType === "dateTime" ||
+    query.dataType === "time" ||
+    query.dataType === "integer" ||
+    query.dataType === "decimal" ||
+    query.dataType === "boolean"
+  ) {
+    return `.//properties//property[value[@rawValue=${stringLiteral(query.value)}]]`;
+  }
+
+  return `.//properties//property[${buildStringMatchPredicate({
+    path: `string-join(value/content[@xml:lang="${query.language}"]/string, "")`,
+    value: query.value,
+    matchMode: query.matchMode,
+    isCaseSensitive: query.isCaseSensitive,
+  })}]`;
+}
+
+/**
  * Build a query predicate for an XQuery string
  * @param query - The query to build the predicate for
  * @returns The query predicate
@@ -108,10 +139,7 @@ function buildQueryPredicate(query: Query): string {
       });
     }
     case "propertyValue": {
-      return `.//properties//property[${buildStringMatchPredicate({
-        path: `string-join(value/content[@xml:lang="${query.language}"]/string, "")`,
-        ...stringMatchParams,
-      })}]`;
+      return buildPropertyValuePredicate(query);
     }
   }
 }

@@ -749,17 +749,21 @@ export type PropertyValueQueryItem = {
 /**
  * Represents a query for Set items
  */
-export type Query = {
-  target:
-    | "title"
-    | "description"
-    | "image"
-    | "periods"
-    | "bibliography"
-    | "propertyValue";
-  value: string;
-  matchMode: "includes" | "exact";
-  isCaseSensitive: boolean;
-  language: string;
-  operator?: "AND" | "OR";
-};
+export type Query =
+  | {
+      target: "propertyValue";
+      dataType: Exclude<PropertyValueContentType, "coordinate">;
+      value: string;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
+      language: string;
+      operator?: "AND" | "OR";
+    }
+  | {
+      target: "title" | "description" | "image" | "periods" | "bibliography";
+      value: string;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
+      language: string;
+      operator?: "AND" | "OR";
+    };

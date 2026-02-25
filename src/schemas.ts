@@ -256,21 +256,42 @@ export const setItemsParamsSchema = z
     propertyVariableUuids: z.array(uuidSchema).default([]),
     queries: z
       .array(
-        z.object({
-          target: z.enum([
-            "title",
-            "description",
-            "image",
-            "periods",
-            "bibliography",
-            "propertyValue",
-          ]),
-          value: z.string(),
-          matchMode: z.enum(["includes", "exact"]),
-          isCaseSensitive: z.boolean(),
-          language: z.string().default("eng"),
-          operator: z.enum(["AND", "OR"]).optional(),
-        }),
+        z.discriminatedUnion("target", [
+          z.object({
+            target: z.literal("propertyValue"),
+            dataType: z.enum([
+              "string",
+              "integer",
+              "decimal",
+              "boolean",
+              "date",
+              "dateTime",
+              "time",
+              "IDREF",
+            ] as const satisfies ReadonlyArray<
+              Exclude<PropertyValueContentType, "coordinate">
+            >),
+            value: z.string(),
+            matchMode: z.enum(["includes", "exact"]),
+            isCaseSensitive: z.boolean(),
+            language: z.string().default("eng"),
+            operator: z.enum(["AND", "OR"]).optional(),
+          }),
+          z.object({
+            target: z.enum([
+              "title",
+              "description",
+              "image",
+              "periods",
+              "bibliography",
+            ]),
+            value: z.string(),
+            matchMode: z.enum(["includes", "exact"]),
+            isCaseSensitive: z.boolean(),
+            language: z.string().default("eng"),
+            operator: z.enum(["AND", "OR"]).optional(),
+          }),
+        ]),
       )
       .default([]),
     page: z.number().min(1, "Page must be positive").default(1),
