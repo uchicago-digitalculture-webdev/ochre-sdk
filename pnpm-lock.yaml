@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  minimatch: ^10.2.2
+  minimatch: ^10.2.3
 
 importers:
 
@@ -25,8 +25,8 @@ importers:
         version: 4.3.6
     devDependencies:
       '@antfu/eslint-config':
-        specifier: ^7.5.0
-        version: 7.5.0(@typescript-eslint/rule-tester@8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3))(@typescript-eslint/typescript-estree@8.56.1(typescript@5.9.3))(@typescript-eslint/utils@8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3))(@vue/compiler-sfc@3.5.29)(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3)(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(yaml@2.8.2))
+        specifier: ^7.6.0
+        version: 7.6.0(@typescript-eslint/rule-tester@8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3))(@typescript-eslint/typescript-estree@8.56.1(typescript@5.9.3))(@typescript-eslint/utils@8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3))(@vue/compiler-sfc@3.5.29)(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3)(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(yaml@2.8.2))
       '@types/node':
         specifier: ^24.10.13
         version: 24.10.13
@@ -51,8 +51,8 @@ importers:
 
 packages:
 
-  '@antfu/eslint-config@7.5.0':
-    resolution: {integrity: sha512-77smYBppIrK/x0tc0lYQgG3Ub6Mf11COOxQyJ3zgabwh7rurQvyKszQHSNVgfTxYS2COpX1tTRUem6MlPbZskQ==}
+  '@antfu/eslint-config@7.6.0':
+    resolution: {integrity: sha512-zxMWlccO+fB+JPCDYplYwGXKsX9fkmqOXFUcStIOd43yI8UJuwD10TRnr8Sa+vHV7rIpcPC0fLabx5p1ll8d1g==}
     hasBin: true
     peerDependencies:
       '@angular-eslint/eslint-plugin': ^21.1.0
@@ -1575,8 +1575,8 @@ packages:
   micromark@4.0.2:
     resolution: {integrity: sha512-zpe98Q6kvavpCr1NPVSCMebCKfD7CA2NqZ+rykeNhONIJBpc1tFKt9hucLGwha3jNTNI8lHpctWJWoimVF4PfA==}
 
-  minimatch@10.2.2:
-    resolution: {integrity: sha512-+G4CpNBxa5MprY+04MbgOw1v7So6n5JY166pFi9KfYwT78fxScCeSNQSNzp6dpPSW2rONOps6Ocam1wFhCgoVw==}
+  minimatch@10.2.3:
+    resolution: {integrity: sha512-Rwi3pnapEqirPSbWbrZaa6N3nmqq4Xer/2XooiOKyV3q12ML06f7MOuc5DVH8ONZIFhwIYQ3yzPH4nt7iWHaTg==}
     engines: {node: 18 || 20 || >=22}
 
   mlly@1.8.0:
@@ -2056,7 +2056,7 @@ packages:
 
 snapshots:
 
-  '@antfu/eslint-config@7.5.0(@typescript-eslint/rule-tester@8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3))(@typescript-eslint/typescript-estree@8.56.1(typescript@5.9.3))(@typescript-eslint/utils@8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3))(@vue/compiler-sfc@3.5.29)(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3)(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(yaml@2.8.2))':
+  '@antfu/eslint-config@7.6.0(@typescript-eslint/rule-tester@8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3))(@typescript-eslint/typescript-estree@8.56.1(typescript@5.9.3))(@typescript-eslint/utils@8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3))(@vue/compiler-sfc@3.5.29)(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3)(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(yaml@2.8.2))':
     dependencies:
       '@antfu/install-pkg': 1.1.0
       '@clack/prompts': 1.0.1
@@ -2089,7 +2089,6 @@ snapshots:
       eslint-plugin-yml: 3.3.0(eslint@10.0.2(jiti@2.6.1))
       eslint-processor-vue-blocks: 2.0.0(@vue/compiler-sfc@3.5.29)(eslint@10.0.2(jiti@2.6.1))
       globals: 17.3.0
-      jsonc-eslint-parser: 3.1.0
       local-pkg: 1.1.2
       parse-gitignore: 2.0.0
       toml-eslint-parser: 1.0.3
@@ -2285,7 +2284,7 @@ snapshots:
     dependencies:
       '@eslint/object-schema': 3.0.2
       debug: 4.4.3
-      minimatch: 10.2.2
+      minimatch: 10.2.3
     transitivePeerDependencies:
       - supports-color
 
@@ -2618,7 +2617,7 @@ snapshots:
       '@typescript-eslint/types': 8.56.1
       '@typescript-eslint/visitor-keys': 8.56.1
       debug: 4.4.3
-      minimatch: 10.2.2
+      minimatch: 10.2.3
       semver: 7.7.4
       tinyglobby: 0.2.15
       ts-api-utils: 2.4.0(typescript@5.9.3)
@@ -3173,7 +3172,7 @@ snapshots:
       imurmurhash: 0.1.4
       is-glob: 4.0.3
       json-stable-stringify-without-jsonify: 1.0.1
-      minimatch: 10.2.2
+      minimatch: 10.2.3
       natural-compare: 1.4.0
       optionator: 0.9.4
     optionalDependencies:
@@ -3682,7 +3681,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  minimatch@10.2.2:
+  minimatch@10.2.3:
     dependencies:
       brace-expansion: 5.0.3
 
