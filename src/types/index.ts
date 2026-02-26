@@ -752,8 +752,35 @@ export type PropertyValueQueryItem = {
 export type Query =
   | {
       target: "propertyValue";
-      dataType: Exclude<PropertyValueContentType, "coordinate">;
+      dataType: Exclude<
+        Exclude<PropertyValueContentType, "coordinate">,
+        "date" | "dateTime"
+      >;
       value: string;
+      from?: never;
+      to?: never;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
+      language: string;
+      operator?: "AND" | "OR";
+    }
+  | {
+      target: "propertyValue";
+      dataType: "date" | "dateTime";
+      value: string;
+      from: string;
+      to?: string;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
+      language: string;
+      operator?: "AND" | "OR";
+    }
+  | {
+      target: "propertyValue";
+      dataType: "date" | "dateTime";
+      value: string;
+      from?: string;
+      to: string;
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;

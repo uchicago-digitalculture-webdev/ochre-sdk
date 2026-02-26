@@ -3,6 +3,7 @@ import type {
   ApiVersion,
   DataCategory,
   PropertyValueContentType,
+  Query,
 } from "./types/index.js";
 import type { RenderOption, WhitespaceOption } from "./types/raw.js";
 import type { WebElementComponent } from "./types/website.js";
@@ -256,42 +257,83 @@ export const setItemsParamsSchema = z
     propertyVariableUuids: z.array(uuidSchema).default([]),
     queries: z
       .array(
-        z.discriminatedUnion("target", [
-          z.object({
-            target: z.literal("propertyValue"),
-            dataType: z.enum([
-              "string",
-              "integer",
-              "decimal",
-              "boolean",
-              "date",
-              "dateTime",
-              "time",
-              "IDREF",
-            ] as const satisfies ReadonlyArray<
-              Exclude<PropertyValueContentType, "coordinate">
-            >),
-            value: z.string(),
-            matchMode: z.enum(["includes", "exact"]),
-            isCaseSensitive: z.boolean(),
-            language: z.string().default("eng"),
-            operator: z.enum(["AND", "OR"]).optional(),
-          }),
-          z.object({
-            target: z.enum([
-              "title",
-              "description",
-              "image",
-              "periods",
-              "bibliography",
-            ]),
-            value: z.string(),
-            matchMode: z.enum(["includes", "exact"]),
-            isCaseSensitive: z.boolean(),
-            language: z.string().default("eng"),
-            operator: z.enum(["AND", "OR"]).optional(),
-          }),
-        ]),
+        z.union([
+          z
+            .object({
+              target: z.literal("propertyValue"),
+              dataType: z.enum([
+                "string",
+                "integer",
+                "decimal",
+                "boolean",
+                "time",
+                "IDREF",
+              ] as const satisfies ReadonlyArray<
+                Exclude<
+                  Exclude<PropertyValueContentType, "coordinate">,
+                  "date" | "dateTime"
+                >
+              >),
+              value: z.string(),
+              matchMode: z.enum(["includes", "exact"]),
+              isCaseSensitive: z.boolean(),
+              language: z.string().default("eng"),
+              operator: z.enum(["AND", "OR"]).optional(),
+            })
+            .strict(),
+          z
+            .object({
+              target: z.literal("propertyValue"),
+              dataType: z.enum(["date", "dateTime"] as const satisfies ReadonlyArray<
+                Extract<
+                  Exclude<PropertyValueContentType, "coordinate">,
+                  "date" | "dateTime"
+                >
+              >),
+              value: z.string(),
+              from: z.string(),
+              to: z.string().optional(),
+              matchMode: z.enum(["includes", "exact"]),
+              isCaseSensitive: z.boolean(),
+              language: z.string().default("eng"),
+              operator: z.enum(["AND", "OR"]).optional(),
+            })
+            .strict(),
+          z
+            .object({
+              target: z.literal("propertyValue"),
+              dataType: z.enum(["date", "dateTime"] as const satisfies ReadonlyArray<
+                Extract<
+                  Exclude<PropertyValueContentType, "coordinate">,
+                  "date" | "dateTime"
+                >
+              >),
+              value: z.string(),
+              from: z.string().optional(),
+              to: z.string(),
+              matchMode: z.enum(["includes", "exact"]),
+              isCaseSensitive: z.boolean(),
+              language: z.string().default("eng"),
+              operator: z.enum(["AND", "OR"]).optional(),
+            })
+            .strict(),
+          z
+            .object({
+              target: z.enum([
+                "title",
+                "description",
+                "image",
+                "periods",
+                "bibliography",
+              ]),
+              value: z.string(),
+              matchMode: z.enum(["includes", "exact"]),
+              isCaseSensitive: z.boolean(),
+              language: z.string().default("eng"),
+              operator: z.enum(["AND", "OR"]).optional(),
+            })
+            .strict(),
+        ]) satisfies z.ZodType<Query>,
       )
       .default([]),
     page: z.number().min(1, "Page must be positive").default(1),
@@ -317,5 +359,6 @@ export const setItemsParamsSchema = z
           message: "Query rules after the first must include an operator",
         });
       }
+
     }
   });

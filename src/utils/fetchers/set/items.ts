@@ -64,6 +64,27 @@ function buildStringMatchPredicate(params: {
 }
 
 /**
+ * Build a date/dateTime range predicate for an XQuery string.
+ */
+function buildDateRangePredicate(params: {
+  from?: string;
+  to?: string;
+}): string {
+  const { from, to } = params;
+  const conditions: Array<string> = [];
+
+  if (from != null) {
+    conditions.push(`(value/@rawValue ge ${stringLiteral(from)})`);
+  }
+
+  if (to != null) {
+    conditions.push(`(value/@rawValue le ${stringLiteral(to)})`);
+  }
+
+  return conditions.join(" and ");
+}
+
+/**
  * Build a property value predicate for an XQuery string
  * @param query - The propertyValue query
  * @returns The property value predicate
@@ -75,9 +96,13 @@ function buildPropertyValuePredicate(
     return `.//properties//property[value[@uuid=${stringLiteral(query.value)}]]`;
   }
 
+  if (query.dataType === "date" || query.dataType === "dateTime") {
+    return `.//properties//property[(label/@uuid=${stringLiteral(query.value)}) and ${buildDateRangePredicate(
+      { from: query.from, to: query.to },
+    )}]`;
+  }
+
   if (
-    query.dataType === "date" ||
-    query.dataType === "dateTime" ||
     query.dataType === "time" ||
     query.dataType === "integer" ||
     query.dataType === "decimal" ||
@@ -100,42 +125,45 @@ function buildPropertyValuePredicate(
  * @returns The query predicate
  */
 function buildQueryPredicate(query: Query): string {
-  const stringMatchParams = {
-    value: query.value,
-    matchMode: query.matchMode,
-    isCaseSensitive: query.isCaseSensitive,
-    language: query.language,
-  };
-
   switch (query.target) {
     case "title": {
       return buildStringMatchPredicate({
         path: `string-join(identification/label/content[@xml:lang="${query.language}"]/string, "")`,
-        ...stringMatchParams,
+        value: query.value,
+        matchMode: query.matchMode,
+        isCaseSensitive: query.isCaseSensitive,
       });
     }
     case "description": {
       return buildStringMatchPredicate({
         path: `string-join(description/content[@xml:lang="${query.language}"]/string, "")`,
-        ...stringMatchParams,
+        value: query.value,
+        matchMode: query.matchMode,
+        isCaseSensitive: query.isCaseSensitive,
       });
     }
     case "periods": {
       return buildStringMatchPredicate({
         path: `string-join(periods/period/identification/label/content[@xml:lang="${query.language}"]/string, "")`,
-        ...stringMatchParams,
+        value: query.value,
+        matchMode: query.matchMode,
+        isCaseSensitive: query.isCaseSensitive,
       });
     }
     case "bibliography": {
       return buildStringMatchPredicate({
         path: `string-join(bibliographies/bibliography/identification/label/content[@xml:lang="${query.language}"]/string, "")`,
-        ...stringMatchParams,
+        value: query.value,
+        matchMode: query.matchMode,
+        isCaseSensitive: query.isCaseSensitive,
       });
     }
     case "image": {
       return buildStringMatchPredicate({
         path: `string-join(image/identification/label/content[@xml:lang="${query.language}"]/string, "")`,
-        ...stringMatchParams,
+        value: query.value,
+        matchMode: query.matchMode,
+        isCaseSensitive: query.isCaseSensitive,
       });
     }
     case "propertyValue": {
