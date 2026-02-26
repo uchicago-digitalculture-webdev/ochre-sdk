@@ -12,6 +12,7 @@ import {
   setPropertyValuesByPropertyVariablesParamsSchema,
 } from "../../../schemas.js";
 import { DEFAULT_API_VERSION } from "../../helpers.js";
+import { stringLiteral } from "../../internal.js";
 import { parseFakeString, parseStringContent } from "../../string.js";
 
 type ParsedPropertyValueItem = {
@@ -23,6 +24,18 @@ type ParsedPropertyValueItem = {
 };
 
 type AggregatePropertyValueItem = Omit<ParsedPropertyValueItem, "variableUuid">;
+
+type SetPropertyValuesByPropertyVariablesTitleQueryInput = {
+  value: string;
+  matchMode: "includes" | "exact";
+  isCaseSensitive: boolean;
+  language?: string;
+};
+
+type SetPropertyValuesByPropertyVariablesTitleQuery = Omit<
+  SetPropertyValuesByPropertyVariablesTitleQueryInput,
+  "language"
+> & { language: string };
 
 function parsePropertyValueLabel(
   content: RawFakeString | RawStringItem | Array<RawStringItem> | undefined,
@@ -124,6 +137,50 @@ function aggregatePropertyValues(
 }
 
 /**
+ * Build a string match predicate for an XQuery string
+ * @param params - The parameters for the predicate
+ * @param params.path - The path to the string
+ * @param params.value - The value to match
+ * @param params.matchMode - The match mode (includes or exact)
+ * @param params.isCaseSensitive - Whether to match case-sensitively
+ * @returns The string match predicate
+ */
+function buildStringMatchPredicate(params: {
+  path: string;
+  value: string;
+  matchMode: "includes" | "exact";
+  isCaseSensitive: boolean;
+}): string {
+  const { path, value, matchMode, isCaseSensitive } = params;
+
+  const comparedPath = isCaseSensitive ? path : `lower-case(${path})`;
+  const comparedValue = isCaseSensitive ? value : value.toLowerCase();
+  const comparedValueLiteral = stringLiteral(comparedValue);
+
+  if (matchMode === "includes") {
+    return `contains(${comparedPath}, ${comparedValueLiteral})`;
+  }
+
+  return `${comparedPath} = ${comparedValueLiteral}`;
+}
+
+/**
+ * Build a title predicate for an XQuery string
+ * @param titleQuery - The title query
+ * @returns The title predicate
+ */
+function buildTitlePredicate(
+  titleQuery: SetPropertyValuesByPropertyVariablesTitleQuery,
+): string {
+  return buildStringMatchPredicate({
+    path: `string-join(identification/label/content[@xml:lang="${titleQuery.language}"]/string, "")`,
+    value: titleQuery.value,
+    matchMode: titleQuery.matchMode,
+    isCaseSensitive: titleQuery.isCaseSensitive,
+  });
+}
+
+/**
  * Schema for a single property value query item in the OCHRE API response
  */
 const propertyValueQueryItemSchema = z
@@ -213,6 +270,7 @@ const responseSchema = z.object({
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - An array of property variable UUIDs to fetch
+ * @param params.titleQuery - Title query to filter returned items by item title
  * @param params.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
  * @param options - Options for the fetch
  * @param options.version - The version of the OCHRE API to use
@@ -223,6 +281,7 @@ function buildXQuery(
     setScopeUuids: Array<string>;
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
+    titleQuery?: SetPropertyValuesByPropertyVariablesTitleQuery;
     isLimitedToLeafPropertyValues: boolean;
   },
   options?: { version: ApiVersion },
@@ -233,36 +292,47 @@ function buildXQuery(
     setScopeUuids,
     belongsToCollectionScopeUuids,
     propertyVariableUuids,
+    titleQuery,
     isLimitedToLeafPropertyValues,
   } = params;
 
-  let setScopeFilter = "";
+  let setScopeFilter = "/set/items/*";
 
   if (setScopeUuids.length > 0) {
     const setScopeValues = setScopeUuids
       .map((uuid) => `@uuid="${uuid}"`)
       .join(" or ");
-    setScopeFilter = `/set[(${setScopeValues})]/items`;
+    setScopeFilter = `/set[(${setScopeValues})]/items/*`;
   }
-  let collectionScopeFilter = "";
+
+  const propertyVariableFilters = propertyVariableUuids
+    .map((uuid) => `@uuid="${uuid}"`)
+    .join(" or ");
+  const filterPredicates: Array<string> = [];
 
   if (belongsToCollectionScopeUuids.length > 0) {
     const belongsToCollectionScopeValues = belongsToCollectionScopeUuids
       .map((uuid) => `@uuid="${uuid}"`)
       .join(" or ");
 
-    collectionScopeFilter = `//properties[property[label/@uuid="${BELONGS_TO_COLLECTION_UUID}" and value/(${belongsToCollectionScopeValues})]]`;
+    filterPredicates.push(
+      `.//properties[property[label/@uuid="${BELONGS_TO_COLLECTION_UUID}" and value/(${belongsToCollectionScopeValues})]]`,
+    );
   }
 
-  const propertyVariableFilters = propertyVariableUuids
-    .map((uuid) => `@uuid="${uuid}"`)
-    .join(" or ");
+  if (titleQuery != null) {
+    filterPredicates.push(buildTitlePredicate(titleQuery));
+  }
+
+  const itemFilters =
+    filterPredicates.length > 0 ? `[${filterPredicates.join(" and ")}]` : "";
   const valueFilter = isLimitedToLeafPropertyValues ? "[not(@i)]" : "";
 
-  const xquery = `let $matching-props := ${version === 2 ? "doc()" : "input()"}/ochre
+  const xquery = `let $items := ${version === 2 ? "doc()" : "input()"}/ochre
       ${setScopeFilter}
-      ${collectionScopeFilter}
-      //property[label/(${propertyVariableFilters})]
+      ${itemFilters}
+
+  let $matching-props := $items//property[label/(${propertyVariableFilters})]
 
   for $p in $matching-props
   for $v in $p/value${valueFilter}
@@ -282,6 +352,7 @@ function buildXQuery(
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - The property variable UUIDs to query by
+ * @param params.titleQuery - Title query to filter returned items by item title
  * @param params.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
  * @param options - Options for the fetch
  * @param options.fetch - The fetch function to use
@@ -293,6 +364,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
     setScopeUuids: Array<string>;
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
+    titleQuery?: SetPropertyValuesByPropertyVariablesTitleQueryInput;
     isLimitedToLeafPropertyValues?: boolean;
   },
   options?: {
@@ -324,6 +396,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
       setScopeUuids,
       belongsToCollectionScopeUuids,
       propertyVariableUuids,
+      titleQuery,
       isLimitedToLeafPropertyValues,
     } = setPropertyValuesByPropertyVariablesParamsSchema.parse(params);
 
@@ -332,6 +405,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
         setScopeUuids,
         belongsToCollectionScopeUuids,
         propertyVariableUuids,
+        titleQuery,
         isLimitedToLeafPropertyValues,
       },
       { version },

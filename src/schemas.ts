@@ -246,6 +246,15 @@ export const setPropertyValuesByPropertyVariablesParamsSchema = z.object({
   propertyVariableUuids: z
     .array(uuidSchema)
     .min(1, "At least one property variable UUID is required"),
+  titleQuery: z
+    .object({
+      value: z.string(),
+      matchMode: z.enum(["includes", "exact"]),
+      isCaseSensitive: z.boolean(),
+      language: z.string().default("eng"),
+    })
+    .strict()
+    .optional(),
   isLimitedToLeafPropertyValues: z.boolean().default(false),
 });
 
