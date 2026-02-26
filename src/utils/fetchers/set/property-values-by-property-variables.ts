@@ -3,6 +3,7 @@ import type {
   ApiVersion,
   PropertyValueContentType,
   PropertyValueQueryItem,
+  Query,
 } from "../../../types/index.js";
 import type { RawFakeString, RawStringItem } from "../../../types/raw.js";
 import { BELONGS_TO_COLLECTION_UUID } from "../../../constants.js";
@@ -12,8 +13,8 @@ import {
   setPropertyValuesByPropertyVariablesParamsSchema,
 } from "../../../schemas.js";
 import { DEFAULT_API_VERSION } from "../../helpers.js";
-import { stringLiteral } from "../../internal.js";
 import { parseFakeString, parseStringContent } from "../../string.js";
+import { buildQueryFilters } from "./query-helpers.js";
 
 type ParsedPropertyValueItem = {
   variableUuid: string | null;
@@ -24,18 +25,6 @@ type ParsedPropertyValueItem = {
 };
 
 type AggregatePropertyValueItem = Omit<ParsedPropertyValueItem, "variableUuid">;
-
-type SetPropertyValuesByPropertyVariablesTitleQueryInput = {
-  value: string;
-  matchMode: "includes" | "exact";
-  isCaseSensitive: boolean;
-  language?: string;
-};
-
-type SetPropertyValuesByPropertyVariablesTitleQuery = Omit<
-  SetPropertyValuesByPropertyVariablesTitleQueryInput,
-  "language"
-> & { language: string };
 
 function parsePropertyValueLabel(
   content: RawFakeString | RawStringItem | Array<RawStringItem> | undefined,
@@ -137,50 +126,6 @@ function aggregatePropertyValues(
 }
 
 /**
- * Build a string match predicate for an XQuery string
- * @param params - The parameters for the predicate
- * @param params.path - The path to the string
- * @param params.value - The value to match
- * @param params.matchMode - The match mode (includes or exact)
- * @param params.isCaseSensitive - Whether to match case-sensitively
- * @returns The string match predicate
- */
-function buildStringMatchPredicate(params: {
-  path: string;
-  value: string;
-  matchMode: "includes" | "exact";
-  isCaseSensitive: boolean;
-}): string {
-  const { path, value, matchMode, isCaseSensitive } = params;
-
-  const comparedPath = isCaseSensitive ? path : `lower-case(${path})`;
-  const comparedValue = isCaseSensitive ? value : value.toLowerCase();
-  const comparedValueLiteral = stringLiteral(comparedValue);
-
-  if (matchMode === "includes") {
-    return `contains(${comparedPath}, ${comparedValueLiteral})`;
-  }
-
-  return `${comparedPath} = ${comparedValueLiteral}`;
-}
-
-/**
- * Build a title predicate for an XQuery string
- * @param titleQuery - The title query
- * @returns The title predicate
- */
-function buildTitlePredicate(
-  titleQuery: SetPropertyValuesByPropertyVariablesTitleQuery,
-): string {
-  return buildStringMatchPredicate({
-    path: `string-join(identification/label/content[@xml:lang="${titleQuery.language}"]/string, "")`,
-    value: titleQuery.value,
-    matchMode: titleQuery.matchMode,
-    isCaseSensitive: titleQuery.isCaseSensitive,
-  });
-}
-
-/**
  * Schema for a single property value query item in the OCHRE API response
  */
 const propertyValueQueryItemSchema = z
@@ -270,7 +215,7 @@ const responseSchema = z.object({
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - An array of property variable UUIDs to fetch
- * @param params.titleQuery - Title query to filter returned items by item title
+ * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
  * @param params.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
  * @param options - Options for the fetch
  * @param options.version - The version of the OCHRE API to use
@@ -281,7 +226,7 @@ function buildXQuery(
     setScopeUuids: Array<string>;
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
-    titleQuery?: SetPropertyValuesByPropertyVariablesTitleQuery;
+    queries: Array<Query>;
     isLimitedToLeafPropertyValues: boolean;
   },
   options?: { version: ApiVersion },
@@ -292,7 +237,7 @@ function buildXQuery(
     setScopeUuids,
     belongsToCollectionScopeUuids,
     propertyVariableUuids,
-    titleQuery,
+    queries,
     isLimitedToLeafPropertyValues,
   } = params;
 
@@ -308,6 +253,7 @@ function buildXQuery(
   const propertyVariableFilters = propertyVariableUuids
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
+  const queryFilters = buildQueryFilters(queries);
   const filterPredicates: Array<string> = [];
 
   if (belongsToCollectionScopeUuids.length > 0) {
@@ -320,8 +266,8 @@ function buildXQuery(
     );
   }
 
-  if (titleQuery != null) {
-    filterPredicates.push(buildTitlePredicate(titleQuery));
+  if (queryFilters.length > 0) {
+    filterPredicates.push(`(${queryFilters})`);
   }
 
   const itemFilters =
@@ -352,7 +298,7 @@ function buildXQuery(
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - The property variable UUIDs to query by
- * @param params.titleQuery - Title query to filter returned items by item title
+ * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
  * @param params.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
  * @param options - Options for the fetch
  * @param options.fetch - The fetch function to use
@@ -364,7 +310,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
     setScopeUuids: Array<string>;
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
-    titleQuery?: SetPropertyValuesByPropertyVariablesTitleQueryInput;
+    queries?: Array<Query>;
     isLimitedToLeafPropertyValues?: boolean;
   },
   options?: {
@@ -396,7 +342,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
       setScopeUuids,
       belongsToCollectionScopeUuids,
       propertyVariableUuids,
-      titleQuery,
+      queries,
       isLimitedToLeafPropertyValues,
     } = setPropertyValuesByPropertyVariablesParamsSchema.parse(params);
 
@@ -405,7 +351,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
         setScopeUuids,
         belongsToCollectionScopeUuids,
         propertyVariableUuids,
-        titleQuery,
+        queries,
         isLimitedToLeafPropertyValues,
       },
       { version },

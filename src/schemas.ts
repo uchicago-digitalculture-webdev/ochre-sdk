@@ -235,28 +235,135 @@ export const boundsSchema = z
   );
 
 /**
- * Schema for validating the parameters for the Set property values by property variables fetching function
+ * Shared schema for Set queries
  * @internal
  */
-export const setPropertyValuesByPropertyVariablesParamsSchema = z.object({
-  setScopeUuids: z
-    .array(uuidSchema)
-    .min(1, "At least one set scope UUID is required"),
-  belongsToCollectionScopeUuids: z.array(uuidSchema).default([]),
-  propertyVariableUuids: z
-    .array(uuidSchema)
-    .min(1, "At least one property variable UUID is required"),
-  titleQuery: z
+const setQuerySchema = z.union([
+  z
     .object({
+      target: z.literal("propertyValue"),
+      dataType: z.enum([
+        "string",
+        "integer",
+        "decimal",
+        "boolean",
+        "time",
+        "IDREF",
+      ] as const satisfies ReadonlyArray<
+        Exclude<
+          Exclude<PropertyValueContentType, "coordinate">,
+          "date" | "dateTime"
+        >
+      >),
       value: z.string(),
       matchMode: z.enum(["includes", "exact"]),
       isCaseSensitive: z.boolean(),
       language: z.string().default("eng"),
+      operator: z.enum(["AND", "OR"]).optional(),
+      isNegated: z.boolean().optional().default(false),
     })
-    .strict()
-    .optional(),
-  isLimitedToLeafPropertyValues: z.boolean().default(false),
-});
+    .strict(),
+  z
+    .object({
+      target: z.literal("propertyValue"),
+      dataType: z.enum(["date", "dateTime"] as const satisfies ReadonlyArray<
+        Extract<
+          Exclude<PropertyValueContentType, "coordinate">,
+          "date" | "dateTime"
+        >
+      >),
+      value: z.string(),
+      from: z.string(),
+      to: z.string().optional(),
+      matchMode: z.enum(["includes", "exact"]),
+      isCaseSensitive: z.boolean(),
+      language: z.string().default("eng"),
+      operator: z.enum(["AND", "OR"]).optional(),
+      isNegated: z.boolean().optional().default(false),
+    })
+    .strict(),
+  z
+    .object({
+      target: z.literal("propertyValue"),
+      dataType: z.enum(["date", "dateTime"] as const satisfies ReadonlyArray<
+        Extract<
+          Exclude<PropertyValueContentType, "coordinate">,
+          "date" | "dateTime"
+        >
+      >),
+      value: z.string(),
+      from: z.string().optional(),
+      to: z.string(),
+      matchMode: z.enum(["includes", "exact"]),
+      isCaseSensitive: z.boolean(),
+      language: z.string().default("eng"),
+      operator: z.enum(["AND", "OR"]).optional(),
+      isNegated: z.boolean().optional().default(false),
+    })
+    .strict(),
+  z
+    .object({
+      target: z.enum([
+        "title",
+        "description",
+        "image",
+        "periods",
+        "bibliography",
+      ]),
+      value: z.string(),
+      matchMode: z.enum(["includes", "exact"]),
+      isCaseSensitive: z.boolean(),
+      language: z.string().default("eng"),
+      operator: z.enum(["AND", "OR"]).optional(),
+      isNegated: z.boolean().optional().default(false),
+    })
+    .strict(),
+]) satisfies z.ZodType<Query>;
+
+const setQueriesSchema = z.array(setQuerySchema).default([]);
+
+function validateSetQueriesOperators(
+  queries: Array<Query>,
+  ctx: z.RefinementCtx,
+): void {
+  for (const [index, query] of queries.entries()) {
+    if (index === 0 && query.operator != null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["queries", index, "operator"],
+        message: "The first query rule must not include an operator",
+      });
+    }
+
+    if (index > 0 && query.operator == null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["queries", index, "operator"],
+        message: "Query rules after the first must include an operator",
+      });
+    }
+  }
+}
+
+/**
+ * Schema for validating the parameters for the Set property values by property variables fetching function
+ * @internal
+ */
+export const setPropertyValuesByPropertyVariablesParamsSchema = z
+  .object({
+    setScopeUuids: z
+      .array(uuidSchema)
+      .min(1, "At least one set scope UUID is required"),
+    belongsToCollectionScopeUuids: z.array(uuidSchema).default([]),
+    propertyVariableUuids: z
+      .array(uuidSchema)
+      .min(1, "At least one property variable UUID is required"),
+    queries: setQueriesSchema,
+    isLimitedToLeafPropertyValues: z.boolean().default(false),
+  })
+  .superRefine((value, ctx) => {
+    validateSetQueriesOperators(value.queries, ctx);
+  });
 
 export const setItemsParamsSchema = z
   .object({
@@ -265,97 +372,7 @@ export const setItemsParamsSchema = z
       .min(1, "At least one set scope UUID is required"),
     belongsToCollectionScopeUuids: z.array(uuidSchema).default([]),
     propertyVariableUuids: z.array(uuidSchema).default([]),
-    queries: z
-      .array(
-        z.union([
-          z
-            .object({
-              target: z.literal("propertyValue"),
-              dataType: z.enum([
-                "string",
-                "integer",
-                "decimal",
-                "boolean",
-                "time",
-                "IDREF",
-              ] as const satisfies ReadonlyArray<
-                Exclude<
-                  Exclude<PropertyValueContentType, "coordinate">,
-                  "date" | "dateTime"
-                >
-              >),
-              value: z.string(),
-              matchMode: z.enum(["includes", "exact"]),
-              isCaseSensitive: z.boolean(),
-              language: z.string().default("eng"),
-              operator: z.enum(["AND", "OR"]).optional(),
-              isNegated: z.boolean().optional().default(false),
-            })
-            .strict(),
-          z
-            .object({
-              target: z.literal("propertyValue"),
-              dataType: z.enum([
-                "date",
-                "dateTime",
-              ] as const satisfies ReadonlyArray<
-                Extract<
-                  Exclude<PropertyValueContentType, "coordinate">,
-                  "date" | "dateTime"
-                >
-              >),
-              value: z.string(),
-              from: z.string(),
-              to: z.string().optional(),
-              matchMode: z.enum(["includes", "exact"]),
-              isCaseSensitive: z.boolean(),
-              language: z.string().default("eng"),
-              operator: z.enum(["AND", "OR"]).optional(),
-              isNegated: z.boolean().optional().default(false),
-            })
-            .strict(),
-          z
-            .object({
-              target: z.literal("propertyValue"),
-              dataType: z.enum([
-                "date",
-                "dateTime",
-              ] as const satisfies ReadonlyArray<
-                Extract<
-                  Exclude<PropertyValueContentType, "coordinate">,
-                  "date" | "dateTime"
-                >
-              >),
-              value: z.string(),
-              from: z.string().optional(),
-              to: z.string(),
-              matchMode: z.enum(["includes", "exact"]),
-              isCaseSensitive: z.boolean(),
-              language: z.string().default("eng"),
-              operator: z.enum(["AND", "OR"]).optional(),
-              isNegated: z.boolean().optional().default(false),
-            })
-            .strict(),
-          z
-            .object({
-              target: z.enum([
-                "title",
-                "description",
-                "image",
-                "periods",
-                "bibliography",
-              ]),
-              value: z.string(),
-              matchMode: z.enum(["includes", "exact"]),
-              isCaseSensitive: z.boolean(),
-              language: z.string().default("eng"),
-              operator: z.enum(["AND", "OR"]).optional(),
-              isNegated: z.boolean().optional().default(false),
-            })
-            .strict(),
-        ]) satisfies z.ZodType<Query>,
-      )
-      .default([]),
+    queries: setQueriesSchema,
     page: z.number().min(1, "Page must be positive").default(1),
     pageSize: z
       .number()
@@ -363,21 +380,5 @@ export const setItemsParamsSchema = z
       .default(DEFAULT_PAGE_SIZE),
   })
   .superRefine((value, ctx) => {
-    for (const [index, query] of value.queries.entries()) {
-      if (index === 0 && query.operator != null) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["queries", index, "operator"],
-          message: "The first query rule must not include an operator",
-        });
-      }
-
-      if (index > 0 && query.operator == null) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["queries", index, "operator"],
-          message: "Query rules after the first must include an operator",
-        });
-      }
-    }
+    validateSetQueriesOperators(value.queries, ctx);
   });
