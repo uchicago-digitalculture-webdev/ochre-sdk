@@ -281,7 +281,7 @@ export type WebElementComponent =
         isResultsBarDisplayed: boolean;
         isMapDisplayed: boolean;
         isInputDisplayed: boolean;
-        isLimitedToTitleQuery: boolean;
+        isLimitedToInputFilter: boolean;
         isLimitedToLeafPropertyValues: boolean;
         sidebarSort: "default" | "alphabetical";
       };

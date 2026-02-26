@@ -611,16 +611,16 @@ function parseWebElementProperties(
         | null;
       isFilterInputDisplayed ??= false;
 
-      let isFilterLimitedToTitleQuery = getPropertyValueByLabel(
+      let isFilterLimitedToInputFilter = getPropertyValueByLabel(
         componentProperty.properties,
-        "filter-limit-to-title-query",
+        "filter-limit-to-input-filter",
       ) as
         | Extract<
             WebElementComponent,
             { component: "collection" }
-          >["filter"]["isLimitedToTitleQuery"]
+          >["filter"]["isLimitedToInputFilter"]
         | null;
-      isFilterLimitedToTitleQuery ??= false;
+      isFilterLimitedToInputFilter ??= false;
 
       let isFilterLimitedToLeafPropertyValues = getPropertyValueByLabel(
         componentProperty.properties,
@@ -734,7 +734,7 @@ function parseWebElementProperties(
           isResultsBarDisplayed: isFilterResultsBarDisplayed,
           isMapDisplayed: isFilterMapDisplayed,
           isInputDisplayed: isFilterInputDisplayed,
-          isLimitedToTitleQuery: isFilterLimitedToTitleQuery,
+          isLimitedToInputFilter: isFilterLimitedToInputFilter,
           isLimitedToLeafPropertyValues: isFilterLimitedToLeafPropertyValues,
           sidebarSort: filterSidebarSort,
         },
