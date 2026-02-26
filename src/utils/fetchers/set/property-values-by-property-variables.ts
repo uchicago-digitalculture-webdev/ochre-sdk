@@ -172,7 +172,7 @@ function buildXQuery(
   for $v in $matching-props/value${valueFilter}
     let $item-uuid := $v/ancestor::*[parent::items]/@uuid
     return <propertyValue uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}" itemUuid="{$item-uuid}">{
-      if ($v/content) then $v/content else $v/text()
+      if ($v/content) then string-join($v/content[@xml:lang="eng"]/string, "") else $v/text()
     }</propertyValue>`;
 
   return `<ochre>{${xquery}}</ochre>`;
