@@ -118,6 +118,7 @@ const responseSchema = z.object({
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - An array of property variable UUIDs to fetch
+ * @param params.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
  * @param options - Options for the fetch
  * @param options.version - The version of the OCHRE API to use
  * @returns An XQuery string
@@ -127,6 +128,7 @@ function buildXQuery(
     setScopeUuids: Array<string>;
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
+    isLimitedToLeafPropertyValues: boolean;
   },
   options?: { version: ApiVersion },
 ): string {
@@ -136,6 +138,7 @@ function buildXQuery(
     setScopeUuids,
     belongsToCollectionScopeUuids,
     propertyVariableUuids,
+    isLimitedToLeafPropertyValues,
   } = params;
 
   let setScopeFilter = "";
@@ -159,13 +162,14 @@ function buildXQuery(
   const propertyVariableFilters = propertyVariableUuids
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
+  const valueFilter = isLimitedToLeafPropertyValues ? "[not(@i)]" : "";
 
   const xquery = `let $matching-props := ${version === 2 ? "doc()" : "input()"}/ochre
       ${setScopeFilter}
       ${collectionScopeFilter}
       //property[label/(${propertyVariableFilters})]
 
-  for $v in $matching-props/value
+  for $v in $matching-props/value${valueFilter}
     let $item-uuid := $v/ancestor::*[parent::items]/@uuid
     return <propertyValue uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}" itemUuid="{$item-uuid}">{
       if ($v/content) then $v/content else $v/text()
@@ -181,6 +185,7 @@ function buildXQuery(
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - The property variable UUIDs to query by
+ * @param params.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
  * @param options - Options for the fetch
  * @param options.fetch - The fetch function to use
  * @param options.version - The version of the OCHRE API to use
@@ -191,6 +196,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
     setScopeUuids: Array<string>;
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
+    isLimitedToLeafPropertyValues?: boolean;
   },
   options?: {
     fetch?: (
@@ -210,10 +216,16 @@ export async function fetchSetPropertyValuesByPropertyVariables(
       setScopeUuids,
       belongsToCollectionScopeUuids,
       propertyVariableUuids,
+      isLimitedToLeafPropertyValues,
     } = setPropertyValuesByPropertyVariablesParamsSchema.parse(params);
 
     const xquery = buildXQuery(
-      { setScopeUuids, belongsToCollectionScopeUuids, propertyVariableUuids },
+      {
+        setScopeUuids,
+        belongsToCollectionScopeUuids,
+        propertyVariableUuids,
+        isLimitedToLeafPropertyValues,
+      },
       { version },
     );
 

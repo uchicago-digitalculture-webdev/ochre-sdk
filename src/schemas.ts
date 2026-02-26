@@ -246,6 +246,7 @@ export const setPropertyValuesByPropertyVariablesParamsSchema = z.object({
   propertyVariableUuids: z
     .array(uuidSchema)
     .min(1, "At least one property variable UUID is required"),
+  isLimitedToLeafPropertyValues: z.boolean().default(false),
 });
 
 export const setItemsParamsSchema = z
