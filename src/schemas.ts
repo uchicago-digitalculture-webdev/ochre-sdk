@@ -279,12 +279,16 @@ export const setItemsParamsSchema = z
               isCaseSensitive: z.boolean(),
               language: z.string().default("eng"),
               operator: z.enum(["AND", "OR"]).optional(),
+              isNegated: z.boolean().optional().default(false),
             })
             .strict(),
           z
             .object({
               target: z.literal("propertyValue"),
-              dataType: z.enum(["date", "dateTime"] as const satisfies ReadonlyArray<
+              dataType: z.enum([
+                "date",
+                "dateTime",
+              ] as const satisfies ReadonlyArray<
                 Extract<
                   Exclude<PropertyValueContentType, "coordinate">,
                   "date" | "dateTime"
@@ -297,12 +301,16 @@ export const setItemsParamsSchema = z
               isCaseSensitive: z.boolean(),
               language: z.string().default("eng"),
               operator: z.enum(["AND", "OR"]).optional(),
+              isNegated: z.boolean().optional().default(false),
             })
             .strict(),
           z
             .object({
               target: z.literal("propertyValue"),
-              dataType: z.enum(["date", "dateTime"] as const satisfies ReadonlyArray<
+              dataType: z.enum([
+                "date",
+                "dateTime",
+              ] as const satisfies ReadonlyArray<
                 Extract<
                   Exclude<PropertyValueContentType, "coordinate">,
                   "date" | "dateTime"
@@ -315,6 +323,7 @@ export const setItemsParamsSchema = z
               isCaseSensitive: z.boolean(),
               language: z.string().default("eng"),
               operator: z.enum(["AND", "OR"]).optional(),
+              isNegated: z.boolean().optional().default(false),
             })
             .strict(),
           z
@@ -331,6 +340,7 @@ export const setItemsParamsSchema = z
               isCaseSensitive: z.boolean(),
               language: z.string().default("eng"),
               operator: z.enum(["AND", "OR"]).optional(),
+              isNegated: z.boolean().optional().default(false),
             })
             .strict(),
         ]) satisfies z.ZodType<Query>,
@@ -359,6 +369,5 @@ export const setItemsParamsSchema = z
           message: "Query rules after the first must include an operator",
         });
       }
-
     }
   });

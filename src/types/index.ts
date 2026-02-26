@@ -763,6 +763,7 @@ export type Query =
       isCaseSensitive: boolean;
       language: string;
       operator?: "AND" | "OR";
+      isNegated?: boolean;
     }
   | {
       target: "propertyValue";
@@ -774,6 +775,7 @@ export type Query =
       isCaseSensitive: boolean;
       language: string;
       operator?: "AND" | "OR";
+      isNegated?: boolean;
     }
   | {
       target: "propertyValue";
@@ -785,6 +787,7 @@ export type Query =
       isCaseSensitive: boolean;
       language: string;
       operator?: "AND" | "OR";
+      isNegated?: boolean;
     }
   | {
       target: "title" | "description" | "image" | "periods" | "bibliography";
@@ -793,4 +796,5 @@ export type Query =
       isCaseSensitive: boolean;
       language: string;
       operator?: "AND" | "OR";
+      isNegated?: boolean;
     };

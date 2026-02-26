@@ -173,12 +173,20 @@ function buildQueryPredicate(query: Query): string {
 }
 
 /**
+ * Build a boolean query clause for an XQuery string.
+ */
+function buildBooleanQueryClause(query: Query): string {
+  const baseClause = `(${buildQueryPredicate(query)})`;
+  return query.isNegated ? `not(${baseClause})` : baseClause;
+}
+
+/**
  * Build an XQuery string to fetch Set items from the OCHRE API
  * @param params - The parameters for the fetch
  * @param params.setScopeUuids - An array of Set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - An array of property variable UUIDs to filter by
- * @param params.queries - Ordered queries to combine with AND/OR
+ * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
  * @param params.page - The page number (1-indexed)
  * @param params.pageSize - The number of items per page
  * @param options - Options for the fetch
@@ -217,13 +225,13 @@ function buildXQuery(
 
   const queryFilters = queries
     .map((query, index) => {
-      const predicate = `(${buildQueryPredicate(query)})`;
+      const clause = buildBooleanQueryClause(query);
 
       if (index === 0) {
-        return predicate;
+        return clause;
       }
 
-      return `${query.operator === "OR" ? "or" : "and"} ${predicate}`;
+      return `${query.operator === "OR" ? "or" : "and"} ${clause}`;
     })
     .join(" ");
 
@@ -279,7 +287,7 @@ function buildXQuery(
  * @param params.setScopeUuids - The Set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - The property variable UUIDs to filter by
- * @param params.queries - Ordered queries to combine with AND/OR
+ * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
  * @param params.page - The page number (1-indexed)
  * @param params.pageSize - The number of items per page
  * @param itemCategories - The categories of the items to fetch
