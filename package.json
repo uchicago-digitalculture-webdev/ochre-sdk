@@ -1,6 +1,6 @@
 {
   "name": "ochre-sdk",
-  "version": "0.20.7",
+  "version": "0.20.8",
   "type": "module",
   "license": "MIT",
   "description": "Node.js library for working with OCHRE (Online Cultural and Historical Research Environment) data",
@@ -55,6 +55,7 @@
     "@date-fns/utc": "^2.1.1",
     "date-fns": "^4.1.0",
     "fast-equals": "^6.0.0",
+    "marklogic": "^4.1.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
