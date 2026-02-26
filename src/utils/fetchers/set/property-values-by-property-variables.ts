@@ -4,6 +4,7 @@ import type {
   PropertyValueContentType,
   PropertyValueQueryItem,
 } from "../../../types/index.js";
+import type { RawFakeString, RawStringItem } from "../../../types/raw.js";
 import { BELONGS_TO_COLLECTION_UUID } from "../../../constants.js";
 import {
   fakeStringSchema,
@@ -13,12 +14,122 @@ import {
 import { DEFAULT_API_VERSION } from "../../helpers.js";
 import { parseFakeString, parseStringContent } from "../../string.js";
 
+type ParsedPropertyValueItem = {
+  variableUuid: string | null;
+  itemUuid: string | null;
+  dataType: Exclude<PropertyValueContentType, "coordinate">;
+  content: string | number | boolean | null;
+  label: string | null;
+};
+
+type AggregatePropertyValueItem = Omit<ParsedPropertyValueItem, "variableUuid">;
+
+function parsePropertyValueLabel(
+  content: RawFakeString | RawStringItem | Array<RawStringItem> | undefined,
+): string | null {
+  if (content == null || content === "") {
+    return null;
+  }
+
+  if (typeof content === "object") {
+    return parseStringContent({ content });
+  }
+
+  return parseFakeString(content);
+}
+
+function parsePropertyValueBooleanContent(
+  rawValue: RawFakeString | undefined,
+): boolean | null {
+  if (rawValue == null || rawValue === "") {
+    return null;
+  }
+
+  if (typeof rawValue === "boolean") {
+    return rawValue;
+  }
+
+  return rawValue.toString().toLocaleLowerCase("en-US") === "true";
+}
+
+function getPropertyValueGroupKey(value: AggregatePropertyValueItem): string {
+  const contentKey =
+    value.content == null ?
+      "null"
+    : `${typeof value.content}:${value.content.toLocaleString("en-US")}`;
+
+  return `${value.dataType}|${contentKey}`;
+}
+
+function aggregatePropertyValues(
+  values: Array<AggregatePropertyValueItem>,
+): Array<PropertyValueQueryItem> {
+  const groupedPropertyValuesMap = new Map<
+    string,
+    {
+      dataType: Exclude<PropertyValueContentType, "coordinate">;
+      content: string | number | boolean | null;
+      label: string | null;
+      itemUuids: Set<string | null>;
+    }
+  >();
+
+  for (const value of values) {
+    const key = getPropertyValueGroupKey(value);
+    const existing = groupedPropertyValuesMap.get(key);
+
+    if (existing == null) {
+      groupedPropertyValuesMap.set(key, {
+        dataType: value.dataType,
+        content: value.content,
+        label: value.label,
+        itemUuids: new Set([value.itemUuid]),
+      });
+      continue;
+    }
+
+    existing.itemUuids.add(value.itemUuid);
+    if (existing.label == null && value.label != null) {
+      existing.label = value.label;
+    }
+  }
+
+  const groupedPropertyValues: Array<PropertyValueQueryItem> = [];
+  for (const group of groupedPropertyValuesMap.values()) {
+    if (group.content == null) {
+      continue;
+    }
+
+    groupedPropertyValues.push({
+      count: group.itemUuids.size,
+      dataType: group.dataType,
+      content: group.content,
+      label: group.label,
+    });
+  }
+
+  return groupedPropertyValues.toSorted((a, b) => {
+    if (a.count !== b.count) {
+      return b.count - a.count;
+    }
+
+    if (a.label !== b.label) {
+      return a.label?.localeCompare(b.label ?? "") ?? 0;
+    }
+
+    return (
+      a.content?.toString().localeCompare(b.content?.toString() ?? "") ?? 0
+    );
+  });
+}
+
 /**
  * Schema for a single property value query item in the OCHRE API response
  */
 const propertyValueQueryItemSchema = z
   .object({
     uuid: z.string(),
+    variableUuid: z.string().optional(),
     itemUuid: z.string().optional(),
     dataType: z.string(),
     rawValue: fakeStringSchema.optional(),
@@ -30,13 +141,12 @@ const propertyValueQueryItemSchema = z
       ])
       .optional(),
   })
-  .transform((val) => {
-    const returnValue: {
-      itemUuid: string | null;
-      dataType: Exclude<PropertyValueContentType, "coordinate">;
-      content: string | number | boolean | null;
-      label: string | null;
-    } = {
+  .transform((val): ParsedPropertyValueItem => {
+    const returnValue: ParsedPropertyValueItem = {
+      variableUuid:
+        val.variableUuid != null && val.variableUuid !== "" ?
+          val.variableUuid
+        : null,
       itemUuid:
         val.itemUuid != null && val.itemUuid !== "" ? val.itemUuid : null,
       dataType: val.dataType as Exclude<PropertyValueContentType, "coordinate">,
@@ -47,36 +157,24 @@ const propertyValueQueryItemSchema = z
     switch (val.dataType) {
       case "IDREF": {
         returnValue.content = val.uuid !== "" ? val.uuid : null;
-        returnValue.label =
-          val.content != null && val.content !== "" ?
-            typeof val.content === "object" ?
-              parseStringContent({ content: val.content })
-            : parseFakeString(val.content)
-          : null;
+        returnValue.label = parsePropertyValueLabel(val.content);
         break;
       }
       case "integer":
       case "decimal":
       case "time": {
-        returnValue.content =
-          val.rawValue != null && val.rawValue !== "" ?
-            Number(val.rawValue)
-          : null;
-        returnValue.label =
-          val.content != null && val.content !== "" ?
-            val.content.toString()
-          : null;
+        if (val.rawValue != null && val.rawValue !== "") {
+          const numericContent = Number(val.rawValue);
+          returnValue.content =
+            Number.isNaN(numericContent) ? null : numericContent;
+        }
+
+        returnValue.label = parsePropertyValueLabel(val.content);
         break;
       }
       case "boolean": {
-        returnValue.content =
-          val.rawValue != null && val.rawValue !== "" ?
-            Boolean(val.rawValue)
-          : null;
-        returnValue.label =
-          val.content != null && val.content !== "" ?
-            val.content.toString()
-          : null;
+        returnValue.content = parsePropertyValueBooleanContent(val.rawValue);
+        returnValue.label = parsePropertyValueLabel(val.content);
         break;
       }
       default: {
@@ -84,10 +182,7 @@ const propertyValueQueryItemSchema = z
           val.rawValue != null && val.rawValue !== "" ?
             val.rawValue.toString()
           : null;
-        returnValue.label =
-          val.content != null && val.content !== "" ?
-            val.content.toString()
-          : null;
+        returnValue.label = parsePropertyValueLabel(val.content);
         break;
       }
     }
@@ -169,9 +264,11 @@ function buildXQuery(
       ${collectionScopeFilter}
       //property[label/(${propertyVariableFilters})]
 
-  for $v in $matching-props/value${valueFilter}
+  for $p in $matching-props
+  for $v in $p/value${valueFilter}
     let $item-uuid := $v/ancestor::*[parent::items]/@uuid
-    return <propertyValue uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}" itemUuid="{$item-uuid}">{
+    let $variable-uuid := $p/label/@uuid
+    return <propertyValue uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}" itemUuid="{$item-uuid}" variableUuid="{$variable-uuid}">{
       if ($v/content) then string-join($v/content[@xml:lang="eng"]/string, "") else $v/text()
     }</propertyValue>`;
 
@@ -206,8 +303,19 @@ export async function fetchSetPropertyValuesByPropertyVariables(
     version?: ApiVersion;
   },
 ): Promise<
-  | { propertyValues: Array<PropertyValueQueryItem> | null; error: null }
-  | { propertyValues: null; error: string }
+  | {
+      propertyValues: Array<PropertyValueQueryItem> | null;
+      propertyValuesByPropertyVariableUuid: Record<
+        string,
+        Array<PropertyValueQueryItem>
+      > | null;
+      error: null;
+    }
+  | {
+      propertyValues: null;
+      propertyValuesByPropertyVariableUuid: null;
+      error: string;
+    }
 > {
   try {
     const version = options?.version ?? DEFAULT_API_VERSION;
@@ -250,63 +358,58 @@ export async function fetchSetPropertyValuesByPropertyVariables(
         parsedResultRaw.result.ochre.propertyValue
       : [parsedResultRaw.result.ochre.propertyValue];
 
-    const groupedPropertyValuesMap = new Map<
-      string | number | boolean | null,
-      {
-        dataType: Exclude<PropertyValueContentType, "coordinate">;
-        content: string | number | boolean | null;
-        label: string | null;
-        itemUuids: Set<string | null>;
-      }
-    >();
+    const propertyValuesByPropertyVariableUuidRaw: Record<
+      string,
+      Array<AggregatePropertyValueItem>
+    > = {};
+    const flattenedPropertyValues: Array<AggregatePropertyValueItem> = [];
 
     for (const propertyValue of parsedPropertyValues) {
-      const existing = groupedPropertyValuesMap.get(propertyValue.content);
-      if (existing == null) {
-        groupedPropertyValuesMap.set(propertyValue.content, {
-          dataType: propertyValue.dataType,
-          content: propertyValue.content,
-          label: propertyValue.label,
-          itemUuids: new Set([propertyValue.itemUuid]),
-        });
-      } else {
-        existing.itemUuids.add(propertyValue.itemUuid);
+      const aggregatePropertyValueItem: AggregatePropertyValueItem = {
+        itemUuid: propertyValue.itemUuid,
+        dataType: propertyValue.dataType,
+        content: propertyValue.content,
+        label: propertyValue.label,
+      };
+
+      flattenedPropertyValues.push(aggregatePropertyValueItem);
+
+      if (propertyValue.variableUuid == null) {
+        continue;
       }
+
+      const valuesByPropertyVariableUuid =
+        (propertyValuesByPropertyVariableUuidRaw[propertyValue.variableUuid] ??=
+          []);
+      valuesByPropertyVariableUuid.push(aggregatePropertyValueItem);
     }
 
-    const groupedPropertyValues: Array<PropertyValueQueryItem> = [];
-    for (const group of groupedPropertyValuesMap.values()) {
-      groupedPropertyValues.push({
-        count: group.itemUuids.size,
-        dataType: group.dataType,
-        content: group.content,
-        label: group.label,
-      });
+    const propertyValuesByPropertyVariableUuid: Record<
+      string,
+      Array<PropertyValueQueryItem>
+    > = {};
+
+    for (const [propertyVariableUuid, values] of Object.entries(
+      propertyValuesByPropertyVariableUuidRaw,
+    )) {
+      const aggregatedValues = aggregatePropertyValues(values);
+
+      if (aggregatedValues.length > 0) {
+        propertyValuesByPropertyVariableUuid[propertyVariableUuid] =
+          aggregatedValues;
+      }
     }
 
     return {
-      propertyValues: groupedPropertyValues
-        .filter((propertyValue) => propertyValue.content !== null)
-        .toSorted((a, b) => {
-          if (a.count !== b.count) {
-            return b.count - a.count;
-          }
-
-          if (a.label !== b.label) {
-            return a.label?.localeCompare(b.label ?? "") ?? 0;
-          }
-
-          return (
-            a.content?.toString().localeCompare(b.content?.toString() ?? "") ??
-            0
-          );
-        }),
+      propertyValues: aggregatePropertyValues(flattenedPropertyValues),
+      propertyValuesByPropertyVariableUuid,
       error: null,
     };
   } catch (error) {
     console.error(error);
     return {
       propertyValues: null,
+      propertyValuesByPropertyVariableUuid: null,
       error:
         error instanceof Error ?
           error.message
