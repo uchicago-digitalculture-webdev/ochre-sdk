@@ -327,14 +327,6 @@ function validateSetQueriesOperators(
   ctx: z.RefinementCtx,
 ): void {
   for (const [index, query] of queries.entries()) {
-    if (index === 0 && query.operator != null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["queries", index, "operator"],
-        message: "The first query rule must not include an operator",
-      });
-    }
-
     if (index > 0 && query.operator == null) {
       ctx.addIssue({
         code: "custom",
