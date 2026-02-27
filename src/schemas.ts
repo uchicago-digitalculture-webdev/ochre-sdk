@@ -4,6 +4,7 @@ import type {
   DataCategory,
   PropertyValueContentType,
   Query,
+  SetItemsSort,
 } from "./types/index.js";
 import type { RenderOption, WhitespaceOption } from "./types/raw.js";
 import type { WebElementComponent } from "./types/website.js";
@@ -322,6 +323,39 @@ const setQuerySchema = z.union([
 
 const setQueriesSchema = z.array(setQuerySchema).default([]);
 
+const setItemsSortSchema = z
+  .discriminatedUnion("target", [
+    z.object({ target: z.literal("none") }).strict(),
+    z
+      .object({
+        target: z.literal("title"),
+        direction: z.enum(["asc", "desc"]).default("asc"),
+        language: z.string().default("eng"),
+      })
+      .strict(),
+    z
+      .object({
+        target: z.literal("propertyValue"),
+        propertyVariableUuid: uuidSchema,
+        dataType: z.enum([
+          "string",
+          "integer",
+          "decimal",
+          "boolean",
+          "date",
+          "dateTime",
+          "time",
+          "IDREF",
+        ] as const satisfies ReadonlyArray<
+          Exclude<PropertyValueContentType, "coordinate">
+        >),
+        direction: z.enum(["asc", "desc"]).default("asc"),
+        language: z.string().default("eng"),
+      })
+      .strict(),
+  ])
+  .default({ target: "none" }) satisfies z.ZodType<SetItemsSort>;
+
 function validateSetQueriesOperators(
   queries: Array<Query>,
   ctx: z.RefinementCtx,
@@ -365,6 +399,7 @@ export const setItemsParamsSchema = z
     belongsToCollectionScopeUuids: z.array(uuidSchema).default([]),
     propertyVariableUuids: z.array(uuidSchema).default([]),
     queries: setQueriesSchema,
+    sort: setItemsSortSchema,
     page: z.number().min(1, "Page must be positive").default(1),
     pageSize: z
       .number()

@@ -3,6 +3,7 @@ import type {
   DataCategory,
   Item,
   Query,
+  SetItemsSort,
 } from "../../../types/index.js";
 import type {
   RawBibliography,
@@ -20,6 +21,7 @@ import type {
 import { BELONGS_TO_COLLECTION_UUID } from "../../../constants.js";
 import { setItemsParamsSchema } from "../../../schemas.js";
 import { DEFAULT_API_VERSION } from "../../helpers.js";
+import { stringLiteral } from "../../internal.js";
 import {
   parseBibliographies,
   parseConcepts,
@@ -35,6 +37,132 @@ import {
 } from "../../parse/index.js";
 import { buildQueryFilters } from "./query-helpers.js";
 
+type SortWithDirection = Exclude<SetItemsSort, { target: "none" }>;
+type PropertyValueSort = Extract<SetItemsSort, { target: "propertyValue" }>;
+type PropertyValueSortDataType = PropertyValueSort["dataType"];
+
+function mapSortDirectionToXQuery(
+  direction: SortWithDirection["direction"],
+): "ascending" | "descending" {
+  return direction === "desc" ? "descending" : "ascending";
+}
+
+function buildStringOrderByClause(
+  direction: "ascending" | "descending",
+): string {
+  return `($sortKey = "") ascending, lower-case($sortKey) ${direction}, $position ascending`;
+}
+
+function buildTypedOrderByClause(
+  direction: "ascending" | "descending",
+): string {
+  return `empty($sortKey) ascending, $sortKey ${direction}, $position ascending`;
+}
+
+function buildPropertyValueValuePath(sort: PropertyValueSort): string {
+  const propertyVariableUuidLiteral = stringLiteral(sort.propertyVariableUuid);
+
+  return `$item//properties//property[label/@uuid=${propertyVariableUuidLiteral}]/value[not(@i)]`;
+}
+
+function buildPropertyValueStringSortKeyExpression(
+  sort: PropertyValueSort,
+): string {
+  const languageLiteral = stringLiteral(sort.language ?? "eng");
+  const propertyValuePath = buildPropertyValueValuePath(sort);
+
+  return `string((for $v in ${propertyValuePath}
+        let $candidate := string-join($v/content[@xml:lang=${languageLiteral}]/string, "")
+        where string-length($candidate) gt 0
+        return $candidate)[1])`;
+}
+
+function buildPropertyValueTypedSortKeyExpression(params: {
+  sort: PropertyValueSort;
+  dataType: Exclude<PropertyValueSortDataType, "string" | "IDREF">;
+}): string {
+  const { sort, dataType } = params;
+  const propertyValuePath = buildPropertyValueValuePath(sort);
+
+  switch (dataType) {
+    case "integer": {
+      return `(for $v in ${propertyValuePath}
+        let $candidate := normalize-space(string($v/@rawValue))
+        where $candidate castable as xs:integer
+        return xs:integer($candidate))[1]`;
+    }
+    case "decimal":
+    case "time": {
+      return `(for $v in ${propertyValuePath}
+        let $candidate := normalize-space(string($v/@rawValue))
+        where $candidate castable as xs:decimal
+        return xs:decimal($candidate))[1]`;
+    }
+    case "boolean": {
+      return `(for $v in ${propertyValuePath}
+        let $candidate := lower-case(normalize-space(string($v/@rawValue)))
+        where $candidate = ("true", "false", "1", "0")
+        return if ($candidate = ("true", "1")) then 1 else 0)[1]`;
+    }
+    case "date": {
+      return `(for $v in ${propertyValuePath}
+        let $candidate := normalize-space(string($v/@rawValue))
+        where $candidate castable as xs:date
+        return xs:date($candidate))[1]`;
+    }
+    case "dateTime": {
+      return `(for $v in ${propertyValuePath}
+        let $candidate := normalize-space(string($v/@rawValue))
+        where $candidate castable as xs:dateTime
+        return xs:dateTime($candidate))[1]`;
+    }
+  }
+}
+
+function buildPropertyValueOrderByClause(params: {
+  dataType: PropertyValueSortDataType;
+  direction: "ascending" | "descending";
+}): string {
+  const { dataType, direction } = params;
+
+  return dataType === "string" || dataType === "IDREF" ?
+      buildStringOrderByClause(direction)
+    : buildTypedOrderByClause(direction);
+}
+
+function buildOrderedItemsClause(sort: SetItemsSort): string {
+  if (sort.target === "none") {
+    return "let $orderedItems := $items";
+  }
+
+  const direction = mapSortDirectionToXQuery(sort.direction);
+
+  if (sort.target === "title") {
+    const languageLiteral = stringLiteral(sort.language ?? "eng");
+    const sortKeyExpression = `string-join($item/identification/label/content[@xml:lang=${languageLiteral}]/string, "")`;
+
+    return `let $orderedItems :=
+    for $item at $position in $items
+      let $sortKey := ${sortKeyExpression}
+      stable order by ${buildStringOrderByClause(direction)}
+      return $item`;
+  }
+
+  const sortKeyExpression =
+    sort.dataType === "string" || sort.dataType === "IDREF" ?
+      buildPropertyValueStringSortKeyExpression(sort)
+    : buildPropertyValueTypedSortKeyExpression({
+        sort,
+        dataType: sort.dataType,
+      });
+
+  return `let $orderedItems :=
+    for $item at $position in $items
+      let $sortKey := ${sortKeyExpression}
+      stable order by ${buildPropertyValueOrderByClause({ dataType: sort.dataType, direction })}
+      return $item`;
+}
+
 /**
  * Build an XQuery string to fetch Set items from the OCHRE API
  * @param params - The parameters for the fetch
@@ -42,6 +170,8 @@ import { buildQueryFilters } from "./query-helpers.js";
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - An array of property variable UUIDs to filter by
  * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
+ * @param params.sort - Optional sorting configuration applied before pagination.
+ * For propertyValue sorting, dataType is required and the sort key uses the first valid leaf value (value[not(@i)]).
  * @param params.page - The page number (1-indexed)
  * @param params.pageSize - The number of items per page
  * @param options - Options for the fetch
@@ -54,6 +184,7 @@ function buildXQuery(
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
     queries: Array<Query>;
+    sort: SetItemsSort;
     page: number;
     pageSize: number;
   },
@@ -64,6 +195,7 @@ function buildXQuery(
   const {
     propertyVariableUuids,
     queries,
+    sort,
     setScopeUuids,
     belongsToCollectionScopeUuids,
     page,
@@ -108,15 +240,17 @@ function buildXQuery(
 
   const itemFilters =
     filterPredicates.length > 0 ? `[${filterPredicates.join(" and ")}]` : "";
+  const orderedItemsClause = buildOrderedItemsClause(sort);
 
   const xquery = `let $items := ${version === 2 ? "doc()" : "input()"}/ochre
         ${setScopeFilter}
         ${itemFilters}
 
   let $totalCount := count($items)
+  ${orderedItemsClause}
 
   return <items totalCount="{$totalCount}" page="${page}" pageSize="${pageSize}">{
-    for $item in $items[position() ge ${startPosition} and position() le ${endPosition}]
+    for $item in $orderedItems[position() ge ${startPosition} and position() le ${endPosition}]
       return element { node-name($item) } {
         $item/@*, $item/node()
       }
@@ -133,6 +267,8 @@ function buildXQuery(
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - The property variable UUIDs to filter by
  * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
+ * @param params.sort - Optional sorting configuration applied before pagination.
+ * For propertyValue sorting, dataType is required and the sort key uses the first valid leaf value (value[not(@i)]).
  * @param params.page - The page number (1-indexed)
  * @param params.pageSize - The number of items per page
  * @param itemCategories - The categories of the items to fetch
@@ -149,6 +285,7 @@ export async function fetchSetItems<
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
     queries: Array<Query>;
+    sort?: SetItemsSort;
     page: number;
     pageSize?: number;
   },
@@ -178,6 +315,7 @@ export async function fetchSetItems<
       belongsToCollectionScopeUuids,
       propertyVariableUuids,
       queries,
+      sort,
       page,
       pageSize,
     } = setItemsParamsSchema.parse(params);
@@ -188,6 +326,7 @@ export async function fetchSetItems<
         belongsToCollectionScopeUuids,
         propertyVariableUuids,
         queries,
+        sort,
         page,
         pageSize,
       },

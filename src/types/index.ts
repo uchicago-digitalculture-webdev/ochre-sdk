@@ -747,6 +747,25 @@ export type PropertyValueQueryItem = {
 };
 
 /**
+ * Represents sorting direction for Set items
+ */
+export type SetItemsSortDirection = "asc" | "desc";
+
+/**
+ * Represents sorting options for Set items
+ */
+export type SetItemsSort =
+  | { target: "none" }
+  | { target: "title"; direction?: SetItemsSortDirection; language?: string }
+  | {
+      target: "propertyValue";
+      propertyVariableUuid: string;
+      dataType: Exclude<PropertyValueContentType, "coordinate">;
+      direction?: SetItemsSortDirection;
+      language?: string;
+    };
+
+/**
  * Represents a query for Set items
  */
 export type Query =
