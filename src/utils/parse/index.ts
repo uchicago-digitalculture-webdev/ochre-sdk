@@ -71,6 +71,7 @@ import {
   parseFakeString,
   parseStringContent,
   parseStringDocumentItem,
+  transformPermanentIdentificationUrl,
 } from "../../utils/string.js";
 import {
   ensureArray,
@@ -376,7 +377,10 @@ export function parseLink(linkRaw: RawLink): Array<Link> {
         "content" in link && link.content != null ?
           parseFakeString(link.content)
         : null,
-      href: "href" in link && link.href != null ? link.href : null,
+      href:
+        "href" in link && link.href != null ?
+          transformPermanentIdentificationUrl(link.href)
+        : null,
       fileFormat:
         "fileFormat" in link && link.fileFormat != null ?
           (link.fileFormat as FileFormat)
@@ -473,14 +477,14 @@ export function parseImage(image: RawImage): Image | null {
     identification:
       image.identification ? parseIdentification(image.identification) : null,
     url:
-      image.href ??
-      (image.htmlImgSrcPrefix == null && image.content != null ?
-        parseFakeString(image.content)
-      : null),
+      image.href != null ? transformPermanentIdentificationUrl(image.href)
+      : image.htmlImgSrcPrefix == null && image.content != null ?
+        transformPermanentIdentificationUrl(parseFakeString(image.content))
+      : null,
     htmlPrefix: image.htmlImgSrcPrefix ?? null,
     content:
       image.htmlImgSrcPrefix != null && image.content != null ?
-        parseFakeString(image.content)
+        transformPermanentIdentificationUrl(parseFakeString(image.content))
       : null,
     widthPreview: image.widthPreview ?? null,
     heightPreview: image.heightPreview ?? null,
@@ -845,7 +849,10 @@ export function parseProperty(
         height: value.height ?? null,
         width: value.width ?? null,
         fileSize: value.fileSize ?? null,
-        href: value.href ?? null,
+        href:
+          value.href != null ?
+            transformPermanentIdentificationUrl(value.href)
+          : null,
         slug: value.slug ?? null,
       };
 
@@ -987,7 +994,10 @@ export function parseBibliography(
         publicationDateTime: parseISO(resource.publicationDateTime),
         type: resource.type,
         identification: parseIdentification(resource.identification),
-        href: resource.href ?? null,
+        href:
+          resource.href != null ?
+            transformPermanentIdentificationUrl(resource.href)
+          : null,
       }))
     : [];
 
@@ -1678,7 +1688,10 @@ export function parseResource(
       resource.document && "content" in resource.document ?
         parseDocument(resource.document.content)
       : null,
-    href: resource.href ?? null,
+    href:
+      resource.href != null ?
+        transformPermanentIdentificationUrl(resource.href)
+      : null,
     imageMap: resource.imagemap ? parseImageMap(resource.imagemap) : null,
     periods:
       resource.periods ?

@@ -40,6 +40,19 @@ function getStringItemByLanguage(
 }
 
 /**
+ * Transforms a permanent identification URL to a OCHRE API URL
+ *
+ * @param url - The permanent identification URL to transform
+ * @returns The OCHRE API URL
+ */
+export function transformPermanentIdentificationUrl(url: string): string {
+  return url.replace(
+    "https://pi.lib.uchicago.edu/1001/org/ochre/",
+    "https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=",
+  );
+}
+
+/**
  * Parses email addresses in a string into HTML links
  *
  * @param string - Input string to parse
@@ -50,7 +63,7 @@ export function parseEmail(string: string): string {
   const returnSplitString: Array<string> = [];
 
   for (const string of splitString) {
-    const cleanString = string
+    const cleanString = transformPermanentIdentificationUrl(string)
       .replaceAll(/(?<=\s|^)[([{]+|[)\]}]+(?=\s|$)/g, "")
       .replaceAll(/[!),:;?\]]/g, "")
       .replace(/\.$/, "");
@@ -673,7 +686,7 @@ export function parseStringDocumentItem(item: RawStringRichTextItem): string {
           case "externalDocument": {
             if (linkResource.publicationDateTime != null) {
               return applyWhitespaceToResult(
-                String.raw`<ExternalLink href="https:\/\/ochre.lib.uchicago.edu/ochre?uuid=${linkResource.uuid}&load" ${
+                String.raw`<ExternalLink href="https:\/\/ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${linkResource.uuid}&load" ${
                   linkContent !== null ? `content="${linkContent}"` : ""
                 }>${itemString}</ExternalLink>`,
                 itemWhitespace,
@@ -689,7 +702,7 @@ export function parseStringDocumentItem(item: RawStringRichTextItem): string {
           }
           case "webpage": {
             return applyWhitespaceToResult(
-              `<ExternalLink href="${linkResource.href}" ${
+              `<ExternalLink href="${linkResource.href != null ? transformPermanentIdentificationUrl(linkResource.href) : "#"}" ${
                 linkContent !== null ? `content="${linkContent}"` : ""
               }>${itemString}</ExternalLink>`,
               itemWhitespace,

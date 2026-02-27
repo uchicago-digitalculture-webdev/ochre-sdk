@@ -32,7 +32,10 @@ import {
   getPropertyByLabelAndValue,
   getPropertyValueByLabel,
 } from "../../utils/getters.js";
-import { parseStringContent } from "../../utils/string.js";
+import {
+  parseStringContent,
+  transformPermanentIdentificationUrl,
+} from "../../utils/string.js";
 import { DEFAULT_API_VERSION } from "../helpers.js";
 import {
   cleanObject,
@@ -236,9 +239,9 @@ function parseWebElementProperties(
         "link-to",
       );
       const href =
-        linkToProperty?.values[0]?.href ??
-        linkToProperty?.values[0]?.slug ??
-        null;
+        linkToProperty?.values[0]?.href != null ?
+          transformPermanentIdentificationUrl(linkToProperty.values[0].href)
+        : (linkToProperty?.values[0]?.slug ?? null);
 
       if (boundElementPropertyUuid == null && href == null) {
         throw new Error(
@@ -443,9 +446,9 @@ function parseWebElementProperties(
       );
 
       let href =
-        navigateToProperty?.values[0]?.href ??
-        navigateToProperty?.values[0]?.slug ??
-        null;
+        navigateToProperty?.values[0]?.href != null ?
+          transformPermanentIdentificationUrl(navigateToProperty.values[0].href)
+        : (navigateToProperty?.values[0]?.slug ?? null);
 
       if (href === null) {
         const linkToProperty = getPropertyByLabel(
@@ -453,9 +456,9 @@ function parseWebElementProperties(
           "link-to",
         );
         href =
-          linkToProperty?.values[0]?.href ??
-          linkToProperty?.values[0]?.slug ??
-          null;
+          linkToProperty?.values[0]?.href != null ?
+            transformPermanentIdentificationUrl(linkToProperty.values[0].href)
+          : (linkToProperty?.values[0]?.slug ?? null);
 
         if (href === null) {
           throw new Error(
@@ -817,7 +820,7 @@ function parseWebElementProperties(
 
       properties = {
         component: "iframe",
-        href,
+        href: transformPermanentIdentificationUrl(href),
         height: height?.toString() ?? null,
         width: width?.toString() ?? null,
       };
@@ -1375,9 +1378,9 @@ function parseWebElementProperties(
         "link-to",
       );
       const href =
-        linkToProperty?.values[0]?.href ??
-        linkToProperty?.values[0]?.slug ??
-        null;
+        linkToProperty?.values[0]?.href != null ?
+          transformPermanentIdentificationUrl(linkToProperty.values[0].href)
+        : (linkToProperty?.values[0]?.slug ?? null);
 
       if (!boundElementUuid && !href) {
         throw new Error(
