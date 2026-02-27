@@ -148,7 +148,7 @@ export function buildQueryFilters(queries: Array<Query>): string {
         return clause;
       }
 
-      return `${query.operator === "OR" ? "or" : "and"} ${clause}`;
+      return `${query.operator === "AND" ? "and" : "or"} ${clause}`;
     })
     .join(" ");
 }
