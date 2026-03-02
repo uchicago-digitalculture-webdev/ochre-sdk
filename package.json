@@ -42,12 +42,10 @@
   "scripts": {
     "dev": "tsdown src/index.ts --watch",
     "build": "tsdown",
-    "lint": "eslint --cache .",
-    "lint:fix": "eslint --cache . --fix",
-    "lint:nocache": "eslint .",
-    "lint:nocache:fix": "eslint . --fix",
-    "format": "prettier --cache --check .",
-    "format:fix": "prettier --cache --write --list-different .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write --list-different .",
     "check-types": "tsc --noEmit",
     "release": "bumpp"
   },
@@ -59,7 +57,7 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^7.6.1",
-    "@types/node": "^24.10.15",
+    "@types/node": "^24.11.0",
     "bumpp": "^10.4.1",
     "eslint": "^10.0.2",
     "prettier": "^3.8.1",
