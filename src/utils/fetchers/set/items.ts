@@ -242,9 +242,14 @@ function buildXQuery(
     filterPredicates.length > 0 ? `[${filterPredicates.join(" and ")}]` : "";
   const orderedItemsClause = buildOrderedItemsClause(sort);
 
-  const xquery = `let $items := ${version === 2 ? "doc()" : "input()"}/ochre
+  const xquery = `let $rawItems := ${version === 2 ? "doc()" : "input()"}/ochre
         ${setScopeFilter}
         ${itemFilters}
+
+  let $items :=
+    for $item at $position in $rawItems
+      where empty($rawItems[position() lt $position][@uuid = $item/@uuid])
+      return $item
 
   let $totalCount := count($items)
   ${orderedItemsClause}
