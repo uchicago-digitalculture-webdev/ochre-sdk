@@ -435,6 +435,7 @@ export type WebBlock<T extends WebBlockLayout = WebBlockLayout> = {
   properties: {
     default: {
       layout: T;
+      wrap: "nowrap" | "wrap" | "wrap-reverse";
       /**
        * valid `gridTemplateColumns` or `gridTemplateRows` CSS property value
        */

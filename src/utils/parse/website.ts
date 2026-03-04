@@ -2320,7 +2320,7 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
     ),
     items: [],
     properties: {
-      default: { layout: "vertical", spacing: null, gap: null },
+      default: { layout: "vertical", wrap: "nowrap", spacing: null, gap: null },
       mobile: null,
       tablet: null,
     } as WebBlock["properties"],
@@ -2335,6 +2335,11 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
       (getPropertyValueByLabel(blockMainProperties, "layout") as
         | WebBlock["properties"]["default"]["layout"]
         | null) ?? "vertical";
+
+    returnBlock.properties.default.wrap =
+      (getPropertyValueByLabel(blockMainProperties, "wrap") as
+        | WebBlock["properties"]["default"]["wrap"]
+        | null) ?? "nowrap";
 
     if (returnBlock.properties.default.layout === "accordion") {
       returnBlock.properties.default.isAccordionEnabled =
@@ -2377,6 +2382,10 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
         layout:
           (getPropertyValueByLabel(tabletOverwriteProperties, "layout") as
             | NonNullable<WebBlock["properties"]["tablet"]>["layout"]
+            | null) ?? undefined,
+        wrap:
+          (getPropertyValueByLabel(tabletOverwriteProperties, "wrap") as
+            | NonNullable<WebBlock["properties"]["tablet"]>["wrap"]
             | null) ?? undefined,
         spacing:
           (getPropertyValueByLabel(tabletOverwriteProperties, "spacing") as
@@ -2444,6 +2453,10 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
         layout:
           (getPropertyValueByLabel(mobileOverwriteProperties, "layout") as
             | NonNullable<WebBlock["properties"]["default"]>["layout"]
+            | null) ?? undefined,
+        wrap:
+          (getPropertyValueByLabel(mobileOverwriteProperties, "wrap") as
+            | NonNullable<WebBlock["properties"]["mobile"]>["wrap"]
             | null) ?? undefined,
         spacing:
           (getPropertyValueByLabel(mobileOverwriteProperties, "spacing") as
