@@ -385,7 +385,7 @@ export const setPropertyValuesByPropertyVariablesParamsSchema = z
       .array(uuidSchema)
       .min(1, "At least one property variable UUID is required"),
     queries: setQueriesSchema,
-    attributeQueries: z
+    attributes: z
       .object({
         bibliographies: z.boolean().default(false),
         periods: z.boolean().default(false),

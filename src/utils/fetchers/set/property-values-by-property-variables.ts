@@ -26,10 +26,9 @@ type ParsedPropertyValueItem = {
 };
 
 type AggregatePropertyValueItem = Omit<ParsedPropertyValueItem, "variableUuid">;
-type AttributeQueryType = "bibliographies" | "periods";
 
 type ParsedAttributeValueItem = {
-  attributeType: AttributeQueryType;
+  attributeType: "bibliographies" | "periods";
   itemUuid: string | null;
   content: string | null;
 };
@@ -246,10 +245,7 @@ const propertyValueQueryItemSchema = z
 
 const attributeValueQueryItemSchema = z
   .object({
-    attributeType: z.enum([
-      "bibliographies",
-      "periods",
-    ] as const satisfies ReadonlyArray<AttributeQueryType>),
+    attributeType: z.enum(["bibliographies", "periods"]),
     itemUuid: z.string().optional(),
     content: z.string().optional(),
   })
@@ -294,9 +290,9 @@ const responseSchema = z.object({
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - An array of property variable UUIDs to fetch
  * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
- * @param params.attributeQueries - Whether to return values for bibliographies and periods
- * @param params.attributeQueries.bibliographies - Whether to return values for bibliographies
- * @param params.attributeQueries.periods - Whether to return values for periods
+ * @param params.attributes - Whether to return values for bibliographies and periods
+ * @param params.attributes.bibliographies - Whether to return values for bibliographies
+ * @param params.attributes.periods - Whether to return values for periods
  * @param params.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
  * @param options - Options for the fetch
  * @param options.version - The version of the OCHRE API to use
@@ -308,7 +304,7 @@ function buildXQuery(
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
     queries: Array<Query>;
-    attributeQueries: { bibliographies: boolean; periods: boolean };
+    attributes: { bibliographies: boolean; periods: boolean };
     isLimitedToLeafPropertyValues: boolean;
   },
   options?: { version: ApiVersion },
@@ -320,7 +316,7 @@ function buildXQuery(
     belongsToCollectionScopeUuids,
     propertyVariableUuids,
     queries,
-    attributeQueries,
+    attributes,
     isLimitedToLeafPropertyValues,
   } = params;
 
@@ -370,7 +366,7 @@ let $property-values :=
   ];
   const returnedSequences: Array<string> = ["$property-values"];
 
-  if (attributeQueries.bibliographies) {
+  if (attributes.bibliographies) {
     queryBlocks.push(`let $bibliography-values :=
   for $item in $items
   for $bibliography in $item/bibliographies/bibliography
@@ -380,7 +376,7 @@ let $property-values :=
     returnedSequences.push("$bibliography-values");
   }
 
-  if (attributeQueries.periods) {
+  if (attributes.periods) {
     queryBlocks.push(`let $period-values :=
   for $item in $items
   for $period in $item/periods/period
@@ -409,9 +405,9 @@ return (${returnedSequences.join(", ")})`;
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - The property variable UUIDs to query by
  * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
- * @param params.attributeQueries - Whether to return values for bibliographies and periods
- * @param params.attributeQueries.bibliographies - Whether to return values for bibliographies
- * @param params.attributeQueries.periods - Whether to return values for periods
+ * @param params.attributes - Whether to return values for bibliographies and periods
+ * @param params.attributes.bibliographies - Whether to return values for bibliographies
+ * @param params.attributes.periods - Whether to return values for periods
  * @param params.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
  * @param options - Options for the fetch
  * @param options.fetch - The fetch function to use
@@ -425,7 +421,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
     queries?: Array<Query>;
-    attributeQueries?: { bibliographies: boolean; periods: boolean };
+    attributes?: { bibliographies: boolean; periods: boolean };
     isLimitedToLeafPropertyValues?: boolean;
   },
   options?: {
@@ -463,7 +459,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
       belongsToCollectionScopeUuids,
       propertyVariableUuids,
       queries,
-      attributeQueries,
+      attributes,
       isLimitedToLeafPropertyValues,
     } = setPropertyValuesByPropertyVariablesParamsSchema.parse(params);
 
@@ -473,7 +469,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
         belongsToCollectionScopeUuids,
         propertyVariableUuids,
         queries,
-        attributeQueries,
+        attributes,
         isLimitedToLeafPropertyValues,
       },
       { version },
@@ -555,7 +551,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
     }
 
     const attributeValuesByTypeRaw: Record<
-      AttributeQueryType,
+      "bibliographies" | "periods",
       Array<ParsedAttributeValueItem>
     > = { bibliographies: [], periods: [] };
 
@@ -570,11 +566,11 @@ export async function fetchSetPropertyValuesByPropertyVariables(
       propertyValuesByPropertyVariableUuid,
       attributeValues: {
         bibliographies:
-          attributeQueries.bibliographies ?
+          attributes.bibliographies ?
             aggregateAttributeValues(attributeValuesByTypeRaw.bibliographies)
           : null,
         periods:
-          attributeQueries.periods ?
+          attributes.periods ?
             aggregateAttributeValues(attributeValuesByTypeRaw.periods)
           : null,
       },
