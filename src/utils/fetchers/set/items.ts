@@ -242,14 +242,9 @@ function buildXQuery(
     filterPredicates.length > 0 ? `[${filterPredicates.join(" and ")}]` : "";
   const orderedItemsClause = buildOrderedItemsClause(sort);
 
-  const xquery = `let $rawItems := ${version === 2 ? "doc()" : "input()"}/ochre
+  const xquery = `let $items := ${version === 2 ? "doc()" : "input()"}/ochre
         ${setScopeFilter}
         ${itemFilters}
-
-  let $items :=
-    for $item at $position in $rawItems
-      where empty($rawItems[position() lt $position][@uuid = $item/@uuid])
-      return $item
 
   let $totalCount := count($items)
   ${orderedItemsClause}
@@ -564,11 +559,20 @@ export async function fetchSetItems<
       items.push(...trees);
     }
 
+    const itemsByUuid = new Map<string, Item<"set", U>>();
+    for (const item of items) {
+      if (itemsByUuid.has(item.uuid)) {
+        throw new Error(`Duplicate item UUID: ${item.uuid}`);
+      }
+      itemsByUuid.set(item.uuid, item);
+    }
+    const uniqueItems = [...itemsByUuid.values()];
+
     return {
       totalCount: data.result.ochre.items.totalCount,
       page: data.result.ochre.items.page,
       pageSize: data.result.ochre.items.pageSize,
-      items,
+      items: uniqueItems,
       error: null,
     };
   } catch (error) {
