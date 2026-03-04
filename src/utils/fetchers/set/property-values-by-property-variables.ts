@@ -182,7 +182,8 @@ const propertyValueQueryItemSchema = z
       default: {
         returnValue.content =
           val.rawValue != null && val.rawValue !== "" ? val.rawValue.toString()
-          : val.content != null ? parseStringContent({ content: val.content })
+          : val.content != null && val.content !== "<unassigned>" ?
+            parseStringContent({ content: val.content })
           : null;
         returnValue.label = parsePropertyValueLabel(val.content);
         break;
