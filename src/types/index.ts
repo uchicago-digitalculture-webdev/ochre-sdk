@@ -747,6 +747,11 @@ export type PropertyValueQueryItem = {
 };
 
 /**
+ * Represents a grouped Set attribute value query item
+ */
+export type SetAttributeValueQueryItem = { count: number; content: string };
+
+/**
  * Represents sorting direction for Set items
  */
 export type SetItemsSortDirection = "asc" | "desc";

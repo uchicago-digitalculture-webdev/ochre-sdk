@@ -4,6 +4,7 @@ import type {
   PropertyValueContentType,
   PropertyValueQueryItem,
   Query,
+  SetAttributeValueQueryItem,
 } from "../../../types/index.js";
 import type { RawFakeString, RawStringItem } from "../../../types/raw.js";
 import { BELONGS_TO_COLLECTION_UUID } from "../../../constants.js";
@@ -25,6 +26,13 @@ type ParsedPropertyValueItem = {
 };
 
 type AggregatePropertyValueItem = Omit<ParsedPropertyValueItem, "variableUuid">;
+type AttributeQueryType = "bibliographies" | "periods";
+
+type ParsedAttributeValueItem = {
+  attributeType: AttributeQueryType;
+  itemUuid: string | null;
+  content: string | null;
+};
 
 function parsePropertyValueLabel(
   content: RawFakeString | RawStringItem | Array<RawStringItem> | undefined,
@@ -125,6 +133,49 @@ function aggregatePropertyValues(
   });
 }
 
+function aggregateAttributeValues(
+  values: Array<ParsedAttributeValueItem>,
+): Array<SetAttributeValueQueryItem> {
+  const groupedAttributeValuesMap = new Map<
+    string,
+    { content: string; itemUuids: Set<string | null> }
+  >();
+
+  for (const value of values) {
+    if (value.content == null || value.content === "") {
+      continue;
+    }
+
+    const existing = groupedAttributeValuesMap.get(value.content);
+
+    if (existing == null) {
+      groupedAttributeValuesMap.set(value.content, {
+        content: value.content,
+        itemUuids: new Set([value.itemUuid]),
+      });
+      continue;
+    }
+
+    existing.itemUuids.add(value.itemUuid);
+  }
+
+  const groupedAttributeValues: Array<SetAttributeValueQueryItem> = [];
+  for (const group of groupedAttributeValuesMap.values()) {
+    groupedAttributeValues.push({
+      count: group.itemUuids.size,
+      content: group.content,
+    });
+  }
+
+  return groupedAttributeValues.toSorted((a, b) => {
+    if (a.count !== b.count) {
+      return b.count - a.count;
+    }
+
+    return a.content.localeCompare(b.content);
+  });
+}
+
 /**
  * Schema for a single property value query item in the OCHRE API response
  */
@@ -193,6 +244,24 @@ const propertyValueQueryItemSchema = z
     return returnValue;
   });
 
+const attributeValueQueryItemSchema = z
+  .object({
+    attributeType: z.enum([
+      "bibliographies",
+      "periods",
+    ] as const satisfies ReadonlyArray<AttributeQueryType>),
+    itemUuid: z.string().optional(),
+    content: z.string().optional(),
+  })
+  .transform(
+    (val): ParsedAttributeValueItem => ({
+      attributeType: val.attributeType,
+      itemUuid:
+        val.itemUuid != null && val.itemUuid !== "" ? val.itemUuid : null,
+      content: val.content != null && val.content !== "" ? val.content : null,
+    }),
+  );
+
 /**
  * Schema for the property values by property variables OCHRE API response
  */
@@ -200,10 +269,18 @@ const responseSchema = z.object({
   result: z.union([
     z.object({
       ochre: z.object({
-        propertyValue: z.union([
-          propertyValueQueryItemSchema,
-          z.array(propertyValueQueryItemSchema),
-        ]),
+        propertyValue: z
+          .union([
+            propertyValueQueryItemSchema,
+            z.array(propertyValueQueryItemSchema),
+          ])
+          .optional(),
+        attributeValue: z
+          .union([
+            attributeValueQueryItemSchema,
+            z.array(attributeValueQueryItemSchema),
+          ])
+          .optional(),
       }),
     }),
     z.array(z.unknown()).length(0),
@@ -217,6 +294,9 @@ const responseSchema = z.object({
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - An array of property variable UUIDs to fetch
  * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
+ * @param params.attributeQueries - Whether to return values for bibliographies and periods
+ * @param params.attributeQueries.bibliographies - Whether to return values for bibliographies
+ * @param params.attributeQueries.periods - Whether to return values for periods
  * @param params.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
  * @param options - Options for the fetch
  * @param options.version - The version of the OCHRE API to use
@@ -228,6 +308,7 @@ function buildXQuery(
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
     queries: Array<Query>;
+    attributeQueries: { bibliographies: boolean; periods: boolean };
     isLimitedToLeafPropertyValues: boolean;
   },
   options?: { version: ApiVersion },
@@ -239,6 +320,7 @@ function buildXQuery(
     belongsToCollectionScopeUuids,
     propertyVariableUuids,
     queries,
+    attributeQueries,
     isLimitedToLeafPropertyValues,
   } = params;
 
@@ -263,7 +345,7 @@ function buildXQuery(
       .join(" or ");
 
     filterPredicates.push(
-      `.//properties[property[label/@uuid="${BELONGS_TO_COLLECTION_UUID}" and value/(${belongsToCollectionScopeValues})]]`,
+      `.//properties[property[label/@uuid="${BELONGS_TO_COLLECTION_UUID}" and value[${belongsToCollectionScopeValues}]]]`,
     );
   }
 
@@ -274,20 +356,47 @@ function buildXQuery(
   const itemFilters =
     filterPredicates.length > 0 ? `[${filterPredicates.join(" and ")}]` : "";
   const valueFilter = isLimitedToLeafPropertyValues ? "[not(@i)]" : "";
+  const queryBlocks: Array<string> = [
+    `let $matching-props := $items//property[label[${propertyVariableFilters}]]
 
-  const xquery = `let $items := ${version === 2 ? "doc()" : "input()"}/ochre
-      ${setScopeFilter}
-      ${itemFilters}
-
-  let $matching-props := $items//property[label/(${propertyVariableFilters})]
-
+let $property-values :=
   for $p in $matching-props
   for $v in $p/value${valueFilter}
     let $item-uuid := $v/ancestor::*[parent::items]/@uuid
     let $variable-uuid := $p/label/@uuid
     return <propertyValue uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}" itemUuid="{$item-uuid}" variableUuid="{$variable-uuid}">{
       if ($v/content) then string-join($v/content[@xml:lang="eng"]/string, "") else $v/text()
-    }</propertyValue>`;
+    }</propertyValue>`,
+  ];
+  const returnedSequences: Array<string> = ["$property-values"];
+
+  if (attributeQueries.bibliographies) {
+    queryBlocks.push(`let $bibliography-values :=
+  for $item in $items
+  for $bibliography in $item/bibliographies/bibliography
+    let $label := string-join($bibliography/identification/label/content[@xml:lang="eng"]/string, "")
+    where string-length($label) gt 0
+    return <attributeValue attributeType="bibliographies" itemUuid="{$item/@uuid}" content="{$label}" />`);
+    returnedSequences.push("$bibliography-values");
+  }
+
+  if (attributeQueries.periods) {
+    queryBlocks.push(`let $period-values :=
+  for $item in $items
+  for $period in $item/periods/period
+    let $label := string-join($period/identification/label/content[@xml:lang="eng"]/string, "")
+    where string-length($label) gt 0
+    return <attributeValue attributeType="periods" itemUuid="{$item/@uuid}" content="{$label}" />`);
+    returnedSequences.push("$period-values");
+  }
+
+  const xquery = `let $items := ${version === 2 ? "doc()" : "input()"}/ochre
+      ${setScopeFilter}
+      ${itemFilters}
+
+${queryBlocks.join("\n\n")}
+
+return (${returnedSequences.join(", ")})`;
 
   return `<ochre>{${xquery}}</ochre>`;
 }
@@ -300,11 +409,15 @@ function buildXQuery(
  * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - The property variable UUIDs to query by
  * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
+ * @param params.attributeQueries - Whether to return values for bibliographies and periods
+ * @param params.attributeQueries.bibliographies - Whether to return values for bibliographies
+ * @param params.attributeQueries.periods - Whether to return values for periods
  * @param params.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
  * @param options - Options for the fetch
  * @param options.fetch - The fetch function to use
  * @param options.version - The version of the OCHRE API to use
- * @returns The parsed Set property values by property variables or null if the fetch/parse fails
+ * @returns Parsed Set property values and requested attribute values.
+ * Returns empty arrays/objects when no matches are found, and null outputs on fetch/parse errors.
  */
 export async function fetchSetPropertyValuesByPropertyVariables(
   params: {
@@ -312,6 +425,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
     belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
     queries?: Array<Query>;
+    attributeQueries?: { bibliographies: boolean; periods: boolean };
     isLimitedToLeafPropertyValues?: boolean;
   },
   options?: {
@@ -323,16 +437,21 @@ export async function fetchSetPropertyValuesByPropertyVariables(
   },
 ): Promise<
   | {
-      propertyValues: Array<PropertyValueQueryItem> | null;
+      propertyValues: Array<PropertyValueQueryItem>;
       propertyValuesByPropertyVariableUuid: Record<
         string,
         Array<PropertyValueQueryItem>
-      > | null;
+      >;
+      attributeValues: {
+        bibliographies: Array<SetAttributeValueQueryItem> | null;
+        periods: Array<SetAttributeValueQueryItem> | null;
+      };
       error: null;
     }
   | {
       propertyValues: null;
       propertyValuesByPropertyVariableUuid: null;
+      attributeValues: null;
       error: string;
     }
 > {
@@ -344,6 +463,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
       belongsToCollectionScopeUuids,
       propertyVariableUuids,
       queries,
+      attributeQueries,
       isLimitedToLeafPropertyValues,
     } = setPropertyValuesByPropertyVariablesParamsSchema.parse(params);
 
@@ -353,6 +473,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
         belongsToCollectionScopeUuids,
         propertyVariableUuids,
         queries,
+        attributeQueries,
         isLimitedToLeafPropertyValues,
       },
       { version },
@@ -370,14 +491,26 @@ export async function fetchSetPropertyValuesByPropertyVariables(
     const data = await response.json();
 
     const parsedResultRaw = responseSchema.parse(data);
-    if (Array.isArray(parsedResultRaw.result)) {
-      throw new TypeError("No property values found");
-    }
+    const parsedPropertyValues: Array<ParsedPropertyValueItem> = [];
+    const parsedAttributeValues: Array<ParsedAttributeValueItem> = [];
 
-    const parsedPropertyValues =
-      Array.isArray(parsedResultRaw.result.ochre.propertyValue) ?
-        parsedResultRaw.result.ochre.propertyValue
-      : [parsedResultRaw.result.ochre.propertyValue];
+    if (!Array.isArray(parsedResultRaw.result)) {
+      if (parsedResultRaw.result.ochre.propertyValue != null) {
+        parsedPropertyValues.push(
+          ...(Array.isArray(parsedResultRaw.result.ochre.propertyValue) ?
+            parsedResultRaw.result.ochre.propertyValue
+          : [parsedResultRaw.result.ochre.propertyValue]),
+        );
+      }
+
+      if (parsedResultRaw.result.ochre.attributeValue != null) {
+        parsedAttributeValues.push(
+          ...(Array.isArray(parsedResultRaw.result.ochre.attributeValue) ?
+            parsedResultRaw.result.ochre.attributeValue
+          : [parsedResultRaw.result.ochre.attributeValue]),
+        );
+      }
+    }
 
     const propertyValuesByPropertyVariableUuidRaw: Record<
       string,
@@ -421,9 +554,30 @@ export async function fetchSetPropertyValuesByPropertyVariables(
       }
     }
 
+    const attributeValuesByTypeRaw: Record<
+      AttributeQueryType,
+      Array<ParsedAttributeValueItem>
+    > = { bibliographies: [], periods: [] };
+
+    for (const attributeValue of parsedAttributeValues) {
+      attributeValuesByTypeRaw[attributeValue.attributeType].push(
+        attributeValue,
+      );
+    }
+
     return {
       propertyValues: aggregatePropertyValues(flattenedPropertyValues),
       propertyValuesByPropertyVariableUuid,
+      attributeValues: {
+        bibliographies:
+          attributeQueries.bibliographies ?
+            aggregateAttributeValues(attributeValuesByTypeRaw.bibliographies)
+          : null,
+        periods:
+          attributeQueries.periods ?
+            aggregateAttributeValues(attributeValuesByTypeRaw.periods)
+          : null,
+      },
       error: null,
     };
   } catch (error) {
@@ -431,6 +585,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
     return {
       propertyValues: null,
       propertyValuesByPropertyVariableUuid: null,
+      attributeValues: null,
       error:
         error instanceof Error ?
           error.message

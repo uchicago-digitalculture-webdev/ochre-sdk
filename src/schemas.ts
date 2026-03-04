@@ -385,6 +385,12 @@ export const setPropertyValuesByPropertyVariablesParamsSchema = z
       .array(uuidSchema)
       .min(1, "At least one property variable UUID is required"),
     queries: setQueriesSchema,
+    attributeQueries: z
+      .object({
+        bibliographies: z.boolean().default(false),
+        periods: z.boolean().default(false),
+      })
+      .default({ bibliographies: false, periods: false }),
     isLimitedToLeafPropertyValues: z.boolean().default(false),
   })
   .superRefine((value, ctx) => {
