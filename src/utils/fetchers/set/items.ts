@@ -210,7 +210,11 @@ function buildXQuery(
     .join(" or ");
   const setScopeFilter = `/set[(${setScopeValues})]/items/*`;
 
-  const queryFilters = buildQueryFilters(queries);
+  const compiledQueryFilters = buildQueryFilters({ queries, version });
+  const queryFilterDeclarations =
+    compiledQueryFilters.declarations.length > 0 ?
+      `${compiledQueryFilters.declarations.join("\n")}\n\n`
+    : "";
 
   const filterPredicates: Array<string> = [];
 
@@ -234,15 +238,15 @@ function buildXQuery(
     );
   }
 
-  if (queryFilters.length > 0) {
-    filterPredicates.push(`(${queryFilters})`);
+  if (compiledQueryFilters.predicate.length > 0) {
+    filterPredicates.push(`(${compiledQueryFilters.predicate})`);
   }
 
   const itemFilters =
     filterPredicates.length > 0 ? `[${filterPredicates.join(" and ")}]` : "";
   const orderedItemsClause = buildOrderedItemsClause(sort);
 
-  const xquery = `let $items := ${version === 2 ? "doc()" : "input()"}/ochre
+  const xquery = `${queryFilterDeclarations}let $items := ${version === 2 ? "doc()" : "input()"}/ochre
         ${setScopeFilter}
         ${itemFilters}
 

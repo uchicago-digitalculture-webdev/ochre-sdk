@@ -332,7 +332,11 @@ function buildXQuery(
   const propertyVariableFilters = propertyVariableUuids
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
-  const queryFilters = buildQueryFilters(queries);
+  const compiledQueryFilters = buildQueryFilters({ queries, version });
+  const queryFilterDeclarations =
+    compiledQueryFilters.declarations.length > 0 ?
+      `${compiledQueryFilters.declarations.join("\n")}\n\n`
+    : "";
   const filterPredicates: Array<string> = [];
 
   if (belongsToCollectionScopeUuids.length > 0) {
@@ -345,8 +349,8 @@ function buildXQuery(
     );
   }
 
-  if (queryFilters.length > 0) {
-    filterPredicates.push(`(${queryFilters})`);
+  if (compiledQueryFilters.predicate.length > 0) {
+    filterPredicates.push(`(${compiledQueryFilters.predicate})`);
   }
 
   const itemFilters =
@@ -386,7 +390,7 @@ let $property-values :=
     returnedSequences.push("$period-values");
   }
 
-  const xquery = `let $items := ${version === 2 ? "doc()" : "input()"}/ochre
+  const xquery = `${queryFilterDeclarations}let $items := ${version === 2 ? "doc()" : "input()"}/ochre
       ${setScopeFilter}
       ${itemFilters}
 
