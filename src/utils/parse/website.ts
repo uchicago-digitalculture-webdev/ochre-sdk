@@ -54,6 +54,9 @@ import {
   parseProperties,
 } from "./index.js";
 
+const SEGMENT_UNIQUE_SLUG_PREFIX_REGEX = /^\$[^-]*-/;
+const TRAILING_SLASH_REGEX = /\/$/;
+
 /**
  * Extracts CSS style properties for a given presentation variant.
  *
@@ -1761,7 +1764,8 @@ function parseWebpage(
   const identification = parseIdentification(webpageResource.identification);
 
   // TODO: Remove this once OCHRE is updated to allow segment-unique slugs
-  const slug = webpageResource.slug?.replace(/^\$[^-]*-/, "") ?? null;
+  const slug =
+    webpageResource.slug?.replace(SEGMENT_UNIQUE_SLUG_PREFIX_REGEX, "") ?? null;
 
   if (slug == null) {
     throw new Error(`Slug not found for page “${identification.label}”`);
@@ -1772,7 +1776,9 @@ function parseWebpage(
     type: "page",
     title: identification.label,
     slug:
-      slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
+      slugPrefix != null ?
+        `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
+      : slug,
     publicationDateTime: parseOptionalDate(webpageResource.publicationDateTime),
     items: [],
     properties: {
@@ -1969,7 +1975,9 @@ function parseWebSegment(
 
   returnSegment.items = parseWebSegmentItems(
     childResources,
-    slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
+    slugPrefix != null ?
+      `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
+    : slug,
   );
 
   return returnSegment;
@@ -2053,11 +2061,15 @@ function parseWebSegmentItem(
   returnSegmentItem.items.push(
     ...parseWebpages(
       resources,
-      slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
+      slugPrefix != null ?
+        `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
+      : slug,
     ),
     ...parseSegments(
       resources,
-      slugPrefix != null ? `${slugPrefix}/${slug}`.replace(/\/$/, "") : slug,
+      slugPrefix != null ?
+        `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
+      : slug,
     ),
   );
 

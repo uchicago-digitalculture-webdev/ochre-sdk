@@ -6,6 +6,8 @@ import { DEFAULT_API_VERSION } from "../helpers.js";
 import { parseWebsite } from "../parse/website.js";
 import { parseFakeString } from "../string.js";
 
+const API_VERSION_SUFFIX_REGEX = /-v\d+$/;
+
 /**
  * Parses the version suffix from an API abbreviation
  *
@@ -16,7 +18,7 @@ function parseApiVersionSuffix(abbreviation: string): {
   abbreviation: string;
   version: ApiVersion;
 } {
-  if (!/-v\d+$/.test(abbreviation)) {
+  if (!API_VERSION_SUFFIX_REGEX.test(abbreviation)) {
     return { abbreviation, version: DEFAULT_API_VERSION };
   }
 

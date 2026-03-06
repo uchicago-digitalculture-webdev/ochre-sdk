@@ -23,6 +23,10 @@ import {
   whitespaceSchema,
 } from "../schemas.js";
 
+const EMAIL_BRACKET_CLEANUP_REGEX = /(?<=\s|^)[([{]+|[)\]}]+(?=\s|$)/g;
+const EMAIL_PUNCTUATION_CLEANUP_REGEX = /[!),:;?\]]/g;
+const EMAIL_TRAILING_PERIOD_REGEX = /\.$/;
+
 /**
  * Finds a string item in an array by language code
  *
@@ -64,9 +68,9 @@ export function parseEmail(string: string): string {
 
   for (const string of splitString) {
     const cleanString = transformPermanentIdentificationUrl(string)
-      .replaceAll(/(?<=\s|^)[([{]+|[)\]}]+(?=\s|$)/g, "")
-      .replaceAll(/[!),:;?\]]/g, "")
-      .replace(/\.$/, "");
+      .replaceAll(EMAIL_BRACKET_CLEANUP_REGEX, "")
+      .replaceAll(EMAIL_PUNCTUATION_CLEANUP_REGEX, "")
+      .replace(EMAIL_TRAILING_PERIOD_REGEX, "");
 
     const index = string.indexOf(cleanString);
 

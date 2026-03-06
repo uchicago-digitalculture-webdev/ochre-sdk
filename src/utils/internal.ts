@@ -4,6 +4,8 @@ import type { RawFakeString, RawStringContent } from "../types/raw.js";
 import { categorySchema } from "../schemas.js";
 import { parseFakeString, parseStringContent } from "./string.js";
 
+const PSEUDO_UUID_REGEX = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
+
 /**
  * Get the category of an item from the OCHRE API response
  * @param keys - The keys of the OCHRE API response
@@ -66,7 +68,7 @@ export function getItemCategories(
  * @internal
  */
 export function isPseudoUuid(value: string): boolean {
-  return /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(value);
+  return PSEUDO_UUID_REGEX.test(value);
 }
 
 /**
