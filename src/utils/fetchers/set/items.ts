@@ -264,7 +264,6 @@ function buildXQuery(
  *
  * @param params - The parameters for the fetch
  * @param params.setScopeUuids - The Set scope UUIDs to filter by
- * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - The property variable UUIDs to filter by
  * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
  * @param params.sort - Optional sorting configuration applied before pagination.
@@ -282,7 +281,6 @@ export async function fetchSetItems<
 >(
   params: {
     setScopeUuids: Array<string>;
-    belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
     queries: Array<Query>;
     sort?: SetItemsSort;

@@ -402,7 +402,6 @@ return (${returnedSequences.join(", ")})`;
  *
  * @param params - The parameters for the fetch
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
- * @param params.belongsToCollectionScopeUuids - The collection scope UUIDs to filter by
  * @param params.propertyVariableUuids - The property variable UUIDs to query by
  * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
  * @param params.attributes - Whether to return values for bibliographies and periods
@@ -418,7 +417,6 @@ return (${returnedSequences.join(", ")})`;
 export async function fetchSetPropertyValuesByPropertyVariables(
   params: {
     setScopeUuids: Array<string>;
-    belongsToCollectionScopeUuids: Array<string>;
     propertyVariableUuids: Array<string>;
     queries?: Array<Query>;
     attributes?: { bibliographies: boolean; periods: boolean };
