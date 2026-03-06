@@ -477,11 +477,21 @@ export async function fetchSetPropertyValuesByPropertyVariables(
       { version },
     );
 
-    const response = await (options?.fetch ?? fetch)(
-      version === 2 ?
-        `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(xquery)}&format=json&lang="*"`
-      : `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(xquery)}&format=json&lang="*"`,
-    );
+    let response: Response;
+    if (version === 2) {
+      response = await (options?.fetch ?? fetch)(
+        "https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&format=json",
+        {
+          method: "POST",
+          body: xquery,
+          headers: { "Content-Type": "application/xquery" },
+        },
+      );
+    } else {
+      response = await (options?.fetch ?? fetch)(
+        `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(xquery)}&format=json&lang="*"`,
+      );
+    }
     if (!response.ok) {
       throw new Error(`OCHRE API responded with status: ${response.status}`);
     }
