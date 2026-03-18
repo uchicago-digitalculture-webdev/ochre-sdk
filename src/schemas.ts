@@ -304,6 +304,17 @@ const setQuerySchema = z.union([
     .strict(),
   z
     .object({
+      target: z.literal("string"),
+      value: z.string(),
+      matchMode: z.enum(["includes", "exact"]),
+      isCaseSensitive: z.boolean(),
+      language: z.string().default("eng"),
+      operator: z.enum(["AND", "OR"]).optional(),
+      isNegated: z.boolean().optional().default(false),
+    })
+    .strict(),
+  z
+    .object({
       target: z.enum([
         "title",
         "description",

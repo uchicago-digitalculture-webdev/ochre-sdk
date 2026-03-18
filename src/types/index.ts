@@ -814,6 +814,15 @@ export type Query =
       isNegated?: boolean;
     }
   | {
+      target: "string";
+      value: string;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
+      language: string;
+      operator?: "AND" | "OR";
+      isNegated?: boolean;
+    }
+  | {
       target: "title" | "description" | "image" | "periods" | "bibliography";
       value: string;
       matchMode: "includes" | "exact";
