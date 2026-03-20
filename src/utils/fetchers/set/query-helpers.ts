@@ -20,6 +20,11 @@ type TokenizedSearchDeclarations = {
 };
 
 type ItemStringQuery = Extract<Query, { target: "string" }>;
+type PropertyQuery = Extract<Query, { target: "property" }>;
+type StringPropertyQuery = PropertyQuery & {
+  dataType: "string";
+  propertyValues: Array<string>;
+};
 
 /**
  * Build a string match predicate for an XQuery string.
@@ -99,12 +104,12 @@ function buildCtsWordQueryExpression(params: {
 function buildTokenizedSearchDeclarations(params: {
   value: string;
   isCaseSensitive: boolean;
-  queryIndex: number;
+  queryKey: string;
 }): TokenizedSearchDeclarations {
-  const { value, isCaseSensitive, queryIndex } = params;
-  const searchStringVar = `$query${queryIndex}SearchString`;
-  const rawTermsVar = `$query${queryIndex}RawTerms`;
-  const termsVar = `$query${queryIndex}Terms`;
+  const { value, isCaseSensitive, queryKey } = params;
+  const searchStringVar = `$query${queryKey}SearchString`;
+  const rawTermsVar = `$query${queryKey}RawTerms`;
+  const termsVar = `$query${queryKey}Terms`;
   const tokenSourceExpression =
     isCaseSensitive ? searchStringVar : `fn:lower-case(${searchStringVar})`;
 
@@ -129,15 +134,15 @@ function buildCtsFieldIncludesPredicate(params: {
   path: string;
   value: string;
   isCaseSensitive: boolean;
-  queryIndex: number;
+  queryKey: string;
 }): CompiledQueryFilter {
-  const { path, value, isCaseSensitive, queryIndex } = params;
+  const { path, value, isCaseSensitive, queryKey } = params;
   const tokenizedSearchDeclarations = buildTokenizedSearchDeclarations({
     value,
     isCaseSensitive,
-    queryIndex,
+    queryKey,
   });
-  const ctsQueryVar = `$query${queryIndex}CtsQuery`;
+  const ctsQueryVar = `$query${queryKey}CtsQuery`;
   const fallbackPredicate = buildRawStringMatchPredicate({
     path,
     value,
@@ -229,9 +234,9 @@ function buildItemStringPropertyValueBranch(params: {
 function buildItemStringSearchPredicate(params: {
   query: ItemStringQuery;
   version: ApiVersion;
-  queryIndex: number;
+  queryKey: string;
 }): CompiledQueryFilter {
-  const { query, version, queryIndex } = params;
+  const { query, version, queryKey } = params;
   const fallbackPredicate = buildCombinedRawStringMatchPredicate({
     paths: buildItemStringSearchPaths(query.language),
     value: query.value,
@@ -246,10 +251,10 @@ function buildItemStringSearchPredicate(params: {
   const tokenizedSearchDeclarations = buildTokenizedSearchDeclarations({
     value: query.value,
     isCaseSensitive: query.isCaseSensitive,
-    queryIndex,
+    queryKey,
   });
-  const termQueriesVar = `$query${queryIndex}TermQueries`;
-  const ctsQueryVar = `$query${queryIndex}CtsQuery`;
+  const termQueriesVar = `$query${queryKey}TermQueries`;
+  const ctsQueryVar = `$query${queryKey}CtsQuery`;
 
   return {
     declarations: [
@@ -289,17 +294,16 @@ function buildStringMatchPredicate(params: {
   matchMode: "includes" | "exact";
   isCaseSensitive: boolean;
   version: ApiVersion;
-  queryIndex: number;
+  queryKey: string;
 }): CompiledQueryFilter {
-  const { path, value, matchMode, isCaseSensitive, version, queryIndex } =
-    params;
+  const { path, value, matchMode, isCaseSensitive, version, queryKey } = params;
 
   if (matchMode === "includes" && version === 2) {
     return buildCtsFieldIncludesPredicate({
       path,
       value,
       isCaseSensitive,
-      queryIndex,
+      queryKey,
     });
   }
 
@@ -312,6 +316,22 @@ function buildStringMatchPredicate(params: {
       isCaseSensitive,
     }),
   };
+}
+
+function buildOrPredicate(predicates: Array<string>): string {
+  if (predicates.length === 1) {
+    return predicates[0] ?? "false()";
+  }
+
+  return `(${predicates.join(" or ")})`;
+}
+
+function buildAndPredicate(predicates: Array<string>): string {
+  if (predicates.length === 1) {
+    return predicates[0] ?? "false()";
+  }
+
+  return `(${predicates.join(" and ")})`;
 }
 
 /**
@@ -336,59 +356,125 @@ function buildDateRangePredicate(params: {
 }
 
 /**
- * Build a property value predicate for an XQuery string.
+ * Build a property label predicate for an XQuery string.
  */
-function buildPropertyValuePredicate(params: {
-  query: Extract<Query, { target: "propertyValue" }>;
+function buildPropertyLabelPredicate(propertyVariables: Array<string>): string {
+  const labelPredicates: Array<string> = [];
+
+  for (const propertyVariable of propertyVariables) {
+    labelPredicates.push(`@uuid=${stringLiteral(propertyVariable)}`);
+  }
+
+  return `label[${buildOrPredicate(labelPredicates)}]`;
+}
+
+function buildPropertyValueAttributePredicate(params: {
+  propertyValues: Array<string>;
+  attributeName: "rawValue" | "uuid";
+}): string {
+  const { propertyValues, attributeName } = params;
+  const valuePredicates: Array<string> = [];
+
+  for (const propertyValue of propertyValues) {
+    valuePredicates.push(
+      `value[@${attributeName}=${stringLiteral(propertyValue)}]`,
+    );
+  }
+
+  return buildOrPredicate(valuePredicates);
+}
+
+function buildPropertyStringValuePredicate(params: {
+  query: StringPropertyQuery;
   version: ApiVersion;
-  queryIndex: number;
+  queryKey: string;
 }): CompiledQueryFilter {
-  const { query, version, queryIndex } = params;
-
-  if (query.dataType === "IDREF") {
-    return {
-      declarations: [],
-      predicate: `.//properties//property[value[@uuid=${stringLiteral(query.value)}]]`,
-    };
-  }
-
-  if (query.dataType === "date" || query.dataType === "dateTime") {
-    return {
-      declarations: [],
-      predicate: `.//properties//property[(label/@uuid=${stringLiteral(query.value)}) and ${buildDateRangePredicate(
-        { from: query.from, to: query.to },
-      )}]`,
-    };
-  }
-
-  if (
-    query.dataType === "time" ||
-    query.dataType === "integer" ||
-    query.dataType === "decimal" ||
-    query.dataType === "boolean"
-  ) {
-    return {
-      declarations: [],
-      predicate: `.//properties//property[value[@rawValue=${stringLiteral(query.value)}]]`,
-    };
-  }
-
+  const { query, version, queryKey } = params;
   const propertyValuePath =
     query.matchMode === "includes" && version === 2 ?
       `string-join(value[not(@inherited="true")]/content[@xml:lang="${query.language}"]/string, "")`
     : `string-join(value/content[@xml:lang="${query.language}"]/string, "")`;
-  const compiledStringPredicate = buildStringMatchPredicate({
-    path: propertyValuePath,
-    value: query.value,
-    matchMode: query.matchMode,
-    isCaseSensitive: query.isCaseSensitive,
-    version,
-    queryIndex,
-  });
+  const declarations: Array<string> = [];
+  const valuePredicates: Array<string> = [];
+
+  for (const [
+    propertyValueIndex,
+    propertyValue,
+  ] of query.propertyValues.entries()) {
+    const compiledStringPredicate = buildStringMatchPredicate({
+      path: propertyValuePath,
+      value: propertyValue,
+      matchMode: query.matchMode,
+      isCaseSensitive: query.isCaseSensitive,
+      version,
+      queryKey: `${queryKey}_${propertyValueIndex + 1}`,
+    });
+
+    declarations.push(...compiledStringPredicate.declarations);
+    valuePredicates.push(compiledStringPredicate.predicate);
+  }
+
+  return { declarations, predicate: buildOrPredicate(valuePredicates) };
+}
+
+/**
+ * Build a property predicate for an XQuery string.
+ */
+function buildPropertyPredicate(params: {
+  query: PropertyQuery;
+  version: ApiVersion;
+  queryKey: string;
+}): CompiledQueryFilter {
+  const { query, version, queryKey } = params;
+  const predicateParts: Array<string> = [
+    buildPropertyLabelPredicate(query.propertyVariables),
+  ];
+  const declarations: Array<string> = [];
+
+  if (query.dataType === "date" || query.dataType === "dateTime") {
+    predicateParts.push(
+      buildDateRangePredicate({ from: query.from, to: query.to }),
+    );
+  } else if (query.propertyValues != null) {
+    switch (query.dataType) {
+      case "IDREF": {
+        predicateParts.push(
+          buildPropertyValueAttributePredicate({
+            propertyValues: query.propertyValues,
+            attributeName: "uuid",
+          }),
+        );
+        break;
+      }
+      case "integer":
+      case "decimal":
+      case "time":
+      case "boolean": {
+        predicateParts.push(
+          buildPropertyValueAttributePredicate({
+            propertyValues: query.propertyValues,
+            attributeName: "rawValue",
+          }),
+        );
+        break;
+      }
+      case "string": {
+        const compiledStringPredicate = buildPropertyStringValuePredicate({
+          query: query as StringPropertyQuery,
+          version,
+          queryKey,
+        });
+
+        declarations.push(...compiledStringPredicate.declarations);
+        predicateParts.push(compiledStringPredicate.predicate);
+        break;
+      }
+    }
+  }
 
   return {
-    declarations: compiledStringPredicate.declarations,
-    predicate: `.//properties//property[${compiledStringPredicate.predicate}]`,
+    declarations,
+    predicate: `.//properties//property[${buildAndPredicate(predicateParts)}]`,
   };
 }
 
@@ -398,13 +484,13 @@ function buildPropertyValuePredicate(params: {
 function buildQueryPredicate(params: {
   query: Query;
   version: ApiVersion;
-  queryIndex: number;
+  queryKey: string;
 }): CompiledQueryFilter {
-  const { query, version, queryIndex } = params;
+  const { query, version, queryKey } = params;
 
   switch (query.target) {
     case "string": {
-      return buildItemStringSearchPredicate({ query, version, queryIndex });
+      return buildItemStringSearchPredicate({ query, version, queryKey });
     }
     case "title": {
       return buildStringMatchPredicate({
@@ -413,7 +499,7 @@ function buildQueryPredicate(params: {
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
         version,
-        queryIndex,
+        queryKey,
       });
     }
     case "description": {
@@ -423,7 +509,7 @@ function buildQueryPredicate(params: {
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
         version,
-        queryIndex,
+        queryKey,
       });
     }
     case "periods": {
@@ -433,7 +519,7 @@ function buildQueryPredicate(params: {
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
         version,
-        queryIndex,
+        queryKey,
       });
     }
     case "bibliography": {
@@ -443,7 +529,7 @@ function buildQueryPredicate(params: {
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
         version,
-        queryIndex,
+        queryKey,
       });
     }
     case "image": {
@@ -453,11 +539,11 @@ function buildQueryPredicate(params: {
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
         version,
-        queryIndex,
+        queryKey,
       });
     }
-    case "propertyValue": {
-      return buildPropertyValuePredicate({ query, version, queryIndex });
+    case "property": {
+      return buildPropertyPredicate({ query, version, queryKey });
     }
   }
 }
@@ -468,13 +554,13 @@ function buildQueryPredicate(params: {
 function buildBooleanQueryClause(params: {
   query: Query;
   version: ApiVersion;
-  queryIndex: number;
+  queryKey: string;
 }): CompiledQueryFilter {
-  const { query, version, queryIndex } = params;
+  const { query, version, queryKey } = params;
   const compiledQueryPredicate = buildQueryPredicate({
     query,
     version,
-    queryIndex,
+    queryKey,
   });
   const baseClause = `(${compiledQueryPredicate.predicate})`;
 
@@ -500,7 +586,7 @@ export function buildQueryFilters(params: {
     const compiledClause = buildBooleanQueryClause({
       query,
       version,
-      queryIndex: index + 1,
+      queryKey: `${index + 1}`,
     });
 
     if (compiledClause.declarations.length > 0) {

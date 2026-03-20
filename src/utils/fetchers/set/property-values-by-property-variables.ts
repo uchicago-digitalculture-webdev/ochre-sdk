@@ -175,6 +175,24 @@ function aggregateAttributeValues(
   });
 }
 
+function getPropertyVariableUuidsFromQueries(
+  queries: Array<Query>,
+): Array<string> {
+  const propertyVariableUuids = new Set<string>();
+
+  for (const query of queries) {
+    if (query.target !== "property") {
+      continue;
+    }
+
+    for (const propertyVariableUuid of query.propertyVariables) {
+      propertyVariableUuids.add(propertyVariableUuid);
+    }
+  }
+
+  return [...propertyVariableUuids];
+}
+
 /**
  * Schema for a single property value query item in the OCHRE API response
  */
@@ -288,7 +306,6 @@ const responseSchema = z.object({
  * @param params - The parameters for the fetch
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
- * @param params.propertyVariableUuids - An array of property variable UUIDs to fetch
  * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
  * @param params.attributes - Whether to return values for bibliographies and periods
  * @param params.attributes.bibliographies - Whether to return values for bibliographies
@@ -302,7 +319,6 @@ function buildXQuery(
   params: {
     setScopeUuids: Array<string>;
     belongsToCollectionScopeUuids: Array<string>;
-    propertyVariableUuids: Array<string>;
     queries: Array<Query>;
     attributes: { bibliographies: boolean; periods: boolean };
     isLimitedToLeafPropertyValues: boolean;
@@ -314,7 +330,6 @@ function buildXQuery(
   const {
     setScopeUuids,
     belongsToCollectionScopeUuids,
-    propertyVariableUuids,
     queries,
     attributes,
     isLimitedToLeafPropertyValues,
@@ -329,7 +344,7 @@ function buildXQuery(
     setScopeFilter = `/set[(${setScopeValues})]/items/*`;
   }
 
-  const propertyVariableFilters = propertyVariableUuids
+  const propertyVariableFilters = getPropertyVariableUuidsFromQueries(queries)
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
   const compiledQueryFilters = buildQueryFilters({ queries, version });
@@ -406,7 +421,6 @@ return (${returnedSequences.join(", ")})`;
  *
  * @param params - The parameters for the fetch
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
- * @param params.propertyVariableUuids - The property variable UUIDs to query by
  * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
  * @param params.attributes - Whether to return values for bibliographies and periods
  * @param params.attributes.bibliographies - Whether to return values for bibliographies
@@ -421,7 +435,6 @@ return (${returnedSequences.join(", ")})`;
 export async function fetchSetPropertyValuesByPropertyVariables(
   params: {
     setScopeUuids: Array<string>;
-    propertyVariableUuids: Array<string>;
     queries?: Array<Query>;
     attributes?: { bibliographies: boolean; periods: boolean };
     isLimitedToLeafPropertyValues?: boolean;
@@ -459,7 +472,6 @@ export async function fetchSetPropertyValuesByPropertyVariables(
     const {
       setScopeUuids,
       belongsToCollectionScopeUuids,
-      propertyVariableUuids,
       queries,
       attributes,
       isLimitedToLeafPropertyValues,
@@ -469,7 +481,6 @@ export async function fetchSetPropertyValuesByPropertyVariables(
       {
         setScopeUuids,
         belongsToCollectionScopeUuids,
-        propertyVariableUuids,
         queries,
         attributes,
         isLimitedToLeafPropertyValues,

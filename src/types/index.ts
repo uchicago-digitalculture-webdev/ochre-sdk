@@ -775,12 +775,13 @@ export type SetItemsSort =
  */
 export type Query =
   | {
-      target: "propertyValue";
+      target: "property";
+      propertyVariables: Array<string>;
       dataType: Exclude<
         Exclude<PropertyValueContentType, "coordinate">,
         "date" | "dateTime"
       >;
-      value: string;
+      propertyValues?: Array<string>;
       from?: never;
       to?: never;
       matchMode: "includes" | "exact";
@@ -790,9 +791,10 @@ export type Query =
       isNegated?: boolean;
     }
   | {
-      target: "propertyValue";
+      target: "property";
+      propertyVariables: Array<string>;
       dataType: "date" | "dateTime";
-      value: string;
+      propertyValues?: never;
       from: string;
       to?: string;
       matchMode: "includes" | "exact";
@@ -802,9 +804,10 @@ export type Query =
       isNegated?: boolean;
     }
   | {
-      target: "propertyValue";
+      target: "property";
+      propertyVariables: Array<string>;
       dataType: "date" | "dateTime";
-      value: string;
+      propertyValues?: never;
       from?: string;
       to: string;
       matchMode: "includes" | "exact";

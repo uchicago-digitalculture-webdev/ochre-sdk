@@ -168,7 +168,6 @@ function buildOrderedItemsClause(sort: SetItemsSort): string {
  * @param params - The parameters for the fetch
  * @param params.setScopeUuids - An array of Set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
- * @param params.propertyVariableUuids - An array of property variable UUIDs to filter by
  * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
  * @param params.sort - Optional sorting configuration applied before pagination.
  * For propertyValue sorting, dataType is required and the sort key uses the first valid leaf value (value[not(@i)]).
@@ -182,7 +181,6 @@ function buildXQuery(
   params: {
     setScopeUuids: Array<string>;
     belongsToCollectionScopeUuids: Array<string>;
-    propertyVariableUuids: Array<string>;
     queries: Array<Query>;
     sort: SetItemsSort;
     page: number;
@@ -193,7 +191,6 @@ function buildXQuery(
   const version = options?.version ?? DEFAULT_API_VERSION;
 
   const {
-    propertyVariableUuids,
     queries,
     sort,
     setScopeUuids,
@@ -228,16 +225,6 @@ function buildXQuery(
     );
   }
 
-  if (propertyVariableUuids.length > 0) {
-    const propertyVariables = propertyVariableUuids
-      .map((uuid) => `@uuid="${uuid}"`)
-      .join(" or ");
-
-    filterPredicates.push(
-      `.//properties//property[label[${propertyVariables}]]`,
-    );
-  }
-
   if (compiledQueryFilters.predicate.length > 0) {
     filterPredicates.push(`(${compiledQueryFilters.predicate})`);
   }
@@ -268,7 +255,6 @@ function buildXQuery(
  *
  * @param params - The parameters for the fetch
  * @param params.setScopeUuids - The Set scope UUIDs to filter by
- * @param params.propertyVariableUuids - The property variable UUIDs to filter by
  * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
  * @param params.sort - Optional sorting configuration applied before pagination.
  * For propertyValue sorting, dataType is required and the sort key uses the first valid leaf value (value[not(@i)]).
@@ -285,7 +271,6 @@ export async function fetchSetItems<
 >(
   params: {
     setScopeUuids: Array<string>;
-    propertyVariableUuids: Array<string>;
     queries: Array<Query>;
     sort?: SetItemsSort;
     page: number;
@@ -315,7 +300,6 @@ export async function fetchSetItems<
     const {
       setScopeUuids,
       belongsToCollectionScopeUuids,
-      propertyVariableUuids,
       queries,
       sort,
       page,
@@ -326,7 +310,6 @@ export async function fetchSetItems<
       {
         setScopeUuids,
         belongsToCollectionScopeUuids,
-        propertyVariableUuids,
         queries,
         sort,
         page,

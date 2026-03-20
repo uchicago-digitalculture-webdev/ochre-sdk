@@ -242,7 +242,10 @@ export const boundsSchema = z
 const setQuerySchema = z.union([
   z
     .object({
-      target: z.literal("propertyValue"),
+      target: z.literal("property"),
+      propertyVariables: z
+        .array(uuidSchema)
+        .min(1, "At least one property variable UUID is required"),
       dataType: z.enum([
         "string",
         "integer",
@@ -256,7 +259,10 @@ const setQuerySchema = z.union([
           "date" | "dateTime"
         >
       >),
-      value: z.string(),
+      propertyValues: z
+        .array(z.string())
+        .min(1, "At least one property value is required")
+        .optional(),
       matchMode: z.enum(["includes", "exact"]),
       isCaseSensitive: z.boolean(),
       language: z.string().default("eng"),
@@ -266,14 +272,16 @@ const setQuerySchema = z.union([
     .strict(),
   z
     .object({
-      target: z.literal("propertyValue"),
+      target: z.literal("property"),
+      propertyVariables: z
+        .array(uuidSchema)
+        .min(1, "At least one property variable UUID is required"),
       dataType: z.enum(["date", "dateTime"] as const satisfies ReadonlyArray<
         Extract<
           Exclude<PropertyValueContentType, "coordinate">,
           "date" | "dateTime"
         >
       >),
-      value: z.string(),
       from: z.string(),
       to: z.string().optional(),
       matchMode: z.enum(["includes", "exact"]),
@@ -285,14 +293,16 @@ const setQuerySchema = z.union([
     .strict(),
   z
     .object({
-      target: z.literal("propertyValue"),
+      target: z.literal("property"),
+      propertyVariables: z
+        .array(uuidSchema)
+        .min(1, "At least one property variable UUID is required"),
       dataType: z.enum(["date", "dateTime"] as const satisfies ReadonlyArray<
         Extract<
           Exclude<PropertyValueContentType, "coordinate">,
           "date" | "dateTime"
         >
       >),
-      value: z.string(),
       from: z.string().optional(),
       to: z.string(),
       matchMode: z.enum(["includes", "exact"]),
@@ -392,9 +402,6 @@ export const setPropertyValuesByPropertyVariablesParamsSchema = z
       .array(uuidSchema)
       .min(1, "At least one set scope UUID is required"),
     belongsToCollectionScopeUuids: z.array(uuidSchema).default([]),
-    propertyVariableUuids: z
-      .array(uuidSchema)
-      .min(1, "At least one property variable UUID is required"),
     queries: setQueriesSchema,
     attributes: z
       .object({
@@ -406,6 +413,14 @@ export const setPropertyValuesByPropertyVariablesParamsSchema = z
   })
   .superRefine((value, ctx) => {
     validateSetQueriesOperators(value.queries, ctx);
+
+    if (!value.queries.some((query) => query.target === "property")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["queries"],
+        message: "At least one property query is required",
+      });
+    }
   });
 
 export const setItemsParamsSchema = z
@@ -414,7 +429,6 @@ export const setItemsParamsSchema = z
       .array(uuidSchema)
       .min(1, "At least one set scope UUID is required"),
     belongsToCollectionScopeUuids: z.array(uuidSchema).default([]),
-    propertyVariableUuids: z.array(uuidSchema).default([]),
     queries: setQueriesSchema,
     sort: setItemsSortSchema,
     page: z.number().min(1, "Page must be positive").default(1),
