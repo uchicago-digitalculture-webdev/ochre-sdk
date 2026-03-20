@@ -380,7 +380,7 @@ let $property-values :=
     let $item-uuid := $v/ancestor::*[parent::items]/@uuid
     let $variable-uuid := $p/label/@uuid
     return <propertyValue uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}" itemUuid="{$item-uuid}" variableUuid="{$variable-uuid}">{
-      if ($v/content) then string-join($v/content[@xml:lang="eng"]/string, "") else $v/text()
+      if ($v/content) then string-join($v/content[@xml:lang="eng"]//text(), "") else $v/text()
     }</propertyValue>`,
   ];
   const returnedSequences: Array<string> = ["$property-values"];
@@ -389,7 +389,7 @@ let $property-values :=
     queryBlocks.push(`let $bibliography-values :=
   for $item in $items
   for $bibliography in $item/bibliographies/bibliography
-    let $label := string-join($bibliography/identification/label/content[@xml:lang="eng"]/string, "")
+    let $label := string-join($bibliography/identification/label/content[@xml:lang="eng"]//text(), "")
     where string-length($label) gt 0
     return <attributeValue attributeType="bibliographies" itemUuid="{$item/@uuid}" content="{$label}" />`);
     returnedSequences.push("$bibliography-values");
@@ -399,7 +399,7 @@ let $property-values :=
     queryBlocks.push(`let $period-values :=
   for $item in $items
   for $period in $item/periods/period
-    let $label := string-join($period/identification/label/content[@xml:lang="eng"]/string, "")
+    let $label := string-join($period/identification/label/content[@xml:lang="eng"]//text(), "")
     where string-length($label) gt 0
     return <attributeValue attributeType="periods" itemUuid="{$item/@uuid}" content="{$label}" />`);
     returnedSequences.push("$period-values");

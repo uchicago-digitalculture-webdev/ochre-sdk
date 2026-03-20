@@ -26,43 +26,58 @@ type StringPropertyQuery = PropertyQuery & {
   propertyValues: Array<string>;
 };
 
+function buildFlattenedContentValuesExpression(
+  contentNodesExpression: string,
+): string {
+  return `for $content in ${contentNodesExpression}
+    return string-join($content//text(), "")`;
+}
+
 /**
  * Build a string match predicate for an XQuery string.
  */
 function buildRawStringMatchPredicate(params: {
-  path: string;
+  valueExpression: string;
   value: string;
   matchMode: "includes" | "exact";
   isCaseSensitive: boolean;
 }): string {
-  const { path, value, matchMode, isCaseSensitive } = params;
-
-  const comparedPath = isCaseSensitive ? path : `lower-case(${path})`;
+  const { valueExpression, value, matchMode, isCaseSensitive } = params;
   const comparedValue = isCaseSensitive ? value : value.toLowerCase();
   const comparedValueLiteral = stringLiteral(comparedValue);
+  const candidateVar = "$candidate";
+  const comparedCandidate =
+    isCaseSensitive ? candidateVar : `lower-case(${candidateVar})`;
 
   if (matchMode === "includes") {
-    return `contains(${comparedPath}, ${comparedValueLiteral})`;
+    return `some ${candidateVar} in (${valueExpression})
+  satisfies contains(${comparedCandidate}, ${comparedValueLiteral})`;
   }
 
-  return `${comparedPath} = ${comparedValueLiteral}`;
+  return `some ${candidateVar} in (${valueExpression})
+  satisfies ${comparedCandidate} = ${comparedValueLiteral}`;
 }
 
 /**
  * Build a combined raw string match predicate for multiple paths.
  */
 function buildCombinedRawStringMatchPredicate(params: {
-  paths: Array<string>;
+  valueExpressions: Array<string>;
   value: string;
   matchMode: "includes" | "exact";
   isCaseSensitive: boolean;
 }): string {
-  const { paths, value, matchMode, isCaseSensitive } = params;
+  const { valueExpressions, value, matchMode, isCaseSensitive } = params;
   const predicates: Array<string> = [];
 
-  for (const path of paths) {
+  for (const valueExpression of valueExpressions) {
     predicates.push(
-      buildRawStringMatchPredicate({ path, value, matchMode, isCaseSensitive }),
+      buildRawStringMatchPredicate({
+        valueExpression,
+        value,
+        matchMode,
+        isCaseSensitive,
+      }),
     );
   }
 
@@ -131,20 +146,28 @@ function buildTokenizedSearchDeclarations(params: {
  * Build a CTS-backed field includes predicate for an XQuery string.
  */
 function buildCtsFieldIncludesPredicate(params: {
-  path: string;
+  contentNodesExpression: string;
+  valueExpression: string;
   value: string;
   isCaseSensitive: boolean;
   queryKey: string;
 }): CompiledQueryFilter {
-  const { path, value, isCaseSensitive, queryKey } = params;
+  const {
+    contentNodesExpression,
+    valueExpression,
+    value,
+    isCaseSensitive,
+    queryKey,
+  } = params;
   const tokenizedSearchDeclarations = buildTokenizedSearchDeclarations({
     value,
     isCaseSensitive,
     queryKey,
   });
   const ctsQueryVar = `$query${queryKey}CtsQuery`;
+  const contentNodeVar = `$query${queryKey}ContentNode`;
   const fallbackPredicate = buildRawStringMatchPredicate({
-    path,
+    valueExpression,
     value,
     matchMode: "includes",
     isCaseSensitive,
@@ -169,7 +192,10 @@ function buildCtsFieldIncludesPredicate(params: {
   ))
   else ()`,
     ],
-    predicate: `(if (exists(${ctsQueryVar})) then cts:contains(${path}, ${ctsQueryVar}) else ${fallbackPredicate})`,
+    predicate: `(if (exists(${ctsQueryVar}))
+  then some ${contentNodeVar} in (${contentNodesExpression})
+    satisfies cts:contains(${contentNodeVar}, ${ctsQueryVar})
+  else ${fallbackPredicate})`,
   };
 }
 
@@ -178,8 +204,12 @@ function buildCtsFieldIncludesPredicate(params: {
  */
 function buildItemStringSearchPaths(language: string): Array<string> {
   return [
-    `string-join(identification/label/content[@xml:lang="${language}"]/string, "")`,
-    `string-join(properties//property/value[not(@inherited="true")]/content[@xml:lang="${language}"]/string, "")`,
+    buildFlattenedContentValuesExpression(
+      `identification/label/content[@xml:lang="${language}"]`,
+    ),
+    buildFlattenedContentValuesExpression(
+      `properties//property/value[not(@inherited="true")]/content[@xml:lang="${language}"]`,
+    ),
   ];
 }
 
@@ -238,7 +268,7 @@ function buildItemStringSearchPredicate(params: {
 }): CompiledQueryFilter {
   const { query, version, queryKey } = params;
   const fallbackPredicate = buildCombinedRawStringMatchPredicate({
-    paths: buildItemStringSearchPaths(query.language),
+    valueExpressions: buildItemStringSearchPaths(query.language),
     value: query.value,
     matchMode: query.matchMode,
     isCaseSensitive: query.isCaseSensitive,
@@ -289,18 +319,29 @@ function buildItemStringSearchPredicate(params: {
  * Build a string match predicate for an XQuery string.
  */
 function buildStringMatchPredicate(params: {
-  path: string;
+  contentNodesExpression: string;
   value: string;
   matchMode: "includes" | "exact";
   isCaseSensitive: boolean;
   version: ApiVersion;
   queryKey: string;
 }): CompiledQueryFilter {
-  const { path, value, matchMode, isCaseSensitive, version, queryKey } = params;
+  const {
+    contentNodesExpression,
+    value,
+    matchMode,
+    isCaseSensitive,
+    version,
+    queryKey,
+  } = params;
+  const valueExpression = buildFlattenedContentValuesExpression(
+    contentNodesExpression,
+  );
 
   if (matchMode === "includes" && version === 2) {
     return buildCtsFieldIncludesPredicate({
-      path,
+      contentNodesExpression,
+      valueExpression,
       value,
       isCaseSensitive,
       queryKey,
@@ -310,7 +351,7 @@ function buildStringMatchPredicate(params: {
   return {
     declarations: [],
     predicate: buildRawStringMatchPredicate({
-      path,
+      valueExpression,
       value,
       matchMode,
       isCaseSensitive,
@@ -390,10 +431,10 @@ function buildPropertyStringValuePredicate(params: {
   queryKey: string;
 }): CompiledQueryFilter {
   const { query, version, queryKey } = params;
-  const propertyValuePath =
+  const propertyContentNodesExpression =
     query.matchMode === "includes" && version === 2 ?
-      `string-join(value[not(@inherited="true")]/content[@xml:lang="${query.language}"]/string, "")`
-    : `string-join(value/content[@xml:lang="${query.language}"]/string, "")`;
+      `value[not(@inherited="true")]/content[@xml:lang="${query.language}"]`
+    : `value/content[@xml:lang="${query.language}"]`;
   const declarations: Array<string> = [];
   const valuePredicates: Array<string> = [];
 
@@ -402,7 +443,7 @@ function buildPropertyStringValuePredicate(params: {
     propertyValue,
   ] of query.propertyValues.entries()) {
     const compiledStringPredicate = buildStringMatchPredicate({
-      path: propertyValuePath,
+      contentNodesExpression: propertyContentNodesExpression,
       value: propertyValue,
       matchMode: query.matchMode,
       isCaseSensitive: query.isCaseSensitive,
@@ -494,7 +535,7 @@ function buildQueryPredicate(params: {
     }
     case "title": {
       return buildStringMatchPredicate({
-        path: `string-join(identification/label/content[@xml:lang="${query.language}"]/string, "")`,
+        contentNodesExpression: `identification/label/content[@xml:lang="${query.language}"]`,
         value: query.value,
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
@@ -504,7 +545,7 @@ function buildQueryPredicate(params: {
     }
     case "description": {
       return buildStringMatchPredicate({
-        path: `string-join(description/content[@xml:lang="${query.language}"]/string, "")`,
+        contentNodesExpression: `description/content[@xml:lang="${query.language}"]`,
         value: query.value,
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
@@ -514,7 +555,7 @@ function buildQueryPredicate(params: {
     }
     case "periods": {
       return buildStringMatchPredicate({
-        path: `string-join(periods/period/identification/label/content[@xml:lang="${query.language}"]/string, "")`,
+        contentNodesExpression: `periods/period/identification/label/content[@xml:lang="${query.language}"]`,
         value: query.value,
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
@@ -524,7 +565,7 @@ function buildQueryPredicate(params: {
     }
     case "bibliography": {
       return buildStringMatchPredicate({
-        path: `string-join(bibliographies/bibliography/identification/label/content[@xml:lang="${query.language}"]/string, "")`,
+        contentNodesExpression: `bibliographies/bibliography/identification/label/content[@xml:lang="${query.language}"]`,
         value: query.value,
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
@@ -534,7 +575,7 @@ function buildQueryPredicate(params: {
     }
     case "image": {
       return buildStringMatchPredicate({
-        path: `string-join(image/identification/label/content[@xml:lang="${query.language}"]/string, "")`,
+        contentNodesExpression: `image/identification/label/content[@xml:lang="${query.language}"]`,
         value: query.value,
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
