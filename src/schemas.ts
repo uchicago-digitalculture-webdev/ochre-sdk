@@ -393,10 +393,10 @@ function validateSetQueriesOperators(
 }
 
 /**
- * Schema for validating the parameters for the Set property values by property variables fetching function
+ * Schema for validating the parameters for the Set property values fetching function
  * @internal
  */
-export const setPropertyValuesByPropertyVariablesParamsSchema = z
+export const setPropertyValuesParamsSchema = z
   .object({
     setScopeUuids: z
       .array(uuidSchema)

@@ -11,7 +11,7 @@ import { BELONGS_TO_COLLECTION_UUID } from "../../../constants.js";
 import {
   fakeStringSchema,
   richTextStringSchema,
-  setPropertyValuesByPropertyVariablesParamsSchema,
+  setPropertyValuesParamsSchema,
 } from "../../../schemas.js";
 import { DEFAULT_API_VERSION } from "../../helpers.js";
 import { parseFakeString, parseStringContent } from "../../string.js";
@@ -277,7 +277,7 @@ const attributeValueQueryItemSchema = z
   );
 
 /**
- * Schema for the property values by property variables OCHRE API response
+ * Schema for the property values OCHRE API response
  */
 const responseSchema = z.object({
   result: z.union([
@@ -302,7 +302,7 @@ const responseSchema = z.object({
 });
 
 /**
- * Build an XQuery string to fetch property values by property variables from the OCHRE API
+ * Build an XQuery string to fetch property values from the OCHRE API
  * @param params - The parameters for the fetch
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
@@ -417,7 +417,7 @@ return (${returnedSequences.join(", ")})`;
 }
 
 /**
- * Fetches and parses Set property values by property variables from the OCHRE API
+ * Fetches and parses Set property values from the OCHRE API
  *
  * @param params - The parameters for the fetch
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
@@ -432,7 +432,7 @@ return (${returnedSequences.join(", ")})`;
  * @returns Parsed Set property values and requested attribute values.
  * Returns empty arrays/objects when no matches are found, and null outputs on fetch/parse errors.
  */
-export async function fetchSetPropertyValuesByPropertyVariables(
+export async function fetchSetPropertyValues(
   params: {
     setScopeUuids: Array<string>;
     queries?: Array<Query>;
@@ -475,7 +475,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
       queries,
       attributes,
       isLimitedToLeafPropertyValues,
-    } = setPropertyValuesByPropertyVariablesParamsSchema.parse(params);
+    } = setPropertyValuesParamsSchema.parse(params);
 
     const xquery = buildXQuery(
       {
@@ -608,7 +608,7 @@ export async function fetchSetPropertyValuesByPropertyVariables(
       error:
         error instanceof Error ?
           error.message
-        : "Failed to fetch property values by property variables",
+        : "Failed to fetch property values",
     };
   }
 }
