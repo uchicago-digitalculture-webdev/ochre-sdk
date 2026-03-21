@@ -11,13 +11,26 @@ const CTS_INCLUDES_STOP_WORDS: Array<string> = [
   "to",
 ];
 const CTS_INCLUDES_STOP_WORDS_VAR = "$ctsIncludesStopWords";
+const CTS_INCLUDES_TOKEN_SPLIT_REGEX = /\W+/u;
 
-type CompiledQueryFilter = { declarations: Array<string>; predicate: string };
+type CompiledQueryClause = {
+  declarations: Array<string>;
+  predicate: string;
+  candidateQueryVar: string | null;
+};
+
+type CompiledQueryPlan = {
+  declarations: Array<string>;
+  itemsExpression: string;
+  predicate: string;
+};
 
 type TokenizedSearchDeclarations = {
   declarations: Array<string>;
   termsVar: string;
 };
+
+type CandidateTermQueryBuilder = (termExpression: string) => string;
 
 type ItemStringQuery = Extract<Query, { target: "string" }>;
 type PropertyQuery = Extract<Query, { target: "property" }>;
@@ -26,11 +39,71 @@ type StringPropertyQuery = PropertyQuery & {
   propertyValues: Array<string>;
 };
 
+type IncludesGroupMember = {
+  rawPredicate: string;
+  buildCandidateTermQuery: CandidateTermQueryBuilder;
+};
+
+function tokenizeIncludesSearchValue(params: {
+  value: string;
+  isCaseSensitive: boolean;
+}): Array<string> {
+  const { value, isCaseSensitive } = params;
+  const tokenSource = isCaseSensitive ? value : value.toLowerCase();
+  const rawTerms = tokenSource.split(CTS_INCLUDES_TOKEN_SPLIT_REGEX);
+  const terms: Array<string> = [];
+
+  for (const term of rawTerms) {
+    const normalizedTerm = term.toLowerCase();
+
+    if (
+      normalizedTerm !== "" &&
+      !CTS_INCLUDES_STOP_WORDS.includes(normalizedTerm)
+    ) {
+      terms.push(term);
+    }
+  }
+
+  return terms;
+}
+
 function buildFlattenedContentValuesExpression(
   contentNodesExpression: string,
 ): string {
   return `for $content in ${contentNodesExpression}
     return string-join($content//text(), "")`;
+}
+
+function buildSearchableContentNodesExpression(
+  contentNodesExpression: string,
+): string {
+  return `for $content in ${contentNodesExpression}
+    return (
+      $content//string[not(ancestor::string)],
+      $content[not(.//string)]
+    )`;
+}
+
+function buildCombinedSearchableContentNodesExpression(
+  contentNodesExpressions: Array<string>,
+): string {
+  const searchableExpressions: Array<string> = [];
+
+  for (const contentNodesExpression of contentNodesExpressions) {
+    searchableExpressions.push(
+      buildSearchableContentNodesExpression(contentNodesExpression),
+    );
+  }
+
+  if (searchableExpressions.length === 0) {
+    return "()";
+  }
+
+  if (searchableExpressions.length === 1) {
+    return searchableExpressions[0] ?? "()";
+  }
+
+  return `(${searchableExpressions.join(", ")})`;
 }
 
 /**
@@ -81,11 +154,7 @@ function buildCombinedRawStringMatchPredicate(params: {
     );
   }
 
-  if (predicates.length === 1) {
-    return predicates[0] ?? "false()";
-  }
-
-  return `(${predicates.join(" or ")})`;
+  return buildOrPredicate(predicates);
 }
 
 /**
@@ -142,60 +211,71 @@ function buildTokenizedSearchDeclarations(params: {
   };
 }
 
-/**
- * Build a CTS-backed field includes predicate for an XQuery string.
- */
-function buildCtsFieldIncludesPredicate(params: {
-  contentNodesExpression: string;
-  valueExpression: string;
+function buildCtsIncludesPredicate(params: {
+  searchableNodesExpression: string;
+  fallbackValueExpression: string;
   value: string;
   isCaseSensitive: boolean;
   queryKey: string;
-}): CompiledQueryFilter {
+  buildCandidateTermQuery: CandidateTermQueryBuilder;
+}): CompiledQueryClause {
   const {
-    contentNodesExpression,
-    valueExpression,
+    searchableNodesExpression,
+    fallbackValueExpression,
     value,
     isCaseSensitive,
     queryKey,
+    buildCandidateTermQuery,
   } = params;
   const tokenizedSearchDeclarations = buildTokenizedSearchDeclarations({
     value,
     isCaseSensitive,
     queryKey,
   });
-  const ctsQueryVar = `$query${queryKey}CtsQuery`;
-  const contentNodeVar = `$query${queryKey}ContentNode`;
+  const termQueriesVar = `$query${queryKey}TermQueries`;
+  const candidateQueryVar = `$query${queryKey}CandidateQuery`;
   const fallbackPredicate = buildRawStringMatchPredicate({
-    valueExpression,
+    valueExpression: fallbackValueExpression,
     value,
     matchMode: "includes",
     isCaseSensitive,
   });
+  const tokenizedTerms = tokenizeIncludesSearchValue({
+    value,
+    isCaseSensitive,
+  });
+
+  if (tokenizedTerms.length === 0) {
+    return {
+      declarations: [],
+      predicate: fallbackPredicate,
+      candidateQueryVar: null,
+    };
+  }
 
   return {
     declarations: [
       ...tokenizedSearchDeclarations.declarations,
-      `let ${ctsQueryVar} :=
+      `let ${termQueriesVar} :=
+  for $term in ${tokenizedSearchDeclarations.termsVar}
+    return ${buildCandidateTermQuery("$term")}`,
+      `let ${candidateQueryVar} :=
   if (count(${tokenizedSearchDeclarations.termsVar}) = 1)
-  then ${buildCtsWordQueryExpression({
-    termExpression: `${tokenizedSearchDeclarations.termsVar}[1]`,
-    isCaseSensitive,
-  })}
+  then ${termQueriesVar}[1]
   else if (count(${tokenizedSearchDeclarations.termsVar}) gt 1)
-  then cts:and-query((
-    for $term in ${tokenizedSearchDeclarations.termsVar}
-      return ${buildCtsWordQueryExpression({
+  then cts:and-query(${termQueriesVar})
+  else ()`,
+    ],
+    predicate: `(every $term in ${tokenizedSearchDeclarations.termsVar}
+  satisfies some $searchNode in (${searchableNodesExpression})
+    satisfies cts:contains(
+      $searchNode,
+      ${buildCtsWordQueryExpression({
         termExpression: "$term",
         isCaseSensitive,
       })}
-  ))
-  else ()`,
-    ],
-    predicate: `(if (exists(${ctsQueryVar}))
-  then some ${contentNodeVar} in (${contentNodesExpression})
-    satisfies cts:contains(${contentNodeVar}, ${ctsQueryVar})
-  else ${fallbackPredicate})`,
+    ))`,
+    candidateQueryVar,
   };
 }
 
@@ -211,6 +291,13 @@ function buildItemStringSearchPaths(language: string): Array<string> {
       `properties//property/value[not(@inherited="true")]/content[@xml:lang="${language}"]`,
     ),
   ];
+}
+
+function buildItemStringSearchableNodesExpression(language: string): string {
+  return buildCombinedSearchableContentNodesExpression([
+    `identification/label/content[@xml:lang="${language}"]`,
+    `properties//property/value[not(@inherited="true")]/content[@xml:lang="${language}"]`,
+  ]);
 }
 
 /**
@@ -261,11 +348,11 @@ function buildItemStringPropertyValueBranch(params: {
 /**
  * Build an item-level CTS string search predicate.
  */
-function buildItemStringSearchPredicate(params: {
+function buildItemStringSearchClause(params: {
   query: ItemStringQuery;
   version: ApiVersion;
   queryKey: string;
-}): CompiledQueryFilter {
+}): CompiledQueryClause {
   const { query, version, queryKey } = params;
   const fallbackPredicate = buildCombinedRawStringMatchPredicate({
     valueExpressions: buildItemStringSearchPaths(query.language),
@@ -275,91 +362,42 @@ function buildItemStringSearchPredicate(params: {
   });
 
   if (query.matchMode !== "includes" || version !== 2) {
-    return { declarations: [], predicate: fallbackPredicate };
+    return {
+      declarations: [],
+      predicate: fallbackPredicate,
+      candidateQueryVar: null,
+    };
   }
 
-  const tokenizedSearchDeclarations = buildTokenizedSearchDeclarations({
+  return buildCtsIncludesPredicate({
+    searchableNodesExpression: buildItemStringSearchableNodesExpression(
+      query.language,
+    ),
+    fallbackValueExpression: `(${buildItemStringSearchPaths(query.language).join(", ")})`,
     value: query.value,
     isCaseSensitive: query.isCaseSensitive,
     queryKey,
-  });
-  const termQueriesVar = `$query${queryKey}TermQueries`;
-  const ctsQueryVar = `$query${queryKey}CtsQuery`;
-
-  return {
-    declarations: [
-      ...tokenizedSearchDeclarations.declarations,
-      `let ${termQueriesVar} :=
-  for $term in ${tokenizedSearchDeclarations.termsVar}
-    return
-      cts:or-query((
+    buildCandidateTermQuery: (termExpression) =>
+      `cts:or-query((
         ${buildItemStringIdentificationBranch({
-          termExpression: "$term",
+          termExpression,
           isCaseSensitive: query.isCaseSensitive,
           language: query.language,
         })},
         ${buildItemStringPropertyValueBranch({
-          termExpression: "$term",
+          termExpression,
           isCaseSensitive: query.isCaseSensitive,
           language: query.language,
         })}
       ))`,
-      `let ${ctsQueryVar} :=
-  if (count(${tokenizedSearchDeclarations.termsVar}) = 1)
-  then ${termQueriesVar}[1]
-  else if (count(${tokenizedSearchDeclarations.termsVar}) gt 1)
-  then cts:and-query(${termQueriesVar})
-  else ()`,
-    ],
-    predicate: `(if (exists(${ctsQueryVar})) then cts:contains(., ${ctsQueryVar}) else ${fallbackPredicate})`,
-  };
-}
-
-/**
- * Build a string match predicate for an XQuery string.
- */
-function buildStringMatchPredicate(params: {
-  contentNodesExpression: string;
-  value: string;
-  matchMode: "includes" | "exact";
-  isCaseSensitive: boolean;
-  version: ApiVersion;
-  queryKey: string;
-}): CompiledQueryFilter {
-  const {
-    contentNodesExpression,
-    value,
-    matchMode,
-    isCaseSensitive,
-    version,
-    queryKey,
-  } = params;
-  const valueExpression = buildFlattenedContentValuesExpression(
-    contentNodesExpression,
-  );
-
-  if (matchMode === "includes" && version === 2) {
-    return buildCtsFieldIncludesPredicate({
-      contentNodesExpression,
-      valueExpression,
-      value,
-      isCaseSensitive,
-      queryKey,
-    });
-  }
-
-  return {
-    declarations: [],
-    predicate: buildRawStringMatchPredicate({
-      valueExpression,
-      value,
-      matchMode,
-      isCaseSensitive,
-    }),
-  };
+  });
 }
 
 function buildOrPredicate(predicates: Array<string>): string {
+  if (predicates.length === 0) {
+    return "false()";
+  }
+
   if (predicates.length === 1) {
     return predicates[0] ?? "false()";
   }
@@ -368,8 +406,12 @@ function buildOrPredicate(predicates: Array<string>): string {
 }
 
 function buildAndPredicate(predicates: Array<string>): string {
+  if (predicates.length === 0) {
+    return "true()";
+  }
+
   if (predicates.length === 1) {
-    return predicates[0] ?? "false()";
+    return predicates[0] ?? "true()";
   }
 
   return `(${predicates.join(" and ")})`;
@@ -393,7 +435,7 @@ function buildDateRangePredicate(params: {
     conditions.push(`(value/@rawValue le ${stringLiteral(to)})`);
   }
 
-  return conditions.join(" and ");
+  return buildAndPredicate(conditions);
 }
 
 /**
@@ -407,6 +449,419 @@ function buildPropertyLabelPredicate(propertyVariables: Array<string>): string {
   }
 
   return `label[${buildOrPredicate(labelPredicates)}]`;
+}
+
+function buildOrCtsQueryExpression(queries: Array<string>): string {
+  if (queries.length === 1) {
+    return queries[0] ?? "cts:false-query()";
+  }
+
+  return `cts:or-query((${queries.join(", ")}))`;
+}
+
+function buildContentTargetCandidateBranch(params: {
+  containerElementName: string;
+  termExpression: string;
+  isCaseSensitive: boolean;
+  language: string;
+}): string {
+  const { containerElementName, termExpression, isCaseSensitive, language } =
+    params;
+
+  return `cts:element-query(xs:QName("${containerElementName}"),
+        cts:and-query((
+          cts:element-attribute-value-query(xs:QName("content"), xs:QName("xml:lang"), ${stringLiteral(language)}),
+          ${buildCtsWordQueryExpression({ termExpression, isCaseSensitive })}
+        ))
+      )`;
+}
+
+function buildPropertyStringCandidateBranch(params: {
+  termExpression: string;
+  isCaseSensitive: boolean;
+  language: string;
+}): string {
+  const { termExpression, isCaseSensitive, language } = params;
+
+  return `cts:element-query(xs:QName("properties"),
+        cts:element-query(xs:QName("property"),
+          cts:element-query(xs:QName("value"),
+            cts:and-query((
+              cts:not-query(cts:element-attribute-value-query(xs:QName("value"), xs:QName("inherited"), "true")),
+              cts:element-query(xs:QName("content"),
+                cts:and-query((
+                  cts:element-attribute-value-query(xs:QName("content"), xs:QName("xml:lang"), ${stringLiteral(language)}),
+                  ${buildCtsWordQueryExpression({ termExpression, isCaseSensitive })}
+                ))
+              )
+            ))
+          )
+        )
+      )`;
+}
+
+function getGroupableIncludesValue(query: Query): string | null {
+  switch (query.target) {
+    case "string":
+    case "title":
+    case "description":
+    case "image":
+    case "periods":
+    case "bibliography": {
+      return query.value;
+    }
+    case "property": {
+      if (query.dataType !== "string" || query.propertyValues?.length !== 1) {
+        return null;
+      }
+
+      return query.propertyValues[0] ?? null;
+    }
+  }
+}
+
+function isCompatibleIncludesGroupQuery(params: {
+  query: Query;
+  value: string;
+  isCaseSensitive: boolean;
+  language: string;
+  version: ApiVersion;
+}): boolean {
+  const { query, value, isCaseSensitive, language, version } = params;
+
+  if (
+    version !== 2 ||
+    query.matchMode !== "includes" ||
+    query.isNegated === true
+  ) {
+    return false;
+  }
+
+  const queryValue = getGroupableIncludesValue(query);
+
+  return (
+    queryValue != null &&
+    queryValue === value &&
+    query.isCaseSensitive === isCaseSensitive &&
+    query.language === language
+  );
+}
+
+function buildContentTargetIncludesGroupMember(params: {
+  contentNodesExpression: string;
+  value: string;
+  isCaseSensitive: boolean;
+  language: string;
+  containerElementName: string;
+}): IncludesGroupMember {
+  const {
+    contentNodesExpression,
+    value,
+    isCaseSensitive,
+    language,
+    containerElementName,
+  } = params;
+  const valueExpression = buildFlattenedContentValuesExpression(
+    contentNodesExpression,
+  );
+
+  return {
+    rawPredicate: buildRawStringMatchPredicate({
+      valueExpression,
+      value,
+      matchMode: "includes",
+      isCaseSensitive,
+    }),
+    buildCandidateTermQuery: (termExpression) =>
+      buildContentTargetCandidateBranch({
+        containerElementName,
+        termExpression,
+        isCaseSensitive,
+        language,
+      }),
+  };
+}
+
+function buildItemStringIncludesGroupMember(
+  query: ItemStringQuery,
+): IncludesGroupMember {
+  return {
+    rawPredicate: buildCombinedRawStringMatchPredicate({
+      valueExpressions: buildItemStringSearchPaths(query.language),
+      value: query.value,
+      matchMode: "includes",
+      isCaseSensitive: query.isCaseSensitive,
+    }),
+    buildCandidateTermQuery: (termExpression) =>
+      `cts:or-query((
+        ${buildItemStringIdentificationBranch({
+          termExpression,
+          isCaseSensitive: query.isCaseSensitive,
+          language: query.language,
+        })},
+        ${buildItemStringPropertyValueBranch({
+          termExpression,
+          isCaseSensitive: query.isCaseSensitive,
+          language: query.language,
+        })}
+      ))`,
+  };
+}
+
+function buildPropertyStringIncludesGroupMember(
+  query: StringPropertyQuery,
+): IncludesGroupMember {
+  const propertyVariables = query.propertyVariables ?? [];
+  const predicateParts: Array<string> = [];
+  const propertyContentNodesExpression = `value[not(@inherited="true")]/content[@xml:lang="${query.language}"]`;
+  const valueExpression = buildFlattenedContentValuesExpression(
+    propertyContentNodesExpression,
+  );
+  const propertyValue = query.propertyValues[0] ?? "";
+
+  if (propertyVariables.length > 0) {
+    predicateParts.push(buildPropertyLabelPredicate(propertyVariables));
+  }
+
+  return {
+    rawPredicate: `.//properties//property[${buildAndPredicate([
+      ...predicateParts,
+      buildRawStringMatchPredicate({
+        valueExpression,
+        value: propertyValue,
+        matchMode: "includes",
+        isCaseSensitive: query.isCaseSensitive,
+      }),
+    ])}]`,
+    buildCandidateTermQuery: (termExpression) =>
+      buildPropertyStringCandidateBranch({
+        termExpression,
+        isCaseSensitive: query.isCaseSensitive,
+        language: query.language,
+      }),
+  };
+}
+
+function buildIncludesGroupMember(query: Query): IncludesGroupMember {
+  switch (query.target) {
+    case "string": {
+      return buildItemStringIncludesGroupMember(query);
+    }
+    case "title": {
+      return buildContentTargetIncludesGroupMember({
+        contentNodesExpression: `identification/label/content[@xml:lang="${query.language}"]`,
+        value: query.value,
+        isCaseSensitive: query.isCaseSensitive,
+        language: query.language,
+        containerElementName: "identification",
+      });
+    }
+    case "description": {
+      return buildContentTargetIncludesGroupMember({
+        contentNodesExpression: `description/content[@xml:lang="${query.language}"]`,
+        value: query.value,
+        isCaseSensitive: query.isCaseSensitive,
+        language: query.language,
+        containerElementName: "description",
+      });
+    }
+    case "periods": {
+      return buildContentTargetIncludesGroupMember({
+        contentNodesExpression: `periods/period/identification/label/content[@xml:lang="${query.language}"]`,
+        value: query.value,
+        isCaseSensitive: query.isCaseSensitive,
+        language: query.language,
+        containerElementName: "period",
+      });
+    }
+    case "bibliography": {
+      return buildContentTargetIncludesGroupMember({
+        contentNodesExpression: `bibliographies/bibliography/identification/label/content[@xml:lang="${query.language}"]`,
+        value: query.value,
+        isCaseSensitive: query.isCaseSensitive,
+        language: query.language,
+        containerElementName: "bibliography",
+      });
+    }
+    case "image": {
+      return buildContentTargetIncludesGroupMember({
+        contentNodesExpression: `image/identification/label/content[@xml:lang="${query.language}"]`,
+        value: query.value,
+        isCaseSensitive: query.isCaseSensitive,
+        language: query.language,
+        containerElementName: "image",
+      });
+    }
+    case "property": {
+      return buildPropertyStringIncludesGroupMember(
+        query as StringPropertyQuery,
+      );
+    }
+  }
+}
+
+function findCompatibleIncludesGroup(params: {
+  queries: Array<Query>;
+  startIndex: number;
+  version: ApiVersion;
+}): Array<Query> | null {
+  const { queries, startIndex, version } = params;
+  const startQuery = queries[startIndex];
+
+  if (startQuery == null) {
+    return null;
+  }
+
+  const groupValue = getGroupableIncludesValue(startQuery);
+
+  if (
+    groupValue == null ||
+    !isCompatibleIncludesGroupQuery({
+      query: startQuery,
+      value: groupValue,
+      isCaseSensitive: startQuery.isCaseSensitive,
+      language: startQuery.language,
+      version,
+    }) ||
+    (startIndex > 0 && queries[startIndex]?.operator === "AND")
+  ) {
+    return null;
+  }
+
+  const groupedQueries: Array<Query> = [startQuery];
+
+  for (let index = startIndex + 1; index < queries.length; index += 1) {
+    const query = queries[index];
+
+    if (
+      query?.operator !== "OR" ||
+      !isCompatibleIncludesGroupQuery({
+        query,
+        value: groupValue,
+        isCaseSensitive: startQuery.isCaseSensitive,
+        language: startQuery.language,
+        version,
+      })
+    ) {
+      break;
+    }
+
+    groupedQueries.push(query);
+  }
+
+  return groupedQueries.length > 1 ? groupedQueries : null;
+}
+
+function buildIncludesGroupClause(params: {
+  queries: Array<Query>;
+  queryKey: string;
+}): CompiledQueryClause {
+  const { queries, queryKey } = params;
+  const firstQuery = queries[0];
+
+  if (firstQuery == null) {
+    throw new Error("Cannot build an includes group without queries");
+  }
+
+  const groupValue = getGroupableIncludesValue(firstQuery);
+
+  if (groupValue == null) {
+    throw new Error("Cannot build an includes group without a search value");
+  }
+
+  const members = queries.map((query) => buildIncludesGroupMember(query));
+  const tokenizedSearchDeclarations = buildTokenizedSearchDeclarations({
+    value: groupValue,
+    isCaseSensitive: firstQuery.isCaseSensitive,
+    queryKey,
+  });
+  const tokenizedTerms = tokenizeIncludesSearchValue({
+    value: groupValue,
+    isCaseSensitive: firstQuery.isCaseSensitive,
+  });
+  const termQueriesVar = `$query${queryKey}TermQueries`;
+  const candidateQueryVar = `$query${queryKey}CandidateQuery`;
+
+  if (tokenizedTerms.length === 0) {
+    return {
+      declarations: [],
+      predicate: buildOrPredicate(members.map((member) => member.rawPredicate)),
+      candidateQueryVar: null,
+    };
+  }
+
+  return {
+    declarations: [
+      ...tokenizedSearchDeclarations.declarations,
+      `let ${termQueriesVar} :=
+  for $term in ${tokenizedSearchDeclarations.termsVar}
+    return ${buildOrCtsQueryExpression(
+      members.map((member) => member.buildCandidateTermQuery("$term")),
+    )}`,
+      `let ${candidateQueryVar} :=
+  if (count(${tokenizedSearchDeclarations.termsVar}) = 1)
+  then ${termQueriesVar}[1]
+  else if (count(${tokenizedSearchDeclarations.termsVar}) gt 1)
+  then cts:and-query(${termQueriesVar})
+  else ()`,
+    ],
+    predicate: `cts:contains(., ${candidateQueryVar})`,
+    candidateQueryVar,
+  };
+}
+
+/**
+ * Build a string match predicate for an XQuery string.
+ */
+function buildStringMatchClause(params: {
+  contentNodesExpression: string;
+  value: string;
+  matchMode: "includes" | "exact";
+  isCaseSensitive: boolean;
+  version: ApiVersion;
+  queryKey: string;
+  buildCandidateTermQuery?: CandidateTermQueryBuilder;
+}): CompiledQueryClause {
+  const {
+    contentNodesExpression,
+    value,
+    matchMode,
+    isCaseSensitive,
+    version,
+    queryKey,
+    buildCandidateTermQuery,
+  } = params;
+  const valueExpression = buildFlattenedContentValuesExpression(
+    contentNodesExpression,
+  );
+
+  if (
+    matchMode === "includes" &&
+    version === 2 &&
+    buildCandidateTermQuery != null
+  ) {
+    return buildCtsIncludesPredicate({
+      searchableNodesExpression: buildSearchableContentNodesExpression(
+        contentNodesExpression,
+      ),
+      fallbackValueExpression: valueExpression,
+      value,
+      isCaseSensitive,
+      queryKey,
+      buildCandidateTermQuery,
+    });
+  }
+
+  return {
+    declarations: [],
+    predicate: buildRawStringMatchPredicate({
+      valueExpression,
+      value,
+      matchMode,
+      isCaseSensitive,
+    }),
+    candidateQueryVar: null,
+  };
 }
 
 function buildPropertyValueAttributePredicate(params: {
@@ -425,11 +880,11 @@ function buildPropertyValueAttributePredicate(params: {
   return buildOrPredicate(valuePredicates);
 }
 
-function buildPropertyStringValuePredicate(params: {
+function buildPropertyStringValueClause(params: {
   query: StringPropertyQuery;
   version: ApiVersion;
   queryKey: string;
-}): CompiledQueryFilter {
+}): CompiledQueryClause {
   const { query, version, queryKey } = params;
   const propertyContentNodesExpression =
     query.matchMode === "includes" && version === 2 ?
@@ -437,39 +892,68 @@ function buildPropertyStringValuePredicate(params: {
     : `value/content[@xml:lang="${query.language}"]`;
   const declarations: Array<string> = [];
   const valuePredicates: Array<string> = [];
+  const candidateQueryVars: Array<string> = [];
 
   for (const [
     propertyValueIndex,
     propertyValue,
   ] of query.propertyValues.entries()) {
-    const compiledStringPredicate = buildStringMatchPredicate({
+    const compiledStringClause = buildStringMatchClause({
       contentNodesExpression: propertyContentNodesExpression,
       value: propertyValue,
       matchMode: query.matchMode,
       isCaseSensitive: query.isCaseSensitive,
       version,
       queryKey: `${queryKey}_${propertyValueIndex + 1}`,
+      buildCandidateTermQuery: (termExpression) =>
+        buildPropertyStringCandidateBranch({
+          termExpression,
+          isCaseSensitive: query.isCaseSensitive,
+          language: query.language,
+        }),
     });
 
-    declarations.push(...compiledStringPredicate.declarations);
-    valuePredicates.push(compiledStringPredicate.predicate);
+    declarations.push(...compiledStringClause.declarations);
+    valuePredicates.push(compiledStringClause.predicate);
+
+    if (compiledStringClause.candidateQueryVar != null) {
+      candidateQueryVars.push(compiledStringClause.candidateQueryVar);
+    }
   }
 
-  return { declarations, predicate: buildOrPredicate(valuePredicates) };
+  let candidateQueryVar: string | null = null;
+
+  if (candidateQueryVars.length > 0) {
+    const candidateQueriesExpression = `(${candidateQueryVars.join(", ")})`;
+    candidateQueryVar = `$query${queryKey}CandidateQuery`;
+    declarations.push(`let ${candidateQueryVar} :=
+  if (count(${candidateQueriesExpression}) = 1)
+  then ${candidateQueriesExpression}[1]
+  else if (count(${candidateQueriesExpression}) gt 1)
+  then cts:or-query(${candidateQueriesExpression})
+  else ()`);
+  }
+
+  return {
+    declarations,
+    predicate: buildOrPredicate(valuePredicates),
+    candidateQueryVar,
+  };
 }
 
 /**
  * Build a property predicate for an XQuery string.
  */
-function buildPropertyPredicate(params: {
+function buildPropertyClause(params: {
   query: PropertyQuery;
   version: ApiVersion;
   queryKey: string;
-}): CompiledQueryFilter {
+}): CompiledQueryClause {
   const { query, version, queryKey } = params;
   const predicateParts: Array<string> = [];
   const declarations: Array<string> = [];
   const propertyVariables = query.propertyVariables ?? [];
+  let candidateQueryVar: string | null = null;
 
   if (propertyVariables.length > 0) {
     predicateParts.push(buildPropertyLabelPredicate(propertyVariables));
@@ -503,14 +987,15 @@ function buildPropertyPredicate(params: {
         break;
       }
       case "string": {
-        const compiledStringPredicate = buildPropertyStringValuePredicate({
+        const compiledStringClause = buildPropertyStringValueClause({
           query: query as StringPropertyQuery,
           version,
           queryKey,
         });
 
-        declarations.push(...compiledStringPredicate.declarations);
-        predicateParts.push(compiledStringPredicate.predicate);
+        declarations.push(...compiledStringClause.declarations);
+        predicateParts.push(compiledStringClause.predicate);
+        candidateQueryVar = compiledStringClause.candidateQueryVar;
         break;
       }
     }
@@ -519,75 +1004,111 @@ function buildPropertyPredicate(params: {
   return {
     declarations,
     predicate: `.//properties//property[${buildAndPredicate(predicateParts)}]`,
+    candidateQueryVar,
   };
 }
 
 /**
  * Build a query predicate for an XQuery string.
  */
-function buildQueryPredicate(params: {
+function buildQueryClause(params: {
   query: Query;
   version: ApiVersion;
   queryKey: string;
-}): CompiledQueryFilter {
+}): CompiledQueryClause {
   const { query, version, queryKey } = params;
 
   switch (query.target) {
     case "string": {
-      return buildItemStringSearchPredicate({ query, version, queryKey });
+      return buildItemStringSearchClause({ query, version, queryKey });
     }
     case "title": {
-      return buildStringMatchPredicate({
+      return buildStringMatchClause({
         contentNodesExpression: `identification/label/content[@xml:lang="${query.language}"]`,
         value: query.value,
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
         version,
         queryKey,
+        buildCandidateTermQuery: (termExpression) =>
+          buildContentTargetCandidateBranch({
+            containerElementName: "identification",
+            termExpression,
+            isCaseSensitive: query.isCaseSensitive,
+            language: query.language,
+          }),
       });
     }
     case "description": {
-      return buildStringMatchPredicate({
+      return buildStringMatchClause({
         contentNodesExpression: `description/content[@xml:lang="${query.language}"]`,
         value: query.value,
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
         version,
         queryKey,
+        buildCandidateTermQuery: (termExpression) =>
+          buildContentTargetCandidateBranch({
+            containerElementName: "description",
+            termExpression,
+            isCaseSensitive: query.isCaseSensitive,
+            language: query.language,
+          }),
       });
     }
     case "periods": {
-      return buildStringMatchPredicate({
+      return buildStringMatchClause({
         contentNodesExpression: `periods/period/identification/label/content[@xml:lang="${query.language}"]`,
         value: query.value,
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
         version,
         queryKey,
+        buildCandidateTermQuery: (termExpression) =>
+          buildContentTargetCandidateBranch({
+            containerElementName: "period",
+            termExpression,
+            isCaseSensitive: query.isCaseSensitive,
+            language: query.language,
+          }),
       });
     }
     case "bibliography": {
-      return buildStringMatchPredicate({
+      return buildStringMatchClause({
         contentNodesExpression: `bibliographies/bibliography/identification/label/content[@xml:lang="${query.language}"]`,
         value: query.value,
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
         version,
         queryKey,
+        buildCandidateTermQuery: (termExpression) =>
+          buildContentTargetCandidateBranch({
+            containerElementName: "bibliography",
+            termExpression,
+            isCaseSensitive: query.isCaseSensitive,
+            language: query.language,
+          }),
       });
     }
     case "image": {
-      return buildStringMatchPredicate({
+      return buildStringMatchClause({
         contentNodesExpression: `image/identification/label/content[@xml:lang="${query.language}"]`,
         value: query.value,
         matchMode: query.matchMode,
         isCaseSensitive: query.isCaseSensitive,
         version,
         queryKey,
+        buildCandidateTermQuery: (termExpression) =>
+          buildContentTargetCandidateBranch({
+            containerElementName: "image",
+            termExpression,
+            isCaseSensitive: query.isCaseSensitive,
+            language: query.language,
+          }),
       });
     }
     case "property": {
-      return buildPropertyPredicate({ query, version, queryKey });
+      return buildPropertyClause({ query, version, queryKey });
     }
   }
 }
@@ -599,53 +1120,70 @@ function buildBooleanQueryClause(params: {
   query: Query;
   version: ApiVersion;
   queryKey: string;
-}): CompiledQueryFilter {
+}): CompiledQueryClause {
   const { query, version, queryKey } = params;
-  const compiledQueryPredicate = buildQueryPredicate({
-    query,
-    version,
-    queryKey,
-  });
-  const baseClause = `(${compiledQueryPredicate.predicate})`;
+  const compiledQueryClause = buildQueryClause({ query, version, queryKey });
+  const baseClause = `(${compiledQueryClause.predicate})`;
 
   return {
-    declarations: compiledQueryPredicate.declarations,
+    declarations: compiledQueryClause.declarations,
     predicate: query.isNegated ? `not(${baseClause})` : baseClause,
+    candidateQueryVar:
+      query.isNegated ? null : compiledQueryClause.candidateQueryVar,
   };
 }
 
-/**
- * Build query filters for an XQuery string.
- */
-export function buildQueryFilters(params: {
+export function buildQueryPlan(params: {
   queries: Array<Query>;
   version: ApiVersion;
-}): CompiledQueryFilter {
-  const { queries, version } = params;
+  baseItemsExpression: string;
+}): CompiledQueryPlan {
+  const { queries, version, baseItemsExpression } = params;
   const declarations: Array<string> = [];
   const predicateParts: Array<string> = [];
+  const candidateQueryVars: Array<string> = [];
   let hasCtsIncludesClauses = false;
 
-  for (const [index, query] of queries.entries()) {
-    const compiledClause = buildBooleanQueryClause({
-      query,
+  for (let index = 0; index < queries.length; ) {
+    const groupedQueries = findCompatibleIncludesGroup({
+      queries,
+      startIndex: index,
       version,
-      queryKey: `${index + 1}`,
     });
+    const query = queries[index];
+
+    if (query == null) {
+      break;
+    }
+
+    const compiledClause =
+      groupedQueries != null ?
+        buildIncludesGroupClause({
+          queries: groupedQueries,
+          queryKey: `${index + 1}`,
+        })
+      : buildBooleanQueryClause({ query, version, queryKey: `${index + 1}` });
 
     if (compiledClause.declarations.length > 0) {
       hasCtsIncludesClauses = true;
       declarations.push(...compiledClause.declarations);
     }
 
+    if (compiledClause.candidateQueryVar != null) {
+      candidateQueryVars.push(compiledClause.candidateQueryVar);
+    }
+
     if (index === 0) {
       predicateParts.push(compiledClause.predicate);
+      index += groupedQueries?.length ?? 1;
       continue;
     }
 
     predicateParts.push(
       `${query.operator === "AND" ? "and" : "or"} ${compiledClause.predicate}`,
     );
+
+    index += groupedQueries?.length ?? 1;
   }
 
   if (hasCtsIncludesClauses) {
@@ -654,5 +1192,23 @@ export function buildQueryFilters(params: {
     );
   }
 
-  return { declarations, predicate: predicateParts.join(" ") };
+  let itemsExpression = `(${baseItemsExpression})`;
+
+  if (candidateQueryVars.length > 0) {
+    const candidateQueriesExpression = `(${candidateQueryVars.join(", ")})`;
+    const candidateItemsQueryVar = "$candidateItemsQuery";
+
+    declarations.push(`let ${candidateItemsQueryVar} :=
+  if (count(${candidateQueriesExpression}) = 1)
+  then ${candidateQueriesExpression}[1]
+  else if (count(${candidateQueriesExpression}) gt 1)
+  then cts:or-query(${candidateQueriesExpression})
+  else ()`);
+
+    itemsExpression = `(if (exists(${candidateItemsQueryVar}))
+  then cts:search(${baseItemsExpression}, ${candidateItemsQueryVar})
+  else ${baseItemsExpression})`;
+  }
+
+  return { declarations, itemsExpression, predicate: predicateParts.join(" ") };
 }

@@ -35,7 +35,7 @@ import {
   parseTexts,
   parseTrees,
 } from "../../parse/index.js";
-import { buildQueryFilters } from "./query-helpers.js";
+import { buildQueryPlan } from "./query-helpers.js";
 
 type SortWithDirection = Exclude<SetItemsSort, { target: "none" }>;
 type PropertyValueSort = Extract<SetItemsSort, { target: "propertyValue" }>;
@@ -207,10 +207,15 @@ function buildXQuery(
     .join(" or ");
   const setScopeFilter = `/set[(${setScopeValues})]/items/*`;
 
-  const compiledQueryFilters = buildQueryFilters({ queries, version });
+  const baseItemsExpression = `${version === 2 ? "doc()" : "input()"}/ochre${setScopeFilter}`;
+  const compiledQueryPlan = buildQueryPlan({
+    queries,
+    version,
+    baseItemsExpression,
+  });
   const queryFilterDeclarations =
-    compiledQueryFilters.declarations.length > 0 ?
-      `${compiledQueryFilters.declarations.join("\n")}\n\n`
+    compiledQueryPlan.declarations.length > 0 ?
+      `${compiledQueryPlan.declarations.join("\n")}\n\n`
     : "";
 
   const filterPredicates: Array<string> = [];
@@ -225,17 +230,15 @@ function buildXQuery(
     );
   }
 
-  if (compiledQueryFilters.predicate.length > 0) {
-    filterPredicates.push(`(${compiledQueryFilters.predicate})`);
+  if (compiledQueryPlan.predicate.length > 0) {
+    filterPredicates.push(`(${compiledQueryPlan.predicate})`);
   }
 
   const itemFilters =
     filterPredicates.length > 0 ? `[${filterPredicates.join(" and ")}]` : "";
   const orderedItemsClause = buildOrderedItemsClause(sort);
 
-  const xquery = `${queryFilterDeclarations}let $items := ${version === 2 ? "doc()" : "input()"}/ochre
-        ${setScopeFilter}
-        ${itemFilters}
+  const xquery = `${queryFilterDeclarations}let $items := ${compiledQueryPlan.itemsExpression}${itemFilters}
 
   let $totalCount := count($items)
   ${orderedItemsClause}
