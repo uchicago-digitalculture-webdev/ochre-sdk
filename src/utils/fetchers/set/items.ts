@@ -238,7 +238,15 @@ function buildXQuery(
     filterPredicates.length > 0 ? `[${filterPredicates.join(" and ")}]` : "";
   const orderedItemsClause = buildOrderedItemsClause(sort);
 
-  const xquery = `${queryFilterDeclarations}let $items := ${compiledQueryPlan.itemsExpression}${itemFilters}
+  const xquery = `${queryFilterDeclarations}let $rawItems := ${compiledQueryPlan.itemsExpression}${itemFilters}
+  let $items :=
+    for $item at $position in $rawItems
+      let $itemUuid := string($item/@uuid)
+      where not(
+        some $previous in subsequence($rawItems, 1, $position - 1)
+          satisfies string($previous/@uuid) = $itemUuid
+      )
+      return $item
 
   let $totalCount := count($items)
   ${orderedItemsClause}
