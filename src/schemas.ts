@@ -243,9 +243,7 @@ const setQuerySchema = z.union([
   z
     .object({
       target: z.literal("property"),
-      propertyVariables: z
-        .array(uuidSchema)
-        .min(1, "At least one property variable UUID is required"),
+      propertyVariables: z.array(uuidSchema).default([]),
       dataType: z.enum([
         "string",
         "integer",
@@ -269,7 +267,19 @@ const setQuerySchema = z.union([
       operator: z.enum(["AND", "OR"]).optional(),
       isNegated: z.boolean().optional().default(false),
     })
-    .strict(),
+    .strict()
+    .superRefine((value, ctx) => {
+      if (
+        value.propertyVariables.length === 0 &&
+        value.propertyValues == null
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "Property queries must include at least one propertyVariable or propertyValue",
+        });
+      }
+    }),
   z
     .object({
       target: z.literal("property"),
@@ -414,11 +424,17 @@ export const setPropertyValuesParamsSchema = z
   .superRefine((value, ctx) => {
     validateSetQueriesOperators(value.queries, ctx);
 
-    if (!value.queries.some((query) => query.target === "property")) {
+    if (
+      !value.queries.some(
+        (query) =>
+          query.target === "property" && query.propertyVariables.length > 0,
+      )
+    ) {
       ctx.addIssue({
         code: "custom",
         path: ["queries"],
-        message: "At least one property query is required",
+        message:
+          "At least one property query with propertyVariables is required",
       });
     }
   });

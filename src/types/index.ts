@@ -776,7 +776,7 @@ export type SetItemsSort =
 export type Query =
   | {
       target: "property";
-      propertyVariables: Array<string>;
+      propertyVariables?: Array<string>;
       dataType: Exclude<
         Exclude<PropertyValueContentType, "coordinate">,
         "date" | "dateTime"

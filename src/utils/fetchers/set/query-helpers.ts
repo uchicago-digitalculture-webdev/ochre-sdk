@@ -467,10 +467,13 @@ function buildPropertyPredicate(params: {
   queryKey: string;
 }): CompiledQueryFilter {
   const { query, version, queryKey } = params;
-  const predicateParts: Array<string> = [
-    buildPropertyLabelPredicate(query.propertyVariables),
-  ];
+  const predicateParts: Array<string> = [];
   const declarations: Array<string> = [];
+  const propertyVariables = query.propertyVariables ?? [];
+
+  if (propertyVariables.length > 0) {
+    predicateParts.push(buildPropertyLabelPredicate(propertyVariables));
+  }
 
   if (query.dataType === "date" || query.dataType === "dateTime") {
     predicateParts.push(
