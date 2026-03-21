@@ -238,15 +238,7 @@ function buildXQuery(
     filterPredicates.length > 0 ? `[${filterPredicates.join(" and ")}]` : "";
   const orderedItemsClause = buildOrderedItemsClause(sort);
 
-  const xquery = `${queryFilterDeclarations}let $rawItems := ${compiledQueryPlan.itemsExpression}${itemFilters}
-  let $items :=
-    for $item at $position in $rawItems
-      let $itemUuid := string($item/@uuid)
-      where not(
-        some $previous in subsequence($rawItems, 1, $position - 1)
-          satisfies string($previous/@uuid) = $itemUuid
-      )
-      return $item
+  const xquery = `${queryFilterDeclarations}let $items := ${compiledQueryPlan.itemsExpression}${itemFilters}
 
   let $totalCount := count($items)
   ${orderedItemsClause}
@@ -567,10 +559,9 @@ export async function fetchSetItems<
 
     const itemsByUuid = new Map<string, Item<"set", U>>();
     for (const item of items) {
-      if (itemsByUuid.has(item.uuid)) {
-        throw new Error(`Duplicate item UUID: ${item.uuid}`);
+      if (!itemsByUuid.has(item.uuid)) {
+        itemsByUuid.set(item.uuid, item);
       }
-      itemsByUuid.set(item.uuid, item);
     }
     const uniqueItems = [...itemsByUuid.values()];
 
