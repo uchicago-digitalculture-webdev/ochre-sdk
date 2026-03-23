@@ -3,9 +3,10 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "lib": ["ES2024"],
+    "lib": ["ESNext"],
     "module": "NodeNext",
-    "target": "ES2024",
+    "target": "ESNext",
+    "types": ["node"],
     "allowJs": true,
     "resolveJsonModule": true,
     "moduleDetection": "force",
