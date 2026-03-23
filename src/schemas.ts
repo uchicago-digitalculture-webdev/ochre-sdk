@@ -4,6 +4,7 @@ import type {
   DataCategory,
   PropertyValueContentType,
   Query,
+  QueryLeaf,
   SetItemsSort,
 } from "./types/index.js";
 import type { RenderOption, WhitespaceOption } from "./types/raw.js";
@@ -239,7 +240,7 @@ export const boundsSchema = z
  * Shared schema for Set queries
  * @internal
  */
-const setQuerySchema = z.union([
+const setQueryLeafSchema = z.union([
   z
     .object({
       target: z.literal("property"),
@@ -264,7 +265,6 @@ const setQuerySchema = z.union([
       matchMode: z.enum(["includes", "exact"]),
       isCaseSensitive: z.boolean(),
       language: z.string().default("eng"),
-      operator: z.enum(["AND", "OR"]).optional(),
       isNegated: z.boolean().optional().default(false),
     })
     .strict()
@@ -297,7 +297,6 @@ const setQuerySchema = z.union([
       matchMode: z.enum(["includes", "exact"]),
       isCaseSensitive: z.boolean(),
       language: z.string().default("eng"),
-      operator: z.enum(["AND", "OR"]).optional(),
       isNegated: z.boolean().optional().default(false),
     })
     .strict(),
@@ -318,7 +317,6 @@ const setQuerySchema = z.union([
       matchMode: z.enum(["includes", "exact"]),
       isCaseSensitive: z.boolean(),
       language: z.string().default("eng"),
-      operator: z.enum(["AND", "OR"]).optional(),
       isNegated: z.boolean().optional().default(false),
     })
     .strict(),
@@ -329,7 +327,6 @@ const setQuerySchema = z.union([
       matchMode: z.enum(["includes", "exact"]),
       isCaseSensitive: z.boolean(),
       language: z.string().default("eng"),
-      operator: z.enum(["AND", "OR"]).optional(),
       isNegated: z.boolean().optional().default(false),
     })
     .strict(),
@@ -346,13 +343,32 @@ const setQuerySchema = z.union([
       matchMode: z.enum(["includes", "exact"]),
       isCaseSensitive: z.boolean(),
       language: z.string().default("eng"),
-      operator: z.enum(["AND", "OR"]).optional(),
       isNegated: z.boolean().optional().default(false),
     })
     .strict(),
-]) satisfies z.ZodType<Query>;
+]) satisfies z.ZodType<QueryLeaf>;
 
-const setQueriesSchema = z.array(setQuerySchema).default([]);
+const setQuerySchema: z.ZodType<Query> = z.lazy(() =>
+  z.union([
+    setQueryLeafSchema,
+    z
+      .object({
+        and: z
+          .array(setQuerySchema)
+          .min(1, "AND groups must contain at least one query"),
+      })
+      .strict(),
+    z
+      .object({
+        or: z
+          .array(setQuerySchema)
+          .min(1, "OR groups must contain at least one query"),
+      })
+      .strict(),
+  ]),
+);
+
+const setQueriesSchema = setQuerySchema.nullable().default(null);
 
 const setItemsSortSchema = z
   .discriminatedUnion("target", [
@@ -387,19 +403,28 @@ const setItemsSortSchema = z
   ])
   .default({ target: "none" }) satisfies z.ZodType<SetItemsSort>;
 
-function validateSetQueriesOperators(
-  queries: Array<Query>,
-  ctx: z.RefinementCtx,
-): void {
-  for (const [index, query] of queries.entries()) {
-    if (index > 0 && query.operator == null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["queries", index, "operator"],
-        message: "Query rules after the first must include an operator",
-      });
+function hasPropertyQueryWithPropertyVariables(
+  query: Query | null | undefined,
+): boolean {
+  if (query == null) {
+    return false;
+  }
+
+  if ("target" in query) {
+    return (
+      query.target === "property" && (query.propertyVariables?.length ?? 0) > 0
+    );
+  }
+
+  const groupQueries = "and" in query ? query.and : query.or;
+
+  for (const groupQuery of groupQueries) {
+    if (hasPropertyQueryWithPropertyVariables(groupQuery)) {
+      return true;
     }
   }
+
+  return false;
 }
 
 /**
@@ -422,14 +447,7 @@ export const setPropertyValuesParamsSchema = z
     isLimitedToLeafPropertyValues: z.boolean().default(false),
   })
   .superRefine((value, ctx) => {
-    validateSetQueriesOperators(value.queries, ctx);
-
-    if (
-      !value.queries.some(
-        (query) =>
-          query.target === "property" && query.propertyVariables.length > 0,
-      )
-    ) {
+    if (!hasPropertyQueryWithPropertyVariables(value.queries)) {
       ctx.addIssue({
         code: "custom",
         path: ["queries"],
@@ -439,20 +457,16 @@ export const setPropertyValuesParamsSchema = z
     }
   });
 
-export const setItemsParamsSchema = z
-  .object({
-    setScopeUuids: z
-      .array(uuidSchema)
-      .min(1, "At least one set scope UUID is required"),
-    belongsToCollectionScopeUuids: z.array(uuidSchema).default([]),
-    queries: setQueriesSchema,
-    sort: setItemsSortSchema,
-    page: z.number().min(1, "Page must be positive").default(1),
-    pageSize: z
-      .number()
-      .min(1, "Page size must be positive")
-      .default(DEFAULT_PAGE_SIZE),
-  })
-  .superRefine((value, ctx) => {
-    validateSetQueriesOperators(value.queries, ctx);
-  });
+export const setItemsParamsSchema = z.object({
+  setScopeUuids: z
+    .array(uuidSchema)
+    .min(1, "At least one set scope UUID is required"),
+  belongsToCollectionScopeUuids: z.array(uuidSchema).default([]),
+  queries: setQueriesSchema,
+  sort: setItemsSortSchema,
+  page: z.number().min(1, "Page must be positive").default(1),
+  pageSize: z
+    .number()
+    .min(1, "Page size must be positive")
+    .default(DEFAULT_PAGE_SIZE),
+});

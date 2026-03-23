@@ -176,18 +176,30 @@ function aggregateAttributeValues(
 }
 
 function getPropertyVariableUuidsFromQueries(
-  queries: Array<Query>,
+  queries: Query | null,
 ): Array<string> {
   const propertyVariableUuids = new Set<string>();
 
-  for (const query of queries) {
-    if (query.target !== "property") {
+  if (queries == null) {
+    return [];
+  }
+
+  const pendingQueries: Array<Query> = [queries];
+
+  for (const query of pendingQueries) {
+    if ("target" in query) {
+      if (query.target !== "property") {
+        continue;
+      }
+
+      for (const propertyVariableUuid of query.propertyVariables ?? []) {
+        propertyVariableUuids.add(propertyVariableUuid);
+      }
+
       continue;
     }
 
-    for (const propertyVariableUuid of query.propertyVariables ?? []) {
-      propertyVariableUuids.add(propertyVariableUuid);
-    }
+    pendingQueries.push(...("and" in query ? query.and : query.or));
   }
 
   return [...propertyVariableUuids];
@@ -306,7 +318,7 @@ const responseSchema = z.object({
  * @param params - The parameters for the fetch
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
- * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
+ * @param params.queries - Recursive query tree used to filter matching items
  * @param params.attributes - Whether to return values for bibliographies and periods
  * @param params.attributes.bibliographies - Whether to return values for bibliographies
  * @param params.attributes.periods - Whether to return values for periods
@@ -319,7 +331,7 @@ function buildXQuery(
   params: {
     setScopeUuids: Array<string>;
     belongsToCollectionScopeUuids: Array<string>;
-    queries: Array<Query>;
+    queries: Query | null;
     attributes: { bibliographies: boolean; periods: boolean };
     isLimitedToLeafPropertyValues: boolean;
   },
@@ -424,7 +436,7 @@ return (${returnedSequences.join(", ")})`;
  *
  * @param params - The parameters for the fetch
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
- * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
+ * @param params.queries - Recursive query tree used to filter matching items
  * @param params.attributes - Whether to return values for bibliographies and periods
  * @param params.attributes.bibliographies - Whether to return values for bibliographies
  * @param params.attributes.periods - Whether to return values for periods
@@ -438,7 +450,7 @@ return (${returnedSequences.join(", ")})`;
 export async function fetchSetPropertyValues(
   params: {
     setScopeUuids: Array<string>;
-    queries?: Array<Query>;
+    queries?: Query | null;
     attributes?: { bibliographies: boolean; periods: boolean };
     isLimitedToLeafPropertyValues?: boolean;
   },

@@ -1,4 +1,9 @@
-import type { ApiVersion, Query } from "../../../types/index.js";
+import type {
+  ApiVersion,
+  Query,
+  QueryGroup,
+  QueryLeaf,
+} from "../../../types/index.js";
 import { stringLiteral } from "../../internal.js";
 
 const CTS_INCLUDES_STOP_WORDS: Array<string> = [
@@ -25,7 +30,11 @@ type CompiledQueryPlan = {
   predicate: string;
 };
 
-type PredicatePart = { operator: "AND" | "OR" | null; predicate: string };
+type CompiledQueryNode = {
+  declarations: Array<string>;
+  predicate: string;
+  candidateQueryVars: Array<string>;
+};
 
 type TokenizedSearchDeclarations = {
   declarations: Array<string>;
@@ -34,8 +43,8 @@ type TokenizedSearchDeclarations = {
 
 type CandidateTermQueryBuilder = (termExpression: string) => string;
 
-type ItemStringQuery = Extract<Query, { target: "string" }>;
-type PropertyQuery = Extract<Query, { target: "property" }>;
+type ItemStringQuery = Extract<QueryLeaf, { target: "string" }>;
+type PropertyQuery = Extract<QueryLeaf, { target: "property" }>;
 type StringPropertyQuery = PropertyQuery & {
   dataType: "string";
   propertyValues: Array<string>;
@@ -461,92 +470,16 @@ function buildOrCtsQueryExpression(queries: Array<string>): string {
   return `cts:or-query((${queries.join(", ")}))`;
 }
 
-function buildPredicateGroups(
-  predicateParts: Array<PredicatePart>,
-): Array<Array<string>> {
-  const groups: Array<Array<string>> = [];
-  let currentGroup: Array<string> = [];
-
-  for (const predicatePart of predicateParts) {
-    if (predicatePart.operator == null || predicatePart.operator === "AND") {
-      currentGroup.push(predicatePart.predicate);
-      continue;
-    }
-
-    if (currentGroup.length > 0) {
-      groups.push(currentGroup);
-    }
-
-    currentGroup = [predicatePart.predicate];
-  }
-
-  if (currentGroup.length > 0) {
-    groups.push(currentGroup);
-  }
-
-  return groups;
+function isQueryLeaf(query: Query): query is QueryLeaf {
+  return "target" in query;
 }
 
-function buildGroupedPredicateExpression(
-  predicateGroups: Array<Array<string>>,
-): string {
-  if (predicateGroups.length === 0) {
-    return "";
-  }
+function getQueryGroupChildren(query: QueryGroup): Array<Query> {
+  return "and" in query ? query.and : query.or;
+}
 
-  const groupExpressions: Array<string> = [];
-
-  for (let index = 0; index < predicateGroups.length; ) {
-    const predicateGroup = predicateGroups[index];
-    const firstPredicate = predicateGroup?.[0];
-
-    if (
-      predicateGroup == null ||
-      predicateGroup.length < 2 ||
-      firstPredicate == null
-    ) {
-      groupExpressions.push(buildAndPredicate(predicateGroup ?? []));
-      index += 1;
-      continue;
-    }
-
-    let sharedGroupEnd = index + 1;
-    while (sharedGroupEnd < predicateGroups.length) {
-      const sharedGroup = predicateGroups[sharedGroupEnd];
-
-      if (
-        sharedGroup == null ||
-        sharedGroup.length < 2 ||
-        sharedGroup[0] !== firstPredicate
-      ) {
-        break;
-      }
-
-      sharedGroupEnd += 1;
-    }
-
-    if (sharedGroupEnd === index + 1) {
-      groupExpressions.push(buildAndPredicate(predicateGroup));
-      index += 1;
-      continue;
-    }
-
-    const suffixGroupExpressions: Array<string> = [];
-    for (const sharedGroup of predicateGroups.slice(index, sharedGroupEnd)) {
-      const suffixPredicates = sharedGroup.slice(1);
-      suffixGroupExpressions.push(buildAndPredicate(suffixPredicates));
-    }
-
-    groupExpressions.push(
-      buildAndPredicate([
-        firstPredicate,
-        buildOrPredicate(suffixGroupExpressions),
-      ]),
-    );
-    index = sharedGroupEnd;
-  }
-
-  return buildOrPredicate(groupExpressions);
+function getQueryGroupOperator(query: QueryGroup): "and" | "or" {
+  return "and" in query ? "and" : "or";
 }
 
 function buildContentTargetCandidateBranch(params: {
@@ -590,7 +523,7 @@ function buildPropertyStringCandidateBranch(params: {
       )`;
 }
 
-function getGroupableIncludesValue(query: Query): string | null {
+function getGroupableIncludesValue(query: QueryLeaf): string | null {
   switch (query.target) {
     case "string":
     case "title":
@@ -611,7 +544,7 @@ function getGroupableIncludesValue(query: Query): string | null {
 }
 
 function isCompatibleIncludesGroupQuery(params: {
-  query: Query;
+  query: QueryLeaf;
   value: string;
   isCaseSensitive: boolean;
   language: string;
@@ -732,7 +665,7 @@ function buildPropertyStringIncludesGroupMember(
   };
 }
 
-function buildIncludesGroupMember(query: Query): IncludesGroupMember {
+function buildIncludesGroupMember(query: QueryLeaf): IncludesGroupMember {
   switch (query.target) {
     case "string": {
       return buildItemStringIncludesGroupMember(query);
@@ -790,60 +723,65 @@ function buildIncludesGroupMember(query: Query): IncludesGroupMember {
   }
 }
 
-function findCompatibleIncludesGroup(params: {
-  queries: Array<Query>;
-  startIndex: number;
+function getCompatibleIncludesGroupLeaves(params: {
+  query: QueryGroup;
   version: ApiVersion;
-}): Array<Query> | null {
-  const { queries, startIndex, version } = params;
-  const startQuery = queries[startIndex];
+}): Array<QueryLeaf> | null {
+  const { query, version } = params;
 
-  if (startQuery == null) {
+  if (!("or" in query) || query.or.length <= 1) {
     return null;
   }
 
-  const groupValue = getGroupableIncludesValue(startQuery);
+  const leafQueries: Array<QueryLeaf> = [];
+  for (const childQuery of query.or) {
+    if (!isQueryLeaf(childQuery)) {
+      return null;
+    }
+
+    leafQueries.push(childQuery);
+  }
+
+  const firstQuery = leafQueries[0];
+
+  if (firstQuery == null) {
+    return null;
+  }
+
+  const groupValue = getGroupableIncludesValue(firstQuery);
 
   if (
     groupValue == null ||
     !isCompatibleIncludesGroupQuery({
-      query: startQuery,
+      query: firstQuery,
       value: groupValue,
-      isCaseSensitive: startQuery.isCaseSensitive,
-      language: startQuery.language,
+      isCaseSensitive: firstQuery.isCaseSensitive,
+      language: firstQuery.language,
       version,
-    }) ||
-    (startIndex > 0 && queries[startIndex]?.operator === "AND")
+    })
   ) {
     return null;
   }
 
-  const groupedQueries: Array<Query> = [startQuery];
-
-  for (let index = startIndex + 1; index < queries.length; index += 1) {
-    const query = queries[index];
-
+  for (const leafQuery of leafQueries.slice(1)) {
     if (
-      query?.operator !== "OR" ||
       !isCompatibleIncludesGroupQuery({
-        query,
+        query: leafQuery,
         value: groupValue,
-        isCaseSensitive: startQuery.isCaseSensitive,
-        language: startQuery.language,
+        isCaseSensitive: firstQuery.isCaseSensitive,
+        language: firstQuery.language,
         version,
       })
     ) {
-      break;
+      return null;
     }
-
-    groupedQueries.push(query);
   }
 
-  return groupedQueries.length > 1 ? groupedQueries : null;
+  return leafQueries;
 }
 
 function buildIncludesGroupClause(params: {
-  queries: Array<Query>;
+  queries: Array<QueryLeaf>;
   queryKey: string;
 }): CompiledQueryClause {
   const { queries, queryKey } = params;
@@ -1114,7 +1052,7 @@ function buildPropertyClause(params: {
  * Build a query predicate for an XQuery string.
  */
 function buildQueryClause(params: {
-  query: Query;
+  query: QueryLeaf;
   version: ApiVersion;
   queryKey: string;
 }): CompiledQueryClause {
@@ -1218,11 +1156,11 @@ function buildQueryClause(params: {
 /**
  * Build a boolean query clause for an XQuery string.
  */
-function buildBooleanQueryClause(params: {
-  query: Query;
+function buildBooleanQueryNode(params: {
+  query: QueryLeaf;
   version: ApiVersion;
   queryKey: string;
-}): CompiledQueryClause {
+}): CompiledQueryNode {
   const { query, version, queryKey } = params;
   const compiledQueryClause = buildQueryClause({ query, version, queryKey });
   const baseClause = `(${compiledQueryClause.predicate})`;
@@ -1230,72 +1168,108 @@ function buildBooleanQueryClause(params: {
   return {
     declarations: compiledQueryClause.declarations,
     predicate: query.isNegated ? `not(${baseClause})` : baseClause,
-    candidateQueryVar:
-      query.isNegated ? null : compiledQueryClause.candidateQueryVar,
+    candidateQueryVars:
+      query.isNegated || compiledQueryClause.candidateQueryVar == null ?
+        []
+      : [compiledQueryClause.candidateQueryVar],
+  };
+}
+
+function buildQueryNode(params: {
+  query: Query;
+  version: ApiVersion;
+  queryKey: string;
+}): CompiledQueryNode {
+  const { query, version, queryKey } = params;
+
+  if (isQueryLeaf(query)) {
+    return buildBooleanQueryNode({ query, version, queryKey });
+  }
+
+  const groupQueries = getQueryGroupChildren(query);
+  const optimizedIncludesGroupQueries = getCompatibleIncludesGroupLeaves({
+    query,
+    version,
+  });
+
+  if (groupQueries.length === 1) {
+    const onlyQuery = groupQueries[0];
+
+    if (onlyQuery == null) {
+      return { declarations: [], predicate: "", candidateQueryVars: [] };
+    }
+
+    return buildQueryNode({ query: onlyQuery, version, queryKey });
+  }
+
+  if (optimizedIncludesGroupQueries != null) {
+    const compiledClause = buildIncludesGroupClause({
+      queries: optimizedIncludesGroupQueries,
+      queryKey,
+    });
+
+    return {
+      declarations: compiledClause.declarations,
+      predicate: compiledClause.predicate,
+      candidateQueryVars:
+        compiledClause.candidateQueryVar == null ?
+          []
+        : [compiledClause.candidateQueryVar],
+    };
+  }
+
+  const declarations: Array<string> = [];
+  const predicates: Array<string> = [];
+  const candidateQueryVars: Array<string> = [];
+
+  for (const [groupIndex, groupQuery] of groupQueries.entries()) {
+    const compiledQueryNode = buildQueryNode({
+      query: groupQuery,
+      version,
+      queryKey: `${queryKey}_${groupIndex + 1}`,
+    });
+
+    declarations.push(...compiledQueryNode.declarations);
+    predicates.push(compiledQueryNode.predicate);
+    candidateQueryVars.push(...compiledQueryNode.candidateQueryVars);
+  }
+
+  return {
+    declarations,
+    predicate:
+      getQueryGroupOperator(query) === "and" ?
+        buildAndPredicate(predicates)
+      : buildOrPredicate(predicates),
+    candidateQueryVars,
   };
 }
 
 export function buildQueryPlan(params: {
-  queries: Array<Query>;
+  queries: Query | null;
   version: ApiVersion;
   baseItemsExpression: string;
 }): CompiledQueryPlan {
   const { queries, version, baseItemsExpression } = params;
   const declarations: Array<string> = [];
-  const predicateParts: Array<PredicatePart> = [];
-  const candidateQueryVars: Array<string> = [];
-  let hasCtsIncludesClauses = false;
+  let predicate = "";
+  let candidateQueryVars: Array<string> = [];
 
-  for (let index = 0; index < queries.length; ) {
-    const groupedQueries = findCompatibleIncludesGroup({
-      queries,
-      startIndex: index,
+  if (queries != null) {
+    const compiledQueryNode = buildQueryNode({
+      query: queries,
       version,
-    });
-    const query = queries[index];
-
-    if (query == null) {
-      break;
-    }
-
-    const compiledClause =
-      groupedQueries != null ?
-        buildIncludesGroupClause({
-          queries: groupedQueries,
-          queryKey: `${index + 1}`,
-        })
-      : buildBooleanQueryClause({ query, version, queryKey: `${index + 1}` });
-
-    if (compiledClause.declarations.length > 0) {
-      hasCtsIncludesClauses = true;
-      declarations.push(...compiledClause.declarations);
-    }
-
-    if (compiledClause.candidateQueryVar != null) {
-      candidateQueryVars.push(compiledClause.candidateQueryVar);
-    }
-
-    if (index === 0) {
-      predicateParts.push({
-        operator: null,
-        predicate: compiledClause.predicate,
-      });
-      index += groupedQueries?.length ?? 1;
-      continue;
-    }
-
-    predicateParts.push({
-      operator: query.operator ?? "OR",
-      predicate: compiledClause.predicate,
+      queryKey: "1",
     });
 
-    index += groupedQueries?.length ?? 1;
-  }
+    if (compiledQueryNode.declarations.length > 0) {
+      declarations.push(
+        `let ${CTS_INCLUDES_STOP_WORDS_VAR} := (${CTS_INCLUDES_STOP_WORDS.map((stopWord) => stringLiteral(stopWord)).join(", ")})`,
+        ...compiledQueryNode.declarations,
+      );
+    }
 
-  if (hasCtsIncludesClauses) {
-    declarations.unshift(
-      `let ${CTS_INCLUDES_STOP_WORDS_VAR} := (${CTS_INCLUDES_STOP_WORDS.map((stopWord) => stringLiteral(stopWord)).join(", ")})`,
-    );
+    predicate = compiledQueryNode.predicate;
+    candidateQueryVars = compiledQueryNode.candidateQueryVars;
   }
 
   let itemsExpression = `(${baseItemsExpression})`;
@@ -1316,11 +1290,5 @@ export function buildQueryPlan(params: {
   else ${baseItemsExpression})`;
   }
 
-  return {
-    declarations,
-    itemsExpression,
-    predicate: buildGroupedPredicateExpression(
-      buildPredicateGroups(predicateParts),
-    ),
-  };
+  return { declarations, itemsExpression, predicate };
 }

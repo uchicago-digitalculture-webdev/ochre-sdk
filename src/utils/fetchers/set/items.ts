@@ -168,7 +168,7 @@ function buildOrderedItemsClause(sort: SetItemsSort): string {
  * @param params - The parameters for the fetch
  * @param params.setScopeUuids - An array of Set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
- * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
+ * @param params.queries - Recursive query tree used to filter matching items
  * @param params.sort - Optional sorting configuration applied before pagination.
  * For propertyValue sorting, dataType is required and the sort key uses the first valid leaf value (value[not(@i)]).
  * @param params.page - The page number (1-indexed)
@@ -181,7 +181,7 @@ function buildXQuery(
   params: {
     setScopeUuids: Array<string>;
     belongsToCollectionScopeUuids: Array<string>;
-    queries: Array<Query>;
+    queries: Query | null;
     sort: SetItemsSort;
     page: number;
     pageSize: number;
@@ -258,7 +258,7 @@ function buildXQuery(
  *
  * @param params - The parameters for the fetch
  * @param params.setScopeUuids - The Set scope UUIDs to filter by
- * @param params.queries - Ordered queries to combine with AND/OR and optional NOT via negation
+ * @param params.queries - Recursive query tree used to filter matching items
  * @param params.sort - Optional sorting configuration applied before pagination.
  * For propertyValue sorting, dataType is required and the sort key uses the first valid leaf value (value[not(@i)]).
  * @param params.page - The page number (1-indexed)
@@ -274,7 +274,7 @@ export async function fetchSetItems<
 >(
   params: {
     setScopeUuids: Array<string>;
-    queries: Array<Query>;
+    queries?: Query | null;
     sort?: SetItemsSort;
     page: number;
     pageSize?: number;

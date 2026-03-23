@@ -771,9 +771,9 @@ export type SetItemsSort =
     };
 
 /**
- * Represents a query for Set items
+ * Represents a leaf query for Set items
  */
-export type Query =
+export type QueryLeaf =
   | {
       target: "property";
       propertyVariables?: Array<string>;
@@ -787,7 +787,6 @@ export type Query =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
-      operator?: "AND" | "OR";
       isNegated?: boolean;
     }
   | {
@@ -800,7 +799,6 @@ export type Query =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
-      operator?: "AND" | "OR";
       isNegated?: boolean;
     }
   | {
@@ -813,7 +811,6 @@ export type Query =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
-      operator?: "AND" | "OR";
       isNegated?: boolean;
     }
   | {
@@ -822,7 +819,6 @@ export type Query =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
-      operator?: "AND" | "OR";
       isNegated?: boolean;
     }
   | {
@@ -831,6 +827,15 @@ export type Query =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
-      operator?: "AND" | "OR";
       isNegated?: boolean;
     };
+
+/**
+ * Represents a boolean query group for Set items
+ */
+export type QueryGroup = { and: Array<Query> } | { or: Array<Query> };
+
+/**
+ * Represents a query for Set items
+ */
+export type Query = QueryLeaf | QueryGroup;
