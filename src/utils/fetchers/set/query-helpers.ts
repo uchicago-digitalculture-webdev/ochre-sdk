@@ -25,6 +25,8 @@ type CompiledQueryPlan = {
   predicate: string;
 };
 
+type PredicatePart = { operator: "AND" | "OR" | null; predicate: string };
+
 type TokenizedSearchDeclarations = {
   declarations: Array<string>;
   termsVar: string;
@@ -457,6 +459,94 @@ function buildOrCtsQueryExpression(queries: Array<string>): string {
   }
 
   return `cts:or-query((${queries.join(", ")}))`;
+}
+
+function buildPredicateGroups(
+  predicateParts: Array<PredicatePart>,
+): Array<Array<string>> {
+  const groups: Array<Array<string>> = [];
+  let currentGroup: Array<string> = [];
+
+  for (const predicatePart of predicateParts) {
+    if (predicatePart.operator == null || predicatePart.operator === "AND") {
+      currentGroup.push(predicatePart.predicate);
+      continue;
+    }
+
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup);
+    }
+
+    currentGroup = [predicatePart.predicate];
+  }
+
+  if (currentGroup.length > 0) {
+    groups.push(currentGroup);
+  }
+
+  return groups;
+}
+
+function buildGroupedPredicateExpression(
+  predicateGroups: Array<Array<string>>,
+): string {
+  if (predicateGroups.length === 0) {
+    return "";
+  }
+
+  const groupExpressions: Array<string> = [];
+
+  for (let index = 0; index < predicateGroups.length; ) {
+    const predicateGroup = predicateGroups[index];
+    const firstPredicate = predicateGroup?.[0];
+
+    if (
+      predicateGroup == null ||
+      predicateGroup.length < 2 ||
+      firstPredicate == null
+    ) {
+      groupExpressions.push(buildAndPredicate(predicateGroup ?? []));
+      index += 1;
+      continue;
+    }
+
+    let sharedGroupEnd = index + 1;
+    while (sharedGroupEnd < predicateGroups.length) {
+      const sharedGroup = predicateGroups[sharedGroupEnd];
+
+      if (
+        sharedGroup == null ||
+        sharedGroup.length < 2 ||
+        sharedGroup[0] !== firstPredicate
+      ) {
+        break;
+      }
+
+      sharedGroupEnd += 1;
+    }
+
+    if (sharedGroupEnd === index + 1) {
+      groupExpressions.push(buildAndPredicate(predicateGroup));
+      index += 1;
+      continue;
+    }
+
+    const suffixGroupExpressions: Array<string> = [];
+    for (const sharedGroup of predicateGroups.slice(index, sharedGroupEnd)) {
+      const suffixPredicates = sharedGroup.slice(1);
+      suffixGroupExpressions.push(buildAndPredicate(suffixPredicates));
+    }
+
+    groupExpressions.push(
+      buildAndPredicate([
+        firstPredicate,
+        buildOrPredicate(suffixGroupExpressions),
+      ]),
+    );
+    index = sharedGroupEnd;
+  }
+
+  return buildOrPredicate(groupExpressions);
 }
 
 function buildContentTargetCandidateBranch(params: {
@@ -1152,7 +1242,7 @@ export function buildQueryPlan(params: {
 }): CompiledQueryPlan {
   const { queries, version, baseItemsExpression } = params;
   const declarations: Array<string> = [];
-  const predicateParts: Array<string> = [];
+  const predicateParts: Array<PredicatePart> = [];
   const candidateQueryVars: Array<string> = [];
   let hasCtsIncludesClauses = false;
 
@@ -1186,14 +1276,18 @@ export function buildQueryPlan(params: {
     }
 
     if (index === 0) {
-      predicateParts.push(compiledClause.predicate);
+      predicateParts.push({
+        operator: null,
+        predicate: compiledClause.predicate,
+      });
       index += groupedQueries?.length ?? 1;
       continue;
     }
 
-    predicateParts.push(
-      `${query.operator === "AND" ? "and" : "or"} ${compiledClause.predicate}`,
-    );
+    predicateParts.push({
+      operator: query.operator ?? "OR",
+      predicate: compiledClause.predicate,
+    });
 
     index += groupedQueries?.length ?? 1;
   }
@@ -1222,5 +1316,11 @@ export function buildQueryPlan(params: {
   else ${baseItemsExpression})`;
   }
 
-  return { declarations, itemsExpression, predicate: predicateParts.join(" ") };
+  return {
+    declarations,
+    itemsExpression,
+    predicate: buildGroupedPredicateExpression(
+      buildPredicateGroups(predicateParts),
+    ),
+  };
 }
