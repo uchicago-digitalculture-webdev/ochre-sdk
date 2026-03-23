@@ -624,7 +624,7 @@ function buildPropertyStringIncludesGroupMember(
   }
 
   return {
-    rawPredicate: `.//properties//property[${buildAndPredicate([
+    rawPredicate: buildPropertyPredicateExpression([
       ...predicateParts,
       buildRawStringMatchPredicate({
         valueExpression,
@@ -632,7 +632,7 @@ function buildPropertyStringIncludesGroupMember(
         matchMode: "includes",
         isCaseSensitive: query.isCaseSensitive,
       }),
-    ])}]`,
+    ]),
     buildCandidateTermQuery: (termExpression) =>
       buildPropertyStringCandidateBranch({
         termExpression,
@@ -880,6 +880,18 @@ function buildPropertyValueAttributePredicate(params: {
   return buildOrPredicate(valuePredicates);
 }
 
+function buildPropertyPredicateExpression(
+  propertyPredicates: Array<string>,
+): string {
+  let propertyExpression = ".//properties//property";
+
+  for (const propertyPredicate of propertyPredicates) {
+    propertyExpression += `[${propertyPredicate}]`;
+  }
+
+  return propertyExpression;
+}
+
 function buildPropertyStringValueClause(params: {
   query: StringPropertyQuery;
   version: ApiVersion;
@@ -1003,7 +1015,7 @@ function buildPropertyClause(params: {
 
   return {
     declarations,
-    predicate: `.//properties//property[${buildAndPredicate(predicateParts)}]`,
+    predicate: buildPropertyPredicateExpression(predicateParts),
     candidateQueryVar,
   };
 }
