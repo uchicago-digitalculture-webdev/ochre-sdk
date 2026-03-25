@@ -10,12 +10,14 @@ import type {
   RawResource,
   RawStringContent,
   RawStringRichText,
+  RawStyle,
   RawTree,
 } from "../../types/raw.js";
 import type {
   LevelContext,
   LevelContextItem,
   Style,
+  StylesheetItem,
   WebBlock,
   WebElement,
   WebElementComponent,
@@ -33,6 +35,7 @@ import {
   getPropertyValueByLabel,
 } from "../../utils/getters.js";
 import {
+  parseFakeString,
   parseStringContent,
   transformPermanentIdentificationUrl,
 } from "../../utils/string.js";
@@ -166,6 +169,52 @@ function parseAllOptionContexts(options: {
     label: handleContexts(options.labelContexts),
     prominent: handleContexts(options.prominentContexts),
   };
+}
+
+function parseStylesheets(styles: Array<RawStyle>): Array<StylesheetItem> {
+  return styles.map((style) => {
+    const defaultStyles: Array<Style> = [];
+
+    for (const [label, value] of Object.entries(style)) {
+      if (
+        label === "variableUuid" ||
+        label === "valueUuid" ||
+        label === "category" ||
+        label === "content"
+      ) {
+        continue;
+      }
+
+      defaultStyles.push({ label, value: parseFakeString(value) });
+    }
+
+    const stylesByViewport: StylesheetItem["styles"] = {
+      default: defaultStyles,
+      tablet: [],
+      mobile: [],
+    };
+
+    if (style.category === "propertyValue" || style.valueUuid != null) {
+      if (style.valueUuid == null) {
+        throw new Error(
+          `Stylesheet property value "${style.variableUuid}" is missing a value UUID`,
+        );
+      }
+
+      return {
+        uuid: style.valueUuid,
+        category: "propertyValue",
+        variableUuid: style.variableUuid,
+        styles: stylesByViewport,
+      };
+    }
+
+    return {
+      uuid: style.variableUuid,
+      category: "propertyVariable",
+      styles: stylesByViewport,
+    };
+  });
 }
 
 /**
@@ -2676,7 +2725,12 @@ function parseWebsiteProperties(
       isPropertyValuesGrouped: true,
       iiifViewer: "universal-viewer",
     },
-    options: { contexts: null, scopes: null, labels: { title: null } },
+    options: {
+      contexts: null,
+      scopes: null,
+      labels: { title: null },
+      stylesheets: { properties: [] },
+    },
   };
 
   const contactProperty = getPropertyByLabel(websiteProperties, "contact");
@@ -2850,6 +2904,12 @@ function parseWebsiteProperties(
         labelNotes.find((note) => note.title === "Title label")?.content ??
         null;
     }
+  }
+
+  if ("styleOptions" in websiteTree && websiteTree.styleOptions != null) {
+    returnProperties.options.stylesheets.properties = parseStylesheets(
+      ensureArray(websiteTree.styleOptions.style),
+    );
   }
 
   return returnProperties;

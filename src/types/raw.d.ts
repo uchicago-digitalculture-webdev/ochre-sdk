@@ -189,6 +189,16 @@ export type RawLevelContext = {
 };
 
 /**
+ * Raw style structure corresponding to the parsed Style type
+ */
+export type RawStyle = {
+  variableUuid: string;
+  valueUuid?: string;
+  category?: string;
+  content: RawFakeString;
+} & Record<string, RawFakeString>;
+
+/**
  * Raw tree structure corresponding to the parsed Tree type
  */
 export type RawTree = {
@@ -214,6 +224,7 @@ export type RawTree = {
     labelContexts?: RawLevelContext | Array<RawLevelContext>;
     prominentContexts?: RawLevelContext | Array<RawLevelContext>;
   };
+  styleOptions?: { style: RawStyle | Array<RawStyle> };
   items:
     | string
     | { resource: RawResource | Array<RawResource> }

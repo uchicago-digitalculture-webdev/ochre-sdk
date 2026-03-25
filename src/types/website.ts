@@ -1,6 +1,7 @@
 import type {
   ApiVersion,
   Bibliography,
+  DataCategory,
   Identification,
   License,
   Metadata,
@@ -45,6 +46,35 @@ export type Scope = {
   type: string;
   identification: Identification;
 };
+
+/**
+ * Represents a stylesheet item with its UUID and category
+ */
+export type StylesheetCategory = Extract<
+  DataCategory,
+  "propertyVariable" | "propertyValue"
+>;
+
+export type StylesheetItem =
+  | {
+      uuid: string;
+      category: "propertyVariable";
+      styles: {
+        default: Array<Style>;
+        tablet: Array<Style>;
+        mobile: Array<Style>;
+      };
+    }
+  | {
+      uuid: string;
+      category: "propertyValue";
+      variableUuid: string;
+      styles: {
+        default: Array<Style>;
+        tablet: Array<Style>;
+        mobile: Array<Style>;
+      };
+    };
 
 /**
  * Represents the OCHRE website type
@@ -126,6 +156,7 @@ export type Website = {
       contexts: PropertyContexts | null;
       scopes: Array<Scope> | null;
       labels: { title: string | null };
+      stylesheets: { properties: Array<StylesheetItem> };
     };
   };
 };
