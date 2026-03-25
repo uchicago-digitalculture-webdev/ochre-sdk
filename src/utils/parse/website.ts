@@ -2711,7 +2711,7 @@ function parseWebsiteProperties(
       searchBarBoundElementUuid: null,
       items: null,
     },
-    footer: { isDisplayed: true, items: null },
+    footer: { isDisplayed: true, logoUuid: null, items: null },
     sidebar,
     itemPage: {
       isMainContentDisplayed: true,
@@ -2761,7 +2761,8 @@ function parseWebsiteProperties(
       | null) ?? "system";
 
   returnProperties.icon.logoUuid =
-    getPropertyByLabel(websiteProperties, "logo")?.values[0]?.uuid ?? null;
+    getPropertyByLabel(websiteProperties, "navbar-logo")?.values[0]?.uuid ??
+    null;
 
   returnProperties.icon.faviconUuid =
     getPropertyByLabel(websiteProperties, "favicon-ico")?.values[0]?.uuid ??
@@ -2799,6 +2800,10 @@ function parseWebsiteProperties(
     (getPropertyValueByLabel(websiteProperties, "footer-displayed") as
       | Website["properties"]["footer"]["isDisplayed"]
       | null) ?? true;
+
+  returnProperties.footer.logoUuid =
+    getPropertyByLabel(websiteProperties, "footer-logo")?.values[0]?.uuid ??
+    null;
 
   const itemPageTypeProperty = getPropertyByLabelAndValue(
     websiteProperties,

@@ -126,6 +126,7 @@ export type Website = {
     };
     footer: {
       isDisplayed: boolean;
+      logoUuid: string | null;
       items: Array<WebElement | WebBlock> | null;
     };
     sidebar: {
