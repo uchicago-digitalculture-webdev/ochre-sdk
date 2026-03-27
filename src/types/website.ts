@@ -6,6 +6,7 @@ import type {
   License,
   Metadata,
   Person,
+  Query,
 } from "./index.js";
 
 /**
@@ -75,6 +76,17 @@ export type StylesheetItem =
         mobile: Array<Style>;
       };
     };
+
+export type WebsitePropertyQueryNode = Query extends infer QueryNode ?
+  QueryNode extends { target: "property" } ?
+    Omit<QueryNode, "propertyValues" | "from" | "to" | "isNegated">
+  : never
+: never;
+
+export type WebsitePropertyQuery =
+  | WebsitePropertyQueryNode
+  | { and: Array<WebsitePropertyQuery> }
+  | { or: Array<WebsitePropertyQuery> };
 
 /**
  * Represents the OCHRE website type
@@ -376,9 +388,9 @@ export type WebElementComponent =
   | {
       component: "query";
       linkUuids: Array<string>;
-      queries: Array<{
+      items: Array<{
         label: string;
-        propertyVariableUuids: Array<string>;
+        queries: Array<WebsitePropertyQuery>;
         startIcon: string | null;
         endIcon: string | null;
       }>;

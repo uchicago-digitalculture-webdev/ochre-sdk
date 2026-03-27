@@ -1242,8 +1242,8 @@ function parseWebElementProperties(
         );
       }
 
-      const queries: Array<
-        Extract<WebElementComponent, { component: "query" }>["queries"][number]
+      const items: Array<
+        Extract<WebElementComponent, { component: "query" }>["items"][number]
       > = [];
 
       if (componentProperty.properties.length === 0) {
@@ -1252,8 +1252,8 @@ function parseWebElementProperties(
         );
       }
 
-      for (const query of componentProperty.properties) {
-        const querySubProperties = query.properties;
+      for (const queryItem of componentProperty.properties) {
+        const querySubProperties = queryItem.properties;
 
         const label = getPropertyValueByLabel(
           querySubProperties,
@@ -1262,16 +1262,45 @@ function parseWebElementProperties(
           | Extract<
               WebElementComponent,
               { component: "query" }
-            >["queries"][number]["label"]
+            >["items"][number]["label"]
           | null;
         if (label === null) {
           continue;
         }
 
-        const propertyVariableUuids =
-          getPropertyByLabel(querySubProperties, "use-property")
-            ?.values.map((value) => value.uuid)
-            .filter((uuid) => uuid !== null) ?? [];
+        const propertyVariables =
+          getPropertyByLabel(querySubProperties, "use-property")?.values.filter(
+            (value) => value.uuid !== null,
+          ) ?? [];
+
+        const queries: Extract<
+          WebElementComponent,
+          { component: "query" }
+        >["items"][number]["queries"] = propertyVariables.map(
+          (propertyVariable) => {
+            if (propertyVariable.uuid === null) {
+              throw new Error(
+                `Property variable UUID not found for the following component: “${componentName}”`,
+              );
+            }
+
+            const dataType = propertyVariable.dataType;
+            if (dataType === "coordinate") {
+              throw new Error(
+                `Query prompts with data type "coordinate" are not supported for the following component: “${componentName}”`,
+              );
+            }
+
+            return {
+              target: "property",
+              propertyVariable: propertyVariable.uuid,
+              dataType,
+              matchMode: "exact",
+              isCaseSensitive: true,
+              language: "eng",
+            };
+          },
+        );
 
         let startIcon = getPropertyValueByLabel(
           querySubProperties,
@@ -1280,7 +1309,7 @@ function parseWebElementProperties(
           | Extract<
               WebElementComponent,
               { component: "query" }
-            >["queries"][number]["startIcon"]
+            >["items"][number]["startIcon"]
           | null;
         startIcon ??= null;
 
@@ -1291,14 +1320,14 @@ function parseWebElementProperties(
           | Extract<
               WebElementComponent,
               { component: "query" }
-            >["queries"][number]["endIcon"]
+            >["items"][number]["endIcon"]
           | null;
         endIcon ??= null;
 
-        queries.push({ label, propertyVariableUuids, startIcon, endIcon });
+        items.push({ label, queries, startIcon, endIcon });
       }
 
-      if (queries.length === 0) {
+      if (items.length === 0) {
         throw new Error(
           `No queries found for the following component: “${componentName}”`,
         );
@@ -1377,7 +1406,7 @@ function parseWebElementProperties(
         linkUuids: setLinks
           .map((link) => link.uuid)
           .filter((uuid) => uuid !== null),
-        queries,
+        items,
         options,
         displayedProperties:
           displayedProperties?.values

@@ -776,7 +776,7 @@ export type SetItemsSort =
 export type QueryLeaf =
   | {
       target: "property";
-      propertyVariables?: Array<string>;
+      propertyVariable?: string;
       dataType: Exclude<
         Exclude<PropertyValueContentType, "coordinate">,
         "date" | "dateTime"
@@ -791,7 +791,7 @@ export type QueryLeaf =
     }
   | {
       target: "property";
-      propertyVariables: Array<string>;
+      propertyVariable: string;
       dataType: "date" | "dateTime";
       propertyValues?: never;
       from: string;
@@ -803,7 +803,7 @@ export type QueryLeaf =
     }
   | {
       target: "property";
-      propertyVariables: Array<string>;
+      propertyVariable: string;
       dataType: "date" | "dateTime";
       propertyValues?: never;
       from?: string;

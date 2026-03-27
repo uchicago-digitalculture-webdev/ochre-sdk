@@ -452,14 +452,8 @@ function buildDateRangePredicate(params: {
 /**
  * Build a property label predicate for an XQuery string.
  */
-function buildPropertyLabelPredicate(propertyVariables: Array<string>): string {
-  const labelPredicates: Array<string> = [];
-
-  for (const propertyVariable of propertyVariables) {
-    labelPredicates.push(`@uuid=${stringLiteral(propertyVariable)}`);
-  }
-
-  return `label[${buildOrPredicate(labelPredicates)}]`;
+function buildPropertyLabelPredicate(propertyVariable: string): string {
+  return `label[@uuid=${stringLiteral(propertyVariable)}]`;
 }
 
 function buildOrCtsQueryExpression(queries: Array<string>): string {
@@ -634,7 +628,7 @@ function buildItemStringIncludesGroupMember(
 function buildPropertyStringIncludesGroupMember(
   query: StringPropertyQuery,
 ): IncludesGroupMember {
-  const propertyVariables = query.propertyVariables ?? [];
+  const propertyVariable = query.propertyVariable;
   const predicateParts: Array<string> = [];
   const propertyContentNodesExpression = `value[not(@inherited="true")]/content[@xml:lang="${query.language}"]`;
   const valueExpression = buildFlattenedContentValuesExpression(
@@ -642,8 +636,8 @@ function buildPropertyStringIncludesGroupMember(
   );
   const propertyValue = query.propertyValues[0] ?? "";
 
-  if (propertyVariables.length > 0) {
-    predicateParts.push(buildPropertyLabelPredicate(propertyVariables));
+  if (propertyVariable != null) {
+    predicateParts.push(buildPropertyLabelPredicate(propertyVariable));
   }
 
   return {
@@ -992,11 +986,11 @@ function buildPropertyClause(params: {
   const { query, version, queryKey } = params;
   const predicateParts: Array<string> = [];
   const declarations: Array<string> = [];
-  const propertyVariables = query.propertyVariables ?? [];
+  const propertyVariable = query.propertyVariable;
   let candidateQueryVar: string | null = null;
 
-  if (propertyVariables.length > 0) {
-    predicateParts.push(buildPropertyLabelPredicate(propertyVariables));
+  if (propertyVariable != null) {
+    predicateParts.push(buildPropertyLabelPredicate(propertyVariable));
   }
 
   if (query.dataType === "date" || query.dataType === "dateTime") {

@@ -192,8 +192,8 @@ function getPropertyVariableUuidsFromQueries(
         continue;
       }
 
-      for (const propertyVariableUuid of query.propertyVariables ?? []) {
-        propertyVariableUuids.add(propertyVariableUuid);
+      if (query.propertyVariable != null) {
+        propertyVariableUuids.add(query.propertyVariable);
       }
 
       continue;

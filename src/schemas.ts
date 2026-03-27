@@ -244,7 +244,7 @@ const setQueryLeafSchema = z.union([
   z
     .object({
       target: z.literal("property"),
-      propertyVariables: z.array(uuidSchema).default([]),
+      propertyVariable: uuidSchema.optional(),
       dataType: z.enum([
         "string",
         "integer",
@@ -269,10 +269,7 @@ const setQueryLeafSchema = z.union([
     })
     .strict()
     .superRefine((value, ctx) => {
-      if (
-        value.propertyVariables.length === 0 &&
-        value.propertyValues == null
-      ) {
+      if (value.propertyVariable == null && value.propertyValues == null) {
         ctx.addIssue({
           code: "custom",
           message:
@@ -283,9 +280,7 @@ const setQueryLeafSchema = z.union([
   z
     .object({
       target: z.literal("property"),
-      propertyVariables: z
-        .array(uuidSchema)
-        .min(1, "At least one property variable UUID is required"),
+      propertyVariable: uuidSchema,
       dataType: z.enum(["date", "dateTime"] as const satisfies ReadonlyArray<
         Extract<
           Exclude<PropertyValueContentType, "coordinate">,
@@ -303,9 +298,7 @@ const setQueryLeafSchema = z.union([
   z
     .object({
       target: z.literal("property"),
-      propertyVariables: z
-        .array(uuidSchema)
-        .min(1, "At least one property variable UUID is required"),
+      propertyVariable: uuidSchema,
       dataType: z.enum(["date", "dateTime"] as const satisfies ReadonlyArray<
         Extract<
           Exclude<PropertyValueContentType, "coordinate">,
@@ -403,7 +396,7 @@ const setItemsSortSchema = z
   ])
   .default({ target: "none" }) satisfies z.ZodType<SetItemsSort>;
 
-function hasPropertyQueryWithPropertyVariables(
+function hasPropertyQueryWithPropertyVariable(
   query: Query | null | undefined,
 ): boolean {
   if (query == null) {
@@ -411,15 +404,13 @@ function hasPropertyQueryWithPropertyVariables(
   }
 
   if ("target" in query) {
-    return (
-      query.target === "property" && (query.propertyVariables?.length ?? 0) > 0
-    );
+    return query.target === "property" && query.propertyVariable != null;
   }
 
   const groupQueries = "and" in query ? query.and : query.or;
 
   for (const groupQuery of groupQueries) {
-    if (hasPropertyQueryWithPropertyVariables(groupQuery)) {
+    if (hasPropertyQueryWithPropertyVariable(groupQuery)) {
       return true;
     }
   }
@@ -447,12 +438,12 @@ export const setPropertyValuesParamsSchema = z
     isLimitedToLeafPropertyValues: z.boolean().default(false),
   })
   .superRefine((value, ctx) => {
-    if (!hasPropertyQueryWithPropertyVariables(value.queries)) {
+    if (!hasPropertyQueryWithPropertyVariable(value.queries)) {
       ctx.addIssue({
         code: "custom",
         path: ["queries"],
         message:
-          "At least one property query with propertyVariables is required",
+          "At least one property query with propertyVariable is required",
       });
     }
   });
