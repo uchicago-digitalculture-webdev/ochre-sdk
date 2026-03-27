@@ -352,7 +352,7 @@ function extractAnnotationMetadata(
             TEXT_ANNOTATION_TEXT_STYLING_UUID &&
           textAnnotationProperty.property != null
         ) {
-          let textStylingVariant = "paragraph";
+          let textStylingVariant = "block";
           let textStylingSize = "md";
           let textStylingHeadingLevel: string | null = null;
           let textStylingCss: Array<Style> = [];
@@ -857,7 +857,7 @@ export function parseStringDocumentItem(item: RawStringRichTextItem): string {
             textAnnotationProperty.property != null
           ) {
             const textStylingType = "text-styling";
-            let textStylingVariant = "paragraph";
+            let textStylingVariant = "block";
             let textStylingSize = "md";
             let textStylingHeadingLevel: string | null = null;
             let textStylingCss: Array<Style> = [];
