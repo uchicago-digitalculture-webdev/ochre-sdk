@@ -77,11 +77,12 @@ export type StylesheetItem =
       };
     };
 
-export type WebsitePropertyQueryNode = Query extends infer QueryNode ?
-  QueryNode extends { target: "property" } ?
-    Omit<QueryNode, "propertyValues" | "from" | "to" | "isNegated">
-  : never
-: never;
+export type WebsitePropertyQueryNode =
+  Query extends infer QueryNode ?
+    QueryNode extends { target: "property" } ?
+      Omit<QueryNode, "propertyValues" | "from" | "to" | "isNegated">
+    : never
+  : never;
 
 export type WebsitePropertyQuery =
   | WebsitePropertyQueryNode
