@@ -794,6 +794,20 @@ export type QueryLeaf =
       propertyVariable: string;
       dataType: "date" | "dateTime";
       propertyValues?: never;
+      value: string;
+      from?: never;
+      to?: never;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
+      language: string;
+      isNegated?: boolean;
+    }
+  | {
+      target: "property";
+      propertyVariable: string;
+      dataType: "date" | "dateTime";
+      propertyValues?: never;
+      value?: never;
       from: string;
       to?: string;
       matchMode: "includes" | "exact";
@@ -806,6 +820,7 @@ export type QueryLeaf =
       propertyVariable: string;
       dataType: "date" | "dateTime";
       propertyValues?: never;
+      value?: never;
       from?: string;
       to: string;
       matchMode: "includes" | "exact";

@@ -6,7 +6,7 @@ import type {
   License,
   Metadata,
   Person,
-  Query,
+  PropertyValueContentType,
 } from "./index.js";
 
 /**
@@ -77,12 +77,14 @@ export type StylesheetItem =
       };
     };
 
-export type WebsitePropertyQueryNode =
-  Query extends infer QueryNode ?
-    QueryNode extends { target: "property" } ?
-      Omit<QueryNode, "propertyValues" | "from" | "to" | "isNegated">
-    : never
-  : never;
+export type WebsitePropertyQueryNode = {
+  target: "property";
+  propertyVariable: string;
+  dataType: Exclude<PropertyValueContentType, "coordinate">;
+  matchMode: "includes" | "exact";
+  isCaseSensitive: boolean;
+  language: string;
+};
 
 export type WebsitePropertyQuery =
   | WebsitePropertyQueryNode

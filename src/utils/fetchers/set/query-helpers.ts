@@ -994,9 +994,13 @@ function buildPropertyClause(params: {
   }
 
   if (query.dataType === "date" || query.dataType === "dateTime") {
-    predicateParts.push(
-      buildDateRangePredicate({ from: query.from, to: query.to }),
-    );
+    if ("value" in query && query.value != null) {
+      predicateParts.push(`value/@rawValue = ${stringLiteral(query.value)}`);
+    } else {
+      predicateParts.push(
+        buildDateRangePredicate({ from: query.from, to: query.to }),
+      );
+    }
   } else if (query.propertyValues != null) {
     switch (query.dataType) {
       case "IDREF": {

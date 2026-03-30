@@ -287,6 +287,26 @@ const setQueryLeafSchema = z.union([
           "date" | "dateTime"
         >
       >),
+      value: z.string(),
+      from: z.never().optional(),
+      to: z.never().optional(),
+      matchMode: z.enum(["includes", "exact"]),
+      isCaseSensitive: z.boolean(),
+      language: z.string().default("eng"),
+      isNegated: z.boolean().optional().default(false),
+    })
+    .strict(),
+  z
+    .object({
+      target: z.literal("property"),
+      propertyVariable: uuidSchema,
+      dataType: z.enum(["date", "dateTime"] as const satisfies ReadonlyArray<
+        Extract<
+          Exclude<PropertyValueContentType, "coordinate">,
+          "date" | "dateTime"
+        >
+      >),
+      value: z.never().optional(),
       from: z.string(),
       to: z.string().optional(),
       matchMode: z.enum(["includes", "exact"]),
@@ -305,6 +325,7 @@ const setQueryLeafSchema = z.union([
           "date" | "dateTime"
         >
       >),
+      value: z.never().optional(),
       from: z.string().optional(),
       to: z.string(),
       matchMode: z.enum(["includes", "exact"]),
