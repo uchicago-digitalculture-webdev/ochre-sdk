@@ -250,44 +250,14 @@ const setQueryLeafSchema = z.union([
         "integer",
         "decimal",
         "boolean",
-        "time",
         "IDREF",
+        "date",
+        "dateTime",
+        "time",
       ] as const satisfies ReadonlyArray<
-        Exclude<
-          Exclude<PropertyValueContentType, "coordinate">,
-          "date" | "dateTime"
-        >
+        Exclude<PropertyValueContentType, "coordinate">
       >),
-      propertyValues: z
-        .array(z.string())
-        .min(1, "At least one property value is required")
-        .optional(),
-      matchMode: z.enum(["includes", "exact"]),
-      isCaseSensitive: z.boolean(),
-      language: z.string().default("eng"),
-      isNegated: z.boolean().optional().default(false),
-    })
-    .strict()
-    .superRefine((value, ctx) => {
-      if (value.propertyVariable == null && value.propertyValues == null) {
-        ctx.addIssue({
-          code: "custom",
-          message:
-            "Property queries must include at least one propertyVariable or propertyValue",
-        });
-      }
-    }),
-  z
-    .object({
-      target: z.literal("property"),
-      propertyVariable: uuidSchema,
-      dataType: z.enum(["date", "dateTime"] as const satisfies ReadonlyArray<
-        Extract<
-          Exclude<PropertyValueContentType, "coordinate">,
-          "date" | "dateTime"
-        >
-      >),
-      value: z.string(),
+      value: z.string().optional(),
       from: z.never().optional(),
       to: z.never().optional(),
       matchMode: z.enum(["includes", "exact"]),
@@ -295,7 +265,16 @@ const setQueryLeafSchema = z.union([
       language: z.string().default("eng"),
       isNegated: z.boolean().optional().default(false),
     })
-    .strict(),
+    .strict()
+    .superRefine((value, ctx) => {
+      if (value.propertyVariable == null && value.value == null) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "Property queries must include at least one propertyVariable or value",
+        });
+      }
+    }),
   z
     .object({
       target: z.literal("property"),
