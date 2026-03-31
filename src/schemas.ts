@@ -245,6 +245,20 @@ const setQueryLeafSchema = z.union([
     .object({
       target: z.literal("property"),
       propertyVariable: uuidSchema.optional(),
+      dataType: z.literal("all"),
+      value: z.string(),
+      from: z.never().optional(),
+      to: z.never().optional(),
+      matchMode: z.enum(["includes", "exact"]),
+      isCaseSensitive: z.boolean(),
+      language: z.string().default("eng"),
+      isNegated: z.boolean().optional().default(false),
+    })
+    .strict(),
+  z
+    .object({
+      target: z.literal("property"),
+      propertyVariable: uuidSchema.optional(),
       dataType: z.enum([
         "string",
         "integer",

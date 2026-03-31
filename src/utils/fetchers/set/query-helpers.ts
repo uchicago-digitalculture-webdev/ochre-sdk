@@ -53,6 +53,7 @@ type StringPropertyQuery = PropertyQuery & {
   dataType: "string";
   value: string;
 };
+type AllPropertyQuery = PropertyQuery & { dataType: "all"; value: string };
 
 type IncludesGroupMember = {
   rawPredicate: string;
@@ -608,6 +609,17 @@ function buildPropertyStringCandidateBranch(params: {
       )`;
 }
 
+function buildPropertyContentNodesExpression(params: {
+  language: string;
+  excludeInherited: boolean;
+}): string {
+  const { language, excludeInherited } = params;
+  const valueExpression =
+    excludeInherited ? `value[not(@inherited="true")]` : "value";
+
+  return `${valueExpression}/content[@xml:lang="${language}"]`;
+}
+
 function buildPropertyRawValueCandidateBranch(params: {
   termExpression: string;
   isCaseSensitive: boolean;
@@ -653,6 +665,30 @@ function buildPropertySimpleValueTextExpression(): string {
 
 function buildPropertySimpleValueSearchableNodesExpression(): string {
   return "value[not(*)]";
+}
+
+function buildPropertyContentRawPredicate(params: {
+  value: string;
+  matchMode: "includes" | "exact";
+  isCaseSensitive: boolean;
+  language: string;
+  excludeInherited: boolean;
+}): string {
+  const { value, matchMode, isCaseSensitive, language, excludeInherited } =
+    params;
+  const contentNodesExpression = buildPropertyContentNodesExpression({
+    language,
+    excludeInherited,
+  });
+
+  return buildRawStringMatchPredicate({
+    valueExpression: buildFlattenedContentValuesExpression(
+      contentNodesExpression,
+    ),
+    value,
+    matchMode,
+    isCaseSensitive,
+  });
 }
 
 function buildPropertyRawValueOrTextRawPredicate(params: {
@@ -702,6 +738,24 @@ function buildPropertyRawValueOrTextTokenPredicate(params: {
       or
       cts:contains($searchNode, ${textQuery})
     ))`;
+}
+
+function buildPropertyContentTokenPredicate(params: {
+  termsExpression: string;
+  isCaseSensitive: boolean;
+  language: string;
+  excludeInherited: boolean;
+}): string {
+  const { termsExpression, isCaseSensitive, language, excludeInherited } =
+    params;
+
+  return buildTokenizedSearchPredicate({
+    searchableNodesExpression: buildSearchableContentNodesExpression(
+      buildPropertyContentNodesExpression({ language, excludeInherited }),
+    ),
+    termsExpression,
+    isCaseSensitive,
+  });
 }
 
 function buildIncludesGroupMemberFromTokenSource(params: {
@@ -847,10 +901,6 @@ function buildPropertyStringIncludesGroupMember(
 ): IncludesGroupMember {
   const propertyVariable = query.propertyVariable;
   const predicateParts: Array<string> = [];
-  const propertyContentNodesExpression = `value[not(@inherited="true")]/content[@xml:lang="${query.language}"]`;
-  const valueExpression = buildFlattenedContentValuesExpression(
-    propertyContentNodesExpression,
-  );
   const propertyValue = query.value;
 
   if (propertyVariable != null) {
@@ -860,16 +910,22 @@ function buildPropertyStringIncludesGroupMember(
   return buildIncludesGroupMemberFromTokenSource({
     rawPredicate: buildPropertyPredicateExpression([
       ...predicateParts,
-      buildRawStringMatchPredicate({
-        valueExpression,
+      buildPropertyContentRawPredicate({
         value: propertyValue,
         matchMode: "includes",
         isCaseSensitive: query.isCaseSensitive,
+        language: query.language,
+        excludeInherited: true,
       }),
     ]),
     searchableNodesExpression: buildPropertyPredicateExpression([
       ...predicateParts,
-      buildSearchableContentNodesExpression(propertyContentNodesExpression),
+      buildSearchableContentNodesExpression(
+        buildPropertyContentNodesExpression({
+          language: query.language,
+          excludeInherited: true,
+        }),
+      ),
     ]),
     isCaseSensitive: query.isCaseSensitive,
     buildCandidateTermQuery: (termExpression) =>
@@ -929,6 +985,69 @@ function buildPropertyRawValueOrTextIncludesGroupMember(
   };
 }
 
+function buildPropertyAllIncludesGroupMember(
+  query: AllPropertyQuery,
+): IncludesGroupMember {
+  const propertyVariable = query.propertyVariable;
+  const predicateParts: Array<string> = [];
+
+  if (propertyVariable != null) {
+    predicateParts.push(buildPropertyLabelPredicate(propertyVariable));
+  }
+
+  return {
+    rawPredicate: buildPropertyPredicateExpression([
+      ...predicateParts,
+      buildOrPredicate([
+        buildPropertyRawValueOrTextRawPredicate({
+          value: query.value,
+          matchMode: "includes",
+          isCaseSensitive: query.isCaseSensitive,
+        }),
+        buildPropertyContentRawPredicate({
+          value: query.value,
+          matchMode: "includes",
+          isCaseSensitive: query.isCaseSensitive,
+          language: query.language,
+          excludeInherited: true,
+        }),
+      ]),
+    ]),
+    buildTokenPredicate: (termsExpression) =>
+      buildPropertyPredicateExpression([
+        ...predicateParts,
+        buildOrPredicate([
+          buildPropertyRawValueOrTextTokenPredicate({
+            termsExpression,
+            isCaseSensitive: query.isCaseSensitive,
+          }),
+          buildPropertyContentTokenPredicate({
+            termsExpression,
+            isCaseSensitive: query.isCaseSensitive,
+            language: query.language,
+            excludeInherited: true,
+          }),
+        ]),
+      ]),
+    buildCandidateTermQuery: (termExpression) =>
+      buildOrCtsQueryExpression([
+        buildPropertyRawValueCandidateBranch({
+          termExpression,
+          isCaseSensitive: query.isCaseSensitive,
+        }),
+        buildPropertySimpleValueTextCandidateBranch({
+          termExpression,
+          isCaseSensitive: query.isCaseSensitive,
+        }),
+        buildPropertyStringCandidateBranch({
+          termExpression,
+          isCaseSensitive: query.isCaseSensitive,
+          language: query.language,
+        }),
+      ]),
+  };
+}
+
 function buildIncludesGroupMember(query: QueryLeaf): IncludesGroupMember {
   switch (query.target) {
     case "string": {
@@ -946,6 +1065,10 @@ function buildIncludesGroupMember(query: QueryLeaf): IncludesGroupMember {
         return buildPropertyStringIncludesGroupMember(
           query as StringPropertyQuery,
         );
+      }
+
+      if (query.dataType === "all") {
+        return buildPropertyAllIncludesGroupMember(query as AllPropertyQuery);
       }
 
       return buildPropertyRawValueOrTextIncludesGroupMember(query);
@@ -1170,10 +1293,10 @@ function buildPropertyStringValueClause(params: {
   queryKey: string;
 }): CompiledQueryClause {
   const { query, version, queryKey } = params;
-  const propertyContentNodesExpression =
-    query.matchMode === "includes" && version === 2 ?
-      `value[not(@inherited="true")]/content[@xml:lang="${query.language}"]`
-    : `value/content[@xml:lang="${query.language}"]`;
+  const propertyContentNodesExpression = buildPropertyContentNodesExpression({
+    language: query.language,
+    excludeInherited: query.matchMode === "includes" && version === 2,
+  });
 
   return buildStringMatchClause({
     contentNodesExpression: propertyContentNodesExpression,
@@ -1188,6 +1311,74 @@ function buildPropertyStringValueClause(params: {
         isCaseSensitive: query.isCaseSensitive,
         language: query.language,
       }),
+  });
+}
+
+function buildPropertyAllValueClause(params: {
+  query: AllPropertyQuery;
+  version: ApiVersion;
+  queryKey: string;
+}): CompiledQueryClause {
+  const { query, version, queryKey } = params;
+  const excludeInheritedContent =
+    query.matchMode === "includes" && version === 2;
+  const fallbackPredicate = buildOrPredicate([
+    buildPropertyRawValueOrTextRawPredicate({
+      value: query.value,
+      matchMode: query.matchMode,
+      isCaseSensitive: query.isCaseSensitive,
+    }),
+    buildPropertyContentRawPredicate({
+      value: query.value,
+      matchMode: query.matchMode,
+      isCaseSensitive: query.isCaseSensitive,
+      language: query.language,
+      excludeInherited: excludeInheritedContent,
+    }),
+  ]);
+
+  if (query.matchMode !== "includes" || version !== 2) {
+    return {
+      declarations: [],
+      predicate: fallbackPredicate,
+      candidateQueryVar: null,
+    };
+  }
+
+  return buildTokenizedCtsClause({
+    value: query.value,
+    isCaseSensitive: query.isCaseSensitive,
+    queryKey,
+    fallbackPredicate,
+    buildTermQueryExpression: (termExpression) =>
+      buildOrCtsQueryExpression([
+        buildPropertyRawValueCandidateBranch({
+          termExpression,
+          isCaseSensitive: query.isCaseSensitive,
+        }),
+        buildPropertySimpleValueTextCandidateBranch({
+          termExpression,
+          isCaseSensitive: query.isCaseSensitive,
+        }),
+        buildPropertyStringCandidateBranch({
+          termExpression,
+          isCaseSensitive: query.isCaseSensitive,
+          language: query.language,
+        }),
+      ]),
+    buildTokenPredicate: (termsExpression) =>
+      buildOrPredicate([
+        buildPropertyRawValueOrTextTokenPredicate({
+          termsExpression,
+          isCaseSensitive: query.isCaseSensitive,
+        }),
+        buildPropertyContentTokenPredicate({
+          termsExpression,
+          isCaseSensitive: query.isCaseSensitive,
+          language: query.language,
+          excludeInherited: true,
+        }),
+      ]),
   });
 }
 
@@ -1236,6 +1427,18 @@ function buildPropertyClause(params: {
             attributeName: "uuid",
           }),
         );
+        break;
+      }
+      case "all": {
+        const compiledAllClause = buildPropertyAllValueClause({
+          query: query as AllPropertyQuery,
+          version,
+          queryKey,
+        });
+
+        declarations.push(...compiledAllClause.declarations);
+        predicateParts.push(compiledAllClause.predicate);
+        candidateQueryVar = compiledAllClause.candidateQueryVar;
         break;
       }
       case "integer":
