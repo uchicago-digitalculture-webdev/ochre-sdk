@@ -258,10 +258,7 @@ const setQueryLeafSchema = z.union([
           "date" | "dateTime"
         >
       >),
-      propertyValues: z
-        .array(z.string())
-        .min(1, "At least one property value is required")
-        .optional(),
+      value: z.string().optional(),
       matchMode: z.enum(["includes", "exact"]),
       isCaseSensitive: z.boolean(),
       language: z.string().default("eng"),
@@ -269,11 +266,11 @@ const setQueryLeafSchema = z.union([
     })
     .strict()
     .superRefine((value, ctx) => {
-      if (value.propertyVariable == null && value.propertyValues == null) {
+      if (value.propertyVariable == null && value.value == null) {
         ctx.addIssue({
           code: "custom",
           message:
-            "Property queries must include at least one propertyVariable or propertyValue",
+            "Property queries must include at least one propertyVariable or value",
         });
       }
     }),

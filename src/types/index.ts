@@ -781,7 +781,7 @@ export type QueryLeaf =
         Exclude<PropertyValueContentType, "coordinate">,
         "date" | "dateTime"
       >;
-      propertyValues?: Array<string>;
+      value?: string;
       from?: never;
       to?: never;
       matchMode: "includes" | "exact";
@@ -793,7 +793,6 @@ export type QueryLeaf =
       target: "property";
       propertyVariable: string;
       dataType: "date" | "dateTime";
-      propertyValues?: never;
       value: string;
       from?: never;
       to?: never;
@@ -806,7 +805,6 @@ export type QueryLeaf =
       target: "property";
       propertyVariable: string;
       dataType: "date" | "dateTime";
-      propertyValues?: never;
       value?: never;
       from: string;
       to?: string;
@@ -819,7 +817,6 @@ export type QueryLeaf =
       target: "property";
       propertyVariable: string;
       dataType: "date" | "dateTime";
-      propertyValues?: never;
       value?: never;
       from?: string;
       to: string;

@@ -47,7 +47,7 @@ type ItemStringQuery = Extract<QueryLeaf, { target: "string" }>;
 type PropertyQuery = Extract<QueryLeaf, { target: "property" }>;
 type StringPropertyQuery = PropertyQuery & {
   dataType: "string";
-  propertyValues: Array<string>;
+  value: string;
 };
 
 type IncludesGroupMember = {
@@ -528,11 +528,11 @@ function getGroupableIncludesValue(query: QueryLeaf): string | null {
       return query.value;
     }
     case "property": {
-      if (query.dataType !== "string" || query.propertyValues?.length !== 1) {
+      if (query.dataType !== "string" || query.value == null) {
         return null;
       }
 
-      return query.propertyValues[0] ?? null;
+      return query.value;
     }
   }
 }
@@ -634,7 +634,6 @@ function buildPropertyStringIncludesGroupMember(
   const valueExpression = buildFlattenedContentValuesExpression(
     propertyContentNodesExpression,
   );
-  const propertyValue = query.propertyValues[0] ?? "";
 
   if (propertyVariable != null) {
     predicateParts.push(buildPropertyLabelPredicate(propertyVariable));
@@ -645,7 +644,7 @@ function buildPropertyStringIncludesGroupMember(
       ...predicateParts,
       buildRawStringMatchPredicate({
         valueExpression,
-        value: propertyValue,
+        value: query.value,
         matchMode: "includes",
         isCaseSensitive: query.isCaseSensitive,
       }),
@@ -887,19 +886,12 @@ function buildStringMatchClause(params: {
 }
 
 function buildPropertyValueAttributePredicate(params: {
-  propertyValues: Array<string>;
+  propertyValue: string;
   attributeName: "rawValue" | "uuid";
 }): string {
-  const { propertyValues, attributeName } = params;
-  const valuePredicates: Array<string> = [];
+  const { propertyValue, attributeName } = params;
 
-  for (const propertyValue of propertyValues) {
-    valuePredicates.push(
-      `value[@${attributeName}=${stringLiteral(propertyValue)}]`,
-    );
-  }
-
-  return buildOrPredicate(valuePredicates);
+  return `value[@${attributeName}=${stringLiteral(propertyValue)}]`;
 }
 
 function buildPropertyPredicateExpression(
@@ -924,55 +916,20 @@ function buildPropertyStringValueClause(params: {
     query.matchMode === "includes" && version === 2 ?
       `value[not(@inherited="true")]/content[@xml:lang="${query.language}"]`
     : `value/content[@xml:lang="${query.language}"]`;
-  const declarations: Array<string> = [];
-  const valuePredicates: Array<string> = [];
-  const candidateQueryVars: Array<string> = [];
-
-  for (const [
-    propertyValueIndex,
-    propertyValue,
-  ] of query.propertyValues.entries()) {
-    const compiledStringClause = buildStringMatchClause({
-      contentNodesExpression: propertyContentNodesExpression,
-      value: propertyValue,
-      matchMode: query.matchMode,
-      isCaseSensitive: query.isCaseSensitive,
-      version,
-      queryKey: `${queryKey}_${propertyValueIndex + 1}`,
-      buildCandidateTermQuery: (termExpression) =>
-        buildPropertyStringCandidateBranch({
-          termExpression,
-          isCaseSensitive: query.isCaseSensitive,
-          language: query.language,
-        }),
-    });
-
-    declarations.push(...compiledStringClause.declarations);
-    valuePredicates.push(compiledStringClause.predicate);
-
-    if (compiledStringClause.candidateQueryVar != null) {
-      candidateQueryVars.push(compiledStringClause.candidateQueryVar);
-    }
-  }
-
-  let candidateQueryVar: string | null = null;
-
-  if (candidateQueryVars.length > 0) {
-    const candidateQueriesExpression = `(${candidateQueryVars.join(", ")})`;
-    candidateQueryVar = `$query${queryKey}CandidateQuery`;
-    declarations.push(`let ${candidateQueryVar} :=
-  if (count(${candidateQueriesExpression}) = 1)
-  then ${candidateQueriesExpression}[1]
-  else if (count(${candidateQueriesExpression}) gt 1)
-  then cts:or-query(${candidateQueriesExpression})
-  else ()`);
-  }
-
-  return {
-    declarations,
-    predicate: buildOrPredicate(valuePredicates),
-    candidateQueryVar,
-  };
+  return buildStringMatchClause({
+    contentNodesExpression: propertyContentNodesExpression,
+    value: query.value,
+    matchMode: query.matchMode,
+    isCaseSensitive: query.isCaseSensitive,
+    version,
+    queryKey,
+    buildCandidateTermQuery: (termExpression) =>
+      buildPropertyStringCandidateBranch({
+        termExpression,
+        isCaseSensitive: query.isCaseSensitive,
+        language: query.language,
+      }),
+  });
 }
 
 /**
@@ -1001,12 +958,12 @@ function buildPropertyClause(params: {
         buildDateRangePredicate({ from: query.from, to: query.to }),
       );
     }
-  } else if (query.propertyValues != null) {
+  } else if (query.value != null) {
     switch (query.dataType) {
       case "IDREF": {
         predicateParts.push(
           buildPropertyValueAttributePredicate({
-            propertyValues: query.propertyValues,
+            propertyValue: query.value,
             attributeName: "uuid",
           }),
         );
@@ -1018,7 +975,7 @@ function buildPropertyClause(params: {
       case "boolean": {
         predicateParts.push(
           buildPropertyValueAttributePredicate({
-            propertyValues: query.propertyValues,
+            propertyValue: query.value,
             attributeName: "rawValue",
           }),
         );
