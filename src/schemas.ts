@@ -343,6 +343,17 @@ const setQueryLeafSchema = z.union([
     .strict(),
   z
     .object({
+      target: z.literal("all"),
+      propertyVariable: uuidSchema.optional(),
+      value: z.string(),
+      matchMode: z.enum(["includes", "exact"]),
+      isCaseSensitive: z.boolean(),
+      language: z.string().default("eng"),
+      isNegated: z.boolean().optional().default(false),
+    })
+    .strict(),
+  z
+    .object({
       target: z.enum([
         "title",
         "description",
@@ -422,7 +433,10 @@ function hasPropertyQueryWithPropertyVariable(
   }
 
   if ("target" in query) {
-    return query.target === "property" && query.propertyVariable != null;
+    return (
+      (query.target === "property" || query.target === "all") &&
+      query.propertyVariable != null
+    );
   }
 
   const groupQueries = "and" in query ? query.and : query.or;

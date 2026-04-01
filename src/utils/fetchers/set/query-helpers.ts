@@ -43,6 +43,7 @@ type TokenizedSearchDeclarations = {
 
 type CandidateTermQueryBuilder = (termExpression: string) => string;
 
+type AllPropertyQuery = Extract<QueryLeaf, { target: "all" }>;
 type ItemStringQuery = Extract<QueryLeaf, { target: "string" }>;
 type PropertyQuery = Extract<QueryLeaf, { target: "property" }>;
 type StringPropertyQuery = PropertyQuery & {
@@ -115,6 +116,58 @@ function buildCombinedSearchableContentNodesExpression(
   }
 
   return `(${searchableExpressions.join(", ")})`;
+}
+
+function buildPropertyValueNodesExpression(params?: {
+  excludeInherited?: boolean;
+}): string {
+  return params?.excludeInherited ? `value[not(@inherited="true")]` : "value";
+}
+
+function buildPropertyValueContentNodesExpression(params: {
+  language: string;
+  excludeInherited?: boolean;
+}): string {
+  const { language, excludeInherited } = params;
+
+  return `${buildPropertyValueNodesExpression({ excludeInherited })}/content[@xml:lang="${language}"]`;
+}
+
+function buildPropertyValueContentValuesExpression(params: {
+  language: string;
+  excludeInherited?: boolean;
+}): string {
+  return buildFlattenedContentValuesExpression(
+    buildPropertyValueContentNodesExpression(params),
+  );
+}
+
+function buildPropertyValueRawValuesExpression(params?: {
+  excludeInherited?: boolean;
+}): string {
+  const valueNodesExpression = buildPropertyValueNodesExpression(params);
+
+  return `for $value in ${valueNodesExpression}[@rawValue]
+    return string($value/@rawValue)`;
+}
+
+function buildPropertyValueDirectTextValuesExpression(params?: {
+  excludeInherited?: boolean;
+}): string {
+  const valueNodesExpression = buildPropertyValueNodesExpression(params);
+
+  return `for $value in ${valueNodesExpression}
+    let $candidate := string-join($value/text(), "")
+    where normalize-space($candidate) != ""
+    return $candidate`;
+}
+
+function buildAllPropertyValueExpressions(language: string): Array<string> {
+  return [
+    buildPropertyValueRawValuesExpression(),
+    buildPropertyValueContentValuesExpression({ language }),
+    buildPropertyValueDirectTextValuesExpression(),
+  ];
 }
 
 /**
@@ -519,6 +572,9 @@ function buildPropertyStringCandidateBranch(params: {
 
 function getGroupableIncludesValue(query: QueryLeaf): string | null {
   switch (query.target) {
+    case "all": {
+      return null;
+    }
     case "string":
     case "title":
     case "description":
@@ -630,10 +686,10 @@ function buildPropertyStringIncludesGroupMember(
 ): IncludesGroupMember {
   const propertyVariable = query.propertyVariable;
   const predicateParts: Array<string> = [];
-  const propertyContentNodesExpression = `value[not(@inherited="true")]/content[@xml:lang="${query.language}"]`;
-  const valueExpression = buildFlattenedContentValuesExpression(
-    propertyContentNodesExpression,
-  );
+  const valueExpression = buildPropertyValueContentValuesExpression({
+    language: query.language,
+    excludeInherited: true,
+  });
 
   if (propertyVariable != null) {
     predicateParts.push(buildPropertyLabelPredicate(propertyVariable));
@@ -707,6 +763,11 @@ function buildIncludesGroupMember(query: QueryLeaf): IncludesGroupMember {
         language: query.language,
         containerElementName: "image",
       });
+    }
+    case "all": {
+      throw new Error(
+        `Target "all" queries are not compatible with includes-group optimization`,
+      );
     }
     case "property": {
       return buildPropertyStringIncludesGroupMember(
@@ -913,9 +974,10 @@ function buildPropertyStringValueClause(params: {
 }): CompiledQueryClause {
   const { query, version, queryKey } = params;
   const propertyContentNodesExpression =
-    query.matchMode === "includes" && version === 2 ?
-      `value[not(@inherited="true")]/content[@xml:lang="${query.language}"]`
-    : `value/content[@xml:lang="${query.language}"]`;
+    buildPropertyValueContentNodesExpression({
+      language: query.language,
+      excludeInherited: query.matchMode === "includes" && version === 2,
+    });
   return buildStringMatchClause({
     contentNodesExpression: propertyContentNodesExpression,
     value: query.value,
@@ -930,6 +992,29 @@ function buildPropertyStringValueClause(params: {
         language: query.language,
       }),
   });
+}
+
+function buildAllPropertyClause(query: AllPropertyQuery): CompiledQueryClause {
+  const predicateParts: Array<string> = [];
+
+  if (query.propertyVariable != null) {
+    predicateParts.push(buildPropertyLabelPredicate(query.propertyVariable));
+  }
+
+  predicateParts.push(
+    buildCombinedRawStringMatchPredicate({
+      valueExpressions: buildAllPropertyValueExpressions(query.language),
+      value: query.value,
+      matchMode: query.matchMode,
+      isCaseSensitive: query.isCaseSensitive,
+    }),
+  );
+
+  return {
+    declarations: [],
+    predicate: buildPropertyPredicateExpression(predicateParts),
+    candidateQueryVar: null,
+  };
 }
 
 /**
@@ -1014,6 +1099,9 @@ function buildQueryClause(params: {
   const { query, version, queryKey } = params;
 
   switch (query.target) {
+    case "all": {
+      return buildAllPropertyClause(query);
+    }
     case "string": {
       return buildItemStringSearchClause({ query, version, queryKey });
     }
