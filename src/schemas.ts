@@ -245,7 +245,48 @@ const setQueryLeafSchema = z.union([
     .object({
       target: z.literal("property"),
       propertyVariable: uuidSchema.optional(),
-      dataType: z.literal("all"),
+      dataType: z.enum([
+        "string",
+        "integer",
+        "decimal",
+        "boolean",
+        "time",
+        "IDREF",
+      ] as const satisfies ReadonlyArray<
+        Exclude<
+          Exclude<PropertyValueContentType, "coordinate">,
+          "date" | "dateTime"
+        >
+      >),
+      propertyValues: z
+        .array(z.string())
+        .min(1, "At least one property value is required")
+        .optional(),
+      matchMode: z.enum(["includes", "exact"]),
+      isCaseSensitive: z.boolean(),
+      language: z.string().default("eng"),
+      isNegated: z.boolean().optional().default(false),
+    })
+    .strict()
+    .superRefine((value, ctx) => {
+      if (value.propertyVariable == null && value.propertyValues == null) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "Property queries must include at least one propertyVariable or propertyValue",
+        });
+      }
+    }),
+  z
+    .object({
+      target: z.literal("property"),
+      propertyVariable: uuidSchema,
+      dataType: z.enum(["date", "dateTime"] as const satisfies ReadonlyArray<
+        Extract<
+          Exclude<PropertyValueContentType, "coordinate">,
+          "date" | "dateTime"
+        >
+      >),
       value: z.string(),
       from: z.never().optional(),
       to: z.never().optional(),
@@ -255,40 +296,6 @@ const setQueryLeafSchema = z.union([
       isNegated: z.boolean().optional().default(false),
     })
     .strict(),
-  z
-    .object({
-      target: z.literal("property"),
-      propertyVariable: uuidSchema.optional(),
-      dataType: z.enum([
-        "string",
-        "integer",
-        "decimal",
-        "boolean",
-        "IDREF",
-        "date",
-        "dateTime",
-        "time",
-      ] as const satisfies ReadonlyArray<
-        Exclude<PropertyValueContentType, "coordinate">
-      >),
-      value: z.string().optional(),
-      from: z.never().optional(),
-      to: z.never().optional(),
-      matchMode: z.enum(["includes", "exact"]),
-      isCaseSensitive: z.boolean(),
-      language: z.string().default("eng"),
-      isNegated: z.boolean().optional().default(false),
-    })
-    .strict()
-    .superRefine((value, ctx) => {
-      if (value.propertyVariable == null && value.value == null) {
-        ctx.addIssue({
-          code: "custom",
-          message:
-            "Property queries must include at least one propertyVariable or value",
-        });
-      }
-    }),
   z
     .object({
       target: z.literal("property"),

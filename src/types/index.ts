@@ -770,10 +770,6 @@ export type SetItemsSort =
       language?: string;
     };
 
-export type QueryPropertyDataType =
-  | Exclude<PropertyValueContentType, "coordinate">
-  | "all";
-
 /**
  * Represents a leaf query for Set items
  */
@@ -781,20 +777,11 @@ export type QueryLeaf =
   | {
       target: "property";
       propertyVariable?: string;
-      dataType: "all";
-      value: string;
-      from?: never;
-      to?: never;
-      matchMode: "includes" | "exact";
-      isCaseSensitive: boolean;
-      language: string;
-      isNegated?: boolean;
-    }
-  | {
-      target: "property";
-      propertyVariable?: string;
-      dataType: Exclude<PropertyValueContentType, "coordinate">;
-      value?: string;
+      dataType: Exclude<
+        Exclude<PropertyValueContentType, "coordinate">,
+        "date" | "dateTime"
+      >;
+      propertyValues?: Array<string>;
       from?: never;
       to?: never;
       matchMode: "includes" | "exact";
@@ -806,6 +793,20 @@ export type QueryLeaf =
       target: "property";
       propertyVariable: string;
       dataType: "date" | "dateTime";
+      propertyValues?: never;
+      value: string;
+      from?: never;
+      to?: never;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
+      language: string;
+      isNegated?: boolean;
+    }
+  | {
+      target: "property";
+      propertyVariable: string;
+      dataType: "date" | "dateTime";
+      propertyValues?: never;
       value?: never;
       from: string;
       to?: string;
@@ -818,6 +819,7 @@ export type QueryLeaf =
       target: "property";
       propertyVariable: string;
       dataType: "date" | "dateTime";
+      propertyValues?: never;
       value?: never;
       from?: string;
       to: string;
