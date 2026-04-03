@@ -361,6 +361,7 @@ const setQueryLeafSchema = z.union([
         "image",
         "periods",
         "bibliography",
+        "notes",
       ]),
       value: z.string(),
       matchMode: z.enum(["includes", "exact"]),

@@ -844,7 +844,13 @@ export type QueryLeaf =
       isNegated?: boolean;
     }
   | {
-      target: "title" | "description" | "image" | "periods" | "bibliography";
+      target:
+        | "title"
+        | "description"
+        | "image"
+        | "periods"
+        | "bibliography"
+        | "notes";
       value: string;
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;

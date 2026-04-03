@@ -56,6 +56,19 @@ type StringPropertyQuery = PropertyQuery & {
   dataType: "string";
   value: string;
 };
+type TextTargetQuery = Extract<
+  QueryLeaf,
+  {
+    target:
+      | "title"
+      | "description"
+      | "image"
+      | "periods"
+      | "bibliography"
+      | "notes";
+  }
+>;
+type NotesQuery = TextTargetQuery & { target: "notes" };
 
 type IncludesGroupMember = {
   rawPredicate: string;
@@ -122,6 +135,36 @@ function buildCombinedSearchableContentNodesExpression(
   }
 
   return `(${searchableExpressions.join(", ")})`;
+}
+
+function buildAttributeValuesExpression(params: {
+  nodeExpression: string;
+  attributeName: string;
+}): string {
+  const { nodeExpression, attributeName } = params;
+
+  return `for $node in ${nodeExpression}[@${attributeName}]
+    return string($node/@${attributeName})`;
+}
+
+function buildNotesContentNodesExpression(language: string): string {
+  return `notes/note/content[@xml:lang="${language}"]`;
+}
+
+function buildNotesTitleValuesExpression(language: string): string {
+  return buildAttributeValuesExpression({
+    nodeExpression: buildNotesContentNodesExpression(language),
+    attributeName: "title",
+  });
+}
+
+function buildNotesValueExpressions(language: string): Array<string> {
+  return [
+    buildFlattenedContentValuesExpression(
+      buildNotesContentNodesExpression(language),
+    ),
+    buildNotesTitleValuesExpression(language),
+  ];
 }
 
 function buildPropertyValueNodesExpression(params?: {
@@ -721,12 +764,40 @@ function buildPropertyScalarCandidateBranch(params: {
       )`;
 }
 
+function buildNotesCandidateBranch(params: {
+  termExpression: string;
+  isCaseSensitive: boolean;
+  language: string;
+}): string {
+  const { termExpression, isCaseSensitive, language } = params;
+
+  return `cts:element-query(xs:QName("notes"),
+        cts:element-query(xs:QName("note"),
+          cts:element-query(xs:QName("content"),
+            cts:and-query((
+              cts:element-attribute-value-query(xs:QName("content"), xs:QName("xml:lang"), ${stringLiteral(language)}),
+              cts:or-query((
+                ${buildCtsElementAttributeWordQueryExpression({
+                  elementName: "content",
+                  attributeName: "title",
+                  termExpression,
+                  isCaseSensitive,
+                })},
+                ${buildCtsWordQueryExpression({ termExpression, isCaseSensitive })}
+              ))
+            ))
+          )
+        )
+      )`;
+}
+
 function getGroupableIncludesValue(query: QueryLeaf): string | null {
   switch (query.target) {
     case "string":
     case "title":
     case "description":
     case "image":
+    case "notes":
     case "periods":
     case "bibliography": {
       return query.value;
@@ -862,6 +933,23 @@ function buildPropertyStringIncludesGroupMember(
   };
 }
 
+function buildNotesIncludesGroupMember(query: NotesQuery): IncludesGroupMember {
+  return {
+    rawPredicate: buildCombinedRawStringMatchPredicate({
+      valueExpressions: buildNotesValueExpressions(query.language),
+      value: query.value,
+      matchMode: "includes",
+      isCaseSensitive: query.isCaseSensitive,
+    }),
+    buildCandidateTermQuery: (termExpression) =>
+      buildNotesCandidateBranch({
+        termExpression,
+        isCaseSensitive: query.isCaseSensitive,
+        language: query.language,
+      }),
+  };
+}
+
 function buildIncludesGroupMember(query: QueryLeaf): IncludesGroupMember {
   switch (query.target) {
     case "string": {
@@ -911,6 +999,9 @@ function buildIncludesGroupMember(query: QueryLeaf): IncludesGroupMember {
         language: query.language,
         containerElementName: "image",
       });
+    }
+    case "notes": {
+      return buildNotesIncludesGroupMember(query as NotesQuery);
     }
     case "property": {
       if (query.dataType === "all") {
@@ -1244,6 +1335,31 @@ function buildPropertyAllValueClause(
   };
 }
 
+function buildNotesValueClause(params: {
+  query: NotesQuery;
+  version: ApiVersion;
+  queryKey: string;
+  allowCtsPredicates: boolean;
+}): CompiledQueryClause {
+  const { query, version, queryKey, allowCtsPredicates } = params;
+
+  return buildCombinedRawStringMatchClause({
+    valueExpressions: buildNotesValueExpressions(query.language),
+    value: query.value,
+    matchMode: query.matchMode,
+    isCaseSensitive: query.isCaseSensitive,
+    version,
+    queryKey,
+    allowCtsPredicates,
+    buildCandidateTermQuery: (termExpression) =>
+      buildNotesCandidateBranch({
+        termExpression,
+        isCaseSensitive: query.isCaseSensitive,
+        language: query.language,
+      }),
+  });
+}
+
 /**
  * Build a property predicate for an XQuery string.
  */
@@ -1448,6 +1564,14 @@ function buildQueryClause(params: {
             isCaseSensitive: query.isCaseSensitive,
             language: query.language,
           }),
+      });
+    }
+    case "notes": {
+      return buildNotesValueClause({
+        query: query as NotesQuery,
+        version,
+        queryKey,
+        allowCtsPredicates,
       });
     }
     case "property": {
