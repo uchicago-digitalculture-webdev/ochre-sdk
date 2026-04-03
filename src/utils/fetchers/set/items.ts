@@ -368,7 +368,7 @@ export async function fetchSetItems<
     };
 
     if (Array.isArray(data.result) || Object.keys(data.result).length === 0) {
-      throw new Error("No items found");
+      throw new Error("Invalid OCHRE API response");
     }
 
     if (itemCategories != null) {

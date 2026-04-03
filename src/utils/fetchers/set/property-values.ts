@@ -188,7 +188,7 @@ function getPropertyVariableUuidsFromQueries(
 
   for (const query of pendingQueries) {
     if ("target" in query) {
-      if (query.target !== "property" && query.target !== "all") {
+      if (query.target !== "property") {
         continue;
       }
 

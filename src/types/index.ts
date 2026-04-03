@@ -826,8 +826,9 @@ export type QueryLeaf =
       isNegated?: boolean;
     }
   | {
-      target: "all";
+      target: "property";
       propertyVariable?: string;
+      dataType: "all";
       value: string;
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
