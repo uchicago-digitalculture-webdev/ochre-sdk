@@ -1,8 +1,4 @@
-import type {
-  ApiVersion,
-  Identification,
-  Property,
-} from "../../types/index.js";
+import type { ApiVersion, Identification, Property } from "#/types/index.js";
 import type {
   RawLevelContext,
   RawMetadata,
@@ -12,7 +8,7 @@ import type {
   RawStringRichText,
   RawStyle,
   RawTree,
-} from "../../types/raw.js";
+} from "#/types/raw.js";
 import type {
   LevelContext,
   LevelContextItem,
@@ -27,25 +23,20 @@ import type {
   WebSegmentItem,
   Website,
   WebTitle,
-} from "../../types/website.js";
-import { boundsSchema, componentSchema } from "../../schemas.js";
+} from "#/types/website.js";
+import { boundsSchema, componentSchema } from "#/schemas.js";
 import {
   getPropertyByLabel,
   getPropertyByLabelAndValueContent,
   getPropertyValueContentByLabel,
-} from "../../utils/getters.js";
-import {
-  parseFakeString,
-  parseStringContent,
-  transformPermanentIdentificationUrl,
-} from "../../utils/string.js";
-import { DEFAULT_API_VERSION } from "../helpers.js";
+} from "#/utils/getters.js";
+import { DEFAULT_API_VERSION } from "#/utils/helpers.js";
 import {
   cleanObject,
   ensureArray,
   parseFakeStringOrContent,
   parseOptionalDate,
-} from "../internal.js";
+} from "#/utils/internal.js";
 import {
   parseDocument,
   parseIdentification,
@@ -55,7 +46,12 @@ import {
   parseNotes,
   parsePersons,
   parseProperties,
-} from "./index.js";
+} from "#/utils/parse/index.js";
+import {
+  parseFakeString,
+  parseStringContent,
+  transformPermanentIdentificationUrl,
+} from "#/utils/string.js";
 
 const SEGMENT_UNIQUE_SLUG_PREFIX_REGEX = /^\$[^-]*-/;
 const TRAILING_SLASH_REGEX = /\/$/;

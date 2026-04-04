@@ -1,7 +1,7 @@
-import type { ApiVersion } from "../../types/index.js";
-import type { RawData, RawDataResponse } from "../../types/raw.js";
-import { uuidSchema } from "../../schemas.js";
-import { DEFAULT_API_VERSION } from "../helpers.js";
+import type { ApiVersion } from "#/types/index.js";
+import type { RawData, RawDataResponse } from "#/types/raw.js";
+import { uuidSchema } from "#/schemas.js";
+import { DEFAULT_API_VERSION } from "#/utils/helpers.js";
 
 /**
  * Fetches raw OCHRE data by UUID from the OCHRE API

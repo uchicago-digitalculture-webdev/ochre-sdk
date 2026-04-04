@@ -1,10 +1,10 @@
-import type { ApiVersion } from "../../types/index.js";
-import type { RawData, RawMetadata, RawTree } from "../../types/raw.js";
-import type { Website } from "../../types/website.js";
-import { apiVersionSuffixSchema } from "../../schemas.js";
-import { DEFAULT_API_VERSION } from "../helpers.js";
-import { parseWebsite } from "../parse/website.js";
-import { parseFakeString } from "../string.js";
+import type { ApiVersion } from "#/types/index.js";
+import type { RawData, RawMetadata, RawTree } from "#/types/raw.js";
+import type { Website } from "#/types/website.js";
+import { apiVersionSuffixSchema } from "#/schemas.js";
+import { DEFAULT_API_VERSION } from "#/utils/helpers.js";
+import { parseWebsite } from "#/utils/parse/website.js";
+import { parseFakeString } from "#/utils/string.js";
 
 const API_VERSION_SUFFIX_REGEX = /-v\d+$/;
 

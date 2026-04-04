@@ -5,17 +5,17 @@ import type {
   PropertyValueQueryItem,
   Query,
   SetAttributeValueQueryItem,
-} from "../../../types/index.js";
-import type { RawFakeString, RawStringItem } from "../../../types/raw.js";
-import { BELONGS_TO_COLLECTION_UUID } from "../../../constants.js";
+} from "#/types/index.js";
+import type { RawFakeString, RawStringItem } from "#/types/raw.js";
+import { BELONGS_TO_COLLECTION_UUID } from "#/constants.js";
 import {
   fakeStringSchema,
   richTextStringSchema,
   setPropertyValuesParamsSchema,
-} from "../../../schemas.js";
-import { DEFAULT_API_VERSION } from "../../helpers.js";
-import { parseFakeString, parseStringContent } from "../../string.js";
-import { buildQueryPlan } from "./query-helpers.js";
+} from "#/schemas.js";
+import { DEFAULT_API_VERSION } from "#/utils/helpers.js";
+import { buildQueryPlan } from "#/utils/query.js";
+import { parseFakeString, parseStringContent } from "#/utils/string.js";
 
 type ParsedPropertyValueItem = {
   variableUuid: string | null;

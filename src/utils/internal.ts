@@ -1,8 +1,8 @@
 import { parseISO } from "date-fns";
-import type { DataCategory, Property } from "../types/index.js";
-import type { RawFakeString, RawStringContent } from "../types/raw.js";
-import { categorySchema } from "../schemas.js";
-import { parseFakeString, parseStringContent } from "./string.js";
+import type { DataCategory, Property } from "#/types/index.js";
+import type { RawFakeString, RawStringContent } from "#/types/raw.js";
+import { categorySchema } from "#/schemas.js";
+import { parseFakeString, parseStringContent } from "#/utils/string.js";
 
 const PSEUDO_UUID_REGEX = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
 

@@ -32,7 +32,7 @@ import type {
   SpatialUnit,
   Text,
   Tree,
-} from "../../types/index.js";
+} from "#/types/index.js";
 import type {
   RawBibliography,
   RawConcept,
@@ -64,15 +64,8 @@ import type {
   RawStringRichText,
   RawText,
   RawTree,
-} from "../../types/raw.js";
-import { propertyValueContentTypeSchema } from "../../schemas.js";
-import {
-  parseEmail,
-  parseFakeString,
-  parseStringContent,
-  parseStringDocumentItem,
-  transformPermanentIdentificationUrl,
-} from "../../utils/string.js";
+} from "#/types/raw.js";
+import { propertyValueContentTypeSchema } from "#/schemas.js";
 import {
   ensureArray,
   getItemCategories,
@@ -81,7 +74,14 @@ import {
   parseCitation,
   parseFakeStringOrContent,
   parseOptionalDate,
-} from "../internal.js";
+} from "#/utils/internal.js";
+import {
+  parseEmail,
+  parseFakeString,
+  parseStringContent,
+  parseStringDocumentItem,
+  transformPermanentIdentificationUrl,
+} from "#/utils/string.js";
 
 const TRAILING_ELLIPSIS_REGEX = /\s*\.{3}$/;
 

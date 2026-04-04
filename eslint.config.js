@@ -70,6 +70,7 @@ export default antfu({
         "error",
         {
           tsconfig: { rootDir: import.meta.dirname, filename: "tsconfig.json" },
+          internalPattern: ["#/*"],
           newlinesBetween: 0,
           order: "asc",
           type: "natural",
@@ -79,6 +80,7 @@ export default antfu({
   },
   rules: {
     "no-console": ["warn"],
+    "no-restricted-imports": ["error", { patterns: ["..*"] }],
     "antfu/no-top-level-await": ["off"],
     "jsonc/sort-keys": "off",
     "pnpm/json-enforce-catalog": "off",

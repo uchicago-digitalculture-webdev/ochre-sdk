@@ -1,9 +1,9 @@
 import * as z from "zod";
-import type { ApiVersion, Gallery } from "../../types/index.js";
-import type { RawIdentification, RawResource } from "../../types/raw.js";
-import { uuidSchema } from "../../schemas.js";
-import { DEFAULT_API_VERSION } from "../helpers.js";
-import { parseIdentification, parseResources } from "../parse/index.js";
+import type { ApiVersion, Gallery } from "#/types/index.js";
+import type { RawIdentification, RawResource } from "#/types/raw.js";
+import { uuidSchema } from "#/schemas.js";
+import { DEFAULT_API_VERSION } from "#/utils/helpers.js";
+import { parseIdentification, parseResources } from "#/utils/parse/index.js";
 
 /**
  * Schema for validating gallery parameters

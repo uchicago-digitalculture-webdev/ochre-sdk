@@ -1,6 +1,7 @@
-import type { ApiVersion, DataCategory, Item } from "../../types/index.js";
-import { DEFAULT_API_VERSION } from "../helpers.js";
-import { getItemCategory } from "../internal.js";
+import type { ApiVersion, DataCategory, Item } from "#/types/index.js";
+import { fetchByUuid } from "#/utils/fetchers/uuid.js";
+import { DEFAULT_API_VERSION } from "#/utils/helpers.js";
+import { getItemCategory } from "#/utils/internal.js";
 import {
   parseBibliography,
   parseConcept,
@@ -14,9 +15,8 @@ import {
   parseSpatialUnit,
   parseText,
   parseTree,
-} from "../parse/index.js";
-import { parseFakeString } from "../string.js";
-import { fetchByUuid } from "./uuid.js";
+} from "#/utils/parse/index.js";
+import { parseFakeString } from "#/utils/string.js";
 
 /**
  * Fetches and parses an OCHRE item from the OCHRE API

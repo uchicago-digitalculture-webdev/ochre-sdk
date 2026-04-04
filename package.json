@@ -27,6 +27,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "imports": {
+    "#/*": "./src/*"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

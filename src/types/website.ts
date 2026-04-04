@@ -7,7 +7,7 @@ import type {
   Metadata,
   Person,
   PropertyValueContentType,
-} from "./index.js";
+} from "#/types/index.js";
 
 /**
  * Represents a level context item with a variable and value

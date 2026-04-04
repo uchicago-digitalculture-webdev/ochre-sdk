@@ -1,5 +1,5 @@
-import type { DataCategory, Item, Property } from "../types/index.js";
-import { flattenProperties } from "./internal.js";
+import type { DataCategory, Item, Property } from "#/types/index.js";
+import { flattenProperties } from "#/utils/internal.js";
 
 /**
  * The default API version to use

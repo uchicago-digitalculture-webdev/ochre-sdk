@@ -3,8 +3,8 @@ import type {
   Query,
   QueryGroup,
   QueryLeaf,
-} from "../../../types/index.js";
-import { stringLiteral } from "../../internal.js";
+} from "#/types/index.js";
+import { stringLiteral } from "#/utils/internal.js";
 
 const CTS_INCLUDES_STOP_WORDS: Array<string> = [
   "and",

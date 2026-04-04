@@ -6,11 +6,11 @@ import type {
   Query,
   QueryLeaf,
   SetItemsSort,
-} from "./types/index.js";
-import type { RenderOption, WhitespaceOption } from "./types/raw.js";
-import type { WebElementComponent } from "./types/website.js";
-import { DEFAULT_PAGE_SIZE } from "./utils/helpers.js";
-import { isPseudoUuid } from "./utils/internal.js";
+} from "#/types/index.js";
+import type { RenderOption, WhitespaceOption } from "#/types/raw.js";
+import type { WebElementComponent } from "#/types/website.js";
+import { DEFAULT_PAGE_SIZE } from "#/utils/helpers.js";
+import { isPseudoUuid } from "#/utils/internal.js";
 
 /**
  * Schema for validating UUIDs

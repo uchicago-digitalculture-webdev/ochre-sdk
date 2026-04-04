@@ -5,8 +5,8 @@ import type {
   RawStringItem,
   RawStringRichTextItem,
   RawStringRichTextItemContent,
-} from "../types/raw.js";
-import type { Style } from "../types/website.js";
+} from "#/types/raw.js";
+import type { Style } from "#/types/website.js";
 import {
   PRESENTATION_ITEM_UUID,
   TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID,
@@ -16,12 +16,12 @@ import {
   TEXT_ANNOTATION_TEXT_STYLING_UUID,
   TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
   TEXT_ANNOTATION_UUID,
-} from "../constants.js";
+} from "#/constants.js";
 import {
   emailSchema,
   renderOptionsSchema,
   whitespaceSchema,
-} from "../schemas.js";
+} from "#/schemas.js";
 
 const EMAIL_BRACKET_CLEANUP_REGEX = /(?<=\s|^)[([{]+|[)\]}]+(?=\s|$)/g;
 const EMAIL_PUNCTUATION_CLEANUP_REGEX = /[!),:;?\]]/g;

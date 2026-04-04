@@ -4,7 +4,7 @@ import type {
   Item,
   Query,
   SetItemsSort,
-} from "../../../types/index.js";
+} from "#/types/index.js";
 import type {
   RawBibliography,
   RawConcept,
@@ -17,11 +17,11 @@ import type {
   RawSpatialUnit,
   RawText,
   RawTree,
-} from "../../../types/raw.js";
-import { BELONGS_TO_COLLECTION_UUID } from "../../../constants.js";
-import { setItemsParamsSchema } from "../../../schemas.js";
-import { DEFAULT_API_VERSION } from "../../helpers.js";
-import { stringLiteral } from "../../internal.js";
+} from "#/types/raw.js";
+import { BELONGS_TO_COLLECTION_UUID } from "#/constants.js";
+import { setItemsParamsSchema } from "#/schemas.js";
+import { DEFAULT_API_VERSION } from "#/utils/helpers.js";
+import { stringLiteral } from "#/utils/internal.js";
 import {
   parseBibliographies,
   parseConcepts,
@@ -34,8 +34,8 @@ import {
   parseSpatialUnits,
   parseTexts,
   parseTrees,
-} from "../../parse/index.js";
-import { buildQueryPlan } from "./query-helpers.js";
+} from "#/utils/parse/index.js";
+import { buildQueryPlan } from "#/utils/query.js";
 
 type SortWithDirection = Exclude<SetItemsSort, { target: "none" }>;
 type PropertyValueSort = Extract<SetItemsSort, { target: "propertyValue" }>;
