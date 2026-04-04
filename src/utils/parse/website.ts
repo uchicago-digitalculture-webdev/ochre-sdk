@@ -31,8 +31,8 @@ import type {
 import { boundsSchema, componentSchema } from "../../schemas.js";
 import {
   getPropertyByLabel,
-  getPropertyByLabelAndValue,
-  getPropertyValueByLabel,
+  getPropertyByLabelAndValueContent,
+  getPropertyValueContentByLabel,
 } from "../../utils/getters.js";
 import {
   parseFakeString,
@@ -73,8 +73,8 @@ function parseCssStylesFromProperties(
 ): Array<Style> {
   const label = cssVariant != null ? `css-${cssVariant}` : "css";
   const cssProperties =
-    getPropertyByLabelAndValue(properties, "presentation", label)?.properties ??
-    [];
+    getPropertyByLabelAndValueContent(properties, "presentation", label)
+      ?.properties ?? [];
   const styles: Array<Style> = [];
   for (const property of cssProperties) {
     const value = property.values[0]?.content?.toString();
@@ -250,7 +250,7 @@ function parseWebElementProperties(
         );
       }
 
-      let isInteractive = getPropertyValueByLabel(
+      let isInteractive = getPropertyValueContentByLabel(
         componentProperty.properties,
         "is-interactive",
       ) as
@@ -261,7 +261,7 @@ function parseWebElementProperties(
         | null;
       isInteractive ??= true;
 
-      let isControlsDisplayed = getPropertyValueByLabel(
+      let isControlsDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "controls-displayed",
       ) as
@@ -335,7 +335,7 @@ function parseWebElementProperties(
         );
       }
 
-      let isFilterInputDisplayed = getPropertyValueByLabel(
+      let isFilterInputDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "filter-input-displayed",
       ) as
@@ -346,7 +346,7 @@ function parseWebElementProperties(
         | null;
       isFilterInputDisplayed ??= true;
 
-      let isOptionsDisplayed = getPropertyValueByLabel(
+      let isOptionsDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "options-displayed",
       ) as
@@ -357,7 +357,7 @@ function parseWebElementProperties(
         | null;
       isOptionsDisplayed ??= true;
 
-      let isAnnotationHighlightsDisplayed = getPropertyValueByLabel(
+      let isAnnotationHighlightsDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "annotation-highlights-displayed",
       ) as
@@ -368,7 +368,7 @@ function parseWebElementProperties(
         | null;
       isAnnotationHighlightsDisplayed ??= true;
 
-      let isAnnotationTooltipsDisplayed = getPropertyValueByLabel(
+      let isAnnotationTooltipsDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "annotation-tooltips-displayed",
       ) as
@@ -397,7 +397,7 @@ function parseWebElementProperties(
         );
       }
 
-      let isSpeedControlsDisplayed = getPropertyValueByLabel(
+      let isSpeedControlsDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "speed-controls-displayed",
       ) as
@@ -408,7 +408,7 @@ function parseWebElementProperties(
         | null;
       isSpeedControlsDisplayed ??= true;
 
-      let isVolumeControlsDisplayed = getPropertyValueByLabel(
+      let isVolumeControlsDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "volume-controls-displayed",
       ) as
@@ -419,7 +419,7 @@ function parseWebElementProperties(
         | null;
       isVolumeControlsDisplayed ??= true;
 
-      let isSeekBarDisplayed = getPropertyValueByLabel(
+      let isSeekBarDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "seek-bar-displayed",
       ) as
@@ -452,7 +452,7 @@ function parseWebElementProperties(
         );
       }
 
-      let layout = getPropertyValueByLabel(
+      let layout = getPropertyValueContentByLabel(
         componentProperty.properties,
         "layout",
       ) as
@@ -460,7 +460,7 @@ function parseWebElementProperties(
         | null;
       layout ??= "long";
 
-      let isSourceDocumentDisplayed = getPropertyValueByLabel(
+      let isSourceDocumentDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "source-document-displayed",
       ) as
@@ -483,7 +483,7 @@ function parseWebElementProperties(
       break;
     }
     case "button": {
-      let variant = getPropertyValueByLabel(
+      let variant = getPropertyValueContentByLabel(
         componentProperty.properties,
         "variant",
       ) as
@@ -521,7 +521,7 @@ function parseWebElementProperties(
         }
       }
 
-      let startIcon = getPropertyValueByLabel(
+      let startIcon = getPropertyValueContentByLabel(
         componentProperty.properties,
         "start-icon",
       ) as
@@ -529,7 +529,7 @@ function parseWebElementProperties(
         | null;
       startIcon ??= null;
 
-      let endIcon = getPropertyValueByLabel(
+      let endIcon = getPropertyValueContentByLabel(
         componentProperty.properties,
         "end-icon",
       ) as
@@ -581,7 +581,7 @@ function parseWebElementProperties(
         "use-property",
       );
 
-      let variant = getPropertyValueByLabel(
+      let variant = getPropertyValueContentByLabel(
         componentProperty.properties,
         "variant",
       ) as
@@ -589,7 +589,7 @@ function parseWebElementProperties(
         | null;
       variant ??= "full";
 
-      let itemVariant = getPropertyValueByLabel(
+      let itemVariant = getPropertyValueContentByLabel(
         componentProperty.properties,
         "item-variant",
       ) as
@@ -600,7 +600,7 @@ function parseWebElementProperties(
         | null;
       itemVariant ??= "detailed";
 
-      let paginationVariant = getPropertyValueByLabel(
+      let paginationVariant = getPropertyValueContentByLabel(
         componentProperty.properties,
         "pagination-variant",
       ) as
@@ -611,7 +611,7 @@ function parseWebElementProperties(
         | null;
       paginationVariant ??= "default";
 
-      let imageQuality = getPropertyValueByLabel(
+      let imageQuality = getPropertyValueContentByLabel(
         componentProperty.properties,
         "image-quality",
       ) as
@@ -622,7 +622,7 @@ function parseWebElementProperties(
         | null;
       imageQuality ??= "low";
 
-      let isUsingQueryParams = getPropertyValueByLabel(
+      let isUsingQueryParams = getPropertyValueContentByLabel(
         componentProperty.properties,
         "is-using-query-params",
       ) as
@@ -633,7 +633,7 @@ function parseWebElementProperties(
         | null;
       isUsingQueryParams ??= false;
 
-      let isFilterResultsBarDisplayed = getPropertyValueByLabel(
+      let isFilterResultsBarDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "filter-results-bar-displayed",
       ) as
@@ -644,7 +644,7 @@ function parseWebElementProperties(
         | null;
       isFilterResultsBarDisplayed ??= false;
 
-      let isFilterMapDisplayed = getPropertyValueByLabel(
+      let isFilterMapDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "filter-map-displayed",
       ) as
@@ -655,7 +655,7 @@ function parseWebElementProperties(
         | null;
       isFilterMapDisplayed ??= false;
 
-      let isFilterInputDisplayed = getPropertyValueByLabel(
+      let isFilterInputDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "filter-input-displayed",
       ) as
@@ -666,7 +666,7 @@ function parseWebElementProperties(
         | null;
       isFilterInputDisplayed ??= false;
 
-      let isFilterLimitedToInputFilter = getPropertyValueByLabel(
+      let isFilterLimitedToInputFilter = getPropertyValueContentByLabel(
         componentProperty.properties,
         "filter-limit-to-input-filter",
       ) as
@@ -677,7 +677,7 @@ function parseWebElementProperties(
         | null;
       isFilterLimitedToInputFilter ??= false;
 
-      let isFilterLimitedToLeafPropertyValues = getPropertyValueByLabel(
+      let isFilterLimitedToLeafPropertyValues = getPropertyValueContentByLabel(
         componentProperty.properties,
         "filter-limit-to-leaf-property-values",
       ) as
@@ -688,7 +688,7 @@ function parseWebElementProperties(
         | null;
       isFilterLimitedToLeafPropertyValues ??= false;
 
-      let isSortDisplayed = getPropertyValueByLabel(
+      let isSortDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "sort-displayed",
       ) as
@@ -699,7 +699,7 @@ function parseWebElementProperties(
         | null;
       isSortDisplayed ??= false;
 
-      let isFilterSidebarDisplayed = getPropertyValueByLabel(
+      let isFilterSidebarDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "filter-sidebar-displayed",
       ) as
@@ -710,7 +710,7 @@ function parseWebElementProperties(
         | null;
       isFilterSidebarDisplayed ??= false;
 
-      let filterSidebarSort = getPropertyValueByLabel(
+      let filterSidebarSort = getPropertyValueContentByLabel(
         componentProperty.properties,
         "filter-sidebar-sort",
       ) as
@@ -721,7 +721,7 @@ function parseWebElementProperties(
         | null;
       filterSidebarSort ??= "default";
 
-      let layout = getPropertyValueByLabel(
+      let layout = getPropertyValueContentByLabel(
         componentProperty.properties,
         "layout",
       ) as
@@ -798,11 +798,11 @@ function parseWebElementProperties(
       break;
     }
     case "empty-space": {
-      const height = getPropertyValueByLabel(
+      const height = getPropertyValueContentByLabel(
         componentProperty.properties,
         "height",
       ) as string | number | null;
-      const width = getPropertyValueByLabel(
+      const width = getPropertyValueContentByLabel(
         componentProperty.properties,
         "width",
       ) as string | number | null;
@@ -824,7 +824,7 @@ function parseWebElementProperties(
         );
       }
 
-      let variant = getPropertyValueByLabel(
+      let variant = getPropertyValueContentByLabel(
         componentProperty.properties,
         "variant",
       ) as
@@ -832,7 +832,7 @@ function parseWebElementProperties(
         | null;
       variant ??= "entry";
 
-      let isFilterInputDisplayed = getPropertyValueByLabel(
+      let isFilterInputDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "filter-input-displayed",
       ) as
@@ -861,11 +861,11 @@ function parseWebElementProperties(
         );
       }
 
-      const height = getPropertyValueByLabel(
+      const height = getPropertyValueContentByLabel(
         componentProperty.properties,
         "height",
       );
-      const width = getPropertyValueByLabel(
+      const width = getPropertyValueContentByLabel(
         componentProperty.properties,
         "width",
       );
@@ -886,7 +886,7 @@ function parseWebElementProperties(
         );
       }
 
-      let variant = getPropertyValueByLabel(
+      let variant = getPropertyValueContentByLabel(
         componentProperty.properties,
         "variant",
       ) as
@@ -908,7 +908,7 @@ function parseWebElementProperties(
         );
       }
 
-      let imageQuality = getPropertyValueByLabel(
+      let imageQuality = getPropertyValueContentByLabel(
         componentProperty.properties,
         "image-quality",
       ) as
@@ -932,7 +932,7 @@ function parseWebElementProperties(
         });
       }
 
-      let variant = getPropertyValueByLabel(
+      let variant = getPropertyValueContentByLabel(
         componentProperty.properties,
         "variant",
       ) as
@@ -940,7 +940,7 @@ function parseWebElementProperties(
         | null;
       variant ??= "default";
 
-      let captionLayout = getPropertyValueByLabel(
+      let captionLayout = getPropertyValueContentByLabel(
         componentProperty.properties,
         "layout-caption",
       ) as
@@ -949,7 +949,7 @@ function parseWebElementProperties(
       captionLayout ??= "bottom";
 
       let width: number | null = null;
-      const widthProperty = getPropertyValueByLabel(
+      const widthProperty = getPropertyValueContentByLabel(
         componentProperty.properties,
         "width",
       ) as string | number | null;
@@ -962,7 +962,7 @@ function parseWebElementProperties(
       }
 
       let height: number | null = null;
-      const heightProperty = getPropertyValueByLabel(
+      const heightProperty = getPropertyValueContentByLabel(
         componentProperty.properties,
         "height",
       ) as string | number | null;
@@ -974,7 +974,7 @@ function parseWebElementProperties(
         }
       }
 
-      let isFullWidth = getPropertyValueByLabel(
+      let isFullWidth = getPropertyValueContentByLabel(
         componentProperty.properties,
         "is-full-width",
       ) as
@@ -982,7 +982,7 @@ function parseWebElementProperties(
         | null;
       isFullWidth ??= true;
 
-      let isFullHeight = getPropertyValueByLabel(
+      let isFullHeight = getPropertyValueContentByLabel(
         componentProperty.properties,
         "is-full-height",
       ) as
@@ -990,7 +990,7 @@ function parseWebElementProperties(
         | null;
       isFullHeight ??= true;
 
-      let captionSource = getPropertyValueByLabel(
+      let captionSource = getPropertyValueContentByLabel(
         componentProperty.properties,
         "source-caption",
       ) as
@@ -998,7 +998,7 @@ function parseWebElementProperties(
         | null;
       captionSource ??= "name";
 
-      let altTextSource = getPropertyValueByLabel(
+      let altTextSource = getPropertyValueContentByLabel(
         componentProperty.properties,
         "alt-text-source",
       ) as
@@ -1006,7 +1006,7 @@ function parseWebElementProperties(
         | null;
       altTextSource ??= "name";
 
-      let isTransparentBackground = getPropertyValueByLabel(
+      let isTransparentBackground = getPropertyValueContentByLabel(
         componentProperty.properties,
         "is-transparent",
       ) as
@@ -1017,7 +1017,7 @@ function parseWebElementProperties(
         | null;
       isTransparentBackground ??= false;
 
-      let isCover = getPropertyValueByLabel(
+      let isCover = getPropertyValueContentByLabel(
         componentProperty.properties,
         "is-cover",
       ) as
@@ -1040,7 +1040,7 @@ function parseWebElementProperties(
         let secondsPerImage = 5;
 
         if (variantProperty?.values[0]!.content === "carousel") {
-          const secondsPerImageProperty = getPropertyValueByLabel(
+          const secondsPerImageProperty = getPropertyValueContentByLabel(
             variantProperty.properties,
             "seconds-per-image",
           ) as string | number | null;
@@ -1061,7 +1061,7 @@ function parseWebElementProperties(
         { component: "image" }
       >["heroOptions"] = null;
       if (variantProperty?.values[0]!.content === "hero") {
-        let isBackgroundImageDisplayed = getPropertyValueByLabel(
+        let isBackgroundImageDisplayed = getPropertyValueContentByLabel(
           variantProperty.properties,
           "background-image-displayed",
         ) as
@@ -1074,7 +1074,7 @@ function parseWebElementProperties(
           | null;
         isBackgroundImageDisplayed ??= true;
 
-        let isDocumentDisplayed = getPropertyValueByLabel(
+        let isDocumentDisplayed = getPropertyValueContentByLabel(
           variantProperty.properties,
           "document-displayed",
         ) as
@@ -1119,7 +1119,7 @@ function parseWebElementProperties(
         );
       }
 
-      let isFilterInputDisplayed = getPropertyValueByLabel(
+      let isFilterInputDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "filter-input-displayed",
       ) as
@@ -1147,7 +1147,7 @@ function parseWebElementProperties(
         );
       }
 
-      let isInteractive = getPropertyValueByLabel(
+      let isInteractive = getPropertyValueContentByLabel(
         componentProperty.properties,
         "is-interactive",
       ) as
@@ -1155,7 +1155,7 @@ function parseWebElementProperties(
         | null;
       isInteractive ??= true;
 
-      let isClustered = getPropertyValueByLabel(
+      let isClustered = getPropertyValueContentByLabel(
         componentProperty.properties,
         "is-clustered",
       ) as
@@ -1163,7 +1163,7 @@ function parseWebElementProperties(
         | null;
       isClustered ??= false;
 
-      let isUsingPins = getPropertyValueByLabel(
+      let isUsingPins = getPropertyValueContentByLabel(
         componentProperty.properties,
         "is-using-pins",
       ) as
@@ -1171,7 +1171,7 @@ function parseWebElementProperties(
         | null;
       isUsingPins ??= false;
 
-      let customBasemap = getPropertyValueByLabel(
+      let customBasemap = getPropertyValueContentByLabel(
         componentProperty.properties,
         "custom-basemap",
       ) as
@@ -1182,7 +1182,7 @@ function parseWebElementProperties(
       let initialBounds:
         | Extract<WebElementComponent, { component: "map" }>["initialBounds"]
         | null = null;
-      const initialBoundsProperty = getPropertyValueByLabel(
+      const initialBoundsProperty = getPropertyValueContentByLabel(
         componentProperty.properties,
         "initial-bounds",
       ) as string | number | null;
@@ -1193,7 +1193,7 @@ function parseWebElementProperties(
       let maximumBounds:
         | Extract<WebElementComponent, { component: "map" }>["maximumBounds"]
         | null = null;
-      const maximumBoundsProperty = getPropertyValueByLabel(
+      const maximumBoundsProperty = getPropertyValueContentByLabel(
         componentProperty.properties,
         "maximum-bounds",
       ) as string | number | null;
@@ -1201,7 +1201,7 @@ function parseWebElementProperties(
         maximumBounds = parseBounds(String(maximumBoundsProperty));
       }
 
-      let isControlsDisplayed = getPropertyValueByLabel(
+      let isControlsDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "controls-displayed",
       ) as
@@ -1212,7 +1212,7 @@ function parseWebElementProperties(
         | null;
       isControlsDisplayed ??= false;
 
-      let isFullHeight = getPropertyValueByLabel(
+      let isFullHeight = getPropertyValueContentByLabel(
         componentProperty.properties,
         "is-full-height",
       ) as
@@ -1255,7 +1255,7 @@ function parseWebElementProperties(
       for (const queryItem of componentProperty.properties) {
         const querySubProperties = queryItem.properties;
 
-        const label = getPropertyValueByLabel(
+        const label = getPropertyValueContentByLabel(
           querySubProperties,
           "query-prompt",
         ) as
@@ -1302,7 +1302,7 @@ function parseWebElementProperties(
           },
         );
 
-        let startIcon = getPropertyValueByLabel(
+        let startIcon = getPropertyValueContentByLabel(
           querySubProperties,
           "start-icon",
         ) as
@@ -1313,7 +1313,7 @@ function parseWebElementProperties(
           | null;
         startIcon ??= null;
 
-        let endIcon = getPropertyValueByLabel(
+        let endIcon = getPropertyValueContentByLabel(
           querySubProperties,
           "end-icon",
         ) as
@@ -1374,7 +1374,7 @@ function parseWebElementProperties(
         "use-property",
       );
 
-      let itemVariant = getPropertyValueByLabel(
+      let itemVariant = getPropertyValueContentByLabel(
         componentProperty.properties,
         "item-variant",
       ) as
@@ -1382,7 +1382,7 @@ function parseWebElementProperties(
         | null;
       itemVariant ??= "detailed";
 
-      let paginationVariant = getPropertyValueByLabel(
+      let paginationVariant = getPropertyValueContentByLabel(
         componentProperty.properties,
         "pagination-variant",
       ) as
@@ -1393,7 +1393,7 @@ function parseWebElementProperties(
         | null;
       paginationVariant ??= "default";
 
-      let layout = getPropertyValueByLabel(
+      let layout = getPropertyValueContentByLabel(
         componentProperty.properties,
         "layout",
       ) as
@@ -1439,7 +1439,7 @@ function parseWebElementProperties(
             { component: "search-bar" }
           >["queryVariant"]
         | null = null;
-      queryVariant = getPropertyValueByLabel(
+      queryVariant = getPropertyValueContentByLabel(
         componentProperty.properties,
         "query-variant",
       ) as
@@ -1469,7 +1469,7 @@ function parseWebElementProperties(
         );
       }
 
-      let placeholder = getPropertyValueByLabel(
+      let placeholder = getPropertyValueContentByLabel(
         componentProperty.properties,
         "placeholder-text",
       ) as
@@ -1480,7 +1480,7 @@ function parseWebElementProperties(
         | null;
       placeholder ??= null;
 
-      let baseFilterQueries = getPropertyValueByLabel(
+      let baseFilterQueries = getPropertyValueContentByLabel(
         componentProperty.properties,
         "base-filter-queries",
       ) as
@@ -1540,7 +1540,7 @@ function parseWebElementProperties(
           variantName === "heading" ||
           variantName === "display"
         ) {
-          let size = getPropertyValueByLabel(
+          let size = getPropertyValueContentByLabel(
             variantProperty.properties,
             "size",
           ) as "xs" | "sm" | "md" | "lg" | null;
@@ -1554,7 +1554,7 @@ function parseWebElementProperties(
         variant = { name: variantName };
       }
 
-      let headingLevel = getPropertyValueByLabel(
+      let headingLevel = getPropertyValueContentByLabel(
         componentProperty.properties,
         "heading-level",
       ) as
@@ -1584,7 +1584,7 @@ function parseWebElementProperties(
         );
       }
 
-      let isChaptersDisplayed = getPropertyValueByLabel(
+      let isChaptersDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "chapters-displayed",
       ) as
@@ -1639,36 +1639,37 @@ function parseWebTitle(
   };
 
   const titleProperties =
-    getPropertyByLabelAndValue(properties, "presentation", "title")
+    getPropertyByLabelAndValueContent(properties, "presentation", "title")
       ?.properties ?? [];
   if (titleProperties.length > 0) {
     title.variant =
-      (getPropertyValueByLabel(titleProperties, "variant") as
+      (getPropertyValueContentByLabel(titleProperties, "variant") as
         | WebTitle["variant"]
         | null) ?? "default";
 
     title.properties.isNameDisplayed =
-      (getPropertyValueByLabel(titleProperties, "name-displayed") as
+      (getPropertyValueContentByLabel(titleProperties, "name-displayed") as
         | WebTitle["properties"]["isNameDisplayed"]
         | null) ?? false;
 
     title.properties.isDescriptionDisplayed =
-      (getPropertyValueByLabel(titleProperties, "description-displayed") as
-        | WebTitle["properties"]["isDescriptionDisplayed"]
-        | null) ?? false;
+      (getPropertyValueContentByLabel(
+        titleProperties,
+        "description-displayed",
+      ) as WebTitle["properties"]["isDescriptionDisplayed"] | null) ?? false;
 
     title.properties.isDateDisplayed =
-      (getPropertyValueByLabel(titleProperties, "date-displayed") as
+      (getPropertyValueContentByLabel(titleProperties, "date-displayed") as
         | WebTitle["properties"]["isDateDisplayed"]
         | null) ?? false;
 
     title.properties.isCreatorsDisplayed =
-      (getPropertyValueByLabel(titleProperties, "creators-displayed") as
+      (getPropertyValueContentByLabel(titleProperties, "creators-displayed") as
         | WebTitle["properties"]["isCreatorsDisplayed"]
         | null) ?? false;
 
     title.properties.isCountDisplayed =
-      (getPropertyValueByLabel(titleProperties, "count-displayed") as
+      (getPropertyValueContentByLabel(titleProperties, "count-displayed") as
         | WebTitle["properties"]["isCountDisplayed"]
         | null) ?? false;
   }
@@ -1766,7 +1767,7 @@ const parseWebpageResources = <T extends "element" | "page" | "block">(
         parseProperties(ensureArray(resource.properties.property))
       : [];
 
-    const resourceProperty = getPropertyByLabelAndValue(
+    const resourceProperty = getPropertyByLabelAndValueContent(
       resourceProperties,
       "presentation",
       type,
@@ -1834,7 +1835,7 @@ function parseWebpage(
 
   if (
     webpageProperties.length === 0 ||
-    getPropertyValueByLabel(webpageProperties, "presentation") !== "page"
+    getPropertyValueContentByLabel(webpageProperties, "presentation") !== "page"
   ) {
     return null;
   }
@@ -1892,7 +1893,7 @@ function parseWebpage(
         parseProperties(ensureArray(resource.properties.property))
       : [];
 
-    const resourceType = getPropertyValueByLabel(
+    const resourceType = getPropertyValueContentByLabel(
       resourceProperties,
       "presentation",
     ) as "segment" | "element" | "block" | null;
@@ -1931,38 +1932,40 @@ function parseWebpage(
     : [];
 
   const webpageSubProperties =
-    getPropertyByLabelAndValue(webpageProperties, "presentation", "page")
+    getPropertyByLabelAndValueContent(webpageProperties, "presentation", "page")
       ?.properties ?? [];
 
   if (webpageSubProperties.length > 0) {
     returnWebpage.properties.isDisplayedInNavbar =
-      (getPropertyValueByLabel(webpageSubProperties, "displayed-in-navbar") as
-        | Webpage["properties"]["isDisplayedInNavbar"]
-        | null) ?? true;
+      (getPropertyValueContentByLabel(
+        webpageSubProperties,
+        "displayed-in-navbar",
+      ) as Webpage["properties"]["isDisplayedInNavbar"] | null) ?? true;
 
     returnWebpage.properties.width =
-      (getPropertyValueByLabel(webpageSubProperties, "width") as
+      (getPropertyValueContentByLabel(webpageSubProperties, "width") as
         | Webpage["properties"]["width"]
         | null) ?? "default";
 
     returnWebpage.properties.variant =
-      (getPropertyValueByLabel(webpageSubProperties, "variant") as
+      (getPropertyValueContentByLabel(webpageSubProperties, "variant") as
         | Webpage["properties"]["variant"]
         | null) ?? "default";
 
     returnWebpage.properties.isSidebarDisplayed =
-      (getPropertyValueByLabel(webpageSubProperties, "sidebar-displayed") as
-        | Webpage["properties"]["isSidebarDisplayed"]
-        | null) ?? true;
+      (getPropertyValueContentByLabel(
+        webpageSubProperties,
+        "sidebar-displayed",
+      ) as Webpage["properties"]["isSidebarDisplayed"] | null) ?? true;
 
     returnWebpage.properties.isBreadcrumbsDisplayed =
-      (getPropertyValueByLabel(
+      (getPropertyValueContentByLabel(
         webpageSubProperties,
         "breadcrumbs-displayed",
       ) as Webpage["properties"]["isBreadcrumbsDisplayed"] | null) ?? false;
 
     returnWebpage.properties.isNavbarSearchBarDisplayed =
-      (getPropertyValueByLabel(
+      (getPropertyValueContentByLabel(
         webpageSubProperties,
         "navbar-search-bar-displayed",
       ) as Webpage["properties"]["isNavbarSearchBarDisplayed"] | null) ?? true;
@@ -2024,7 +2027,8 @@ function parseWebSegment(
 
   if (
     webpageProperties.length === 0 ||
-    getPropertyValueByLabel(webpageProperties, "presentation") !== "segment"
+    getPropertyValueContentByLabel(webpageProperties, "presentation") !==
+      "segment"
   ) {
     return null;
   }
@@ -2100,7 +2104,7 @@ function parseWebSegmentItem(
 
   if (
     webpageProperties.length === 0 ||
-    getPropertyValueByLabel(webpageProperties, "presentation") !==
+    getPropertyValueContentByLabel(webpageProperties, "presentation") !==
       "segment-item"
   ) {
     return null;
@@ -2211,9 +2215,9 @@ function parseSidebar(
       : [];
 
     return (
-      getPropertyValueByLabel(resourceProperties, "presentation") ===
+      getPropertyValueContentByLabel(resourceProperties, "presentation") ===
         "element" &&
-      getPropertyValueByLabel(
+      getPropertyValueContentByLabel(
         resourceProperties[0]?.properties ?? [],
         "component",
       ) === "sidebar"
@@ -2270,22 +2274,33 @@ function parseSidebar(
     )?.properties;
 
     if (titleProperties) {
-      const titleVariant = getPropertyValueByLabel(titleProperties, "variant");
+      const titleVariant = getPropertyValueContentByLabel(
+        titleProperties,
+        "variant",
+      );
       if (titleVariant) {
         title.variant = titleVariant as "default" | "simple";
       }
 
       title.properties.isNameDisplayed =
-        getPropertyValueByLabel(titleProperties, "name-displayed") === true;
-      title.properties.isDescriptionDisplayed =
-        getPropertyValueByLabel(titleProperties, "description-displayed") ===
+        getPropertyValueContentByLabel(titleProperties, "name-displayed") ===
         true;
+      title.properties.isDescriptionDisplayed =
+        getPropertyValueContentByLabel(
+          titleProperties,
+          "description-displayed",
+        ) === true;
       title.properties.isDateDisplayed =
-        getPropertyValueByLabel(titleProperties, "date-displayed") === true;
+        getPropertyValueContentByLabel(titleProperties, "date-displayed") ===
+        true;
       title.properties.isCreatorsDisplayed =
-        getPropertyValueByLabel(titleProperties, "creators-displayed") === true;
+        getPropertyValueContentByLabel(
+          titleProperties,
+          "creators-displayed",
+        ) === true;
       title.properties.isCountDisplayed =
-        getPropertyValueByLabel(titleProperties, "count-displayed") === true;
+        getPropertyValueContentByLabel(titleProperties, "count-displayed") ===
+        true;
     }
 
     const sidebarResources =
@@ -2297,7 +2312,7 @@ function parseSidebar(
           parseProperties(ensureArray(resource.properties.property))
         : [];
 
-      const resourceType = getPropertyValueByLabel(
+      const resourceType = getPropertyValueContentByLabel(
         resourceProperties,
         "presentation",
       ) as "element" | "block" | null;
@@ -2362,7 +2377,7 @@ function parseWebElementForAccordion(
         parseProperties(ensureArray(resource.properties.property))
       : [];
 
-    const resourceType = getPropertyValueByLabel(
+    const resourceType = getPropertyValueContentByLabel(
       resourceProperties,
       "presentation",
     ) as "element" | "block" | null;
@@ -2418,32 +2433,37 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
   };
 
   const blockMainProperties =
-    getPropertyByLabelAndValue(blockProperties, "presentation", "block")
+    getPropertyByLabelAndValueContent(blockProperties, "presentation", "block")
       ?.properties ?? [];
   if (blockMainProperties.length > 0) {
     returnBlock.properties.default.layout =
-      (getPropertyValueByLabel(blockMainProperties, "layout") as
+      (getPropertyValueContentByLabel(blockMainProperties, "layout") as
         | WebBlock["properties"]["default"]["layout"]
         | null) ?? "vertical";
 
     returnBlock.properties.default.wrap =
-      (getPropertyValueByLabel(blockMainProperties, "wrap") as
+      (getPropertyValueContentByLabel(blockMainProperties, "wrap") as
         | WebBlock["properties"]["default"]["wrap"]
         | null) ?? "nowrap";
 
     if (returnBlock.properties.default.layout === "accordion") {
       returnBlock.properties.default.isAccordionEnabled =
-        (getPropertyValueByLabel(blockMainProperties, "accordion-enabled") as
-          | WebBlock["properties"]["default"]["isAccordionEnabled"]
-          | null) ?? true;
+        (getPropertyValueContentByLabel(
+          blockMainProperties,
+          "accordion-enabled",
+        ) as WebBlock["properties"]["default"]["isAccordionEnabled"] | null) ??
+        true;
 
       returnBlock.properties.default.isAccordionExpandedByDefault =
-        (getPropertyValueByLabel(blockMainProperties, "accordion-expanded") as
+        (getPropertyValueContentByLabel(
+          blockMainProperties,
+          "accordion-expanded",
+        ) as
           | WebBlock["properties"]["default"]["isAccordionExpandedByDefault"]
           | null) ?? true;
 
       returnBlock.properties.default.isAccordionSidebarDisplayed =
-        (getPropertyValueByLabel(
+        (getPropertyValueContentByLabel(
           blockMainProperties,
           "accordion-sidebar-displayed",
         ) as
@@ -2452,12 +2472,12 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
     }
 
     returnBlock.properties.default.spacing =
-      (getPropertyValueByLabel(blockMainProperties, "spacing") as
+      (getPropertyValueContentByLabel(blockMainProperties, "spacing") as
         | WebBlock["properties"]["default"]["spacing"]
         | null) ?? null;
 
     returnBlock.properties.default.gap =
-      (getPropertyValueByLabel(blockMainProperties, "gap") as
+      (getPropertyValueContentByLabel(blockMainProperties, "gap") as
         | WebBlock["properties"]["default"]["gap"]
         | null) ?? null;
 
@@ -2470,19 +2490,25 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
 
       const propertiesTablet: NonNullable<WebBlock["properties"]["tablet"]> = {
         layout:
-          (getPropertyValueByLabel(tabletOverwriteProperties, "layout") as
+          (getPropertyValueContentByLabel(
+            tabletOverwriteProperties,
+            "layout",
+          ) as
             | NonNullable<WebBlock["properties"]["tablet"]>["layout"]
             | null) ?? undefined,
         wrap:
-          (getPropertyValueByLabel(tabletOverwriteProperties, "wrap") as
+          (getPropertyValueContentByLabel(tabletOverwriteProperties, "wrap") as
             | NonNullable<WebBlock["properties"]["tablet"]>["wrap"]
             | null) ?? undefined,
         spacing:
-          (getPropertyValueByLabel(tabletOverwriteProperties, "spacing") as
+          (getPropertyValueContentByLabel(
+            tabletOverwriteProperties,
+            "spacing",
+          ) as
             | NonNullable<WebBlock["properties"]["tablet"]>["spacing"]
             | null) ?? undefined,
         gap:
-          (getPropertyValueByLabel(tabletOverwriteProperties, "gap") as
+          (getPropertyValueContentByLabel(tabletOverwriteProperties, "gap") as
             | NonNullable<WebBlock["properties"]["tablet"]>["gap"]
             | null) ?? undefined,
         isAccordionEnabled: undefined,
@@ -2495,7 +2521,7 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
         returnBlock.properties.default.layout === "accordion"
       ) {
         propertiesTablet.isAccordionEnabled =
-          (getPropertyValueByLabel(
+          (getPropertyValueContentByLabel(
             tabletOverwriteProperties,
             "accordion-enabled",
           ) as
@@ -2505,7 +2531,7 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
             | null) ?? undefined;
 
         propertiesTablet.isAccordionExpandedByDefault =
-          (getPropertyValueByLabel(
+          (getPropertyValueContentByLabel(
             tabletOverwriteProperties,
             "accordion-expanded",
           ) as
@@ -2515,7 +2541,7 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
             | null) ?? undefined;
 
         propertiesTablet.isAccordionSidebarDisplayed =
-          (getPropertyValueByLabel(
+          (getPropertyValueContentByLabel(
             tabletOverwriteProperties,
             "accordion-sidebar-displayed",
           ) as
@@ -2541,19 +2567,25 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
 
       const propertiesMobile: NonNullable<WebBlock["properties"]["mobile"]> = {
         layout:
-          (getPropertyValueByLabel(mobileOverwriteProperties, "layout") as
+          (getPropertyValueContentByLabel(
+            mobileOverwriteProperties,
+            "layout",
+          ) as
             | NonNullable<WebBlock["properties"]["default"]>["layout"]
             | null) ?? undefined,
         wrap:
-          (getPropertyValueByLabel(mobileOverwriteProperties, "wrap") as
+          (getPropertyValueContentByLabel(mobileOverwriteProperties, "wrap") as
             | NonNullable<WebBlock["properties"]["mobile"]>["wrap"]
             | null) ?? undefined,
         spacing:
-          (getPropertyValueByLabel(mobileOverwriteProperties, "spacing") as
+          (getPropertyValueContentByLabel(
+            mobileOverwriteProperties,
+            "spacing",
+          ) as
             | NonNullable<WebBlock["properties"]["default"]>["spacing"]
             | null) ?? undefined,
         gap:
-          (getPropertyValueByLabel(mobileOverwriteProperties, "gap") as
+          (getPropertyValueContentByLabel(mobileOverwriteProperties, "gap") as
             | NonNullable<WebBlock["properties"]["default"]>["gap"]
             | null) ?? undefined,
         isAccordionEnabled: undefined,
@@ -2566,7 +2598,7 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
         returnBlock.properties.default.layout === "accordion"
       ) {
         propertiesMobile.isAccordionEnabled =
-          (getPropertyValueByLabel(
+          (getPropertyValueContentByLabel(
             mobileOverwriteProperties,
             "accordion-enabled",
           ) as
@@ -2576,7 +2608,7 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
             | null) ?? undefined;
 
         propertiesMobile.isAccordionExpandedByDefault =
-          (getPropertyValueByLabel(
+          (getPropertyValueContentByLabel(
             mobileOverwriteProperties,
             "accordion-expanded",
           ) as
@@ -2586,7 +2618,7 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
             | null) ?? undefined;
 
         propertiesMobile.isAccordionSidebarDisplayed =
-          (getPropertyValueByLabel(
+          (getPropertyValueContentByLabel(
             mobileOverwriteProperties,
             "accordion-sidebar-displayed",
           ) as
@@ -2620,7 +2652,7 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
           parseProperties(ensureArray(resource.properties.property))
         : [];
 
-      const resourceType = getPropertyValueByLabel(
+      const resourceType = getPropertyValueContentByLabel(
         resourceProperties,
         "presentation",
       ) as "element" | "block" | null;
@@ -2637,7 +2669,7 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
         resourceProperties,
         "presentation",
       );
-      const componentType = getPropertyValueByLabel(
+      const componentType = getPropertyValueContentByLabel(
         presentationProperty?.properties ?? [],
         "component",
       ) as string | null;
@@ -2663,7 +2695,7 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
           parseProperties(ensureArray(resource.properties.property))
         : [];
 
-      const resourceType = getPropertyValueByLabel(
+      const resourceType = getPropertyValueContentByLabel(
         resourceProperties,
         "presentation",
       ) as "element" | "block" | null;
@@ -2710,17 +2742,17 @@ function parseWebsiteProperties(
   const websiteProperties =
     getPropertyByLabel(mainProperties, "presentation")?.properties ?? [];
 
-  let type = getPropertyValueByLabel(websiteProperties, "webUI") as
+  let type = getPropertyValueContentByLabel(websiteProperties, "webUI") as
     | Website["properties"]["type"]
     | null;
   type ??= "traditional";
 
-  let status = getPropertyValueByLabel(websiteProperties, "status") as
+  let status = getPropertyValueContentByLabel(websiteProperties, "status") as
     | Website["properties"]["status"]
     | null;
   status ??= "development";
 
-  let privacy = getPropertyValueByLabel(websiteProperties, "privacy") as
+  let privacy = getPropertyValueContentByLabel(websiteProperties, "privacy") as
     | Website["properties"]["privacy"]
     | null;
   privacy ??= "public";
@@ -2780,12 +2812,14 @@ function parseWebsiteProperties(
   }
 
   returnProperties.theme.isThemeToggleDisplayed =
-    (getPropertyValueByLabel(websiteProperties, "supports-theme-toggle") as
-      | Website["properties"]["theme"]["isThemeToggleDisplayed"]
-      | null) ?? true;
+    (getPropertyValueContentByLabel(
+      websiteProperties,
+      "supports-theme-toggle",
+    ) as Website["properties"]["theme"]["isThemeToggleDisplayed"] | null) ??
+    true;
 
   returnProperties.theme.defaultTheme =
-    (getPropertyValueByLabel(websiteProperties, "default-theme") as
+    (getPropertyValueContentByLabel(websiteProperties, "default-theme") as
       | Website["properties"]["theme"]["defaultTheme"]
       | null) ?? "system";
 
@@ -2802,31 +2836,32 @@ function parseWebsiteProperties(
     null;
 
   returnProperties.navbar.isDisplayed =
-    (getPropertyValueByLabel(websiteProperties, "navbar-displayed") as
+    (getPropertyValueContentByLabel(websiteProperties, "navbar-displayed") as
       | Website["properties"]["navbar"]["isDisplayed"]
       | null) ?? true;
 
   returnProperties.navbar.variant =
-    (getPropertyValueByLabel(websiteProperties, "navbar-variant") as
+    (getPropertyValueContentByLabel(websiteProperties, "navbar-variant") as
       | Website["properties"]["navbar"]["variant"]
       | null) ?? "default";
 
   returnProperties.navbar.alignment =
-    (getPropertyValueByLabel(websiteProperties, "navbar-alignment") as
+    (getPropertyValueContentByLabel(websiteProperties, "navbar-alignment") as
       | Website["properties"]["navbar"]["alignment"]
       | null) ?? "start";
 
   returnProperties.navbar.isProjectDisplayed =
-    (getPropertyValueByLabel(websiteProperties, "navbar-project-displayed") as
-      | Website["properties"]["navbar"]["isProjectDisplayed"]
-      | null) ?? true;
+    (getPropertyValueContentByLabel(
+      websiteProperties,
+      "navbar-project-displayed",
+    ) as Website["properties"]["navbar"]["isProjectDisplayed"] | null) ?? true;
 
   returnProperties.navbar.searchBarBoundElementUuid =
     getPropertyByLabel(websiteProperties, "bound-element-navbar-search-bar")
       ?.values[0]?.uuid ?? null;
 
   returnProperties.footer.isDisplayed =
-    (getPropertyValueByLabel(websiteProperties, "footer-displayed") as
+    (getPropertyValueContentByLabel(websiteProperties, "footer-displayed") as
       | Website["properties"]["footer"]["isDisplayed"]
       | null) ?? true;
 
@@ -2834,14 +2869,14 @@ function parseWebsiteProperties(
     getPropertyByLabel(websiteProperties, "footer-logo")?.values[0]?.uuid ??
     null;
 
-  const itemPageTypeProperty = getPropertyByLabelAndValue(
+  const itemPageTypeProperty = getPropertyByLabelAndValueContent(
     websiteProperties,
     "page-type",
     "item-page",
   );
   if (itemPageTypeProperty !== null) {
     returnProperties.itemPage.isMainContentDisplayed =
-      (getPropertyValueByLabel(
+      (getPropertyValueContentByLabel(
         itemPageTypeProperty.properties,
         "item-page-main-content-displayed",
       ) as
@@ -2849,7 +2884,7 @@ function parseWebsiteProperties(
         | null) ?? true;
 
     returnProperties.itemPage.isDescriptionDisplayed =
-      (getPropertyValueByLabel(
+      (getPropertyValueContentByLabel(
         itemPageTypeProperty.properties,
         "item-page-description-displayed",
       ) as
@@ -2857,42 +2892,42 @@ function parseWebsiteProperties(
         | null) ?? true;
 
     returnProperties.itemPage.isDocumentDisplayed =
-      (getPropertyValueByLabel(
+      (getPropertyValueContentByLabel(
         itemPageTypeProperty.properties,
         "item-page-document-displayed",
       ) as Website["properties"]["itemPage"]["isDocumentDisplayed"] | null) ??
       true;
 
     returnProperties.itemPage.isNotesDisplayed =
-      (getPropertyValueByLabel(
+      (getPropertyValueContentByLabel(
         itemPageTypeProperty.properties,
         "item-page-notes-displayed",
       ) as Website["properties"]["itemPage"]["isNotesDisplayed"] | null) ??
       true;
 
     returnProperties.itemPage.isEventsDisplayed =
-      (getPropertyValueByLabel(
+      (getPropertyValueContentByLabel(
         itemPageTypeProperty.properties,
         "item-page-events-displayed",
       ) as Website["properties"]["itemPage"]["isEventsDisplayed"] | null) ??
       true;
 
     returnProperties.itemPage.isPeriodsDisplayed =
-      (getPropertyValueByLabel(
+      (getPropertyValueContentByLabel(
         itemPageTypeProperty.properties,
         "item-page-periods-displayed",
       ) as Website["properties"]["itemPage"]["isPeriodsDisplayed"] | null) ??
       true;
 
     returnProperties.itemPage.isPropertiesDisplayed =
-      (getPropertyValueByLabel(
+      (getPropertyValueContentByLabel(
         itemPageTypeProperty.properties,
         "item-page-properties-displayed",
       ) as Website["properties"]["itemPage"]["isPropertiesDisplayed"] | null) ??
       true;
 
     returnProperties.itemPage.isBibliographyDisplayed =
-      (getPropertyValueByLabel(
+      (getPropertyValueContentByLabel(
         itemPageTypeProperty.properties,
         "item-page-bibliography-displayed",
       ) as
@@ -2900,7 +2935,7 @@ function parseWebsiteProperties(
         | null) ?? true;
 
     returnProperties.itemPage.isPropertyValuesGrouped =
-      (getPropertyValueByLabel(
+      (getPropertyValueContentByLabel(
         itemPageTypeProperty.properties,
         "item-page-property-values-grouped",
       ) as
@@ -2908,7 +2943,7 @@ function parseWebsiteProperties(
         | null) ?? true;
 
     returnProperties.itemPage.iiifViewer =
-      (getPropertyValueByLabel(
+      (getPropertyValueContentByLabel(
         itemPageTypeProperty.properties,
         "item-page-iiif-viewer",
       ) as Website["properties"]["itemPage"]["iiifViewer"] | null) ??
