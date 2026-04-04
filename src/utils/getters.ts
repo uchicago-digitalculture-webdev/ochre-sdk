@@ -21,6 +21,142 @@ const DEFAULT_OPTIONS: PropertyOptions = {
 };
 
 /**
+ * Searches for a property in an array of properties
+ * @param properties - The array of properties to search through
+ * @param options - The options for the search
+ * @param findDirectResult - A function to find the direct result
+ * @param transformNestedResult - A function to transform the nested result
+ * @returns The result of the search, or null if not found
+ */
+function searchPropertyResult<
+  T extends PropertyValueContentType = PropertyValueContentType,
+  TResult = Property<T>,
+>(
+  properties: Array<Property<T>>,
+  options: PropertyOptions,
+  findDirectResult: (properties: Array<Property<T>>) => TResult | null,
+  transformNestedResult?: (result: TResult) => TResult | null,
+): TResult | null {
+  const directResult = findDirectResult(properties);
+  if (directResult !== null) {
+    return directResult;
+  }
+
+  if (options.includeNestedProperties) {
+    for (const property of properties) {
+      const nestedResult = searchPropertyResult(
+        property.properties as Array<Property<T>>,
+        options,
+        findDirectResult,
+        transformNestedResult,
+      );
+      if (nestedResult !== null) {
+        const transformedResult =
+          transformNestedResult != null ?
+            transformNestedResult(nestedResult)
+          : nestedResult;
+        if (transformedResult !== null) {
+          return transformedResult;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function getPropertyValuesResult<
+  T extends PropertyValueContentType = PropertyValueContentType,
+>(
+  values: Array<PropertyValueContent<T>>,
+  limitToLeafPropertyValues: boolean | undefined,
+  copyValuesWhenUnfiltered: boolean,
+): Array<PropertyValueContent<T>> {
+  if (limitToLeafPropertyValues) {
+    return getLeafPropertyValues(values);
+  }
+
+  if (copyValuesWhenUnfiltered) {
+    return values.map((value) => value);
+  }
+
+  return values;
+}
+
+function clonePropertyValues<
+  T extends PropertyValueContentType = PropertyValueContentType,
+>(values: Array<PropertyValueContent<T>>): Array<PropertyValueContent<T>> {
+  return values.map((value) => ({ ...value, content: value.content }));
+}
+
+function getNormalizedProperty<
+  T extends PropertyValueContentType = PropertyValueContentType,
+>(
+  property: Property<T>,
+  limitToLeafPropertyValues: boolean | undefined,
+  transformValues?: (
+    values: Array<PropertyValueContent<T>>,
+  ) => Array<PropertyValueContent<T>>,
+): Property<T> {
+  if (!limitToLeafPropertyValues) {
+    return property;
+  }
+
+  const values = getLeafPropertyValues(property.values);
+
+  return {
+    ...property,
+    values: transformValues != null ? transformValues(values) : values,
+  };
+}
+
+function getFirstPropertyValueResult<
+  T extends PropertyValueContentType = PropertyValueContentType,
+>(
+  values: Array<PropertyValueContent<T>>,
+  limitToLeafPropertyValues: boolean | undefined,
+): PropertyValueContent<T> | null {
+  if (limitToLeafPropertyValues) {
+    return getLeafPropertyValues(values)[0] ?? null;
+  }
+
+  return values[0] ?? null;
+}
+
+function getFirstPropertyValueContentResult<
+  T extends PropertyValueContentType = PropertyValueContentType,
+>(
+  values: Array<PropertyValueContent<T>>,
+  limitToLeafPropertyValues: boolean | undefined,
+): PropertyValueContent<T>["content"] | null {
+  if (limitToLeafPropertyValues) {
+    return getLeafPropertyValues(values)[0]?.content ?? null;
+  }
+
+  return values[0]?.content ?? null;
+}
+
+function visitProperties<
+  T extends PropertyValueContentType = PropertyValueContentType,
+>(
+  properties: Array<Property<T>>,
+  includeNestedProperties: boolean | undefined,
+  visit: (property: Property<T>) => void,
+): void {
+  for (const property of properties) {
+    visit(property);
+
+    if (includeNestedProperties) {
+      visitProperties(
+        property.properties as Array<Property<T>>,
+        includeNestedProperties,
+        visit,
+      );
+    }
+  }
+}
+
+/**
  * Finds a property by its UUID in an array of properties
  *
  * @param properties - Array of properties to search through
@@ -35,26 +171,14 @@ export function getPropertyByUuid<
   uuid: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Property<T> | null {
-  const { includeNestedProperties, limitToLeafPropertyValues } = options;
-  const property = properties.find((property) => property.uuid === uuid);
-  if (property != null) {
-    return property;
-  }
+  const { includeNestedProperties } = options;
 
-  if (includeNestedProperties) {
-    for (const property of properties) {
-      const nestedResult = getPropertyByUuid<T>(
-        property.properties as Array<Property<T>>,
-        uuid,
-        { includeNestedProperties, limitToLeafPropertyValues },
-      );
-      if (nestedResult !== null) {
-        return nestedResult;
-      }
-    }
-  }
-
-  return null;
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) =>
+      currentProperties.find((property) => property.uuid === uuid) ?? null,
+  );
 }
 
 /**
@@ -74,33 +198,27 @@ export function getPropertyValuesByUuid<
 ): Array<PropertyValueContent<T>> | null {
   const { includeNestedProperties, limitToLeafPropertyValues } = options;
 
-  const property = properties.find((property) => property.uuid === uuid);
-  if (property != null) {
-    if (limitToLeafPropertyValues) {
-      return getLeafPropertyValues<T>(property.values);
-    } else {
-      return property.values.map((value) => value);
-    }
-  }
-
-  if (includeNestedProperties) {
-    for (const nestedProperty of properties) {
-      const nestedResult = getPropertyValuesByUuid<T>(
-        nestedProperty.properties as Array<Property<T>>,
-        uuid,
-        { includeNestedProperties, limitToLeafPropertyValues },
-      );
-      if (nestedResult !== null) {
-        if (limitToLeafPropertyValues) {
-          return getLeafPropertyValues<T>(nestedResult);
-        } else {
-          return nestedResult.map((value) => value);
-        }
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const property =
+        currentProperties.find(
+          (currentProperty) => currentProperty.uuid === uuid,
+        ) ?? null;
+      if (property == null) {
+        return null;
       }
-    }
-  }
 
-  return null;
+      return getPropertyValuesResult(
+        property.values,
+        limitToLeafPropertyValues,
+        true,
+      );
+    },
+    (nestedResult) =>
+      getPropertyValuesResult(nestedResult, limitToLeafPropertyValues, true),
+  );
 }
 
 /**
@@ -120,31 +238,25 @@ export function getPropertyValueContentsByUuid<
 ): Array<PropertyValueContent<T>["content"]> | null {
   const { includeNestedProperties, limitToLeafPropertyValues } = options;
 
-  const property = properties.find((property) => property.uuid === uuid);
-  if (property != null) {
-    if (limitToLeafPropertyValues) {
-      return getLeafPropertyValues<T>(property.values).map(
-        (value) => value.content,
-      );
-    } else {
-      return property.values.map((value) => value.content);
-    }
-  }
-
-  if (includeNestedProperties) {
-    for (const nestedProperty of properties) {
-      const nestedResult = getPropertyValueContentsByUuid<T>(
-        nestedProperty.properties as Array<Property<T>>,
-        uuid,
-        { includeNestedProperties, limitToLeafPropertyValues },
-      );
-      if (nestedResult !== null) {
-        return nestedResult;
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const property =
+        currentProperties.find(
+          (currentProperty) => currentProperty.uuid === uuid,
+        ) ?? null;
+      if (property == null) {
+        return null;
       }
-    }
-  }
 
-  return null;
+      return getPropertyValuesResult(
+        property.values,
+        limitToLeafPropertyValues,
+        false,
+      ).map((value) => value.content);
+    },
+  );
 }
 
 /**
@@ -163,36 +275,24 @@ export function getPropertyValueByUuid<
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): PropertyValueContent<T> | null {
   const { includeNestedProperties, limitToLeafPropertyValues } = options;
-  const values = getPropertyValuesByUuid<T>(properties, uuid, {
-    includeNestedProperties,
-    limitToLeafPropertyValues,
-  });
-  if (values !== null && values.length > 0) {
-    if (limitToLeafPropertyValues) {
-      return getLeafPropertyValues<T>(values)[0] ?? null;
-    } else {
-      return values[0]!;
-    }
-  }
 
-  if (includeNestedProperties) {
-    for (const nestedProperty of properties) {
-      const nestedResult = getPropertyValueByUuid<T>(
-        nestedProperty.properties as Array<Property<T>>,
-        uuid,
-        { includeNestedProperties, limitToLeafPropertyValues },
-      );
-      if (nestedResult !== null) {
-        if (limitToLeafPropertyValues) {
-          return getLeafPropertyValues<T>([nestedResult])[0] ?? null;
-        } else {
-          return nestedResult;
-        }
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const values = getPropertyValuesByUuid<T>(currentProperties, uuid, {
+        includeNestedProperties: false,
+        limitToLeafPropertyValues,
+      });
+      if (values === null || values.length === 0) {
+        return null;
       }
-    }
-  }
 
-  return null;
+      return getFirstPropertyValueResult(values, limitToLeafPropertyValues);
+    },
+    (nestedResult) =>
+      getFirstPropertyValueResult([nestedResult], limitToLeafPropertyValues),
+  );
 }
 
 /**
@@ -211,32 +311,25 @@ export function getPropertyValueContentByUuid<
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): PropertyValueContent<T>["content"] | null {
   const { includeNestedProperties, limitToLeafPropertyValues } = options;
-  const values = getPropertyValuesByUuid<T>(properties, uuid, {
-    includeNestedProperties,
-    limitToLeafPropertyValues,
-  });
-  if (values !== null && values.length > 0) {
-    if (limitToLeafPropertyValues) {
-      return getLeafPropertyValues<T>(values)[0]?.content ?? null;
-    } else {
-      return values[0]!.content;
-    }
-  }
 
-  if (includeNestedProperties) {
-    for (const nestedProperty of properties) {
-      const nestedResult = getPropertyValueContentByUuid<T>(
-        nestedProperty.properties as Array<Property<T>>,
-        uuid,
-        { includeNestedProperties, limitToLeafPropertyValues },
-      );
-      if (nestedResult !== null) {
-        return nestedResult;
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const values = getPropertyValuesByUuid<T>(currentProperties, uuid, {
+        includeNestedProperties: false,
+        limitToLeafPropertyValues,
+      });
+      if (values === null || values.length === 0) {
+        return null;
       }
-    }
-  }
 
-  return null;
+      return getFirstPropertyValueContentResult(
+        values,
+        limitToLeafPropertyValues,
+      );
+    },
+  );
 }
 
 /**
@@ -254,26 +347,14 @@ export function getPropertyByLabel<
   label: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Property<T> | null {
-  const { includeNestedProperties, limitToLeafPropertyValues } = options;
-  const property = properties.find((property) => property.label === label);
-  if (property != null) {
-    return property;
-  }
+  const { includeNestedProperties } = options;
 
-  if (includeNestedProperties) {
-    for (const nestedProperty of properties) {
-      const nestedResult = getPropertyByLabel<T>(
-        nestedProperty.properties as Array<Property<T>>,
-        label,
-        { includeNestedProperties, limitToLeafPropertyValues },
-      );
-      if (nestedResult !== null) {
-        return nestedResult;
-      }
-    }
-  }
-
-  return null;
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) =>
+      currentProperties.find((property) => property.label === label) ?? null,
+  );
 }
 
 /**
@@ -294,40 +375,26 @@ export function getPropertyByLabelAndValues<
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Property<T> | null {
   const { includeNestedProperties, limitToLeafPropertyValues } = options;
-  const property = properties.find(
-    (property) =>
-      property.label === label && deepEqual(property.values, values),
-  );
-  if (property != null) {
-    if (limitToLeafPropertyValues) {
-      return { ...property, values: getLeafPropertyValues<T>(property.values) };
-    } else {
-      return property;
-    }
-  }
 
-  if (includeNestedProperties) {
-    for (const nestedProperty of properties) {
-      const nestedResult = getPropertyByLabelAndValues<T>(
-        nestedProperty.properties as Array<Property<T>>,
-        label,
-        values,
-        { includeNestedProperties, limitToLeafPropertyValues },
-      );
-      if (nestedResult !== null) {
-        if (limitToLeafPropertyValues) {
-          return {
-            ...nestedResult,
-            values: getLeafPropertyValues<T>(nestedResult.values),
-          };
-        } else {
-          return nestedResult;
-        }
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const property =
+        currentProperties.find(
+          (currentProperty) =>
+            currentProperty.label === label &&
+            deepEqual(currentProperty.values, values),
+        ) ?? null;
+      if (property == null) {
+        return null;
       }
-    }
-  }
 
-  return null;
+      return getNormalizedProperty(property, limitToLeafPropertyValues);
+    },
+    (nestedResult) =>
+      getNormalizedProperty(nestedResult, limitToLeafPropertyValues),
+  );
 }
 
 /**
@@ -348,50 +415,33 @@ export function getPropertyByLabelAndValueContents<
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Property<T> | null {
   const { includeNestedProperties, limitToLeafPropertyValues } = options;
-  const property = properties.find(
-    (property) =>
-      property.label === label &&
-      deepEqual(
-        property.values.map((value) => value.content),
-        valueContents,
-      ),
-  );
-  if (property != null) {
-    if (limitToLeafPropertyValues) {
-      return {
-        ...property,
-        values: getLeafPropertyValues<T>(property.values).map((value) => ({
-          ...value,
-          content: value.content,
-        })),
-      };
-    } else {
-      return property;
-    }
-  }
 
-  if (includeNestedProperties) {
-    for (const nestedProperty of properties) {
-      const nestedResult = getPropertyByLabelAndValueContents<T>(
-        nestedProperty.properties as Array<Property<T>>,
-        label,
-        valueContents,
-        { includeNestedProperties, limitToLeafPropertyValues },
-      );
-      if (nestedResult !== null) {
-        if (limitToLeafPropertyValues) {
-          return {
-            ...nestedResult,
-            values: getLeafPropertyValues<T>(nestedResult.values),
-          };
-        } else {
-          return nestedResult;
-        }
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const property =
+        currentProperties.find(
+          (currentProperty) =>
+            currentProperty.label === label &&
+            deepEqual(
+              currentProperty.values.map((value) => value.content),
+              valueContents,
+            ),
+        ) ?? null;
+      if (property == null) {
+        return null;
       }
-    }
-  }
 
-  return null;
+      return getNormalizedProperty(
+        property,
+        limitToLeafPropertyValues,
+        clonePropertyValues,
+      );
+    },
+    (nestedResult) =>
+      getNormalizedProperty(nestedResult, limitToLeafPropertyValues),
+  );
 }
 
 /**
@@ -412,41 +462,28 @@ export function getPropertyByLabelAndValue<
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Property<T> | null {
   const { includeNestedProperties, limitToLeafPropertyValues } = options;
-  const property = properties.find(
-    (property) =>
-      property.label === label &&
-      property.values.some((v) => deepEqual(v, value)),
-  );
-  if (property != null) {
-    if (limitToLeafPropertyValues) {
-      return { ...property, values: getLeafPropertyValues<T>(property.values) };
-    } else {
-      return property;
-    }
-  }
 
-  if (includeNestedProperties) {
-    for (const nestedProperty of properties) {
-      const nestedResult = getPropertyByLabelAndValue<T>(
-        nestedProperty.properties as Array<Property<T>>,
-        label,
-        value,
-        { includeNestedProperties, limitToLeafPropertyValues },
-      );
-      if (nestedResult !== null) {
-        if (limitToLeafPropertyValues) {
-          return {
-            ...nestedResult,
-            values: getLeafPropertyValues<T>(nestedResult.values),
-          };
-        } else {
-          return nestedResult;
-        }
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const property =
+        currentProperties.find(
+          (currentProperty) =>
+            currentProperty.label === label &&
+            currentProperty.values.some((candidateValue) =>
+              deepEqual(candidateValue, value),
+            ),
+        ) ?? null;
+      if (property == null) {
+        return null;
       }
-    }
-  }
 
-  return null;
+      return getNormalizedProperty(property, limitToLeafPropertyValues);
+    },
+    (nestedResult) =>
+      getNormalizedProperty(nestedResult, limitToLeafPropertyValues),
+  );
 }
 
 /**
@@ -467,41 +504,28 @@ export function getPropertyByLabelAndValueContent<
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Property<T> | null {
   const { includeNestedProperties, limitToLeafPropertyValues } = options;
-  const property = properties.find(
-    (property) =>
-      property.label === label &&
-      property.values.some((v) => deepEqual(v.content, valueContent)),
-  );
-  if (property != null) {
-    if (limitToLeafPropertyValues) {
-      return { ...property, values: getLeafPropertyValues<T>(property.values) };
-    } else {
-      return property;
-    }
-  }
 
-  if (includeNestedProperties) {
-    for (const nestedProperty of properties) {
-      const nestedResult = getPropertyByLabelAndValueContent<T>(
-        nestedProperty.properties as Array<Property<T>>,
-        label,
-        valueContent,
-        { includeNestedProperties, limitToLeafPropertyValues },
-      );
-      if (nestedResult !== null) {
-        if (limitToLeafPropertyValues) {
-          return {
-            ...nestedResult,
-            values: getLeafPropertyValues<T>(nestedResult.values),
-          };
-        } else {
-          return nestedResult;
-        }
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const property =
+        currentProperties.find(
+          (currentProperty) =>
+            currentProperty.label === label &&
+            currentProperty.values.some((value) =>
+              deepEqual(value.content, valueContent),
+            ),
+        ) ?? null;
+      if (property == null) {
+        return null;
       }
-    }
-  }
 
-  return null;
+      return getNormalizedProperty(property, limitToLeafPropertyValues);
+    },
+    (nestedResult) =>
+      getNormalizedProperty(nestedResult, limitToLeafPropertyValues),
+  );
 }
 
 /**
@@ -520,33 +544,28 @@ export function getPropertyValuesByLabel<
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Array<PropertyValueContent<T>> | null {
   const { includeNestedProperties, limitToLeafPropertyValues } = options;
-  const property = properties.find((property) => property.label === label);
-  if (property != null) {
-    if (limitToLeafPropertyValues) {
-      return getLeafPropertyValues<T>(property.values);
-    } else {
-      return property.values;
-    }
-  }
 
-  if (includeNestedProperties) {
-    for (const nestedProperty of properties) {
-      const nestedResult = getPropertyValuesByLabel<T>(
-        nestedProperty.properties as Array<Property<T>>,
-        label,
-        { includeNestedProperties, limitToLeafPropertyValues },
-      );
-      if (nestedResult !== null) {
-        if (limitToLeafPropertyValues) {
-          return getLeafPropertyValues<T>(nestedResult);
-        } else {
-          return nestedResult;
-        }
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const property =
+        currentProperties.find(
+          (currentProperty) => currentProperty.label === label,
+        ) ?? null;
+      if (property == null) {
+        return null;
       }
-    }
-  }
 
-  return null;
+      return getPropertyValuesResult(
+        property.values,
+        limitToLeafPropertyValues,
+        false,
+      );
+    },
+    (nestedResult) =>
+      getPropertyValuesResult(nestedResult, limitToLeafPropertyValues, false),
+  );
 }
 
 /**
@@ -565,36 +584,24 @@ export function getPropertyValueByLabel<
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): PropertyValueContent<T> | null {
   const { includeNestedProperties, limitToLeafPropertyValues } = options;
-  const values = getPropertyValuesByLabel<T>(properties, label, {
-    includeNestedProperties,
-    limitToLeafPropertyValues,
-  });
-  if (values !== null && values.length > 0) {
-    if (limitToLeafPropertyValues) {
-      return getLeafPropertyValues<T>(values)[0] ?? null;
-    } else {
-      return values[0]!;
-    }
-  }
 
-  if (includeNestedProperties) {
-    for (const nestedProperty of properties) {
-      const nestedResult = getPropertyValueByLabel<T>(
-        nestedProperty.properties as Array<Property<T>>,
-        label,
-        { includeNestedProperties, limitToLeafPropertyValues },
-      );
-      if (nestedResult !== null) {
-        if (limitToLeafPropertyValues) {
-          return getLeafPropertyValues<T>([nestedResult])[0] ?? null;
-        } else {
-          return nestedResult;
-        }
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const values = getPropertyValuesByLabel<T>(currentProperties, label, {
+        includeNestedProperties: false,
+        limitToLeafPropertyValues,
+      });
+      if (values === null || values.length === 0) {
+        return null;
       }
-    }
-  }
 
-  return null;
+      return getFirstPropertyValueResult(values, limitToLeafPropertyValues);
+    },
+    (nestedResult) =>
+      getFirstPropertyValueResult([nestedResult], limitToLeafPropertyValues),
+  );
 }
 
 /**
@@ -613,32 +620,25 @@ export function getPropertyValueContentByLabel<
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): PropertyValueContent<T>["content"] | null {
   const { includeNestedProperties, limitToLeafPropertyValues } = options;
-  const values = getPropertyValuesByLabel<T>(properties, label, {
-    includeNestedProperties,
-    limitToLeafPropertyValues,
-  });
-  if (values !== null && values.length > 0) {
-    if (limitToLeafPropertyValues) {
-      return getLeafPropertyValues<T>(values)[0]?.content ?? null;
-    } else {
-      return values[0]!.content;
-    }
-  }
 
-  if (includeNestedProperties) {
-    for (const nestedProperty of properties) {
-      const nestedResult = getPropertyValueContentByLabel<T>(
-        nestedProperty.properties as Array<Property<T>>,
-        label,
-        { includeNestedProperties, limitToLeafPropertyValues },
-      );
-      if (nestedResult !== null) {
-        return nestedResult;
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const values = getPropertyValuesByLabel<T>(currentProperties, label, {
+        includeNestedProperties: false,
+        limitToLeafPropertyValues,
+      });
+      if (values === null || values.length === 0) {
+        return null;
       }
-    }
-  }
 
-  return null;
+      return getFirstPropertyValueContentResult(
+        values,
+        limitToLeafPropertyValues,
+      );
+    },
+  );
 }
 
 /**
@@ -657,36 +657,21 @@ export function getUniqueProperties<
   const { includeNestedProperties, limitToLeafPropertyValues } = options;
   const uniqueProperties = new Array<Property<T>>();
 
-  for (const property of properties) {
+  visitProperties(properties, includeNestedProperties, (property) => {
     if (uniqueProperties.some((p) => p.uuid === property.uuid)) {
-      continue;
+      return;
     }
 
     uniqueProperties.push(property);
-
-    if (includeNestedProperties) {
-      const nestedProperties = getUniqueProperties<T>(
-        property.properties as Array<Property<T>>,
-        { includeNestedProperties: true, limitToLeafPropertyValues },
-      );
-      for (const nestedProperty of nestedProperties) {
-        if (uniqueProperties.some((p) => p.uuid === nestedProperty.uuid)) {
-          continue;
-        }
-
-        uniqueProperties.push(nestedProperty);
-      }
-    }
-  }
+  });
 
   if (limitToLeafPropertyValues) {
-    return uniqueProperties.map((property) => ({
-      ...property,
-      values: getLeafPropertyValues<T>(property.values),
-    }));
-  } else {
-    return uniqueProperties;
+    return uniqueProperties.map((property) =>
+      getNormalizedProperty(property, limitToLeafPropertyValues),
+    );
   }
+
+  return uniqueProperties;
 }
 
 /**
@@ -702,30 +687,16 @@ export function getUniquePropertyLabels<
   properties: Array<Property<T>>,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Array<string> {
-  const { includeNestedProperties, limitToLeafPropertyValues } = options;
+  const { includeNestedProperties } = options;
   const uniquePropertyLabels = new Array<string>();
 
-  for (const property of properties) {
+  visitProperties(properties, includeNestedProperties, (property) => {
     if (uniquePropertyLabels.includes(property.label)) {
-      continue;
+      return;
     }
 
     uniquePropertyLabels.push(property.label);
-
-    if (property.properties.length > 0 && includeNestedProperties) {
-      const nestedProperties = getUniquePropertyLabels(property.properties, {
-        includeNestedProperties: true,
-        limitToLeafPropertyValues,
-      });
-      for (const nestedProperty of nestedProperties) {
-        if (uniquePropertyLabels.includes(nestedProperty)) {
-          continue;
-        }
-
-        uniquePropertyLabels.push(nestedProperty);
-      }
-    }
-  }
+  });
 
   return uniquePropertyLabels;
 }
