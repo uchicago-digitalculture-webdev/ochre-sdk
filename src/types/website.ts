@@ -316,8 +316,7 @@ export type WebElementComponent =
       component: "collection";
       linkUuids: Array<string>;
       displayedProperties: Array<{ uuid: string; label: string }> | null;
-      variant: "full" | "highlights";
-      itemVariant: "detailed" | "card" | "tile" | "showcase";
+      variant: "detailed" | "card" | "tile" | "showcase";
       paginationVariant: "default" | "numeric";
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
       imageQuality: "high" | "low";
@@ -404,10 +403,10 @@ export type WebElementComponent =
         labels: { title: string | null };
       };
       displayedProperties: Array<{ uuid: string; label: string }> | null;
-      itemVariant: Extract<
+      variant: Extract<
         WebElementComponent,
         { component: "collection" }
-      >["itemVariant"];
+      >["variant"];
       paginationVariant: Extract<
         WebElementComponent,
         { component: "collection" }

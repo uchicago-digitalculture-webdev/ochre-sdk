@@ -583,18 +583,7 @@ function parseWebElementProperties(
       ) as
         | Extract<WebElementComponent, { component: "collection" }>["variant"]
         | null;
-      variant ??= "full";
-
-      let itemVariant = getPropertyValueContentByLabel(
-        componentProperty.properties,
-        "item-variant",
-      ) as
-        | Extract<
-            WebElementComponent,
-            { component: "collection" }
-          >["itemVariant"]
-        | null;
-      itemVariant ??= "detailed";
+      variant ??= "detailed";
 
       let paginationVariant = getPropertyValueContentByLabel(
         componentProperty.properties,
@@ -774,7 +763,6 @@ function parseWebElementProperties(
               label: value.content?.toString() ?? "",
             })) ?? null,
         variant,
-        itemVariant,
         paginationVariant,
         layout,
         imageQuality,
@@ -1370,13 +1358,13 @@ function parseWebElementProperties(
         "use-property",
       );
 
-      let itemVariant = getPropertyValueContentByLabel(
+      let variant = getPropertyValueContentByLabel(
         componentProperty.properties,
-        "item-variant",
+        "variant",
       ) as
-        | Extract<WebElementComponent, { component: "query" }>["itemVariant"]
+        | Extract<WebElementComponent, { component: "query" }>["variant"]
         | null;
-      itemVariant ??= "detailed";
+      variant ??= "detailed";
 
       let paginationVariant = getPropertyValueContentByLabel(
         componentProperty.properties,
@@ -1411,7 +1399,7 @@ function parseWebElementProperties(
               uuid: value.uuid!,
               label: value.content?.toString() ?? "",
             })) ?? null,
-        itemVariant,
+        variant,
         paginationVariant,
         layout,
       };
@@ -1723,8 +1711,7 @@ function parseWebElement(elementResource: RawResource): WebElement {
       properties.component === "annotated-image" ||
       properties.component === "annotated-document" ||
       properties.component === "collection",
-    isCountDisplayed:
-      properties.component === "collection" && properties.variant === "full",
+    isCountDisplayed: properties.component === "collection",
   });
 
   return {
