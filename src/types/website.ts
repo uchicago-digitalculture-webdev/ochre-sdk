@@ -318,6 +318,7 @@ export type WebElementComponent =
       displayedProperties: Array<{ uuid: string; label: string }> | null;
       variant: "detailed" | "card" | "tile" | "showcase";
       paginationVariant: "default" | "numeric";
+      loadingVariant: "spinner" | "skeleton" | "animation" | "none";
       layout: "image-top" | "image-bottom" | "image-start" | "image-end";
       imageQuality: "high" | "low";
       isSortDisplayed: boolean;

@@ -596,6 +596,17 @@ function parseWebElementProperties(
         | null;
       paginationVariant ??= "default";
 
+      let loadingVariant = getPropertyValueContentByLabel(
+        componentProperty.properties,
+        "loading-variant",
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "collection" }
+          >["loadingVariant"]
+        | null;
+      loadingVariant ??= "spinner";
+
       let imageQuality = getPropertyValueContentByLabel(
         componentProperty.properties,
         "image-quality",
@@ -764,6 +775,7 @@ function parseWebElementProperties(
             })) ?? null,
         variant,
         paginationVariant,
+        loadingVariant,
         layout,
         imageQuality,
         isUsingQueryParams,
