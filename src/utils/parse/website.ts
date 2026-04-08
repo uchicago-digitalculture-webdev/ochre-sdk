@@ -1374,7 +1374,10 @@ function parseWebElementProperties(
         componentProperty.properties,
         "variant",
       ) as
-        | Extract<WebElementComponent, { component: "query" }>["variant"]
+        | Extract<
+            WebElementComponent,
+            { component: "query" }
+          >["collectionProperties"]["variant"]
         | null;
       variant ??= "detailed";
 
@@ -1385,15 +1388,29 @@ function parseWebElementProperties(
         | Extract<
             WebElementComponent,
             { component: "query" }
-          >["paginationVariant"]
+          >["collectionProperties"]["paginationVariant"]
         | null;
       paginationVariant ??= "default";
+
+      let loadingVariant = getPropertyValueContentByLabel(
+        componentProperty.properties,
+        "loading-variant",
+      ) as
+        | Extract<
+            WebElementComponent,
+            { component: "query" }
+          >["collectionProperties"]["loadingVariant"]
+        | null;
+      loadingVariant ??= "spinner";
 
       let layout = getPropertyValueContentByLabel(
         componentProperty.properties,
         "layout",
       ) as
-        | Extract<WebElementComponent, { component: "query" }>["layout"]
+        | Extract<
+            WebElementComponent,
+            { component: "query" }
+          >["collectionProperties"]["layout"]
         | null;
       layout ??= "image-start";
 
@@ -1404,16 +1421,19 @@ function parseWebElementProperties(
           .filter((uuid) => uuid !== null),
         items,
         options,
-        displayedProperties:
-          displayedProperties?.values
-            .filter((value) => value.uuid !== null)
-            .map((value) => ({
-              uuid: value.uuid!,
-              label: value.content?.toString() ?? "",
-            })) ?? null,
-        variant,
-        paginationVariant,
-        layout,
+        collectionProperties: {
+          displayedProperties:
+            displayedProperties?.values
+              .filter((value) => value.uuid !== null)
+              .map((value) => ({
+                uuid: value.uuid!,
+                label: value.content?.toString() ?? "",
+              })) ?? null,
+          variant,
+          paginationVariant,
+          loadingVariant,
+          layout,
+        },
       };
       break;
     }

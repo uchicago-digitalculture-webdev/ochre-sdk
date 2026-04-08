@@ -403,19 +403,28 @@ export type WebElementComponent =
         contexts: PropertyContexts | null;
         labels: { title: string | null };
       };
-      displayedProperties: Array<{ uuid: string; label: string }> | null;
-      variant: Extract<
-        WebElementComponent,
-        { component: "collection" }
-      >["variant"];
-      paginationVariant: Extract<
-        WebElementComponent,
-        { component: "collection" }
-      >["paginationVariant"];
-      layout: Extract<
-        WebElementComponent,
-        { component: "collection" }
-      >["layout"];
+      collectionProperties: {
+        displayedProperties: Extract<
+          WebElementComponent,
+          { component: "collection" }
+        >["displayedProperties"];
+        variant: Extract<
+          WebElementComponent,
+          { component: "collection" }
+        >["variant"];
+        paginationVariant: Extract<
+          WebElementComponent,
+          { component: "collection" }
+        >["paginationVariant"];
+        loadingVariant: Extract<
+          WebElementComponent,
+          { component: "collection" }
+        >["loadingVariant"];
+        layout: Extract<
+          WebElementComponent,
+          { component: "collection" }
+        >["layout"];
+      };
     }
   | {
       component: "search-bar";
