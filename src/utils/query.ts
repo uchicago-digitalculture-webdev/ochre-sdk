@@ -28,15 +28,21 @@ type TextTargetQuery = Extract<
 type PropertyQuery = Extract<QueryLeaf, { target: "property" }>;
 type AllPropertyQuery = Extract<PropertyQuery, { dataType: "all" }>;
 
-const CONTENT_TARGET_CONTAINER_ELEMENTS: Record<
+const CONTENT_TARGET_CONTENT_ELEMENT_PATHS: Record<
   Exclude<TextTargetQuery["target"], "notes">,
-  string
+  Array<string>
 > = {
-  title: "identification",
-  description: "description",
-  image: "image",
-  periods: "period",
-  bibliography: "bibliography",
+  title: ["identification", "label", "content"],
+  description: ["description", "content"],
+  image: ["image", "identification", "label", "content"],
+  periods: ["periods", "period", "identification", "label", "content"],
+  bibliography: [
+    "bibliographies",
+    "bibliography",
+    "identification",
+    "label",
+    "content",
+  ],
 };
 
 function tokenizeIncludesSearchValue(params: {
@@ -59,16 +65,34 @@ function tokenizeIncludesSearchValue(params: {
   return terms;
 }
 
+function tokenizeExactPhraseSearchValue(params: {
+  value: string;
+  isCaseSensitive: boolean;
+}): Array<string> {
+  const { value, isCaseSensitive } = params;
+  const tokenSource = isCaseSensitive ? value : value.toLowerCase();
+  const rawTerms = tokenSource.split(CTS_INCLUDES_TOKEN_SPLIT_REGEX);
+  const terms: Array<string> = [];
+
+  for (const term of rawTerms) {
+    if (term !== "") {
+      terms.push(term);
+    }
+  }
+
+  return terms;
+}
+
 function buildCtsMatchOptionsExpression(params: {
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
 }): string {
-  const { isCaseSensitive } = params;
+  const { matchMode, isCaseSensitive } = params;
   const options: Array<string> = [
     isCaseSensitive ? "case-sensitive" : "case-insensitive",
-    "diacritic-insensitive",
-    "punctuation-insensitive",
-    "whitespace-insensitive",
+    matchMode === "exact" ? "diacritic-sensitive" : "diacritic-insensitive",
+    matchMode === "exact" ? "punctuation-sensitive" : "punctuation-insensitive",
+    matchMode === "exact" ? "whitespace-sensitive" : "whitespace-insensitive",
     "unstemmed",
     "unwildcarded",
   ];
@@ -149,6 +173,23 @@ function buildSearchableContentTextQueryExpression(params: {
   const { value, matchMode, isCaseSensitive } = params;
 
   if (matchMode === "exact") {
+    const phraseTerms = tokenizeExactPhraseSearchValue({
+      value,
+      isCaseSensitive,
+    });
+
+    if (phraseTerms.length > 1) {
+      return buildAndCtsQueryExpressionInternal(
+        phraseTerms.map((term) =>
+          buildCtsWordQueryExpression({
+            value: term,
+            matchMode,
+            isCaseSensitive,
+          }),
+        ),
+      );
+    }
+
     return buildCtsWordQueryExpression({ value, matchMode, isCaseSensitive });
   }
 
@@ -373,10 +414,10 @@ function buildContentTargetQueryExpression(params: {
   language: string;
 }): string {
   const { target, value, matchMode, isCaseSensitive, language } = params;
-  const containerElement = CONTENT_TARGET_CONTAINER_ELEMENTS[target];
+  const contentElementPath = CONTENT_TARGET_CONTENT_ELEMENT_PATHS[target];
 
   return buildNestedElementQuery(
-    [containerElement],
+    contentElementPath,
     buildAndCtsQueryExpressionInternal([
       buildContentLanguageQuery(language),
       buildSearchableContentTextQueryExpression({
