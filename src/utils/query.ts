@@ -405,6 +405,15 @@ function buildPropertyQueryExpression(params: {
   );
 }
 
+function buildPropertyPresenceQueryExpression(params: {
+  propertyVariable?: string;
+}): string {
+  return buildPropertyQueryExpression({
+    propertyVariable: params.propertyVariable,
+    queryExpression: "cts:true-query()",
+  });
+}
+
 function buildPropertyStringQueryExpression(params: {
   propertyVariable?: string;
   value: string;
@@ -459,47 +468,17 @@ function buildPropertyAllQueryExpression(params: {
 }): string {
   const { query, value, matchMode } = params;
 
-  if (matchMode === "exact") {
-    return buildPropertyQueryExpression({
-      propertyVariable: query.propertyVariable,
-      queryExpression: buildNestedElementQuery(
-        ["value"],
-        buildAndCtsQueryExpressionInternal([
-          buildValueNotIdRefQuery(),
-          buildCtsWordQueryExpression({
-            value,
-            matchMode,
-            isCaseSensitive: query.isCaseSensitive,
-          }),
-        ]),
-      ),
-    });
-  }
-
   return buildPropertyQueryExpression({
     propertyVariable: query.propertyVariable,
     queryExpression: buildNestedElementQuery(
       ["value"],
       buildAndCtsQueryExpressionInternal([
         buildValueNotIdRefQuery(),
-        buildOrCtsQueryExpressionInternal([
-          buildValueRawValueInnerQuery({
-            value,
-            matchMode,
-            isCaseSensitive: query.isCaseSensitive,
-          }),
-          buildValueDirectTextInnerQuery({
-            value,
-            matchMode,
-            isCaseSensitive: query.isCaseSensitive,
-          }),
-          buildValueContentInnerQuery({
-            language: query.language,
-            value,
-            matchMode,
-            isCaseSensitive: query.isCaseSensitive,
-          }),
-        ]),
+        buildCtsWordQueryExpression({
+          value,
+          matchMode,
+          isCaseSensitive: query.isCaseSensitive,
+        }),
       ]),
     ),
   });
@@ -534,13 +513,13 @@ function buildPropertyDateRangeQueryExpression(
 
   if (query.from != null) {
     rangeQueryExpressions.push(
-      `cts:element-attribute-range-query(xs:QName("value"), xs:QName("rawValue"), ">=", xs:${query.dataType}(${stringLiteral(query.from)}))`,
+      `cts:element-attribute-range-query(xs:QName("value"), xs:QName("rawValue"), ">=", ${stringLiteral(query.from)})`,
     );
   }
 
   if (query.to != null) {
     rangeQueryExpressions.push(
-      `cts:element-attribute-range-query(xs:QName("value"), xs:QName("rawValue"), "<=", xs:${query.dataType}(${stringLiteral(query.to)}))`,
+      `cts:element-attribute-range-query(xs:QName("value"), xs:QName("rawValue"), "<=", ${stringLiteral(query.to)})`,
     );
   }
 
@@ -671,6 +650,18 @@ function buildLeafValueQueryExpression(params: {
 }
 
 function buildLeafQueryExpression(query: QueryLeaf): string {
+  if (
+    query.target === "property" &&
+    query.dataType !== "date" &&
+    query.dataType !== "dateTime" &&
+    !("value" in query) &&
+    query.propertyVariable != null
+  ) {
+    return buildPropertyPresenceQueryExpression({
+      propertyVariable: query.propertyVariable,
+    });
+  }
+
   if (
     query.target === "property" &&
     (query.dataType === "date" || query.dataType === "dateTime") &&

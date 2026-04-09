@@ -208,6 +208,50 @@ function getPropertyVariableUuidsFromQueries(
   return [...propertyVariableUuids];
 }
 
+function getItemFilterQueriesFromPropertyValueQueries(
+  queries: Query | null,
+): Query | null {
+  if (queries == null) {
+    return null;
+  }
+
+  if ("target" in queries) {
+    if (queries.target !== "property") {
+      return queries;
+    }
+
+    if (queries.dataType === "date" || queries.dataType === "dateTime") {
+      return queries;
+    }
+
+    return "value" in queries && queries.value != null ? queries : null;
+  }
+
+  const filteredChildren: Array<Query> = [];
+  const childQueries = "and" in queries ? queries.and : queries.or;
+
+  for (const childQuery of childQueries) {
+    const filteredChildQuery =
+      getItemFilterQueriesFromPropertyValueQueries(childQuery);
+
+    if (filteredChildQuery != null) {
+      filteredChildren.push(filteredChildQuery);
+    }
+  }
+
+  if (filteredChildren.length === 0) {
+    return null;
+  }
+
+  if (filteredChildren.length === 1) {
+    return filteredChildren[0] ?? null;
+  }
+
+  return "and" in queries ?
+      { and: filteredChildren }
+    : { or: filteredChildren };
+}
+
 /**
  * Schema for a single property value query item in the OCHRE API response
  */
@@ -356,7 +400,9 @@ function buildXQuery(params: {
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
   const baseItemsExpression = `doc()/ochre${setScopeFilter}`;
-  const compiledQueryPlan = buildQueryPlan({ queries });
+  const compiledQueryPlan = buildQueryPlan({
+    queries: getItemFilterQueriesFromPropertyValueQueries(queries),
+  });
   const itemsQueryExpressions: Array<string> = [];
   const belongsToCollectionQueryExpression =
     buildBelongsToCollectionQueryExpression(
