@@ -114,3 +114,20 @@ it("should fetch uchicago-node Set items for query: 'cat'", async () => {
 
   expect(totalCount).toBe(1);
 });
+
+it("should fetch sosc-core-at-smart Set items for bibliographies query: 'Aristotle, The Politics'", async () => {
+  const { totalCount } = await fetchSetItems({
+    setScopeUuids: ["16f5a39a-47b9-492d-9f9c-b7e4ec4156b6"],
+    queries: {
+      target: "bibliography",
+      value: "Aristotle, The Politics",
+      matchMode: "exact",
+      isCaseSensitive: true,
+      language: "eng",
+    },
+    page: 1,
+    pageSize: 48,
+  });
+
+  expect(totalCount).toBe(8);
+});
