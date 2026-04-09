@@ -50,6 +50,7 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write --list-different .",
     "check-types": "tsc --noEmit",
+    "test": "vitest run",
     "release": "bumpp"
   },
   "dependencies": {
@@ -65,7 +66,8 @@
     "eslint": "^10.2.0",
     "prettier": "^3.8.1",
     "tsdown": "^0.21.7",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
   },
   "packageManager": "pnpm@10.33.0"
 }
