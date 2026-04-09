@@ -10,9 +10,12 @@ const CTS_INCLUDES_STOP_WORDS = new Set<string>([
   "the",
   "to",
 ]);
+const CTS_INCLUDES_TOKEN_WORD_REGEX = /^\p{L}+$/u;
+const CTS_INCLUDES_TOKEN_REGEX = /[\p{L}\p{N}*?]+/gu;
 const CTS_INCLUDES_TOKEN_SPLIT_REGEX = /\W+/u;
 
 type QueryMatchMode = "includes" | "exact";
+type CtsQueryFamily = "text" | "raw";
 type TextTargetQuery = Extract<
   QueryLeaf,
   {
@@ -51,10 +54,22 @@ function tokenizeIncludesSearchValue(params: {
 }): Array<string> {
   const { value, isCaseSensitive } = params;
   const tokenSource = isCaseSensitive ? value : value.toLowerCase();
-  const rawTerms = tokenSource.split(CTS_INCLUDES_TOKEN_SPLIT_REGEX);
+  const rawTerms = tokenSource.match(CTS_INCLUDES_TOKEN_REGEX) ?? [];
   const terms: Array<string> = [];
 
   for (const term of rawTerms) {
+    const hasWildcard = term.includes("*") || term.includes("?");
+
+    if (hasWildcard) {
+      const wildcardStrippedTerm = term.replaceAll("*", "").replaceAll("?", "");
+
+      if (wildcardStrippedTerm !== "") {
+        terms.push(term);
+      }
+
+      continue;
+    }
+
     const normalizedTerm = term.toLowerCase();
 
     if (normalizedTerm !== "" && !CTS_INCLUDES_STOP_WORDS.has(normalizedTerm)) {
@@ -83,19 +98,55 @@ function tokenizeExactPhraseSearchValue(params: {
   return terms;
 }
 
+function hasWildcardCharacters(value: string): boolean {
+  return value.includes("*") || value.includes("?");
+}
+
+function getWildcardStrippedValue(value: string): string {
+  return value.replaceAll("*", "").replaceAll("?", "");
+}
+
+function shouldUseStemmedTextSearch(value: string): boolean {
+  const wildcardStrippedValue = getWildcardStrippedValue(value);
+
+  return (
+    wildcardStrippedValue.length >= 3 &&
+    CTS_INCLUDES_TOKEN_WORD_REGEX.test(wildcardStrippedValue)
+  );
+}
+
 function buildCtsMatchOptionsExpression(params: {
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
+  queryFamily?: CtsQueryFamily;
+  language?: string;
+  isWildcarded?: boolean;
+  isStemmed?: boolean;
 }): string {
-  const { matchMode, isCaseSensitive } = params;
+  const { matchMode, isCaseSensitive, queryFamily, language, isWildcarded } =
+    params;
+  const { isStemmed } = params;
   const options: Array<string> = [
     isCaseSensitive ? "case-sensitive" : "case-insensitive",
     matchMode === "exact" ? "diacritic-sensitive" : "diacritic-insensitive",
     matchMode === "exact" ? "punctuation-sensitive" : "punctuation-insensitive",
     matchMode === "exact" ? "whitespace-sensitive" : "whitespace-insensitive",
-    "unstemmed",
-    "unwildcarded",
   ];
+
+  if (matchMode === "exact") {
+    options.push("unstemmed", "unwildcarded");
+  } else if (queryFamily === "text") {
+    options.push(
+      isStemmed ? "stemmed" : "unstemmed",
+      isWildcarded ? "wildcarded" : "unwildcarded",
+    );
+
+    if (isStemmed && language != null && language !== "") {
+      options.push(`lang=${language}`);
+    }
+  } else {
+    options.push("unstemmed", isWildcarded ? "wildcarded" : "unwildcarded");
+  }
 
   return `(${options.map((option) => stringLiteral(option)).join(", ")})`;
 }
@@ -104,10 +155,18 @@ function buildCtsWordQueryExpression(params: {
   value: string;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
+  queryFamily?: CtsQueryFamily;
+  language?: string;
 }): string {
-  const { value, matchMode, isCaseSensitive } = params;
+  const { value, matchMode, isCaseSensitive, queryFamily, language } = params;
+  const isWildcarded = matchMode === "includes" && hasWildcardCharacters(value);
+  const isStemmed =
+    matchMode === "includes" &&
+    queryFamily === "text" &&
+    !isWildcarded &&
+    shouldUseStemmedTextSearch(value);
 
-  return `cts:word-query(${stringLiteral(value)}, ${buildCtsMatchOptionsExpression({ matchMode, isCaseSensitive })})`;
+  return `cts:word-query(${stringLiteral(value)}, ${buildCtsMatchOptionsExpression({ matchMode, isCaseSensitive, queryFamily, language, isWildcarded, isStemmed })})`;
 }
 
 function buildCtsElementWordQueryExpression(params: {
@@ -115,10 +174,25 @@ function buildCtsElementWordQueryExpression(params: {
   value: string;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
+  queryFamily?: CtsQueryFamily;
+  language?: string;
 }): string {
-  const { elementName, value, matchMode, isCaseSensitive } = params;
+  const {
+    elementName,
+    value,
+    matchMode,
+    isCaseSensitive,
+    queryFamily,
+    language,
+  } = params;
+  const isWildcarded = matchMode === "includes" && hasWildcardCharacters(value);
+  const isStemmed =
+    matchMode === "includes" &&
+    queryFamily === "text" &&
+    !isWildcarded &&
+    shouldUseStemmedTextSearch(value);
 
-  return `cts:element-word-query(xs:QName("${elementName}"), ${stringLiteral(value)}, ${buildCtsMatchOptionsExpression({ matchMode, isCaseSensitive })})`;
+  return `cts:element-word-query(xs:QName("${elementName}"), ${stringLiteral(value)}, ${buildCtsMatchOptionsExpression({ matchMode, isCaseSensitive, queryFamily, language, isWildcarded, isStemmed })})`;
 }
 
 function buildCtsElementAttributeWordQueryExpression(params: {
@@ -127,11 +201,26 @@ function buildCtsElementAttributeWordQueryExpression(params: {
   value: string;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
+  queryFamily?: CtsQueryFamily;
+  language?: string;
 }): string {
-  const { elementName, attributeName, value, matchMode, isCaseSensitive } =
-    params;
+  const {
+    elementName,
+    attributeName,
+    value,
+    matchMode,
+    isCaseSensitive,
+    queryFamily,
+    language,
+  } = params;
+  const isWildcarded = matchMode === "includes" && hasWildcardCharacters(value);
+  const isStemmed =
+    matchMode === "includes" &&
+    queryFamily === "text" &&
+    !isWildcarded &&
+    shouldUseStemmedTextSearch(value);
 
-  return `cts:element-attribute-word-query(xs:QName("${elementName}"), xs:QName("${attributeName}"), ${stringLiteral(value)}, ${buildCtsMatchOptionsExpression({ matchMode, isCaseSensitive })})`;
+  return `cts:element-attribute-word-query(xs:QName("${elementName}"), xs:QName("${attributeName}"), ${stringLiteral(value)}, ${buildCtsMatchOptionsExpression({ matchMode, isCaseSensitive, queryFamily, language, isWildcarded, isStemmed })})`;
 }
 
 function buildCtsElementValueQueryExpression(params: {
@@ -169,8 +258,9 @@ function buildSearchableContentTextQueryExpression(params: {
   value: string;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
+  language: string;
 }): string {
-  const { value, matchMode, isCaseSensitive } = params;
+  const { value, matchMode, isCaseSensitive, language } = params;
 
   if (matchMode === "exact") {
     const phraseTerms = tokenizeExactPhraseSearchValue({
@@ -199,8 +289,16 @@ function buildSearchableContentTextQueryExpression(params: {
       value,
       matchMode,
       isCaseSensitive,
+      queryFamily: "text",
+      language,
     }),
-    buildCtsWordQueryExpression({ value, matchMode, isCaseSensitive }),
+    buildCtsWordQueryExpression({
+      value,
+      matchMode,
+      isCaseSensitive,
+      queryFamily: "text",
+      language,
+    }),
   ]);
 }
 
@@ -311,6 +409,7 @@ function buildValueContentInnerQuery(params: {
         value,
         matchMode,
         isCaseSensitive,
+        language,
       }),
     ]),
   );
@@ -334,6 +433,7 @@ function buildValueDirectTextInnerQuery(params: {
         value,
         matchMode,
         isCaseSensitive,
+        queryFamily: "raw",
       });
 
   return buildAndCtsQueryExpressionInternal([
@@ -366,6 +466,7 @@ function buildValueRawValueInnerQuery(params: {
     value,
     matchMode,
     isCaseSensitive,
+    queryFamily: "raw",
   });
 }
 
@@ -395,11 +496,14 @@ function buildNotesQueryExpression(params: {
             value,
             matchMode,
             isCaseSensitive,
+            queryFamily: "text",
+            language,
           }),
         buildSearchableContentTextQueryExpression({
           value,
           matchMode,
           isCaseSensitive,
+          language,
         }),
       ]),
     ]),
@@ -424,6 +528,7 @@ function buildContentTargetQueryExpression(params: {
         value,
         matchMode,
         isCaseSensitive,
+        language,
       }),
     ]),
   );
@@ -508,6 +613,36 @@ function buildPropertyAllQueryExpression(params: {
   matchMode: QueryMatchMode;
 }): string {
   const { query, value, matchMode } = params;
+
+  if (matchMode === "includes") {
+    return buildPropertyQueryExpression({
+      propertyVariable: query.propertyVariable,
+      queryExpression: buildNestedElementQuery(
+        ["value"],
+        buildAndCtsQueryExpressionInternal([
+          buildValueNotIdRefQuery(),
+          buildOrCtsQueryExpressionInternal([
+            buildValueContentInnerQuery({
+              language: query.language,
+              value,
+              matchMode,
+              isCaseSensitive: query.isCaseSensitive,
+            }),
+            buildValueRawValueInnerQuery({
+              value,
+              matchMode,
+              isCaseSensitive: query.isCaseSensitive,
+            }),
+            buildValueDirectTextInnerQuery({
+              value,
+              matchMode,
+              isCaseSensitive: query.isCaseSensitive,
+            }),
+          ]),
+        ]),
+      ),
+    });
+  }
 
   return buildPropertyQueryExpression({
     propertyVariable: query.propertyVariable,
@@ -729,6 +864,11 @@ function buildLeafQueryExpression(query: QueryLeaf): string {
     value: searchValue,
     isCaseSensitive: query.isCaseSensitive,
   });
+  const fullValueQueryExpression = buildLeafValueQueryExpression({
+    query,
+    value: searchValue,
+    matchMode: "exact",
+  });
 
   if (terms.length === 0) {
     return "cts:false-query()";
@@ -746,10 +886,23 @@ function buildLeafQueryExpression(query: QueryLeaf): string {
     );
   }
 
-  return buildAndCtsQueryExpressionInternal(termQueryExpressions);
+  const tokenizedQueryExpression =
+    buildAndCtsQueryExpressionInternal(termQueryExpressions);
+
+  if (terms.length === 1) {
+    return tokenizedQueryExpression;
+  }
+
+  return buildOrCtsQueryExpressionInternal([
+    fullValueQueryExpression,
+    tokenizedQueryExpression,
+  ]);
 }
 
-type IncludesGroupMember = { buildTermQuery: (term: string) => string };
+type IncludesGroupMember = {
+  buildTermQuery: (term: string) => string;
+  buildFullValueQuery: (value: string) => string;
+};
 
 function getGroupableIncludesValue(query: QueryLeaf): string | null {
   if (query.matchMode !== "includes" || query.isNegated === true) {
@@ -842,6 +995,8 @@ function buildIncludesGroupMember(query: QueryLeaf): IncludesGroupMember {
         value: term,
         matchMode: "includes",
       }),
+    buildFullValueQuery: (value) =>
+      buildLeafValueQueryExpression({ query, value, matchMode: "exact" }),
   };
 }
 
@@ -869,6 +1024,11 @@ function buildIncludesGroupQueryExpression(queries: Array<QueryLeaf>): string {
 
   const members = queries.map((query) => buildIncludesGroupMember(query));
   const perTermQueryExpressions: Array<string> = [];
+  const fullValueFieldQueryExpressions: Array<string> = [];
+
+  for (const member of members) {
+    fullValueFieldQueryExpressions.push(member.buildFullValueQuery(groupValue));
+  }
 
   for (const term of terms) {
     const fieldQueryExpressions: Array<string> = [];
@@ -882,7 +1042,18 @@ function buildIncludesGroupQueryExpression(queries: Array<QueryLeaf>): string {
     );
   }
 
-  return buildAndCtsQueryExpressionInternal(perTermQueryExpressions);
+  const tokenizedGroupQueryExpression = buildAndCtsQueryExpressionInternal(
+    perTermQueryExpressions,
+  );
+
+  if (terms.length === 1) {
+    return tokenizedGroupQueryExpression;
+  }
+
+  return buildOrCtsQueryExpressionInternal([
+    buildOrCtsQueryExpressionInternal(fullValueFieldQueryExpressions),
+    tokenizedGroupQueryExpression,
+  ]);
 }
 
 function buildQueryNode(query: Query): string {

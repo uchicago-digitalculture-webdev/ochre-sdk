@@ -1,6 +1,138 @@
 import { expect, it } from "vitest";
 import { fetchSetPropertyValues } from "./property-values.js";
 
+const UCHICAGO_NODE_SET_SCOPE_UUIDS = [
+  "10268bd8-5e97-4f8c-b3f7-89d85d93a776",
+  "6b81459f-978c-4958-affa-3f0e895bf86e",
+  "a6af0d98-5e68-4565-953d-2633a6ce145c",
+  "e59a10d4-c873-4aad-8a2f-f4e62240c5a3",
+  "c103ea19-5617-480e-bdfa-8ae8e1d1f83f",
+  "606c62dd-80ad-41db-ae1d-7a8b2ff7ef27",
+] as const;
+
+function buildUchicagoNodePropertyValueSelectionQuery() {
+  return {
+    or: [
+      {
+        target: "property" as const,
+        propertyVariable: "8383140a-e676-417f-b5d8-863d9df6d905",
+        dataType: "string" as const,
+        matchMode: "exact" as const,
+        isCaseSensitive: true,
+        language: "eng",
+      },
+      {
+        target: "property" as const,
+        propertyVariable: "f311cb1b-2993-4584-bb0e-9a35888f29b9",
+        dataType: "string" as const,
+        matchMode: "exact" as const,
+        isCaseSensitive: true,
+        language: "eng",
+      },
+      {
+        target: "property" as const,
+        propertyVariable: "03b520c1-248f-41e1-b05f-5aa0488e5bbe",
+        dataType: "IDREF" as const,
+        matchMode: "exact" as const,
+        isCaseSensitive: true,
+        language: "eng",
+      },
+      {
+        target: "property" as const,
+        propertyVariable: "30054cb2-909a-4f34-8db9-8fe7369d691d",
+        dataType: "IDREF" as const,
+        matchMode: "exact" as const,
+        isCaseSensitive: true,
+        language: "eng",
+      },
+      {
+        target: "property" as const,
+        propertyVariable: "48a43a29-b240-4d0a-9ab2-fa3025ca5cf7",
+        dataType: "IDREF" as const,
+        matchMode: "exact" as const,
+        isCaseSensitive: true,
+        language: "eng",
+      },
+      {
+        target: "property" as const,
+        propertyVariable: "4c9fc941-5c23-4c22-84a8-628177d772bc",
+        dataType: "IDREF" as const,
+        matchMode: "exact" as const,
+        isCaseSensitive: true,
+        language: "eng",
+      },
+      {
+        target: "property" as const,
+        propertyVariable: "9f4ba746-585e-45b0-a654-43d52c9d840b",
+        dataType: "IDREF" as const,
+        matchMode: "exact" as const,
+        isCaseSensitive: true,
+        language: "eng",
+      },
+      {
+        target: "property" as const,
+        propertyVariable: "cf4b9fdc-6cef-4cc6-b6b6-7182aca93fb8",
+        dataType: "date" as const,
+        from: "0000",
+        to: "9999-12-31",
+        matchMode: "exact" as const,
+        isCaseSensitive: true,
+        language: "eng",
+      },
+    ],
+  };
+}
+
+function buildUchicagoNodeItemSearchQuery(value: string) {
+  return {
+    or: [
+      {
+        target: "title" as const,
+        value,
+        matchMode: "includes" as const,
+        isCaseSensitive: false,
+        language: "eng",
+      },
+      {
+        target: "description" as const,
+        value,
+        matchMode: "includes" as const,
+        isCaseSensitive: false,
+        language: "eng",
+      },
+      {
+        target: "notes" as const,
+        value,
+        matchMode: "includes" as const,
+        isCaseSensitive: false,
+        language: "eng",
+      },
+      {
+        target: "bibliography" as const,
+        value,
+        matchMode: "includes" as const,
+        isCaseSensitive: false,
+        language: "eng",
+      },
+      {
+        target: "periods" as const,
+        value,
+        matchMode: "includes" as const,
+        isCaseSensitive: false,
+        language: "eng",
+      },
+      {
+        target: "property" as const,
+        dataType: "all" as const,
+        value,
+        matchMode: "includes" as const,
+        isCaseSensitive: false,
+        language: "eng",
+      },
+    ],
+  };
+}
+
 it("should fetch idalion Set 'Object register' property values", async () => {
   const { propertyValues } = await fetchSetPropertyValues({
     setScopeUuids: ["23d13357-408b-4980-8962-8c8e876a2188"],
@@ -226,135 +358,29 @@ it("should fetch idalion Set 'Object register' property values", async () => {
   expect(propertyValues?.length).toBeGreaterThan(0);
 });
 
-it("should fetch uchicago-node Set 'Search' property values", async () => {
+it("should fetch uchicago-node Set property values for wildcard query: 'cat*'", async () => {
   const { propertyValues } = await fetchSetPropertyValues({
-    setScopeUuids: [
-      "10268bd8-5e97-4f8c-b3f7-89d85d93a776",
-      "6b81459f-978c-4958-affa-3f0e895bf86e",
-      "a6af0d98-5e68-4565-953d-2633a6ce145c",
-      "e59a10d4-c873-4aad-8a2f-f4e62240c5a3",
-      "c103ea19-5617-480e-bdfa-8ae8e1d1f83f",
-      "606c62dd-80ad-41db-ae1d-7a8b2ff7ef27",
-    ],
+    setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],
     queries: {
       and: [
-        {
-          or: [
-            {
-              target: "property",
-              propertyVariable: "8383140a-e676-417f-b5d8-863d9df6d905",
-              dataType: "string",
-              matchMode: "exact",
-              isCaseSensitive: true,
-              language: "eng",
-            },
-            {
-              target: "property",
-              propertyVariable: "f311cb1b-2993-4584-bb0e-9a35888f29b9",
-              dataType: "string",
-              matchMode: "exact",
-              isCaseSensitive: true,
-              language: "eng",
-            },
-            {
-              target: "property",
-              propertyVariable: "03b520c1-248f-41e1-b05f-5aa0488e5bbe",
-              dataType: "IDREF",
-              matchMode: "exact",
-              isCaseSensitive: true,
-              language: "eng",
-            },
-            {
-              target: "property",
-              propertyVariable: "30054cb2-909a-4f34-8db9-8fe7369d691d",
-              dataType: "IDREF",
-              matchMode: "exact",
-              isCaseSensitive: true,
-              language: "eng",
-            },
-            {
-              target: "property",
-              propertyVariable: "48a43a29-b240-4d0a-9ab2-fa3025ca5cf7",
-              dataType: "IDREF",
-              matchMode: "exact",
-              isCaseSensitive: true,
-              language: "eng",
-            },
-            {
-              target: "property",
-              propertyVariable: "4c9fc941-5c23-4c22-84a8-628177d772bc",
-              dataType: "IDREF",
-              matchMode: "exact",
-              isCaseSensitive: true,
-              language: "eng",
-            },
-            {
-              target: "property",
-              propertyVariable: "9f4ba746-585e-45b0-a654-43d52c9d840b",
-              dataType: "IDREF",
-              matchMode: "exact",
-              isCaseSensitive: true,
-              language: "eng",
-            },
-            {
-              target: "property",
-              propertyVariable: "cf4b9fdc-6cef-4cc6-b6b6-7182aca93fb8",
-              dataType: "date",
-              from: "0000",
-              to: "9999-12-31",
-              matchMode: "exact",
-              isCaseSensitive: true,
-              language: "eng",
-            },
-          ],
-        },
-        {
-          or: [
-            {
-              target: "title",
-              value: "ca. 1870",
-              matchMode: "includes",
-              isCaseSensitive: false,
-              language: "eng",
-            },
-            {
-              target: "description",
-              value: "ca. 1870",
-              matchMode: "includes",
-              isCaseSensitive: false,
-              language: "eng",
-            },
-            {
-              target: "notes",
-              value: "ca. 1870",
-              matchMode: "includes",
-              isCaseSensitive: false,
-              language: "eng",
-            },
-            {
-              target: "bibliography",
-              value: "ca. 1870",
-              matchMode: "includes",
-              isCaseSensitive: false,
-              language: "eng",
-            },
-            {
-              target: "periods",
-              value: "ca. 1870",
-              matchMode: "includes",
-              isCaseSensitive: false,
-              language: "eng",
-            },
-            {
-              target: "property",
-              dataType: "all",
-              value: "ca. 1870",
-              matchMode: "includes",
-              isCaseSensitive: false,
-              language: "eng",
-            },
-          ],
-        },
+        buildUchicagoNodePropertyValueSelectionQuery(),
+        buildUchicagoNodeItemSearchQuery("cat*"),
+      ],
+    },
+    isLimitedToLeafPropertyValues: false,
+  });
+
+  expect(propertyValues).not.toBeNull();
+  expect(propertyValues?.length).toBeGreaterThan(0);
+});
+
+it("should fetch uchicago-node Set 'Search' property values", async () => {
+  const { propertyValues } = await fetchSetPropertyValues({
+    setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],
+    queries: {
+      and: [
+        buildUchicagoNodePropertyValueSelectionQuery(),
+        buildUchicagoNodeItemSearchQuery("ca. 1870"),
       ],
     },
     isLimitedToLeafPropertyValues: false,
