@@ -20,7 +20,6 @@ import type {
 } from "#/types/raw.js";
 import { BELONGS_TO_COLLECTION_UUID } from "#/constants.js";
 import { setItemsParamsSchema } from "#/schemas.js";
-import { DEFAULT_API_VERSION } from "#/utils/helpers.js";
 import { stringLiteral } from "#/utils/internal.js";
 import {
   parseBibliographies,
@@ -35,7 +34,11 @@ import {
   parseTexts,
   parseTrees,
 } from "#/utils/parse/index.js";
-import { buildQueryPlan } from "#/utils/query.js";
+import {
+  buildAndCtsQueryExpression,
+  buildBelongsToCollectionQueryExpression,
+  buildQueryPlan,
+} from "#/utils/query.js";
 
 type SortWithDirection = Exclude<SetItemsSort, { target: "none" }>;
 type PropertyValueSort = Extract<SetItemsSort, { target: "propertyValue" }>;
@@ -173,23 +176,16 @@ function buildOrderedItemsClause(sort: SetItemsSort): string {
  * For propertyValue sorting, dataType is required and the sort key uses the first valid leaf value (value[not(@i)]).
  * @param params.page - The page number (1-indexed)
  * @param params.pageSize - The number of items per page
- * @param options - Options for the fetch
- * @param options.version - The version of the OCHRE API to use
  * @returns An XQuery string
  */
-function buildXQuery(
-  params: {
-    setScopeUuids: Array<string>;
-    belongsToCollectionScopeUuids: Array<string>;
-    queries: Query | null;
-    sort: SetItemsSort;
-    page: number;
-    pageSize: number;
-  },
-  options?: { version: ApiVersion },
-): string {
-  const version = options?.version ?? DEFAULT_API_VERSION;
-
+function buildXQuery(params: {
+  setScopeUuids: Array<string>;
+  belongsToCollectionScopeUuids: Array<string>;
+  queries: Query | null;
+  sort: SetItemsSort;
+  page: number;
+  pageSize: number;
+}): string {
   const {
     queries,
     sort,
@@ -206,39 +202,34 @@ function buildXQuery(
     .map((uuid) => `@uuid="${uuid}"`)
     .join(" or ");
   const setScopeFilter = `/set[(${setScopeValues})]/items/*`;
-
-  const baseItemsExpression = `${version === 2 ? "doc()" : "input()"}/ochre${setScopeFilter}`;
-  const compiledQueryPlan = buildQueryPlan({
-    queries,
-    version,
-    baseItemsExpression,
-  });
-  const queryFilterDeclarations =
-    compiledQueryPlan.declarations.length > 0 ?
-      `${compiledQueryPlan.declarations.join("\n")}\n\n`
-    : "";
-
-  const filterPredicates: Array<string> = [];
-
-  if (belongsToCollectionScopeUuids.length > 0) {
-    const belongsToCollectionScopeValues = belongsToCollectionScopeUuids
-      .map((uuid) => `@uuid="${uuid}"`)
-      .join(" or ");
-
-    filterPredicates.push(
-      `.//properties[property[label/@uuid="${BELONGS_TO_COLLECTION_UUID}" and value/(${belongsToCollectionScopeValues})]]`,
+  const baseItemsExpression = `doc()/ochre${setScopeFilter}`;
+  const compiledQueryPlan = buildQueryPlan({ queries });
+  const itemsQueryExpressions: Array<string> = [];
+  const belongsToCollectionQueryExpression =
+    buildBelongsToCollectionQueryExpression(
+      belongsToCollectionScopeUuids,
+      BELONGS_TO_COLLECTION_UUID,
     );
+
+  if (compiledQueryPlan.queryExpression != null) {
+    itemsQueryExpressions.push(compiledQueryPlan.queryExpression);
   }
 
-  if (compiledQueryPlan.predicate.length > 0) {
-    filterPredicates.push(`(${compiledQueryPlan.predicate})`);
+  if (belongsToCollectionQueryExpression != null) {
+    itemsQueryExpressions.push(belongsToCollectionQueryExpression);
   }
 
-  const itemFilters =
-    filterPredicates.length > 0 ? `[${filterPredicates.join(" and ")}]` : "";
+  const itemsQueryExpression = buildAndCtsQueryExpression(
+    itemsQueryExpressions,
+  );
   const orderedItemsClause = buildOrderedItemsClause(sort);
 
-  const xquery = `${queryFilterDeclarations}let $items := ${compiledQueryPlan.itemsExpression}${itemFilters}
+  const itemsClause =
+    itemsQueryExpression == null ?
+      `let $items := ${baseItemsExpression}`
+    : `let $items := ${baseItemsExpression}[cts:contains(., ${itemsQueryExpression})]`;
+
+  const xquery = `${itemsClause}
 
   let $totalCount := count($items)
   ${orderedItemsClause}
@@ -298,7 +289,9 @@ export async function fetchSetItems<
   | { totalCount: null; page: null; pageSize: null; items: null; error: string }
 > {
   try {
-    const version = options?.version ?? DEFAULT_API_VERSION;
+    if (options?.version != null && options.version !== 2) {
+      throw new Error("Set item queries only support API version 2");
+    }
 
     const {
       setScopeUuids,
@@ -309,33 +302,23 @@ export async function fetchSetItems<
       pageSize,
     } = setItemsParamsSchema.parse(params);
 
-    const xquery = buildXQuery(
-      {
-        setScopeUuids,
-        belongsToCollectionScopeUuids,
-        queries,
-        sort,
-        page,
-        pageSize,
-      },
-      { version },
-    );
+    const xquery = buildXQuery({
+      setScopeUuids,
+      belongsToCollectionScopeUuids,
+      queries,
+      sort,
+      page,
+      pageSize,
+    });
 
-    let response: Response;
-    if (version === 2) {
-      response = await (options?.fetch ?? fetch)(
-        "https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&format=json",
-        {
-          method: "POST",
-          body: xquery,
-          headers: { "Content-Type": "application/xquery" },
-        },
-      );
-    } else {
-      response = await (options?.fetch ?? fetch)(
-        `https://ochre.lib.uchicago.edu/ochre?xquery=${encodeURIComponent(xquery)}&format=json&lang="*"`,
-      );
-    }
+    const response = await (options?.fetch ?? fetch)(
+      "https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&format=json",
+      {
+        method: "POST",
+        body: xquery,
+        headers: { "Content-Type": "application/xquery" },
+      },
+    );
     if (!response.ok) {
       throw new Error(`OCHRE API responded with status: ${response.status}`);
     }
