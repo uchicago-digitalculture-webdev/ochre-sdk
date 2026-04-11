@@ -1,6 +1,7 @@
 import type { ApiVersion, Identification, Property } from "#/types/index.js";
 import type {
   RawLevelContext,
+  RawLevelContextItem,
   RawMetadata,
   RawProperty,
   RawResource,
@@ -12,6 +13,7 @@ import type {
 import type {
   LevelContext,
   LevelContextItem,
+  PropertyContexts,
   Style,
   StylesheetItem,
   WebBlock,
@@ -139,26 +141,23 @@ function parseAllOptionContexts(options: {
   downloadContexts?: RawLevelContext | Array<RawLevelContext> | null;
   labelContexts?: RawLevelContext | Array<RawLevelContext> | null;
   prominentContexts?: RawLevelContext | Array<RawLevelContext> | null;
-}): {
-  flatten: Array<LevelContext>;
-  suppress: Array<LevelContext>;
-  filter: Array<LevelContext>;
-  sort: Array<LevelContext>;
-  detail: Array<LevelContext>;
-  download: Array<LevelContext>;
-  label: Array<LevelContext>;
-  prominent: Array<LevelContext>;
-} {
+}): PropertyContexts {
   function handleContexts(
     v: RawLevelContext | Array<RawLevelContext> | null | undefined,
   ): Array<LevelContext> {
     return parseContexts(v != null ? ensureArray(v) : []);
   }
 
+  function handleFilterContexts(
+    v: RawLevelContext | Array<RawLevelContext> | null | undefined,
+  ): PropertyContexts["filter"] {
+    return parseFilterContexts(v != null ? ensureArray(v) : []);
+  }
+
   return {
     flatten: handleContexts(options.flattenContexts),
     suppress: handleContexts(options.suppressContexts),
-    filter: handleContexts(options.filterContexts),
+    filter: handleFilterContexts(options.filterContexts),
     sort: handleContexts(options.sortContexts),
     detail: handleContexts(options.detailContexts),
     download: handleContexts(options.downloadContexts),
@@ -2999,39 +2998,121 @@ function parseWebsiteProperties(
   return returnProperties;
 }
 
+function parseContextItem(
+  contextItemToParse: RawLevelContextItem,
+): LevelContext {
+  const levelsToParse = ensureArray(contextItemToParse.levels.level);
+
+  let type = "";
+
+  const levels: Array<LevelContextItem> = levelsToParse.map((level) => {
+    let variableUuid = "";
+    let valueUuid: string | null = null;
+
+    if (typeof level === "string") {
+      const splitLevel = level.split(", ");
+
+      variableUuid = splitLevel[0]!;
+      valueUuid = splitLevel[1] === "null" ? null : splitLevel[1]!;
+    } else {
+      const splitLevel = level.content.split(", ");
+
+      type = level.dataType;
+      variableUuid = splitLevel[0]!;
+      valueUuid = splitLevel[1] === "null" ? null : splitLevel[1]!;
+    }
+
+    return { variableUuid, valueUuid };
+  });
+
+  return {
+    context: levels,
+    type,
+    identification: parseIdentification(contextItemToParse.identification),
+  };
+}
+
+function parseFilterContextDisplay(
+  filterOption:
+    | "inline-displayed"
+    | "inline-sidebar-displayed-closed"
+    | "inline-sidebar-displayed-open"
+    | "sidebar-displayed-closed"
+    | "sidebar-displayed-open"
+    | "inline-sidebar-hidden"
+    | undefined,
+): Pick<
+  PropertyContexts["filter"][number],
+  "isInlineDisplayed" | "isSidebarDisplayed" | "isSidebarOpen"
+> {
+  switch (filterOption) {
+    case "inline-displayed": {
+      return {
+        isInlineDisplayed: true,
+        isSidebarDisplayed: false,
+        isSidebarOpen: false,
+      };
+    }
+    case "inline-sidebar-displayed-closed": {
+      return {
+        isInlineDisplayed: true,
+        isSidebarDisplayed: true,
+        isSidebarOpen: false,
+      };
+    }
+    case "inline-sidebar-displayed-open": {
+      return {
+        isInlineDisplayed: true,
+        isSidebarDisplayed: true,
+        isSidebarOpen: true,
+      };
+    }
+    case "sidebar-displayed-closed": {
+      return {
+        isInlineDisplayed: false,
+        isSidebarDisplayed: true,
+        isSidebarOpen: false,
+      };
+    }
+    case "sidebar-displayed-open": {
+      return {
+        isInlineDisplayed: false,
+        isSidebarDisplayed: true,
+        isSidebarOpen: true,
+      };
+    }
+    default: {
+      return {
+        isInlineDisplayed: false,
+        isSidebarDisplayed: false,
+        isSidebarOpen: false,
+      };
+    }
+  }
+}
+
 function parseContexts(contexts: Array<RawLevelContext>): Array<LevelContext> {
   const contextsParsed: Array<LevelContext> = [];
 
   for (const mainContext of contexts) {
     for (const contextItemToParse of ensureArray(mainContext.context)) {
-      const levelsToParse = ensureArray(contextItemToParse.levels.level);
+      contextsParsed.push(parseContextItem(contextItemToParse));
+    }
+  }
 
-      let type = "";
+  return contextsParsed;
+}
 
-      const levels: Array<LevelContextItem> = levelsToParse.map((level) => {
-        let variableUuid = "";
-        let valueUuid: string | null = null;
+function parseFilterContexts(
+  contexts: Array<RawLevelContext>,
+): PropertyContexts["filter"] {
+  const contextsParsed: PropertyContexts["filter"] = [];
 
-        if (typeof level === "string") {
-          const splitLevel = level.split(", ");
-
-          variableUuid = splitLevel[0]!;
-          valueUuid = splitLevel[1] === "null" ? null : splitLevel[1]!;
-        } else {
-          const splitLevel = level.content.split(", ");
-
-          type = level.dataType;
-          variableUuid = splitLevel[0]!;
-          valueUuid = splitLevel[1] === "null" ? null : splitLevel[1]!;
-        }
-
-        return { variableUuid, valueUuid };
-      });
-
+  for (const mainContext of contexts) {
+    for (const contextItemToParse of ensureArray(mainContext.context)) {
       contextsParsed.push({
-        context: levels,
-        type,
-        identification: parseIdentification(contextItemToParse.identification),
+        ...parseContextItem(contextItemToParse),
+        ...parseFilterContextDisplay(contextItemToParse.filterOption),
       });
     }
   }

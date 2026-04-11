@@ -179,6 +179,13 @@ export type RawLevelContextItem = {
   levels: {
     level: RawLevelContextItemContent | Array<RawLevelContextItemContent>;
   };
+  filterOption?:
+    | "inline-displayed"
+    | "inline-sidebar-displayed-closed"
+    | "inline-sidebar-displayed-open"
+    | "sidebar-displayed-closed"
+    | "sidebar-displayed-open"
+    | "inline-sidebar-hidden";
 };
 
 /**

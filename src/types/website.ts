@@ -31,7 +31,13 @@ export type LevelContext = {
 export type PropertyContexts = {
   flatten: Array<LevelContext>;
   suppress: Array<LevelContext>;
-  filter: Array<LevelContext>;
+  filter: Array<
+    LevelContext & {
+      isInlineDisplayed: boolean;
+      isSidebarDisplayed: boolean;
+      isSidebarOpen: boolean;
+    }
+  >;
   sort: Array<LevelContext>;
   detail: Array<LevelContext>;
   download: Array<LevelContext>;
