@@ -83,8 +83,6 @@ import {
   transformPermanentIdentificationUrl,
 } from "#/utils/string.js";
 
-const TRAILING_ELLIPSIS_REGEX = /\s*\.{3}$/;
-
 /**
  * Parses raw identification data into the standardized Identification type
  *
@@ -864,9 +862,7 @@ export function parseProperty(
 
   return {
     uuid: property.label.uuid,
-    label: parseStringContent(property.label, language)
-      .replace(TRAILING_ELLIPSIS_REGEX, "")
-      .trim(),
+    label: parseStringContent(property.label, language).trim(),
     values,
     comment:
       property.comment != null ? parseStringContent(property.comment) : null,
