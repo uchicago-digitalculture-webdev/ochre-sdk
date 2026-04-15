@@ -53,6 +53,17 @@ function buildUchicagoNodeSearchQueries(value: string) {
   };
 }
 
+it("should fetch uchicago-node Set items for query: 'maps of Pilsen'", async () => {
+  const { totalCount } = await fetchSetItems({
+    setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],
+    queries: buildUchicagoNodeSearchQueries("maps of Pilsen"),
+    page: 1,
+    pageSize: 48,
+  });
+
+  expect(totalCount).toBe(2);
+});
+
 it("should fetch uchicago-node Set items for query: 'ca. 1870'", async () => {
   const { totalCount } = await fetchSetItems({
     setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],
