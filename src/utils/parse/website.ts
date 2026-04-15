@@ -200,6 +200,7 @@ function parseStylesheets(styles: Array<RawStyle>): Array<StylesheetItem> {
         uuid: style.valueUuid,
         category: "propertyValue",
         variableUuid: style.variableUuid,
+        icon: style.lucideIcon ?? null,
         styles: stylesByViewport,
       };
     }
@@ -207,6 +208,7 @@ function parseStylesheets(styles: Array<RawStyle>): Array<StylesheetItem> {
     return {
       uuid: style.variableUuid,
       category: "propertyVariable",
+      icon: style.lucideIcon ?? null,
       styles: stylesByViewport,
     };
   });

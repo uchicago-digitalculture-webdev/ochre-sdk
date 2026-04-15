@@ -202,6 +202,7 @@ export type RawStyle = {
   variableUuid: string;
   valueUuid?: string;
   category?: string;
+  lucideIcon?: string;
   content: RawFakeString;
 } & Record<string, RawFakeString>;
 

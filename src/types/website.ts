@@ -66,6 +66,7 @@ export type StylesheetItem =
   | {
       uuid: string;
       category: "propertyVariable";
+      icon: string | null;
       styles: {
         default: Array<Style>;
         tablet: Array<Style>;
@@ -76,6 +77,7 @@ export type StylesheetItem =
       uuid: string;
       category: "propertyValue";
       variableUuid: string;
+      icon: string | null;
       styles: {
         default: Array<Style>;
         tablet: Array<Style>;
