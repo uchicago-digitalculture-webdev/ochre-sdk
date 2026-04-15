@@ -366,6 +366,7 @@ const responseSchema = z.object({
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
  * @param params.queries - Recursive query tree used to filter matching items
+ * @param params.propertyVariableUuids - Property variable UUIDs to aggregate, if any
  * @param params.attributes - Whether to return values for bibliographies and periods
  * @param params.attributes.bibliographies - Whether to return values for bibliographies
  * @param params.attributes.periods - Whether to return values for periods
