@@ -376,6 +376,7 @@ function buildXQuery(params: {
   setScopeUuids: Array<string>;
   belongsToCollectionScopeUuids: Array<string>;
   queries: Query | null;
+  propertyVariableUuids: Array<string>;
   attributes: { bibliographies: boolean; periods: boolean };
   isLimitedToLeafPropertyValues: boolean;
 }): string {
@@ -383,6 +384,7 @@ function buildXQuery(params: {
     setScopeUuids,
     belongsToCollectionScopeUuids,
     queries,
+    propertyVariableUuids,
     attributes,
     isLimitedToLeafPropertyValues,
   } = params;
@@ -396,9 +398,6 @@ function buildXQuery(params: {
     setScopeFilter = `/set[(${setScopeValues})]/items/*`;
   }
 
-  const propertyVariableFilters = getPropertyVariableUuidsFromQueries(queries)
-    .map((uuid) => `@uuid="${uuid}"`)
-    .join(" or ");
   const baseItemsExpression = `doc()/ochre${setScopeFilter}`;
   const compiledQueryPlan = buildQueryPlan({
     queries: getItemFilterQueriesFromPropertyValueQueries(queries),
@@ -422,8 +421,15 @@ function buildXQuery(params: {
     itemsQueryExpressions,
   );
   const valueFilter = isLimitedToLeafPropertyValues ? "[not(@i)]" : "";
-  const queryBlocks: Array<string> = [
-    `let $matching-props := $items//property[label[${propertyVariableFilters}]]
+  const queryBlocks: Array<string> = [];
+  const returnedSequences: Array<string> = [];
+
+  if (propertyVariableUuids.length > 0) {
+    const propertyVariableFilters = propertyVariableUuids
+      .map((uuid) => `@uuid="${uuid}"`)
+      .join(" or ");
+
+    queryBlocks.push(`let $matching-props := $items//property[label[${propertyVariableFilters}]]
 
 let $property-values :=
   for $p in $matching-props
@@ -432,9 +438,9 @@ let $property-values :=
     let $variable-uuid := $p/label/@uuid
     return <propertyValue uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}" itemUuid="{$item-uuid}" variableUuid="{$variable-uuid}">{
       if ($v/content) then string-join($v/content[@xml:lang="eng"]//text(), "") else $v/text()
-    }</propertyValue>`,
-  ];
-  const returnedSequences: Array<string> = ["$property-values"];
+    }</propertyValue>`);
+    returnedSequences.push("$property-values");
+  }
 
   if (attributes.bibliographies) {
     queryBlocks.push(`let $bibliography-values :=
@@ -532,11 +538,26 @@ export async function fetchSetPropertyValues(
       attributes,
       isLimitedToLeafPropertyValues,
     } = setPropertyValuesParamsSchema.parse(params);
+    const propertyVariableUuids = getPropertyVariableUuidsFromQueries(queries);
+
+    if (
+      propertyVariableUuids.length === 0 &&
+      !attributes.bibliographies &&
+      !attributes.periods
+    ) {
+      return {
+        propertyValues: [],
+        propertyValuesByPropertyVariableUuid: {},
+        attributeValues: { bibliographies: null, periods: null },
+        error: null,
+      };
+    }
 
     const xquery = buildXQuery({
       setScopeUuids,
       belongsToCollectionScopeUuids,
       queries,
+      propertyVariableUuids,
       attributes,
       isLimitedToLeafPropertyValues,
     });

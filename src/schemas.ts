@@ -427,57 +427,24 @@ const setItemsSortSchema = z
   ])
   .default({ target: "none" }) satisfies z.ZodType<SetItemsSort>;
 
-function hasPropertyQueryWithPropertyVariable(
-  query: Query | null | undefined,
-): boolean {
-  if (query == null) {
-    return false;
-  }
-
-  if ("target" in query) {
-    return query.target === "property" && query.propertyVariable != null;
-  }
-
-  const groupQueries = "and" in query ? query.and : query.or;
-
-  for (const groupQuery of groupQueries) {
-    if (hasPropertyQueryWithPropertyVariable(groupQuery)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 /**
  * Schema for validating the parameters for the Set property values fetching function
  * @internal
  */
-export const setPropertyValuesParamsSchema = z
-  .object({
-    setScopeUuids: z
-      .array(uuidSchema)
-      .min(1, "At least one set scope UUID is required"),
-    belongsToCollectionScopeUuids: z.array(uuidSchema).default([]),
-    queries: setQueriesSchema,
-    attributes: z
-      .object({
-        bibliographies: z.boolean().default(false),
-        periods: z.boolean().default(false),
-      })
-      .default({ bibliographies: false, periods: false }),
-    isLimitedToLeafPropertyValues: z.boolean().default(false),
-  })
-  .superRefine((value, ctx) => {
-    if (!hasPropertyQueryWithPropertyVariable(value.queries)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["queries"],
-        message:
-          "At least one property query with propertyVariable is required",
-      });
-    }
-  });
+export const setPropertyValuesParamsSchema = z.object({
+  setScopeUuids: z
+    .array(uuidSchema)
+    .min(1, "At least one set scope UUID is required"),
+  belongsToCollectionScopeUuids: z.array(uuidSchema).default([]),
+  queries: setQueriesSchema,
+  attributes: z
+    .object({
+      bibliographies: z.boolean().default(false),
+      periods: z.boolean().default(false),
+    })
+    .default({ bibliographies: false, periods: false }),
+  isLimitedToLeafPropertyValues: z.boolean().default(false),
+});
 
 export const setItemsParamsSchema = z.object({
   setScopeUuids: z
