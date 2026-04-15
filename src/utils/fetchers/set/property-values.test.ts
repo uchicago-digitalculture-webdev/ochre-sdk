@@ -389,3 +389,18 @@ it("should fetch uchicago-node Set 'Search' property values", async () => {
   expect(propertyValues).not.toBeNull();
   expect(propertyValues?.length).toBeGreaterThan(0);
 });
+
+it("should fetch sosc-core-at-smart Set 'Wise to Power Collection' attribute values", async () => {
+  const { attributeValues } = await fetchSetPropertyValues({
+    setScopeUuids: ["16f5a39a-47b9-492d-9f9c-b7e4ec4156b6"],
+    queries: null,
+    attributes: { bibliographies: true, periods: true },
+    isLimitedToLeafPropertyValues: false,
+  });
+
+  expect(attributeValues).not.toBeNull();
+  expect(attributeValues?.bibliographies).not.toBeNull();
+  expect(attributeValues?.periods).not.toBeNull();
+  expect(attributeValues?.bibliographies?.length).toBeGreaterThan(0);
+  expect(attributeValues?.periods?.length).toBeGreaterThan(0);
+});
