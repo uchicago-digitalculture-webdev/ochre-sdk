@@ -606,7 +606,7 @@ function parseWebElementProperties(
             { component: "collection" }
           >["loadingVariant"]
         | null;
-      loadingVariant ??= "spinner";
+      loadingVariant ??= "skeleton";
 
       let imageQuality = getPropertyValueContentByLabel(
         componentProperty.properties,
@@ -1402,7 +1402,7 @@ function parseWebElementProperties(
             { component: "query" }
           >["collectionProperties"]["loadingVariant"]
         | null;
-      loadingVariant ??= "spinner";
+      loadingVariant ??= "skeleton";
 
       let layout = getPropertyValueContentByLabel(
         componentProperty.properties,
