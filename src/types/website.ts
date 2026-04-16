@@ -324,11 +324,10 @@ export type WebElementComponent =
       component: "collection";
       linkUuids: Array<string>;
       displayedProperties: Array<{ uuid: string; label: string }> | null;
-      variant: "detailed" | "card" | "tile" | "showcase";
+      variant: "slide" | "table" | "card" | "tile" | "showcase";
       paginationVariant: "default" | "numeric";
       loadingVariant: "spinner" | "skeleton" | "animation" | "none";
-      layout: "image-top" | "image-bottom" | "image-start" | "image-end";
-      imageQuality: "high" | "low";
+      imageLayout: "top" | "bottom" | "start" | "end" | null;
       isSortDisplayed: boolean;
       isUsingQueryParams: boolean;
       filter: {
@@ -341,7 +340,10 @@ export type WebElementComponent =
         sidebarSort: "default" | "alphabetical";
       };
       options: {
-        attributeFilters: { bibliographies: boolean; periods: boolean };
+        attributeFilters: {
+          bibliographies: { enabled: boolean; isOpenByDefault: boolean };
+          periods: { enabled: boolean; isOpenByDefault: boolean };
+        };
         scopes: Array<Scope> | null;
         contexts: PropertyContexts | null;
         labels: { title: string | null };
@@ -428,10 +430,10 @@ export type WebElementComponent =
           WebElementComponent,
           { component: "collection" }
         >["loadingVariant"];
-        layout: Extract<
+        imageLayout: Extract<
           WebElementComponent,
           { component: "collection" }
-        >["layout"];
+        >["imageLayout"];
       };
     }
   | {

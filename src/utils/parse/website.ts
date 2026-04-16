@@ -584,7 +584,7 @@ function parseWebElementProperties(
       ) as
         | Extract<WebElementComponent, { component: "collection" }>["variant"]
         | null;
-      variant ??= "detailed";
+      variant ??= "slide";
 
       let paginationVariant = getPropertyValueContentByLabel(
         componentProperty.properties,
@@ -607,17 +607,6 @@ function parseWebElementProperties(
           >["loadingVariant"]
         | null;
       loadingVariant ??= "skeleton";
-
-      let imageQuality = getPropertyValueContentByLabel(
-        componentProperty.properties,
-        "image-quality",
-      ) as
-        | Extract<
-            WebElementComponent,
-            { component: "collection" }
-          >["imageQuality"]
-        | null;
-      imageQuality ??= "low";
 
       let isUsingQueryParams = getPropertyValueContentByLabel(
         componentProperty.properties,
@@ -718,21 +707,30 @@ function parseWebElementProperties(
         | null;
       filterSidebarSort ??= "default";
 
-      let layout = getPropertyValueContentByLabel(
+      let imageLayout = getPropertyValueContentByLabel(
         componentProperty.properties,
-        "layout",
+        "image-layout",
       ) as
-        | Extract<WebElementComponent, { component: "collection" }>["layout"]
+        | Extract<
+            WebElementComponent,
+            { component: "collection" }
+          >["imageLayout"]
         | null;
-      layout ??= "image-start";
+      imageLayout ??= "start";
 
       const options: Extract<
         WebElementComponent,
         { component: "collection" }
       >["options"] = {
         attributeFilters: {
-          bibliographies: elementResource.options?.filterBibliography ?? false,
-          periods: elementResource.options?.filterPeriods ?? false,
+          bibliographies: {
+            enabled: elementResource.options?.filterBibliography ?? false,
+            isOpenByDefault: false,
+          },
+          periods: {
+            enabled: elementResource.options?.filterPeriods ?? false,
+            isOpenByDefault: false,
+          },
         },
         scopes:
           elementResource.options?.scopes != null ?
@@ -777,8 +775,7 @@ function parseWebElementProperties(
         variant,
         paginationVariant,
         loadingVariant,
-        layout,
-        imageQuality,
+        imageLayout,
         isUsingQueryParams,
         isSortDisplayed,
         filter: {
@@ -1380,7 +1377,7 @@ function parseWebElementProperties(
             { component: "query" }
           >["collectionProperties"]["variant"]
         | null;
-      variant ??= "detailed";
+      variant ??= "slide";
 
       let paginationVariant = getPropertyValueContentByLabel(
         componentProperty.properties,
@@ -1404,16 +1401,16 @@ function parseWebElementProperties(
         | null;
       loadingVariant ??= "skeleton";
 
-      let layout = getPropertyValueContentByLabel(
+      let imageLayout = getPropertyValueContentByLabel(
         componentProperty.properties,
-        "layout",
+        "image-layout",
       ) as
         | Extract<
             WebElementComponent,
             { component: "query" }
-          >["collectionProperties"]["layout"]
+          >["collectionProperties"]["imageLayout"]
         | null;
-      layout ??= "image-start";
+      imageLayout ??= "start";
 
       properties = {
         component: "query",
@@ -1433,7 +1430,7 @@ function parseWebElementProperties(
           variant,
           paginationVariant,
           loadingVariant,
-          layout,
+          imageLayout,
         },
       };
       break;
