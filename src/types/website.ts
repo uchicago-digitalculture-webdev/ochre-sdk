@@ -10,39 +10,46 @@ import type {
 } from "#/types/index.js";
 
 /**
- * Represents a level context item with a variable and value
+ * Represents a context tree level item with a variable and value
  */
-export type LevelContextItem = {
+export type ContextTreeLevelItem = {
   variableUuid: string;
   valueUuid: string | null;
 };
 /**
- * Represents a level context with a context item
+ * Represents a context tree level with a context item
  */
-export type LevelContext = {
-  context: Array<LevelContextItem>;
+export type ContextTreeLevel = {
+  context: Array<ContextTreeLevelItem>;
   identification: Identification;
   type: string;
 };
 
 /**
- * Represents property contexts with its levels
+ * Represents a filter context tree level with a context item
  */
-export type PropertyContexts = {
-  flatten: Array<LevelContext>;
-  suppress: Array<LevelContext>;
-  filter: Array<
-    LevelContext & {
-      isInlineDisplayed: boolean;
-      isSidebarDisplayed: boolean;
-      isSidebarOpen: boolean;
-    }
-  >;
-  sort: Array<LevelContext>;
-  detail: Array<LevelContext>;
-  download: Array<LevelContext>;
-  label: Array<LevelContext>;
-  prominent: Array<LevelContext>;
+export type ContextTreeFilterLevel = {
+  context: Array<ContextTreeLevelItem>;
+  identification: Identification;
+  type: string;
+  filterType: "property" | "coordinates" | "bibliography" | "period";
+  isInlineDisplayed: boolean;
+  isSidebarDisplayed: boolean;
+  isSidebarOpen: boolean;
+};
+
+/**
+ * Represents a context tree with levels grouped by behavior
+ */
+export type ContextTree = {
+  flatten: Array<ContextTreeLevel>;
+  suppress: Array<ContextTreeLevel>;
+  filter: Array<ContextTreeFilterLevel>;
+  sort: Array<ContextTreeLevel>;
+  detail: Array<ContextTreeLevel>;
+  download: Array<ContextTreeLevel>;
+  label: Array<ContextTreeLevel>;
+  prominent: Array<ContextTreeLevel>;
 };
 
 /**
@@ -177,7 +184,7 @@ export type Website = {
       iiifViewer: "universal-viewer" | "clover";
     };
     options: {
-      contexts: PropertyContexts | null;
+      contextTree: ContextTree | null;
       scopes: Array<Scope> | null;
       labels: { title: string | null };
       stylesheets: { properties: Array<StylesheetItem> };
@@ -340,12 +347,8 @@ export type WebElementComponent =
         sidebarSort: "default" | "alphabetical";
       };
       options: {
-        attributeFilters: {
-          bibliographies: { enabled: boolean; isOpenByDefault: boolean };
-          periods: { enabled: boolean; isOpenByDefault: boolean };
-        };
         scopes: Array<Scope> | null;
-        contexts: PropertyContexts | null;
+        contextTree: ContextTree | null;
         labels: { title: string | null };
       };
     }
@@ -408,9 +411,8 @@ export type WebElementComponent =
         endIcon: string | null;
       }>;
       options: {
-        attributeFilters: { bibliographies: boolean; periods: boolean };
         scopes: Array<Scope> | null;
-        contexts: PropertyContexts | null;
+        contextTree: ContextTree | null;
         labels: { title: string | null };
       };
       collectionProperties: {

@@ -2,6 +2,8 @@ import type { ApiVersion, Identification, Property } from "#/types/index.js";
 import type {
   RawLevelContext,
   RawLevelContextItem,
+  RawLevelFilterContext,
+  RawLevelFilterContextItem,
   RawMetadata,
   RawProperty,
   RawResource,
@@ -11,9 +13,9 @@ import type {
   RawTree,
 } from "#/types/raw.js";
 import type {
-  LevelContext,
-  LevelContextItem,
-  PropertyContexts,
+  ContextTree,
+  ContextTreeLevel,
+  ContextTreeLevelItem,
   Style,
   StylesheetItem,
   WebBlock,
@@ -135,22 +137,22 @@ export function parseBounds(
 function parseAllOptionContexts(options: {
   flattenContexts?: RawLevelContext | Array<RawLevelContext> | null;
   suppressContexts?: RawLevelContext | Array<RawLevelContext> | null;
-  filterContexts?: RawLevelContext | Array<RawLevelContext> | null;
+  filterContexts?: RawLevelFilterContext | Array<RawLevelFilterContext> | null;
   sortContexts?: RawLevelContext | Array<RawLevelContext> | null;
   detailContexts?: RawLevelContext | Array<RawLevelContext> | null;
   downloadContexts?: RawLevelContext | Array<RawLevelContext> | null;
   labelContexts?: RawLevelContext | Array<RawLevelContext> | null;
   prominentContexts?: RawLevelContext | Array<RawLevelContext> | null;
-}): PropertyContexts {
+}): ContextTree {
   function handleContexts(
     v: RawLevelContext | Array<RawLevelContext> | null | undefined,
-  ): Array<LevelContext> {
+  ): Array<ContextTreeLevel> {
     return parseContexts(v != null ? ensureArray(v) : []);
   }
 
   function handleFilterContexts(
-    v: RawLevelContext | Array<RawLevelContext> | null | undefined,
-  ): PropertyContexts["filter"] {
+    v: RawLevelFilterContext | Array<RawLevelFilterContext> | null | undefined,
+  ): ContextTree["filter"] {
     return parseFilterContexts(v != null ? ensureArray(v) : []);
   }
 
@@ -722,16 +724,6 @@ function parseWebElementProperties(
         WebElementComponent,
         { component: "collection" }
       >["options"] = {
-        attributeFilters: {
-          bibliographies: {
-            enabled: elementResource.options?.filterBibliography ?? false,
-            isOpenByDefault: false,
-          },
-          periods: {
-            enabled: elementResource.options?.filterPeriods ?? false,
-            isOpenByDefault: false,
-          },
-        },
         scopes:
           elementResource.options?.scopes != null ?
             ensureArray(elementResource.options.scopes.scope).map((scope) => ({
@@ -740,12 +732,12 @@ function parseWebElementProperties(
               identification: parseIdentification(scope.identification),
             }))
           : null,
-        contexts: null,
+        contextTree: null,
         labels: { title: null },
       };
 
       if ("options" in elementResource && elementResource.options) {
-        options.contexts = parseAllOptionContexts(elementResource.options);
+        options.contextTree = parseAllOptionContexts(elementResource.options);
 
         if (
           "notes" in elementResource.options &&
@@ -1331,10 +1323,6 @@ function parseWebElementProperties(
         WebElementComponent,
         { component: "query" }
       >["options"] = {
-        attributeFilters: {
-          bibliographies: elementResource.options?.filterBibliography ?? false,
-          periods: elementResource.options?.filterPeriods ?? false,
-        },
         scopes:
           elementResource.options?.scopes != null ?
             ensureArray(elementResource.options.scopes.scope).map((scope) => ({
@@ -1343,12 +1331,12 @@ function parseWebElementProperties(
               identification: parseIdentification(scope.identification),
             }))
           : null,
-        contexts: null,
+        contextTree: null,
         labels: { title: null },
       };
 
       if ("options" in elementResource && elementResource.options) {
-        options.contexts = parseAllOptionContexts(elementResource.options);
+        options.contextTree = parseAllOptionContexts(elementResource.options);
 
         if (
           "notes" in elementResource.options &&
@@ -2800,7 +2788,7 @@ function parseWebsiteProperties(
       iiifViewer: "universal-viewer",
     },
     options: {
-      contexts: null,
+      contextTree: null,
       scopes: null,
       labels: { title: null },
       stylesheets: { properties: [] },
@@ -2973,7 +2961,7 @@ function parseWebsiteProperties(
         }))
       : null;
 
-    returnProperties.options.contexts = parseAllOptionContexts(
+    returnProperties.options.contextTree = parseAllOptionContexts(
       websiteTree.options,
     );
 
@@ -2998,13 +2986,16 @@ function parseWebsiteProperties(
 }
 
 function parseContextItem(
-  contextItemToParse: RawLevelContextItem,
-): LevelContext {
-  const levelsToParse = ensureArray(contextItemToParse.levels.level);
+  contextItemToParse: RawLevelContextItem | RawLevelFilterContextItem,
+): ContextTreeLevel {
+  const levelsToParse =
+    contextItemToParse.levels != null ?
+      ensureArray(contextItemToParse.levels.level)
+    : [];
 
   let type = "";
 
-  const levels: Array<LevelContextItem> = levelsToParse.map((level) => {
+  const levels: Array<ContextTreeLevelItem> = levelsToParse.map((level) => {
     let variableUuid = "";
     let valueUuid: string | null = null;
 
@@ -3041,7 +3032,7 @@ function parseFilterContextDisplay(
     | "inline-sidebar-hidden"
     | undefined,
 ): Pick<
-  PropertyContexts["filter"][number],
+  ContextTree["filter"][number],
   "isInlineDisplayed" | "isSidebarDisplayed" | "isSidebarOpen"
 > {
   switch (filterOption) {
@@ -3090,33 +3081,36 @@ function parseFilterContextDisplay(
   }
 }
 
-function parseContexts(contexts: Array<RawLevelContext>): Array<LevelContext> {
-  const contextsParsed: Array<LevelContext> = [];
+function parseContexts(
+  contextLevels: Array<RawLevelContext>,
+): Array<ContextTreeLevel> {
+  const contextTreeLevels: Array<ContextTreeLevel> = [];
 
-  for (const mainContext of contexts) {
-    for (const contextItemToParse of ensureArray(mainContext.context)) {
-      contextsParsed.push(parseContextItem(contextItemToParse));
+  for (const contextLevel of contextLevels) {
+    for (const contextItemToParse of ensureArray(contextLevel.context)) {
+      contextTreeLevels.push(parseContextItem(contextItemToParse));
     }
   }
 
-  return contextsParsed;
+  return contextTreeLevels;
 }
 
 function parseFilterContexts(
-  contexts: Array<RawLevelContext>,
-): PropertyContexts["filter"] {
-  const contextsParsed: PropertyContexts["filter"] = [];
+  filterContextLevels: Array<RawLevelFilterContext>,
+): ContextTree["filter"] {
+  const filterContextTreeLevels: ContextTree["filter"] = [];
 
-  for (const mainContext of contexts) {
-    for (const contextItemToParse of ensureArray(mainContext.context)) {
-      contextsParsed.push({
+  for (const filterContextLevel of filterContextLevels) {
+    for (const contextItemToParse of ensureArray(filterContextLevel.context)) {
+      filterContextTreeLevels.push({
         ...parseContextItem(contextItemToParse),
+        filterType: contextItemToParse.filterType,
         ...parseFilterContextDisplay(contextItemToParse.filterOption),
       });
     }
   }
 
-  return contextsParsed;
+  return filterContextTreeLevels;
 }
 
 export function parseWebsite(

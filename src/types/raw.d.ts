@@ -157,16 +157,25 @@ export type RawMetadata = {
   description: RawStringContent | RawFakeString;
 };
 
+/**
+ * UUID structure for tree search options
+ */
 type RawTreeSearchOptionUuid = {
   type: string;
   content: string; // UUID
 };
 
+/**
+ * Scope structure for tree search options
+ */
 type RawTreeSearchOptionScope = {
   uuid: RawTreeSearchOptionUuid;
   identification: RawIdentification;
 };
 
+/**
+ * Content structure for level context items
+ */
 export type RawLevelContextItemContent =
   | string
   | {
@@ -174,12 +183,26 @@ export type RawLevelContextItemContent =
       content: string; // "variableUuid, valueUuid|null"
     };
 
+/**
+ * Level context item structure for website-wide item properties
+ */
 export type RawLevelContextItem = {
   identification: RawIdentification;
   levels: {
     level: RawLevelContextItemContent | Array<RawLevelContextItemContent>;
   };
-  filterOption?:
+};
+
+/**
+ * Filter level context item structure for website-wide item properties
+ */
+export type RawLevelFilterContextItem = {
+  identification: RawIdentification;
+  levels?: {
+    level: RawLevelContextItemContent | Array<RawLevelContextItemContent>;
+  };
+  filterType: "property" | "coordinates" | "bibliography" | "period";
+  filterOption:
     | "inline-displayed"
     | "inline-sidebar-displayed-closed"
     | "inline-sidebar-displayed-open"
@@ -189,12 +212,18 @@ export type RawLevelContextItem = {
 };
 
 /**
- * Flattening context structure for website-wide item properties
+ * Context structure for website-wide item properties
  */
 export type RawLevelContext = {
   context: RawLevelContextItem | Array<RawLevelContextItem>;
 };
 
+/**
+ * Filter context structure for website-wide item properties
+ */
+export type RawLevelFilterContext = {
+  context: RawLevelFilterContextItem | Array<RawLevelFilterContextItem>;
+};
 /**
  * Raw style structure corresponding to the parsed Style type
  */
@@ -225,7 +254,7 @@ export type RawTree = {
     };
     flattenContexts?: RawLevelContext | Array<RawLevelContext>;
     suppressContexts?: RawLevelContext | Array<RawLevelContext>;
-    filterContexts?: RawLevelContext | Array<RawLevelContext>;
+    filterContexts?: RawLevelFilterContext | Array<RawLevelFilterContext>;
     sortContexts?: RawLevelContext | Array<RawLevelContext>;
     detailContexts?: RawLevelContext | Array<RawLevelContext>;
     downloadContexts?: RawLevelContext | Array<RawLevelContext>;
@@ -310,14 +339,12 @@ export type RawResource = {
   resource?: RawResource | Array<RawResource>;
   options?: {
     notes?: { note: RawNote | Array<RawNote> };
-    filterBibliography?: boolean;
-    filterPeriods?: boolean;
     scopes?: {
       scope: RawTreeSearchOptionScope | Array<RawTreeSearchOptionScope>;
     };
     flattenContexts?: RawLevelContext | Array<RawLevelContext>;
     suppressContexts?: RawLevelContext | Array<RawLevelContext>;
-    filterContexts?: RawLevelContext | Array<RawLevelContext>;
+    filterContexts?: RawLevelFilterContext | Array<RawLevelFilterContext>;
     sortContexts?: RawLevelContext | Array<RawLevelContext>;
     detailContexts?: RawLevelContext | Array<RawLevelContext>;
     downloadContexts?: RawLevelContext | Array<RawLevelContext>;
