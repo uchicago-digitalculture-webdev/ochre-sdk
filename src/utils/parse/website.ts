@@ -2751,6 +2751,7 @@ function parseWebsiteProperties(
     status,
     privacy,
     contact: null,
+    loadingVariant: "spinner",
     theme: { isThemeToggleDisplayed: true, defaultTheme: "system" },
     icon: { logoUuid: null, faviconUuid: null, appleTouchIconUuid: null },
     navbar: {
@@ -2799,6 +2800,11 @@ function parseWebsiteProperties(
       );
     }
   }
+
+  returnProperties.loadingVariant =
+    (getPropertyValueContentByLabel(websiteProperties, "loading-variant") as
+      | Website["properties"]["loadingVariant"]
+      | null) ?? "spinner";
 
   returnProperties.theme.isThemeToggleDisplayed =
     (getPropertyValueContentByLabel(

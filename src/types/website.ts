@@ -137,6 +137,7 @@ export type Website = {
     status: "development" | "preview" | "production";
     privacy: "public" | "password" | "private";
     contact: { name: string; email: string | null } | null;
+    loadingVariant: "spinner" | "skeleton" | "animation" | "none";
     theme: {
       isThemeToggleDisplayed: boolean;
       defaultTheme: "light" | "dark" | "system";
