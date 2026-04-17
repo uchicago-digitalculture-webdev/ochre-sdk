@@ -340,7 +340,6 @@ export type WebElementComponent =
       filter: {
         isSidebarDisplayed: boolean;
         isResultsBarDisplayed: boolean;
-        isMapDisplayed: boolean;
         isInputDisplayed: boolean;
         isLimitedToInputFilter: boolean;
         isLimitedToLeafPropertyValues: boolean;

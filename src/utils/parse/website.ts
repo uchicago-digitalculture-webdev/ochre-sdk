@@ -632,17 +632,6 @@ function parseWebElementProperties(
         | null;
       isFilterResultsBarDisplayed ??= false;
 
-      let isFilterMapDisplayed = getPropertyValueContentByLabel(
-        componentProperty.properties,
-        "filter-map-displayed",
-      ) as
-        | Extract<
-            WebElementComponent,
-            { component: "collection" }
-          >["filter"]["isMapDisplayed"]
-        | null;
-      isFilterMapDisplayed ??= false;
-
       let isFilterInputDisplayed = getPropertyValueContentByLabel(
         componentProperty.properties,
         "filter-input-displayed",
@@ -773,7 +762,6 @@ function parseWebElementProperties(
         filter: {
           isSidebarDisplayed: isFilterSidebarDisplayed,
           isResultsBarDisplayed: isFilterResultsBarDisplayed,
-          isMapDisplayed: isFilterMapDisplayed,
           isInputDisplayed: isFilterInputDisplayed,
           isLimitedToInputFilter: isFilterLimitedToInputFilter,
           isLimitedToLeafPropertyValues: isFilterLimitedToLeafPropertyValues,
