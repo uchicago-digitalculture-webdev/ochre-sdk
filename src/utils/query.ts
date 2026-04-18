@@ -38,10 +38,7 @@ type QueryCompilerContext = {
   helperDeclarations: Array<string>;
 };
 
-type QueryHelperRegistration = {
-  name: string;
-  callExpression: string;
-};
+type QueryHelperRegistration = { name: string; callExpression: string };
 
 type ParameterizedQueryHelperRegistration = {
   name: string;
@@ -966,10 +963,7 @@ function registerConstantHelper(params: {
   const existingName = context.helperNamesByKey.get(key);
 
   if (existingName != null) {
-    return {
-      name: existingName,
-      callExpression: `${existingName}()`,
-    };
+    return { name: existingName, callExpression: `${existingName}()` };
   }
 
   const helperName = `local:queryHelper${context.nextHelperSerial}`;
@@ -979,10 +973,7 @@ function registerConstantHelper(params: {
     `declare function ${helperName}() as cts:query {\n${indentBlock(bodyExpression, 2)}\n};`,
   );
 
-  return {
-    name: helperName,
-    callExpression: `${helperName}()`,
-  };
+  return { name: helperName, callExpression: `${helperName}()` };
 }
 
 function replaceSampleValueLiteral(
@@ -1071,11 +1062,7 @@ function registerLeafHelper(params: {
   return registerConstantHelper({
     context,
     key: getLeafHelperKey({ query, matchMode, value }),
-    bodyExpression: buildLeafValueQueryExpression({
-      query,
-      value,
-      matchMode,
-    }),
+    bodyExpression: buildLeafValueQueryExpression({ query, value, matchMode }),
   });
 }
 
@@ -1200,12 +1187,9 @@ function buildLeafQueryExpression(
 
   for (const term of terms) {
     const termHelper =
-      term === (terms[0] ?? "") ? includesHelper
-      : registerIncludesLeafHelper({
-          context,
-          query,
-          sampleValue: term,
-        });
+      term === (terms[0] ?? "") ?
+        includesHelper
+      : registerIncludesLeafHelper({ context, query, sampleValue: term });
 
     tokenizedHelperCalls.push(termHelper.call(stringLiteral(term)));
   }
@@ -1341,17 +1325,15 @@ function buildIncludesGroupQueryExpression(
 
   for (const term of terms) {
     const memberHelpers = queries.map((query) =>
-      registerIncludesLeafHelper({
-        context,
-        query,
-        sampleValue: term,
-      }),
+      registerIncludesLeafHelper({ context, query, sampleValue: term }),
     );
     const termGroupHelper = registerParameterizedHelper({
       context,
-      key: ["group", "includes", ...memberHelpers.map((helper) => helper.name)].join(
-        "|",
-      ),
+      key: [
+        "group",
+        "includes",
+        ...memberHelpers.map((helper) => helper.name),
+      ].join("|"),
       bodyExpression: buildOrCtsQueryExpressionInternal(
         memberHelpers.map((helper) => helper.call("$value")),
       ),
@@ -1400,10 +1382,7 @@ function buildIncludesGroupQueryExpression(
   ]);
 }
 
-function buildQueryNode(
-  context: QueryCompilerContext,
-  query: Query,
-): string {
+function buildQueryNode(context: QueryCompilerContext, query: Query): string {
   if (isQueryLeaf(query)) {
     const queryExpression = buildLeafQueryExpression(context, query);
 
@@ -1415,7 +1394,10 @@ function buildQueryNode(
   const optimizedIncludesGroupQueries = getCompatibleIncludesGroupLeaves(query);
 
   if (optimizedIncludesGroupQueries != null) {
-    return buildIncludesGroupQueryExpression(context, optimizedIncludesGroupQueries);
+    return buildIncludesGroupQueryExpression(
+      context,
+      optimizedIncludesGroupQueries,
+    );
   }
 
   const childQueryExpressions: Array<string> = [];
@@ -1471,8 +1453,5 @@ export function buildQueryPlan(params: { queries: Query | null }): {
   const context = createQueryCompilerContext();
   const queryExpression = buildQueryNode(context, queries);
 
-  return {
-    prolog: context.helperDeclarations.join("\n\n"),
-    queryExpression,
-  };
+  return { prolog: context.helperDeclarations.join("\n\n"), queryExpression };
 }
