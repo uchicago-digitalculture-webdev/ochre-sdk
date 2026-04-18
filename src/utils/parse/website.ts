@@ -2774,7 +2774,8 @@ function parseWebsiteProperties(
       isPropertiesDisplayed: true,
       isBibliographyDisplayed: true,
       isPropertyValuesGrouped: true,
-      isPublicationDateTimeDisplayed: false,
+      isPublicationDateTimeDisplayed: true,
+      isPersistentIdentifierDisplayed: true,
       iiifViewer: "universal-viewer",
     },
     options: {
@@ -2944,7 +2945,15 @@ function parseWebsiteProperties(
         "item-page-publication-date-time-displayed",
       ) as
         | Website["properties"]["itemPage"]["isPublicationDateTimeDisplayed"]
-        | null) ?? false;
+        | null) ?? true;
+
+    returnProperties.itemPage.isPersistentIdentifierDisplayed =
+      (getPropertyValueContentByLabel(
+        itemPageTypeProperty.properties,
+        "item-page-persistent-identifier-displayed",
+      ) as
+        | Website["properties"]["itemPage"]["isPersistentIdentifierDisplayed"]
+        | null) ?? true;
 
     returnProperties.itemPage.iiifViewer =
       (getPropertyValueContentByLabel(

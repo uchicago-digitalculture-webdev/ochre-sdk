@@ -183,6 +183,7 @@ export type Website = {
       isBibliographyDisplayed: boolean;
       isPropertyValuesGrouped: boolean;
       isPublicationDateTimeDisplayed: boolean;
+      isPersistentIdentifierDisplayed: boolean;
       iiifViewer: "universal-viewer" | "clover";
     };
     options: {
