@@ -13,6 +13,7 @@ import {
   richTextStringSchema,
   setPropertyValuesParamsSchema,
 } from "#/schemas.js";
+import { stringLiteral } from "#/utils/internal.js";
 import {
   buildAndCtsQueryExpression,
   buildBelongsToCollectionQueryExpression,
@@ -390,16 +391,15 @@ function buildXQuery(params: {
     isLimitedToLeafPropertyValues,
   } = params;
 
-  let setScopeFilter = "/set/items/*";
-
-  if (setScopeUuids.length > 0) {
-    const setScopeValues = setScopeUuids
-      .map((uuid) => `@uuid="${uuid}"`)
-      .join(" or ");
-    setScopeFilter = `/set[(${setScopeValues})]/items/*`;
-  }
-
-  const baseItemsExpression = `doc()/ochre${setScopeFilter}`;
+  const setScopeValues = setScopeUuids.map((uuid) => stringLiteral(uuid));
+  const setScopeDeclaration =
+    setScopeValues.length > 0 ?
+      `declare variable $setScopeUuids := (${setScopeValues.join(", ")});`
+    : "";
+  const baseItemsExpression =
+    setScopeValues.length > 0 ?
+      "doc()/ochre/set[@uuid = $setScopeUuids]/items/*"
+    : "doc()/ochre/set/items/*";
   const compiledQueryPlan = buildQueryPlan({
     queries: getItemFilterQueriesFromPropertyValueQueries(queries),
   });
@@ -424,6 +424,15 @@ function buildXQuery(params: {
   const valueFilter = isLimitedToLeafPropertyValues ? "[not(@i)]" : "";
   const queryBlocks: Array<string> = [];
   const returnedSequences: Array<string> = [];
+  const xqueryDeclarations = ['xquery version "1.0-ml";'];
+
+  if (setScopeDeclaration !== "") {
+    xqueryDeclarations.push(setScopeDeclaration);
+  }
+
+  if (compiledQueryPlan.prolog !== "") {
+    xqueryDeclarations.push(compiledQueryPlan.prolog);
+  }
 
   if (propertyVariableUuids.length > 0) {
     const propertyVariableFilters = propertyVariableUuids
@@ -466,15 +475,19 @@ let $property-values :=
   const itemsClause =
     itemsQueryExpression == null ?
       `let $items := ${baseItemsExpression}`
-    : `let $items := ${baseItemsExpression}[cts:contains(., ${itemsQueryExpression})]`;
+    : `let $query := ${itemsQueryExpression}
+  let $items := cts:search(${baseItemsExpression}, $query)`;
 
-  const xquery = `${itemsClause}
+  const xquery = `${xqueryDeclarations.join("\n\n")}
 
+<ochre>{
+${itemsClause}
 ${queryBlocks.join("\n\n")}
 
-return (${returnedSequences.join(", ")})`;
+return (${returnedSequences.join(", ")})
+}</ochre>`;
 
-  return `<ochre>{${xquery}}</ochre>`;
+  return xquery;
 }
 
 /**

@@ -196,13 +196,9 @@ function buildXQuery(params: {
   } = params;
 
   const startPosition = (page - 1) * pageSize + 1;
-  const endPosition = page * pageSize;
-
-  const setScopeValues = setScopeUuids
-    .map((uuid) => `@uuid="${uuid}"`)
-    .join(" or ");
-  const setScopeFilter = `/set[(${setScopeValues})]/items/*`;
-  const baseItemsExpression = `doc()/ochre${setScopeFilter}`;
+  const setScopeValues = setScopeUuids.map((uuid) => stringLiteral(uuid));
+  const setScopeDeclaration = `declare variable $setScopeUuids := (${setScopeValues.join(", ")});`;
+  const baseItemsExpression = "doc()/ochre/set[@uuid = $setScopeUuids]/items/*";
   const compiledQueryPlan = buildQueryPlan({ queries });
   const itemsQueryExpressions: Array<string> = [];
   const belongsToCollectionQueryExpression =
@@ -223,25 +219,32 @@ function buildXQuery(params: {
     itemsQueryExpressions,
   );
   const orderedItemsClause = buildOrderedItemsClause(sort);
+  const xqueryDeclarations = ['xquery version "1.0-ml";', setScopeDeclaration];
+
+  if (compiledQueryPlan.prolog !== "") {
+    xqueryDeclarations.push(compiledQueryPlan.prolog);
+  }
 
   const itemsClause =
     itemsQueryExpression == null ?
       `let $items := ${baseItemsExpression}`
-    : `let $items := ${baseItemsExpression}[cts:contains(., ${itemsQueryExpression})]`;
+    : `let $query := ${itemsQueryExpression}
+  let $items := cts:search(${baseItemsExpression}, $query)`;
 
-  const xquery = `${itemsClause}
+  const xquery = `${xqueryDeclarations.join("\n\n")}
 
+<ochre>{
+${itemsClause}
   let $totalCount := count($items)
   ${orderedItemsClause}
+  let $pagedItems := subsequence($orderedItems, ${startPosition}, ${pageSize})
 
   return <items totalCount="{$totalCount}" page="${page}" pageSize="${pageSize}">{
-    for $item in $orderedItems[position() ge ${startPosition} and position() le ${endPosition}]
-      return element { node-name($item) } {
-        $item/@*, $item/node()
-      }
-  }</items>`;
+    $pagedItems
+  }</items>
+}</ochre>`;
 
-  return `<ochre>{${xquery}}</ochre>`;
+  return xquery;
 }
 
 /**
