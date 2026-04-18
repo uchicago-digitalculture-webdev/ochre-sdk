@@ -10,7 +10,7 @@ const UCHICAGO_NODE_SET_SCOPE_UUIDS = [
   "606c62dd-80ad-41db-ae1d-7a8b2ff7ef27",
 ] as const;
 
-function buildUchicagoNodeSearchQueries(value: string) {
+function buildInputValueQueries(value: string) {
   return {
     or: [
       {
@@ -56,7 +56,7 @@ function buildUchicagoNodeSearchQueries(value: string) {
 it("should fetch uchicago-node Set items for query: 'maps of Pilsen'", async () => {
   const { totalCount } = await fetchSetItems({
     setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],
-    queries: buildUchicagoNodeSearchQueries("maps of Pilsen"),
+    queries: buildInputValueQueries("maps of Pilsen"),
     page: 1,
     pageSize: 48,
   });
@@ -64,10 +64,53 @@ it("should fetch uchicago-node Set items for query: 'maps of Pilsen'", async () 
   expect(totalCount).toBe(2);
 });
 
+it("should fetch uchicago-node Set items for query: 'west garfield'", async () => {
+  const { totalCount } = await fetchSetItems({
+    setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],
+    queries: {
+      and: [
+        buildInputValueQueries("west garfield"),
+        {
+          target: "property",
+          propertyVariable: "cf4b9fdc-6cef-4cc6-b6b6-7182aca93fb8",
+          dataType: "date",
+          from: "1886-01-01T00:00:00Z",
+          to: "1896-12-31T23:59:59Z",
+          matchMode: "exact",
+          isCaseSensitive: true,
+          language: "eng",
+        },
+        {
+          target: "property",
+          propertyVariable: "9f4ba746-585e-45b0-a654-43d52c9d840b",
+          dataType: "IDREF",
+          value: "ede04283-36d5-471b-a8ca-3f5836fd992d",
+          matchMode: "exact",
+          isCaseSensitive: true,
+          language: "eng",
+        },
+        {
+          target: "property",
+          propertyVariable: "4c9fc941-5c23-4c22-84a8-628177d772bc",
+          dataType: "IDREF",
+          value: "0092cc2f-934d-4ae6-a69f-dd53ac41e6ff",
+          matchMode: "exact",
+          isCaseSensitive: true,
+          language: "eng",
+        },
+      ],
+    },
+    page: 1,
+    pageSize: 48,
+  });
+
+  expect(totalCount).toBe(3);
+});
+
 it("should fetch uchicago-node Set items for query: 'ca. 1870'", async () => {
   const { totalCount } = await fetchSetItems({
     setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],
-    queries: buildUchicagoNodeSearchQueries("ca. 1870"),
+    queries: buildInputValueQueries("ca. 1870"),
     page: 1,
     pageSize: 48,
   });
@@ -78,7 +121,7 @@ it("should fetch uchicago-node Set items for query: 'ca. 1870'", async () => {
 it("should fetch uchicago-node Set items for query: 'cat'", async () => {
   const { totalCount } = await fetchSetItems({
     setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],
-    queries: buildUchicagoNodeSearchQueries("cat"),
+    queries: buildInputValueQueries("cat"),
     page: 1,
     pageSize: 48,
   });
@@ -106,13 +149,13 @@ it("should fetch sosc-core-at-smart Set items for bibliographies query: 'Aristot
 it("should fetch more uchicago-node Set items for wildcard query: 'cat*'", async () => {
   const { totalCount: catCount } = await fetchSetItems({
     setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],
-    queries: buildUchicagoNodeSearchQueries("cat"),
+    queries: buildInputValueQueries("cat"),
     page: 1,
     pageSize: 48,
   });
   const { totalCount: wildcardCount } = await fetchSetItems({
     setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],
-    queries: buildUchicagoNodeSearchQueries("cat*"),
+    queries: buildInputValueQueries("cat*"),
     page: 1,
     pageSize: 48,
   });
@@ -125,7 +168,7 @@ it("should fetch more uchicago-node Set items for wildcard query: 'cat*'", async
 it("should fetch uchicago-node Set items for stemmed query: 'train'", async () => {
   const { totalCount } = await fetchSetItems({
     setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],
-    queries: buildUchicagoNodeSearchQueries("train"),
+    queries: buildInputValueQueries("train"),
     page: 1,
     pageSize: 48,
   });
