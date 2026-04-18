@@ -2774,6 +2774,7 @@ function parseWebsiteProperties(
       isPropertiesDisplayed: true,
       isBibliographyDisplayed: true,
       isPropertyValuesGrouped: true,
+      isPublicationDateTimeDisplayed: false,
       iiifViewer: "universal-viewer",
     },
     options: {
@@ -2936,6 +2937,14 @@ function parseWebsiteProperties(
       ) as
         | Website["properties"]["itemPage"]["isPropertyValuesGrouped"]
         | null) ?? true;
+
+    returnProperties.itemPage.isPublicationDateTimeDisplayed =
+      (getPropertyValueContentByLabel(
+        itemPageTypeProperty.properties,
+        "item-page-publication-date-time-displayed",
+      ) as
+        | Website["properties"]["itemPage"]["isPublicationDateTimeDisplayed"]
+        | null) ?? false;
 
     returnProperties.itemPage.iiifViewer =
       (getPropertyValueContentByLabel(
