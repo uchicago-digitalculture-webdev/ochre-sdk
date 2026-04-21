@@ -134,7 +134,7 @@ it("should fetch sosc-core-at-smart Set items for bibliographies query: 'Aristot
     setScopeUuids: ["16f5a39a-47b9-492d-9f9c-b7e4ec4156b6"],
     queries: {
       target: "bibliography",
-      value: "Aristotle, The Politics",
+      value: "David Walker, An Appeal to the Colored Citizens of the World",
       matchMode: "exact",
       isCaseSensitive: true,
       language: "eng",
@@ -143,7 +143,24 @@ it("should fetch sosc-core-at-smart Set items for bibliographies query: 'Aristot
     pageSize: 48,
   });
 
-  expect(totalCount).toBe(8);
+  expect(totalCount).toBe(7);
+});
+
+it("should fetch sosc-core-at-smart Set items for periods query: '19th century CE'", async () => {
+  const { totalCount } = await fetchSetItems({
+    setScopeUuids: ["16f5a39a-47b9-492d-9f9c-b7e4ec4156b6"],
+    queries: {
+      target: "periods",
+      value: "19th century CE",
+      matchMode: "exact",
+      isCaseSensitive: true,
+      language: "eng",
+    },
+    page: 1,
+    pageSize: 48,
+  });
+
+  expect(totalCount).toBe(16);
 });
 
 it("should fetch more uchicago-node Set items for wildcard query: 'cat*'", async () => {
