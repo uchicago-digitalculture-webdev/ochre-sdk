@@ -254,23 +254,12 @@ function buildRichTextPhraseQueryExpression(params: {
   return `cts:word-query(${stringLiteral(value)}, ${buildRichTextPhraseOptionsExpression({ isCaseSensitive })})`;
 }
 
-function buildCtsNearQueryExpression(params: {
-  queryExpressions: Array<string>;
-  distance: number;
-  isOrdered?: boolean;
-}): string {
-  const { queryExpressions, distance, isOrdered = false } = params;
-  const options = isOrdered ? `, (${stringLiteral("ordered")})` : "";
-
-  return `cts:near-query((${queryExpressions.join(", ")}), ${distance}${options})`;
-}
-
 function buildRichTextExactQueryExpression(params: {
   value: string;
   isCaseSensitive: boolean;
   language: string;
 }): string {
-  const { value, isCaseSensitive, language } = params;
+  const { value, isCaseSensitive } = params;
   const phraseQuery = buildRichTextPhraseQueryExpression({
     value,
     isCaseSensitive,
@@ -281,21 +270,13 @@ function buildRichTextExactQueryExpression(params: {
     return phraseQuery;
   }
 
-  const orderedNearQuery = buildCtsNearQueryExpression({
-    queryExpressions: terms.map((term) =>
-      buildCtsWordQueryExpression({
-        value: term,
-        matchMode: "exact",
-        isCaseSensitive,
-        queryFamily: "text",
-        language,
-      }),
+  const tokenAndQuery = buildAndCtsQueryExpressionInternal(
+    terms.map((term) =>
+      buildRichTextPhraseQueryExpression({ value: term, isCaseSensitive }),
     ),
-    distance: 2,
-    isOrdered: true,
-  });
+  );
 
-  return buildOrCtsQueryExpressionInternal([phraseQuery, orderedNearQuery]);
+  return buildOrCtsQueryExpressionInternal([phraseQuery, tokenAndQuery]);
 }
 
 function buildCtsElementWordQueryExpression(params: {
