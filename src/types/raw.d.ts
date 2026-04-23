@@ -735,6 +735,7 @@ export type RawEvent = {
 export type RawInterpretation = {
   interpretationNo: number;
   date?: string; // YYYY-MM-DD
+  notes?: { note: RawNote | Array<RawNote> };
   links?: RawLink | Array<RawLink>;
   properties?: { property: RawProperty | Array<RawProperty> };
   bibliographies?: { bibliography: RawBibliography | Array<RawBibliography> };

@@ -669,7 +669,7 @@ export function parseObservation(observation: RawObservation): Observation {
 export function parseObservations(
   observations: Array<RawObservation>,
 ): Array<Observation> {
-  return observations.map((obs) => parseObservation(obs));
+  return observations.map((observation) => parseObservation(observation));
 }
 
 /**
@@ -894,17 +894,24 @@ export function parseProperties(
 export function parseInterpretations(
   interpretations: Array<RawInterpretation>,
 ): Array<Interpretation> {
-  return interpretations.map((interp) => ({
-    date: interp.date ?? null,
-    number: interp.interpretationNo,
-    links: interp.links ? parseLinks(ensureArray(interp.links)) : [],
+  return interpretations.map((interpretation) => ({
+    date: interpretation.date ?? null,
+    number: interpretation.interpretationNo,
+    notes:
+      interpretation.notes ?
+        parseNotes(ensureArray(interpretation.notes.note))
+      : [],
+    links:
+      interpretation.links ? parseLinks(ensureArray(interpretation.links)) : [],
     properties:
-      interp.properties ?
-        parseProperties(ensureArray(interp.properties.property))
+      interpretation.properties ?
+        parseProperties(ensureArray(interpretation.properties.property))
       : [],
     bibliographies:
-      interp.bibliographies ?
-        parseBibliographies(ensureArray(interp.bibliographies.bibliography))
+      interpretation.bibliographies ?
+        parseBibliographies(
+          ensureArray(interpretation.bibliographies.bibliography),
+        )
       : [],
   }));
 }

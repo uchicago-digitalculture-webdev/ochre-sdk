@@ -377,6 +377,7 @@ export type Event = {
 export type Interpretation = {
   date: string | null;
   number: number;
+  notes: Array<Note>;
   links: Array<Link>;
   properties: Array<Property>;
   bibliographies: Array<Bibliography>;
