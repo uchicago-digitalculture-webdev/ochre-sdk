@@ -701,6 +701,16 @@ function buildPropertyStringQueryExpression(params: {
       matchMode,
       isCaseSensitive,
     }),
+    rawValueQueryExpression: buildValueRawValueInnerQuery({
+      value,
+      matchMode,
+      isCaseSensitive,
+    }),
+    bareValueQueryExpression: buildValueDirectTextInnerQuery({
+      value,
+      matchMode,
+      isCaseSensitive,
+    }),
   });
 }
 

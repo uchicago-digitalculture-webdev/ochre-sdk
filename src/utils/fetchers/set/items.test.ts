@@ -64,7 +64,7 @@ it("should fetch uchicago-node Set items for query: 'maps of Pilsen'", async () 
   expect(totalCount).toBe(2);
 });
 
-it("should fetch uchicago-node Set items for query: 'west garfield'", async () => {
+it("should fetch uchicago-node Set items for query: 'west garfield' and properties", async () => {
   const { totalCount } = await fetchSetItems({
     setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],
     queries: {
@@ -105,6 +105,30 @@ it("should fetch uchicago-node Set items for query: 'west garfield'", async () =
   });
 
   expect(totalCount).toBe(3);
+});
+
+it("should fetch uchicago-node Set items for query: 'chicago' and property query: 'Media type filter' = 'Map'", async () => {
+  const { totalCount } = await fetchSetItems({
+    setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],
+    queries: {
+      and: [
+        buildInputValueQueries("chicago"),
+        {
+          target: "property",
+          propertyVariable: "8383140a-e676-417f-b5d8-863d9df6d905",
+          dataType: "string",
+          value: "Map",
+          matchMode: "exact",
+          isCaseSensitive: true,
+          language: "eng",
+        },
+      ],
+    },
+    page: 1,
+    pageSize: 48,
+  });
+
+  expect(totalCount).toBe(1744);
 });
 
 it("should fetch uchicago-node Set items for query: 'ca. 1870'", async () => {
