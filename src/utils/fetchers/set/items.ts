@@ -220,7 +220,9 @@ function getCtsQueriesWithoutExactStringPropertyQueries(
     : { and: filteredChildren };
 }
 
-function buildExactStringPropertyPredicate(query: ExactStringPropertyQuery) {
+function buildExactStringPropertyPredicate(
+  query: ExactStringPropertyQuery,
+): string {
   const propertyPredicates: Array<string> = [];
   const value = stringLiteral(query.value);
 

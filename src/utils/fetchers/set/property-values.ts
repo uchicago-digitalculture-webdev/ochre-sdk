@@ -22,18 +22,18 @@ import {
 import { parseFakeString, parseStringContent } from "#/utils/string.js";
 
 type ParsedPropertyValueItem = {
+  scope: "global" | "variable";
   variableUuid: string | null;
-  itemUuid: string | null;
+  count: number;
+  globalCount: number | null;
   dataType: Exclude<PropertyValueContentType, "coordinate">;
   content: string | number | boolean | null;
   label: string | null;
 };
 
-type AggregatePropertyValueItem = Omit<ParsedPropertyValueItem, "variableUuid">;
-
 type ParsedAttributeValueItem = {
   attributeType: "bibliographies" | "periods";
-  itemUuid: string | null;
+  count: number;
   content: string | null;
 };
 
@@ -65,63 +65,10 @@ function parsePropertyValueBooleanContent(
   return rawValue.toString().toLocaleLowerCase("en-US") === "true";
 }
 
-function getPropertyValueGroupKey(value: AggregatePropertyValueItem): string {
-  const contentKey =
-    value.content == null ?
-      "null"
-    : `${typeof value.content}:${value.content.toLocaleString("en-US")}`;
-
-  return `${value.dataType}|${contentKey}`;
-}
-
-function aggregatePropertyValues(
-  values: Array<AggregatePropertyValueItem>,
+function sortPropertyValues(
+  values: Array<PropertyValueQueryItem>,
 ): Array<PropertyValueQueryItem> {
-  const groupedPropertyValuesMap = new Map<
-    string,
-    {
-      dataType: Exclude<PropertyValueContentType, "coordinate">;
-      content: string | number | boolean | null;
-      label: string | null;
-      itemUuids: Set<string | null>;
-    }
-  >();
-
-  for (const value of values) {
-    const key = getPropertyValueGroupKey(value);
-    const existing = groupedPropertyValuesMap.get(key);
-
-    if (existing == null) {
-      groupedPropertyValuesMap.set(key, {
-        dataType: value.dataType,
-        content: value.content,
-        label: value.label,
-        itemUuids: new Set([value.itemUuid]),
-      });
-      continue;
-    }
-
-    existing.itemUuids.add(value.itemUuid);
-    if (existing.label == null && value.label != null) {
-      existing.label = value.label;
-    }
-  }
-
-  const groupedPropertyValues: Array<PropertyValueQueryItem> = [];
-  for (const group of groupedPropertyValuesMap.values()) {
-    if (group.content == null) {
-      continue;
-    }
-
-    groupedPropertyValues.push({
-      count: group.itemUuids.size,
-      dataType: group.dataType,
-      content: group.content,
-      label: group.label,
-    });
-  }
-
-  return groupedPropertyValues.toSorted((a, b) => {
+  return values.toSorted((a, b) => {
     if (a.count !== b.count) {
       return b.count - a.count;
     }
@@ -136,41 +83,17 @@ function aggregatePropertyValues(
   });
 }
 
-function aggregateAttributeValues(
-  values: Array<ParsedAttributeValueItem>,
+function getPropertyValueKey(value: {
+  dataType: Exclude<PropertyValueContentType, "coordinate">;
+  content: string | number | boolean;
+}): string {
+  return `${value.dataType}|${typeof value.content}:${value.content.toLocaleString("en-US")}`;
+}
+
+function sortAttributeValues(
+  values: Array<SetAttributeValueQueryItem>,
 ): Array<SetAttributeValueQueryItem> {
-  const groupedAttributeValuesMap = new Map<
-    string,
-    { content: string; itemUuids: Set<string | null> }
-  >();
-
-  for (const value of values) {
-    if (value.content == null || value.content === "") {
-      continue;
-    }
-
-    const existing = groupedAttributeValuesMap.get(value.content);
-
-    if (existing == null) {
-      groupedAttributeValuesMap.set(value.content, {
-        content: value.content,
-        itemUuids: new Set([value.itemUuid]),
-      });
-      continue;
-    }
-
-    existing.itemUuids.add(value.itemUuid);
-  }
-
-  const groupedAttributeValues: Array<SetAttributeValueQueryItem> = [];
-  for (const group of groupedAttributeValuesMap.values()) {
-    groupedAttributeValues.push({
-      count: group.itemUuids.size,
-      content: group.content,
-    });
-  }
-
-  return groupedAttributeValues.toSorted((a, b) => {
+  return values.toSorted((a, b) => {
     if (a.count !== b.count) {
       return b.count - a.count;
     }
@@ -178,6 +101,19 @@ function aggregateAttributeValues(
     return a.content.localeCompare(b.content);
   });
 }
+
+const countSchema = z
+  .union([z.number(), z.string()])
+  .optional()
+  .transform((val) => {
+    if (val == null || val === "") {
+      return 1;
+    }
+
+    const count = Number(val);
+
+    return Number.isFinite(count) ? count : 1;
+  });
 
 function getPropertyVariableUuidsFromQueries(
   queries: Query | null,
@@ -259,8 +195,10 @@ function getItemFilterQueriesFromPropertyValueQueries(
 const propertyValueQueryItemSchema = z
   .object({
     uuid: z.string(),
+    scope: z.enum(["global", "variable"]).default("global"),
     variableUuid: z.string().optional(),
-    itemUuid: z.string().optional(),
+    count: countSchema,
+    globalCount: countSchema.nullish(),
     dataType: z.string(),
     rawValue: fakeStringSchema.optional(),
     content: z
@@ -273,12 +211,13 @@ const propertyValueQueryItemSchema = z
   })
   .transform((val): ParsedPropertyValueItem => {
     const returnValue: ParsedPropertyValueItem = {
+      scope: val.scope,
       variableUuid:
         val.variableUuid != null && val.variableUuid !== "" ?
           val.variableUuid
         : null,
-      itemUuid:
-        val.itemUuid != null && val.itemUuid !== "" ? val.itemUuid : null,
+      count: val.count,
+      globalCount: val.globalCount ?? null,
       dataType: val.dataType as Exclude<PropertyValueContentType, "coordinate">,
       content: null,
       label: null,
@@ -324,14 +263,13 @@ const propertyValueQueryItemSchema = z
 const attributeValueQueryItemSchema = z
   .object({
     attributeType: z.enum(["bibliographies", "periods"]),
-    itemUuid: z.string().optional(),
+    count: countSchema,
     content: z.string().optional(),
   })
   .transform(
     (val): ParsedAttributeValueItem => ({
       attributeType: val.attributeType,
-      itemUuid:
-        val.itemUuid != null && val.itemUuid !== "" ? val.itemUuid : null,
+      count: val.count,
       content: val.content != null && val.content !== "" ? val.content : null,
     }),
   );
@@ -392,14 +330,8 @@ function buildXQuery(params: {
   } = params;
 
   const setScopeValues = setScopeUuids.map((uuid) => stringLiteral(uuid));
-  const setScopeDeclaration =
-    setScopeValues.length > 0 ?
-      `declare variable $setScopeUuids := (${setScopeValues.join(", ")});`
-    : "";
-  const baseItemsExpression =
-    setScopeValues.length > 0 ?
-      "doc()/ochre/set[@uuid = $setScopeUuids]/items/*"
-    : "doc()/ochre/set/items/*";
+  const setScopeDeclaration = `declare variable $setScopeUuids := (${setScopeValues.join(", ")});`;
+  const baseItemsExpression = "doc()/ochre/set[@uuid = $setScopeUuids]/items/*";
   const compiledQueryPlan = buildQueryPlan({
     queries: getItemFilterQueriesFromPropertyValueQueries(queries),
   });
@@ -424,51 +356,197 @@ function buildXQuery(params: {
   const valueFilter = isLimitedToLeafPropertyValues ? "[not(@i)]" : "";
   const queryBlocks: Array<string> = [];
   const returnedSequences: Array<string> = [];
-  const xqueryDeclarations = ['xquery version "1.0-ml";'];
+  const xqueryDeclarations = [
+    'xquery version "1.0-ml";',
+    'declare namespace map = "http://marklogic.com/xdmp/map";',
+    setScopeDeclaration,
+    `declare function local:increment-count($counts, $key) {
+  let $current := map:get($counts, $key)
+  return map:put(
+    $counts,
+    $key,
+    if (empty($current)) then 1 else xs:integer($current) + 1
+  )
+};
 
-  if (setScopeDeclaration !== "") {
-    xqueryDeclarations.push(setScopeDeclaration);
-  }
+declare function local:value-display($v) {
+  if ($v/content)
+  then string-join($v/content[@xml:lang="eng"]//text(), "")
+  else string($v)
+};
+
+declare function local:value-content($data-type, $raw-value, $value-uuid, $display) {
+  if ($data-type = "IDREF") then $value-uuid
+  else if ($data-type = ("integer", "decimal", "time")) then
+    if ($raw-value castable as xs:double)
+    then string(xs:double($raw-value))
+    else ""
+  else if ($data-type = "boolean") then
+    if ($raw-value = "") then ""
+    else if (lower-case($raw-value) = "true") then "true"
+    else "false"
+  else if ($raw-value != "") then $raw-value
+  else if ($display != "" and $display != "<unassigned>") then $display
+  else ""
+};
+
+declare function local:value-kind($data-type) {
+  if ($data-type = ("integer", "decimal", "time")) then "number"
+  else if ($data-type = "boolean") then "boolean"
+  else "string"
+};
+
+declare function local:property-output-raw-value($data-type, $raw-value, $content) {
+  if ($data-type = ("integer", "decimal", "time", "boolean")) then $content
+  else $raw-value
+};
+
+declare function local:put-property-detail(
+  $details,
+  $key,
+  $scope,
+  $variable-uuid,
+  $value-uuid,
+  $raw-value,
+  $data-type,
+  $display
+) {
+  let $existing := map:get($details, $key)
+  return
+    if (
+      empty($existing)
+      or (string-length(string($existing)) = 0 and string-length($display) gt 0)
+    ) then
+      map:put(
+        $details,
+        $key,
+        <propertyValue scope="{$scope}" variableUuid="{$variable-uuid}" uuid="{$value-uuid}" rawValue="{$raw-value}" dataType="{$data-type}">{$display}</propertyValue>
+      )
+    else ()
+};
+
+declare function local:add-property-facet(
+  $counts,
+  $details,
+  $seen,
+  $key,
+  $scope,
+  $variable-uuid,
+  $value-uuid,
+  $raw-value,
+  $data-type,
+  $display
+) {
+  if (exists(map:get($seen, $key))) then ()
+  else (
+    map:put($seen, $key, true()),
+    local:increment-count($counts, $key),
+    local:put-property-detail($details, $key, $scope, $variable-uuid, $value-uuid, $raw-value, $data-type, $display)
+  )
+};
+
+declare function local:add-attribute-facet($counts, $seen, $key) {
+  if (exists(map:get($seen, $key))) then ()
+  else (
+    map:put($seen, $key, true()),
+    local:increment-count($counts, $key)
+  )
+};`,
+  ];
 
   if (compiledQueryPlan.prolog !== "") {
     xqueryDeclarations.push(compiledQueryPlan.prolog);
   }
 
   if (propertyVariableUuids.length > 0) {
-    const propertyVariableFilters = propertyVariableUuids
-      .map((uuid) => `@uuid="${uuid}"`)
-      .join(" or ");
+    const propertyVariableValues = propertyVariableUuids.map((uuid) =>
+      stringLiteral(uuid),
+    );
 
-    queryBlocks.push(`let $matching-props := $items//property[label[${propertyVariableFilters}]]
+    xqueryDeclarations.push(
+      `declare variable $facetLabelUuids := (${propertyVariableValues.join(", ")});`,
+    );
+    queryBlocks.push(`let $global-property-counts := map:map()
+let $variable-property-counts := map:map()
+let $variable-property-details := map:map()
+let $variable-property-global-keys := map:map()
+let $_property-aggregation := xdmp:eager(
+  for $item in $items
+  let $global-seen := map:map()
+  let $variable-seen := map:map()
+  return
+    for $p in $item/properties/property[label/@uuid = $facetLabelUuids]
+    let $variable-uuid := string($p/label/@uuid)
+    for $v in $p/value${valueFilter}
+    let $value-uuid := string($v/@uuid)
+    let $raw-value := string($v/@rawValue)
+    let $data-type := string($v/@dataType)
+    let $display := local:value-display($v)
+    let $content := local:value-content($data-type, $raw-value, $value-uuid, $display)
+    let $value-kind := local:value-kind($data-type)
+    let $output-raw-value := local:property-output-raw-value($data-type, $raw-value, $content)
+    let $global-key := string-join(($data-type, $value-kind, $content), "||")
+    let $variable-key := string-join(($variable-uuid, $data-type, $value-kind, $content), "||")
+    where $content != ""
+    return (
+      local:add-attribute-facet($global-property-counts, $global-seen, $global-key),
+      local:add-property-facet($variable-property-counts, $variable-property-details, $variable-seen, $variable-key, "variable", $variable-uuid, $value-uuid, $output-raw-value, $data-type, $display),
+      map:put($variable-property-global-keys, $variable-key, $global-key)
+    )
+)
 
 let $property-values :=
-  for $p in $matching-props
-  for $v in $p/value${valueFilter}
-    let $item-uuid := $v/ancestor::*[parent::items]/@uuid
-    let $variable-uuid := $p/label/@uuid
-    return <propertyValue uuid="{$v/@uuid}" rawValue="{$v/@rawValue}" dataType="{$v/@dataType}" itemUuid="{$item-uuid}" variableUuid="{$variable-uuid}">{
-      if ($v/content) then string-join($v/content[@xml:lang="eng"]//text(), "") else $v/text()
-    }</propertyValue>`);
+  (
+    $_property-aggregation,
+    for $key in map:keys($variable-property-counts)
+    let $detail := map:get($variable-property-details, $key)
+    let $global-key := map:get($variable-property-global-keys, $key)
+    return <propertyValue scope="variable" variableUuid="{string($detail/@variableUuid)}" uuid="{string($detail/@uuid)}" rawValue="{string($detail/@rawValue)}" dataType="{string($detail/@dataType)}" count="{map:get($variable-property-counts, $key)}" globalCount="{map:get($global-property-counts, $global-key)}">{
+      string($detail)
+    }</propertyValue>
+  )`);
     returnedSequences.push("$property-values");
   }
 
   if (attributes.bibliographies) {
-    queryBlocks.push(`let $bibliography-values :=
+    queryBlocks.push(`let $bibliography-counts := map:map()
+let $_bibliography-aggregation := xdmp:eager(
   for $item in $items
-  for $bibliography in $item/bibliographies/bibliography
+  let $seen := map:map()
+  return
+    for $bibliography in $item/bibliographies/bibliography
     let $label := string-join($bibliography/identification/label/content[@xml:lang="eng"]//text(), "")
     where string-length($label) gt 0
-    return <attributeValue attributeType="bibliographies" itemUuid="{$item/@uuid}" content="{$label}" />`);
+    return local:add-attribute-facet($bibliography-counts, $seen, $label)
+)
+
+let $bibliography-values :=
+  (
+    $_bibliography-aggregation,
+    for $label in map:keys($bibliography-counts)
+    return <attributeValue attributeType="bibliographies" count="{map:get($bibliography-counts, $label)}" content="{$label}" />
+  )`);
     returnedSequences.push("$bibliography-values");
   }
 
   if (attributes.periods) {
-    queryBlocks.push(`let $period-values :=
+    queryBlocks.push(`let $period-counts := map:map()
+let $_period-aggregation := xdmp:eager(
   for $item in $items
-  for $period in $item/periods/period
+  let $seen := map:map()
+  return
+    for $period in $item/periods/period
     let $label := string-join($period/identification/label/content[@xml:lang="eng"]//text(), "")
     where string-length($label) gt 0
-    return <attributeValue attributeType="periods" itemUuid="{$item/@uuid}" content="{$label}" />`);
+    return local:add-attribute-facet($period-counts, $seen, $label)
+)
+
+let $period-values :=
+  (
+    $_period-aggregation,
+    for $label in map:keys($period-counts)
+    return <attributeValue attributeType="periods" count="{map:get($period-counts, $label)}" content="{$label}" />
+  )`);
     returnedSequences.push("$period-values");
   }
 
@@ -612,70 +690,101 @@ export async function fetchSetPropertyValues(
       }
     }
 
-    const propertyValuesByPropertyVariableUuidRaw: Record<
+    const propertyValuesByPropertyVariableUuid: Record<
       string,
-      Array<AggregatePropertyValueItem>
+      Array<PropertyValueQueryItem>
     > = {};
-    const flattenedPropertyValues: Array<AggregatePropertyValueItem> = [];
+    const flattenedPropertyValuesByKey = new Map<
+      string,
+      PropertyValueQueryItem
+    >();
 
     for (const propertyValue of parsedPropertyValues) {
-      const aggregatePropertyValueItem: AggregatePropertyValueItem = {
-        itemUuid: propertyValue.itemUuid,
+      if (propertyValue.content == null) {
+        continue;
+      }
+
+      const propertyValueItem: PropertyValueQueryItem = {
+        count: propertyValue.count,
         dataType: propertyValue.dataType,
         content: propertyValue.content,
         label: propertyValue.label,
       };
 
-      flattenedPropertyValues.push(aggregatePropertyValueItem);
+      const globalPropertyValueItem: PropertyValueQueryItem = {
+        count: propertyValue.globalCount ?? propertyValue.count,
+        dataType: propertyValue.dataType,
+        content: propertyValue.content,
+        label: propertyValue.label,
+      };
+      const globalPropertyValueKey = getPropertyValueKey({
+        dataType: globalPropertyValueItem.dataType,
+        content: propertyValue.content,
+      });
+      const existingGlobalPropertyValue = flattenedPropertyValuesByKey.get(
+        globalPropertyValueKey,
+      );
 
-      if (propertyValue.variableUuid == null) {
+      if (existingGlobalPropertyValue == null) {
+        flattenedPropertyValuesByKey.set(
+          globalPropertyValueKey,
+          globalPropertyValueItem,
+        );
+      } else if (
+        existingGlobalPropertyValue.label == null &&
+        globalPropertyValueItem.label != null
+      ) {
+        existingGlobalPropertyValue.label = globalPropertyValueItem.label;
+      }
+
+      if (propertyValue.scope === "global") {
         continue;
       }
 
-      const valuesByPropertyVariableUuid =
-        (propertyValuesByPropertyVariableUuidRaw[propertyValue.variableUuid] ??=
-          []);
-      valuesByPropertyVariableUuid.push(aggregatePropertyValueItem);
-    }
-
-    const propertyValuesByPropertyVariableUuid: Record<
-      string,
-      Array<PropertyValueQueryItem>
-    > = {};
-
-    for (const [propertyVariableUuid, values] of Object.entries(
-      propertyValuesByPropertyVariableUuidRaw,
-    )) {
-      const aggregatedValues = aggregatePropertyValues(values);
-
-      if (aggregatedValues.length > 0) {
-        propertyValuesByPropertyVariableUuid[propertyVariableUuid] =
-          aggregatedValues;
+      if (propertyValue.variableUuid != null) {
+        const valuesByPropertyVariableUuid =
+          (propertyValuesByPropertyVariableUuid[propertyValue.variableUuid] ??=
+            []);
+        valuesByPropertyVariableUuid.push(propertyValueItem);
       }
     }
 
-    const attributeValuesByTypeRaw: Record<
+    for (const [propertyVariableUuid, values] of Object.entries(
+      propertyValuesByPropertyVariableUuid,
+    )) {
+      propertyValuesByPropertyVariableUuid[propertyVariableUuid] =
+        sortPropertyValues(values);
+    }
+
+    const attributeValuesByType: Record<
       "bibliographies" | "periods",
-      Array<ParsedAttributeValueItem>
+      Array<SetAttributeValueQueryItem>
     > = { bibliographies: [], periods: [] };
 
     for (const attributeValue of parsedAttributeValues) {
-      attributeValuesByTypeRaw[attributeValue.attributeType].push(
-        attributeValue,
-      );
+      if (attributeValue.content == null || attributeValue.content === "") {
+        continue;
+      }
+
+      attributeValuesByType[attributeValue.attributeType].push({
+        count: attributeValue.count,
+        content: attributeValue.content,
+      });
     }
 
     return {
-      propertyValues: aggregatePropertyValues(flattenedPropertyValues),
+      propertyValues: sortPropertyValues([
+        ...flattenedPropertyValuesByKey.values(),
+      ]),
       propertyValuesByPropertyVariableUuid,
       attributeValues: {
         bibliographies:
           attributes.bibliographies ?
-            aggregateAttributeValues(attributeValuesByTypeRaw.bibliographies)
+            sortAttributeValues(attributeValuesByType.bibliographies)
           : null,
         periods:
           attributes.periods ?
-            aggregateAttributeValues(attributeValuesByTypeRaw.periods)
+            sortAttributeValues(attributeValuesByType.periods)
           : null,
       },
       error: null,
