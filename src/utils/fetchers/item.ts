@@ -22,6 +22,11 @@ import { parseFakeString } from "#/utils/string.js";
  * Fetches and parses an OCHRE item from the OCHRE API
  *
  * @param uuid - The UUID of the OCHRE item to fetch
+ * @param category - The category of the OCHRE item to fetch
+ * @param itemCategories - The categories of the OCHRE items to fetch
+ * @param options - The options for the fetch
+ * @param options.fetch - The fetch function to use
+ * @param options.version - The version of the OCHRE API to use
  * @returns Object containing the parsed OCHRE item, or an error message if the fetch/parse fails
  */
 export async function fetchItem<
