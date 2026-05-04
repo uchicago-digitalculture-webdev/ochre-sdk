@@ -60,6 +60,37 @@ import {
 const SEGMENT_UNIQUE_SLUG_PREFIX_REGEX = /^\$[^-]*-/;
 const TRAILING_SLASH_REGEX = /\/$/;
 
+function formatRawResourceMetadata(resource: RawResource): string {
+  const metadata: Array<string> = [
+    `label “${parseStringContent(resource.identification.label as RawStringContent)}”`,
+    `uuid “${resource.uuid}”`,
+  ];
+
+  if (resource.slug != null) {
+    metadata.push(`slug “${resource.slug}”`);
+  }
+
+  if (resource.identification.abbreviation != null) {
+    metadata.push(
+      `abbreviation “${parseFakeStringOrContent(
+        resource.identification.abbreviation,
+      )}”`,
+    );
+  }
+
+  return metadata.join(", ");
+}
+
+function formatComponentError(
+  message: string,
+  componentName: WebElementComponent["component"] | undefined,
+  elementResource: RawResource,
+): string {
+  return `${message} for component “${componentName ?? "(unknown)"}” (${formatRawResourceMetadata(
+    elementResource,
+  )})`;
+}
+
 /**
  * Extracts CSS style properties for a given presentation variant.
  *
@@ -245,7 +276,11 @@ function parseWebElementProperties(
       );
       if (resourceLink?.uuid == null) {
         throw new Error(
-          `Resource link not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Resource link not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -296,7 +331,11 @@ function parseWebElementProperties(
 
       if (boundElementPropertyUuid == null && href == null) {
         throw new Error(
-          `Bound element or href not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Bound element or href not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -313,7 +352,11 @@ function parseWebElementProperties(
       );
       if (documentLink?.uuid == null) {
         throw new Error(
-          `Document link not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Document link not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -330,7 +373,11 @@ function parseWebElementProperties(
 
       if (imageLinks.length === 0 || imageLinks[0]!.uuid == null) {
         throw new Error(
-          `Image link not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Image link not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -392,7 +439,11 @@ function parseWebElementProperties(
       const audioLink = links.find((link) => link.type === "audio");
       if (audioLink?.uuid == null) {
         throw new Error(
-          `Audio link not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Audio link not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -447,7 +498,11 @@ function parseWebElementProperties(
       );
       if (itemLinks.length === 0 && bibliographyLink?.bibliographies == null) {
         throw new Error(
-          `No links found for the following component: “${componentName}”`,
+          formatComponentError(
+            "No links found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -513,7 +568,11 @@ function parseWebElementProperties(
 
         if (href === null) {
           throw new Error(
-            `Properties “navigate-to” or “link-to” not found for the following component: “${componentName}”`,
+            formatComponentError(
+              "Properties “navigate-to” or “link-to” not found",
+              componentName,
+              elementResource,
+            ),
           );
         } else {
           isExternal = true;
@@ -571,7 +630,11 @@ function parseWebElementProperties(
       const setLinks = links.filter((link) => link.category === "set");
       if (setLinks.every((link) => link.uuid === null)) {
         throw new Error(
-          `Set links not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Set links not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -794,7 +857,11 @@ function parseWebElementProperties(
       );
       if (entriesLink?.uuid == null) {
         throw new Error(
-          `Entries link not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Entries link not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -831,7 +898,7 @@ function parseWebElementProperties(
         | null;
       if (!href) {
         throw new Error(
-          `URL not found for the following component: “${componentName}”`,
+          formatComponentError("URL not found", componentName, elementResource),
         );
       }
 
@@ -856,7 +923,11 @@ function parseWebElementProperties(
       const manifestLink = links.find((link) => link.type === "IIIF");
       if (manifestLink?.uuid == null) {
         throw new Error(
-          `Manifest link not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Manifest link not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -878,7 +949,11 @@ function parseWebElementProperties(
     case "image": {
       if (links.length === 0) {
         throw new Error(
-          `No links found for the following component: “${componentName}”`,
+          formatComponentError(
+            "No links found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -1089,7 +1164,11 @@ function parseWebElementProperties(
       );
       if (galleryLink?.uuid == null) {
         throw new Error(
-          `Image gallery link not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Image gallery link not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -1117,7 +1196,11 @@ function parseWebElementProperties(
       );
       if (mapLink?.uuid == null) {
         throw new Error(
-          `Map link not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Map link not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -1212,7 +1295,11 @@ function parseWebElementProperties(
       const setLinks = links.filter((link) => link.category === "set");
       if (setLinks.every((link) => link.uuid === null)) {
         throw new Error(
-          `Set links not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Set links not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -1222,7 +1309,11 @@ function parseWebElementProperties(
 
       if (componentProperty.properties.length === 0) {
         throw new Error(
-          `Query properties not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Query properties not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -1254,14 +1345,22 @@ function parseWebElementProperties(
           (propertyVariable) => {
             if (propertyVariable.uuid === null) {
               throw new Error(
-                `Property variable UUID not found for the following component: “${componentName}”`,
+                formatComponentError(
+                  "Property variable UUID not found",
+                  componentName,
+                  elementResource,
+                ),
               );
             }
 
             const dataType = propertyVariable.dataType;
             if (dataType === "coordinate") {
               throw new Error(
-                `Query prompts with data type "coordinate" are not supported for the following component: “${componentName}”`,
+                formatComponentError(
+                  'Query prompts with data type "coordinate" are not supported',
+                  componentName,
+                  elementResource,
+                ),
               );
             }
 
@@ -1303,7 +1402,11 @@ function parseWebElementProperties(
 
       if (items.length === 0) {
         throw new Error(
-          `No queries found for the following component: “${componentName}”`,
+          formatComponentError(
+            "No queries found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -1415,7 +1518,11 @@ function parseWebElementProperties(
       const tableLink = links.find((link) => link.category === "set");
       if (tableLink?.uuid == null) {
         throw new Error(
-          `Table link not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Table link not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -1455,7 +1562,11 @@ function parseWebElementProperties(
 
       if (!boundElementUuid && !href) {
         throw new Error(
-          `Bound element or href not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Bound element or href not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -1501,7 +1612,11 @@ function parseWebElementProperties(
         : null;
       if (!content) {
         throw new Error(
-          `Content not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Content not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -1559,7 +1674,11 @@ function parseWebElementProperties(
       const timelineLink = links.find((link) => link.category === "tree");
       if (timelineLink?.uuid == null) {
         throw new Error(
-          `Timeline link not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Timeline link not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -1570,7 +1689,11 @@ function parseWebElementProperties(
       const videoLink = links.find((link) => link.type === "video");
       if (videoLink?.uuid == null) {
         throw new Error(
-          `Video link not found for the following component: “${componentName}”`,
+          formatComponentError(
+            "Video link not found",
+            componentName,
+            elementResource,
+          ),
         );
       }
 
@@ -1604,7 +1727,11 @@ function parseWebElementProperties(
 
   if (properties === null) {
     throw new Error(
-      `Properties not found for the following component: “${componentName}”`,
+      formatComponentError(
+        "Properties not found",
+        componentName,
+        elementResource,
+      ),
     );
   }
 
@@ -1691,7 +1818,9 @@ function parseWebElement(elementResource: RawResource): WebElement {
   );
   if (presentationProperty === null) {
     throw new Error(
-      `Presentation property not found for element “${identification.label}”`,
+      `Presentation property not found for element (${formatRawResourceMetadata(
+        elementResource,
+      )})`,
     );
   }
 
@@ -1701,7 +1830,9 @@ function parseWebElement(elementResource: RawResource): WebElement {
   );
   if (componentProperty === null) {
     throw new Error(
-      `Component for element “${identification.label}” not found`,
+      `Component property not found for element (${formatRawResourceMetadata(
+        elementResource,
+      )})`,
     );
   }
 
@@ -1836,7 +1967,9 @@ function parseWebpage(
     webpageResource.slug?.replace(SEGMENT_UNIQUE_SLUG_PREFIX_REGEX, "") ?? null;
 
   if (slug == null) {
-    throw new Error(`Slug not found for page “${identification.label}”`);
+    throw new Error(
+      `Slug not found for page (${formatRawResourceMetadata(webpageResource)})`,
+    );
   }
 
   const returnWebpage: Webpage = {
@@ -2029,7 +2162,11 @@ function parseWebSegment(
       parseFakeStringOrContent(segmentResource.identification.abbreviation)
     : null;
   if (slug == null) {
-    throw new Error(`Slug not found for segment “${identification.label}”`);
+    throw new Error(
+      `Slug not found for segment (${formatRawResourceMetadata(
+        segmentResource,
+      )})`,
+    );
   }
 
   const returnSegment: WebSegment = {
@@ -2109,7 +2246,9 @@ function parseWebSegmentItem(
     : null;
   if (slug == null) {
     throw new Error(
-      `Slug not found for segment item “${identification.label}”`,
+      `Slug not found for segment item (${formatRawResourceMetadata(
+        segmentItemResource,
+      )})`,
     );
   }
 
@@ -2648,9 +2787,9 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
 
       if (resourceType !== "element") {
         throw new Error(
-          `Accordion only accepts elements, but got “${resourceType}” for the following resource: “${parseStringContent(
-            resource.identification.label as RawStringContent,
-          )}”`,
+          `Accordion only accepts elements, but got “${resourceType}” (${formatRawResourceMetadata(
+            resource,
+          )})`,
         );
       }
 
@@ -2665,9 +2804,9 @@ function parseWebBlock(blockResource: RawResource): WebBlock | null {
 
       if (componentType !== "text") {
         throw new Error(
-          `Accordion only accepts text components, but got “${componentType}” for the following resource: “${parseStringContent(
-            resource.identification.label as RawStringContent,
-          )}”`,
+          `Accordion only accepts text components, but got “${componentType}” (${formatRawResourceMetadata(
+            resource,
+          )})`,
         );
       }
 
@@ -2798,7 +2937,7 @@ function parseWebsiteProperties(
       };
     } else {
       throw new Error(
-        `Contact property must be in the format “name;email”, but got “${contactProperty.values[0]?.content}”`,
+        `Contact property must use “name;email”, got “${contactProperty.values[0]?.content}” (website uuid “${websiteTree.uuid}”)`,
       );
     }
   }
@@ -3132,14 +3271,18 @@ export function parseWebsite(
   { version = DEFAULT_API_VERSION }: { version?: ApiVersion } = {},
 ): Website {
   if (!websiteTree.properties) {
-    throw new Error("Website properties not found");
+    throw new Error(
+      `Website properties not found (website uuid “${websiteTree.uuid}”)`,
+    );
   }
 
   if (
     typeof websiteTree.items === "string" ||
     !("resource" in websiteTree.items)
   ) {
-    throw new Error("Website pages not found");
+    throw new Error(
+      `Website pages not found (website uuid “${websiteTree.uuid}”)`,
+    );
   }
 
   const resources = ensureArray(websiteTree.items.resource);
