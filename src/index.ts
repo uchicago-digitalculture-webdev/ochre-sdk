@@ -1,6 +1,7 @@
 export * from "#/types/index.js";
 export * from "#/types/website.js";
 export * from "#/utils/fetchers/gallery.js";
+export * from "#/utils/fetchers/item-links.js";
 export * from "#/utils/fetchers/item.js";
 export * from "#/utils/fetchers/set/items.js";
 export * from "#/utils/fetchers/set/property-values.js";
