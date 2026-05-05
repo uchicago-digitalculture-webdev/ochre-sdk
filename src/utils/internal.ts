@@ -1,4 +1,5 @@
 import { parseISO } from "date-fns";
+import * as v from "valibot";
 import type { DataCategory, Property } from "#/types/index.js";
 import type { RawFakeString, RawStringContent } from "#/types/raw.js";
 import { categorySchema } from "#/schemas.js";
@@ -14,7 +15,7 @@ const PSEUDO_UUID_REGEX = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
  */
 export function getItemCategory(keys: ReadonlyArray<string>): DataCategory {
   const categoryFound = keys.find(
-    (key) => categorySchema.safeParse(key).success,
+    (key) => v.safeParse(categorySchema, key).success,
   );
   if (!categoryFound) {
     const unknownKey = keys.find(
@@ -32,7 +33,7 @@ export function getItemCategory(keys: ReadonlyArray<string>): DataCategory {
     throw new Error(`Invalid OCHRE data; found unexpected "${unknownKey}" key`);
   }
 
-  const categoryKey = categorySchema.parse(categoryFound);
+  const categoryKey = v.parse(categorySchema, categoryFound);
 
   return categoryKey;
 }
@@ -46,19 +47,19 @@ export function getItemCategory(keys: ReadonlyArray<string>): DataCategory {
 export function getItemCategories(
   keys: ReadonlyArray<string>,
 ): Array<DataCategory> {
-  const categories = keys.map((key) => categorySchema.safeParse(key));
+  const categories = keys.map((key) => v.safeParse(categorySchema, key));
   if (categories.some((result) => !result.success)) {
     throw new Error(
       `Invalid OCHRE data; found unexpected keys: ${categories
         .filter((result) => !result.success)
-        .map((result) => result.error.message)
+        .flatMap((result) => result.issues.map((issue) => issue.message))
         .join(", ")}`,
     );
   }
 
   return categories
     .filter((result) => result.success)
-    .map((result) => result.data);
+    .map((result) => result.output);
 }
 
 /**

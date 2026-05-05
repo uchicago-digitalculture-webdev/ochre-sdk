@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import type {
   ApiVersion,
   DataCategory,
@@ -425,7 +426,7 @@ export async function fetchSetItems<
       sort,
       page,
       pageSize,
-    } = setItemsParamsSchema.parse(params);
+    } = v.parse(setItemsParamsSchema, params);
 
     const xquery = buildXQuery({
       setScopeUuids,

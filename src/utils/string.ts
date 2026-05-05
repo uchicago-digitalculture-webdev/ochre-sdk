@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import type {
   RawFakeString,
   RawPropertyValueContent,
@@ -77,7 +78,7 @@ export function parseEmail(string: string): string {
     const before = string.slice(0, index);
     const after = string.slice(index + cleanString.length);
 
-    const isEmail = emailSchema.safeParse(cleanString).success;
+    const isEmail = v.safeParse(emailSchema, cleanString).success;
     if (isEmail) {
       returnSplitString.push(
         `${before}<ExternalLink href="mailto:${cleanString}">${cleanString}</ExternalLink>${after}`,
@@ -105,14 +106,14 @@ function parseRenderOptions(
 ): string {
   let returnString = contentString;
 
-  const result = renderOptionsSchema.safeParse(renderString);
+  const result = v.safeParse(renderOptionsSchema, renderString);
   if (!result.success) {
     console.warn(`Invalid render options string provided: “${renderString}”`);
 
     return contentString;
   }
 
-  for (const option of result.data) {
+  for (const option of result.output) {
     switch (option) {
       case "bold": {
         returnString = `**${returnString}**`;
@@ -143,14 +144,14 @@ function parseRenderOptions(
 function parseWhitespace(contentString: string, whitespace: string): string {
   let returnString = contentString;
 
-  const result = whitespaceSchema.safeParse(whitespace);
+  const result = v.safeParse(whitespaceSchema, whitespace);
   if (!result.success) {
     console.warn(`Invalid whitespace string provided: “${whitespace}”`);
 
     return contentString;
   }
 
-  for (const option of result.data) {
+  for (const option of result.output) {
     switch (option) {
       case "newline": {
         if (returnString.trim() === "***") {

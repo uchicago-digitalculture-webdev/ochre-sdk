@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import type { ApiVersion, Identification, Property } from "#/types/index.js";
 import type {
   RawLevelContext,
@@ -143,12 +144,14 @@ function parseResponsiveCssStyles(properties: Array<Property>): {
 export function parseBounds(
   bounds: string,
 ): [[number, number], [number, number]] {
-  const result = boundsSchema.safeParse(bounds);
+  const result = v.safeParse(boundsSchema, bounds);
   if (!result.success) {
-    throw new Error(`Invalid bounds: ${result.error.message}`);
+    throw new Error(
+      `Invalid bounds: ${result.issues.map((issue) => issue.message).join(", ")}`,
+    );
   }
 
-  return result.data;
+  return result.output;
 }
 
 /**
@@ -259,9 +262,12 @@ function parseWebElementProperties(
   elementResource: RawResource,
 ): WebElementComponent {
   const unparsedComponentName = componentProperty.values[0]!.content;
-  const { data: componentName } = componentSchema.safeParse(
+  const componentNameResult = v.safeParse(
+    componentSchema,
     unparsedComponentName,
   );
+  const componentName =
+    componentNameResult.success ? componentNameResult.output : undefined;
 
   let properties: WebElementComponent | null = null;
 

@@ -1,4 +1,4 @@
-import * as z from "zod";
+import * as v from "valibot";
 import type { ApiVersion, Gallery } from "#/types/index.js";
 import type { RawIdentification, RawResource } from "#/types/raw.js";
 import { uuidSchema } from "#/schemas.js";
@@ -8,11 +8,11 @@ import { parseIdentification, parseResources } from "#/utils/parse/index.js";
 /**
  * Schema for validating gallery parameters
  */
-const galleryParamsSchema = z.object({
+const galleryParamsSchema = v.object({
   uuid: uuidSchema,
-  filter: z.string().optional(),
-  page: z.number().positive({ error: "Page must be positive" }),
-  pageSize: z.number().positive({ error: "Page size must be positive" }),
+  filter: v.optional(v.string()),
+  page: v.pipe(v.number(), v.minValue(1, "Page must be positive")),
+  pageSize: v.pipe(v.number(), v.minValue(1, "Page size must be positive")),
 });
 
 /**
@@ -43,7 +43,10 @@ export async function fetchGallery(
   try {
     const version = options?.version ?? DEFAULT_API_VERSION;
 
-    const { uuid, filter, page, pageSize } = galleryParamsSchema.parse(params);
+    const { uuid, filter, page, pageSize } = v.parse(
+      galleryParamsSchema,
+      params,
+    );
 
     const response = await (options?.fetch ?? fetch)(
       `${version === 2 ? "https://ochre.lib.uchicago.edu/ochre/v2/ochre.php" : "https://ochre.lib.uchicago.edu/ochre"}?xquery=${encodeURIComponent(`<ochre>{

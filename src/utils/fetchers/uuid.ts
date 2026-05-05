@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import type { ApiVersion } from "#/types/index.js";
 import type { RawData, RawDataResponse } from "#/types/raw.js";
 import { uuidSchema } from "#/schemas.js";
@@ -23,7 +24,7 @@ export async function fetchByUuid(
   try {
     const version = options?.version ?? DEFAULT_API_VERSION;
 
-    const parsedUuid = uuidSchema.parse(uuid);
+    const parsedUuid = v.parse(uuidSchema, uuid);
 
     const response = await (options?.fetch ?? fetch)(
       version === 2 ?

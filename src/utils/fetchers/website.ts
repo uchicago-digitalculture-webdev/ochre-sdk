@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import type { ApiVersion } from "#/types/index.js";
 import type { RawData, RawMetadata, RawTree } from "#/types/raw.js";
 import type { Website } from "#/types/website.js";
@@ -22,14 +23,14 @@ function parseApiVersionSuffix(abbreviation: string): {
     return { abbreviation, version: DEFAULT_API_VERSION };
   }
 
-  const result = apiVersionSuffixSchema.safeParse(abbreviation.slice(-3));
+  const result = v.safeParse(apiVersionSuffixSchema, abbreviation.slice(-3));
   if (!result.success) {
     throw new Error("Invalid API version suffix");
   }
 
   return {
-    abbreviation: abbreviation.replace(`-v${result.data}`, ""),
-    version: result.data,
+    abbreviation: abbreviation.replace(`-v${result.output}`, ""),
+    version: result.output,
   };
 }
 

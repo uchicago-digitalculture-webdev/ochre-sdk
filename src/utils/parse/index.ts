@@ -1,5 +1,6 @@
 import { UTCDate } from "@date-fns/utc";
 import { parseISO, set } from "date-fns";
+import * as v from "valibot";
 import type {
   Bibliography,
   Concept,
@@ -753,16 +754,17 @@ export function parseProperty(
     } else {
       let parsedType: PropertyValueContentType = "string";
       if (value.dataType != null) {
-        const { data, error } = propertyValueContentTypeSchema.safeParse(
+        const result = v.safeParse(
+          propertyValueContentTypeSchema,
           value.dataType,
         );
-        if (error) {
+        if (!result.success) {
           throw new Error(
             `Invalid property value content type: "${value.dataType}"`,
           );
         }
 
-        parsedType = data;
+        parsedType = result.output;
       }
 
       switch (parsedType) {

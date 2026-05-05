@@ -1,4 +1,4 @@
-import * as z from "zod";
+import * as v from "valibot";
 import type {
   ApiVersion,
   PropertyValueContentType,
@@ -102,18 +102,18 @@ function sortAttributeValues(
   });
 }
 
-const countSchema = z
-  .union([z.number(), z.string()])
-  .optional()
-  .transform((val) => {
-    if (val == null || val === "") {
+const countSchema = v.pipe(
+  v.optional(v.union([v.number(), v.string()]), 1),
+  v.transform((val) => {
+    if (val === "") {
       return 1;
     }
 
     const count = Number(val);
 
     return Number.isFinite(count) ? count : 1;
-  });
+  }),
+);
 
 function getPropertyVariableUuidsFromQueries(
   queries: Query | null,
@@ -192,24 +192,24 @@ function getItemFilterQueriesFromPropertyValueQueries(
 /**
  * Schema for a single property value query item in the OCHRE API response
  */
-const propertyValueQueryItemSchema = z
-  .object({
-    uuid: z.string(),
-    scope: z.enum(["global", "variable"]).default("global"),
-    variableUuid: z.string().optional(),
+const propertyValueQueryItemSchema = v.pipe(
+  v.object({
+    uuid: v.string(),
+    scope: v.optional(v.picklist(["global", "variable"]), "global"),
+    variableUuid: v.optional(v.string()),
     count: countSchema,
-    globalCount: countSchema.nullish(),
-    dataType: z.string(),
-    rawValue: fakeStringSchema.optional(),
-    content: z
-      .union([
+    globalCount: v.nullish(countSchema),
+    dataType: v.string(),
+    rawValue: v.optional(fakeStringSchema),
+    content: v.optional(
+      v.union([
         fakeStringSchema,
         richTextStringSchema,
-        z.array(richTextStringSchema),
-      ])
-      .optional(),
-  })
-  .transform((val): ParsedPropertyValueItem => {
+        v.array(richTextStringSchema),
+      ]),
+    ),
+  }),
+  v.transform((val): ParsedPropertyValueItem => {
     const returnValue: ParsedPropertyValueItem = {
       scope: val.scope,
       variableUuid:
@@ -258,44 +258,46 @@ const propertyValueQueryItemSchema = z
     }
 
     return returnValue;
-  });
+  }),
+);
 
-const attributeValueQueryItemSchema = z
-  .object({
-    attributeType: z.enum(["bibliographies", "periods"]),
+const attributeValueQueryItemSchema = v.pipe(
+  v.object({
+    attributeType: v.picklist(["bibliographies", "periods"]),
     count: countSchema,
-    content: z.string().optional(),
-  })
-  .transform(
+    content: v.optional(v.string()),
+  }),
+  v.transform(
     (val): ParsedAttributeValueItem => ({
       attributeType: val.attributeType,
       count: val.count,
       content: val.content != null && val.content !== "" ? val.content : null,
     }),
-  );
+  ),
+);
 
 /**
  * Schema for the property values OCHRE API response
  */
-const responseSchema = z.object({
-  result: z.union([
-    z.object({
-      ochre: z.object({
-        propertyValue: z
-          .union([
+const responseSchema = v.object({
+  result: v.union([
+    v.object({
+      ochre: v.object({
+        propertyValue: v.optional(
+          v.union([
             propertyValueQueryItemSchema,
-            z.array(propertyValueQueryItemSchema),
-          ])
-          .optional(),
-        attributeValue: z
-          .union([
+            v.array(propertyValueQueryItemSchema),
+          ]),
+        ),
+        attributeValue: v.optional(
+          v.union([
             attributeValueQueryItemSchema,
-            z.array(attributeValueQueryItemSchema),
-          ])
-          .optional(),
+            v.array(attributeValueQueryItemSchema),
+          ]),
+        ),
       }),
     }),
-    z.array(z.unknown()).length(0),
+    v.pipe(v.array(v.unknown()), v.length(0)),
   ]),
 });
 
@@ -629,7 +631,7 @@ export async function fetchSetPropertyValues(
       queries,
       attributes,
       isLimitedToLeafPropertyValues,
-    } = setPropertyValuesParamsSchema.parse(params);
+    } = v.parse(setPropertyValuesParamsSchema, params);
     const propertyVariableUuids = getPropertyVariableUuidsFromQueries(queries);
 
     if (
@@ -668,7 +670,7 @@ export async function fetchSetPropertyValues(
 
     const data = await response.json();
 
-    const parsedResultRaw = responseSchema.parse(data);
+    const parsedResultRaw = v.parse(responseSchema, data);
     const parsedPropertyValues: Array<ParsedPropertyValueItem> = [];
     const parsedAttributeValues: Array<ParsedAttributeValueItem> = [];
 
