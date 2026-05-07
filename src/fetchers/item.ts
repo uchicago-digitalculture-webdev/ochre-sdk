@@ -1,8 +1,14 @@
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
-import type { Data, DataCategory, ItemsDataCategory } from "#/types/index.js";
+import type {
+  DataCategory,
+  HierarchyItemCategoryFromOption,
+  HierarchyItemCategoryOption,
+  Item,
+  SetItemDataCategory,
+} from "#/types/index.js";
 import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
-import { parseData } from "#/parsers/index.js";
+import { parseItem } from "#/parsers/index.js";
 import { iso639_3Schema, uuidSchema } from "#/schemas.js";
 import { XMLData as XMLDataSchema } from "#/types/xml/schemas.js";
 import { logIssues } from "#/utils.js";
@@ -37,22 +43,25 @@ export function withLanguages<const T extends ReadonlyArray<string>>(
  * @param uuid - The UUID of the OCHRE item to fetch
  * @param options - Required options object
  * @param options.category - The category of the OCHRE item to fetch
- * @param options.itemCategory - The category of items contained in the OCHRE item to fetch (only used for tree and set)
+ * @param options.itemCategory - The category of items inside the OCHRE item to fetch. Tree accepts one category; Set accepts one category or an array.
  * @param options.languages - The languages to use ***(must be created with withLanguages())***
  * @param options.isRichText - Whether to parse the text as rich text
  * @param options.fetch - Custom fetch function to use instead of the default fetch
- * @returns An object containing the parsed data
+ * @returns An object containing the parsed item
  */
 export async function fetchItem<
-  T extends DataCategory | undefined = undefined,
-  U extends T extends "tree" | "set" ? ItemsDataCategory : never = never,
-  V extends ValidatedLanguages<ReadonlyArray<string>> | undefined = undefined,
+  const TItemCategory extends
+    | HierarchyItemCategoryOption<DataCategory>
+    | undefined = undefined,
+  const TLanguages extends
+    | ValidatedLanguages<ReadonlyArray<string>>
+    | undefined = undefined,
 >(
   uuid: string,
   options?: {
-    category?: T;
-    itemCategory?: U;
-    languages?: V;
+    category?: undefined;
+    itemCategory?: TItemCategory;
+    languages?: TLanguages;
     isRichText?: boolean;
     fetch?: (
       input: string | URL | globalThis.Request,
@@ -61,10 +70,85 @@ export async function fetchItem<
   },
 ): Promise<
   | {
-      data: Data<T, U, V extends undefined ? ReadonlyArray<string> : V>;
+      item: Item<
+        DataCategory,
+        HierarchyItemCategoryFromOption<DataCategory, TItemCategory>,
+        TLanguages extends ValidatedLanguages<infer U> ? U
+        : ReadonlyArray<string>
+      >;
       error: null;
     }
-  | { data: null; error: string }
+  | { item: null; error: string }
+>;
+export async function fetchItem<
+  const TCategory extends DataCategory,
+  const TItemCategory extends
+    | HierarchyItemCategoryOption<TCategory>
+    | undefined = undefined,
+  const TLanguages extends
+    | ValidatedLanguages<ReadonlyArray<string>>
+    | undefined = undefined,
+>(
+  uuid: string,
+  options: {
+    category: TCategory;
+    itemCategory?: TItemCategory;
+    languages?: TLanguages;
+    isRichText?: boolean;
+    fetch?: (
+      input: string | URL | globalThis.Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+  },
+): Promise<
+  | {
+      item: Item<
+        TCategory,
+        HierarchyItemCategoryFromOption<TCategory, TItemCategory>,
+        TLanguages extends ValidatedLanguages<infer U> ? U
+        : ReadonlyArray<string>
+      >;
+      error: null;
+    }
+  | { item: null; error: string }
+>;
+export async function fetchItem(
+  uuid: string,
+  options?: {
+    category?: DataCategory;
+    itemCategory?: HierarchyItemCategoryOption<DataCategory>;
+    languages?: ValidatedLanguages<ReadonlyArray<string>>;
+    isRichText?: boolean;
+    fetch?: (
+      input: string | URL | globalThis.Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+  },
+): Promise<
+  | {
+      item: Item<DataCategory, SetItemDataCategory, ReadonlyArray<string>>;
+      error: null;
+    }
+  | { item: null; error: string }
+>;
+export async function fetchItem(
+  uuid: string,
+  options?: {
+    category?: DataCategory;
+    itemCategory?: HierarchyItemCategoryOption<DataCategory>;
+    languages?: ValidatedLanguages<ReadonlyArray<string>>;
+    isRichText?: boolean;
+    fetch?: (
+      input: string | URL | globalThis.Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
+  },
+): Promise<
+  | {
+      item: Item<DataCategory, SetItemDataCategory, ReadonlyArray<string>>;
+      error: null;
+    }
+  | { item: null; error: string }
 > {
   try {
     const parsedUuid = v.parse(uuidSchema, uuid);
@@ -87,25 +171,18 @@ export async function fetchItem<
       throw new Error("Failed to parse OCHRE data");
     }
 
-    const parsedData = parseData(output, {
+    const parsedItem = parseItem(output, {
       category: options?.category,
       itemCategory: options?.itemCategory,
       languages: options?.languages ?? DEFAULT_LANGUAGES,
       isRichText: options?.isRichText ?? false,
     });
 
-    return {
-      data: parsedData as Data<
-        T,
-        U,
-        V extends undefined ? ReadonlyArray<string> : V
-      >,
-      error: null,
-    };
+    return { item: parsedItem, error: null };
   } catch (error) {
     console.error(error);
     return {
-      data: null,
+      item: null,
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }

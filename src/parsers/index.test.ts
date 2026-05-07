@@ -5,6 +5,7 @@ import type {
   XMLIdentification,
   XMLResource,
   XMLString,
+  XMLText,
 } from "#/types/xml/types.js";
 import {
   PRESENTATION_ITEM_UUID,
@@ -13,7 +14,7 @@ import {
   TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
   TEXT_ANNOTATION_UUID,
 } from "#/constants.js";
-import { parseData } from "#/parsers/index.js";
+import { parseItem } from "#/parsers/index.js";
 import { parseXMLContent, parseXMLString } from "#/parsers/string.js";
 
 const PUBLICATION_DATE = "2026-01-01T00:00:00Z";
@@ -38,7 +39,7 @@ function identification(
 }
 
 function metadata(
-  category: "tree" | "variable",
+  category: "tree" | "variable" | "set",
 ): XMLData["result"]["ochre"]["metadata"] {
   return {
     dataset: xmlString("Dataset"),
@@ -67,7 +68,17 @@ function resource(uuid: string, label: string): XMLResource {
   };
 }
 
-describe("parseData", () => {
+function text(uuid: string, label: string): XMLText {
+  return {
+    uuid,
+    publicationDateTime: PUBLICATION_DATE,
+    identification: identification({ eng: label, spa: `${label} ES` }),
+    text: label,
+    language: "eng",
+  };
+}
+
+describe("parseItem", () => {
   it("parses multilingual tree items, payload-only property labels, and resource wrappers", () => {
     const rawData: XMLData = {
       result: {
@@ -117,14 +128,18 @@ describe("parseData", () => {
       },
     };
 
-    const parsedData = parseData(rawData, {
+    const tree = parseItem(rawData, {
       category: "tree",
       itemCategory: "resource",
       languages: ["eng", "spa"] as const,
       isRichText: true,
     });
-    const tree = parsedData.items[0]!;
 
+    expect(tree.belongsTo).toStrictEqual({
+      uuid: "30000000-0000-4000-8000-000000000000",
+      abbreviation: "TEST",
+    });
+    expect(tree.metadata.dataset).toBe("Dataset");
     expect(tree.identification.label.getExactText("spa")).toBe("Arbol");
     expect(tree.itemsCategory).toBe("resource");
     expect(tree.properties[0]?.label.name).toBe("presentation");
@@ -135,6 +150,85 @@ describe("parseData", () => {
         firstTreeItem.category
       : null,
     ).toBe("resource");
+  });
+
+  it("rejects tree XML with multiple item categories", () => {
+    const rawData: XMLData = {
+      result: {
+        ochre: {
+          uuid: "b0000000-0000-4000-8000-000000000000",
+          belongsTo: "TEST",
+          uuidBelongsTo: "c0000000-0000-4000-8000-000000000000",
+          publicationDateTime: PUBLICATION_DATE,
+          metadata: metadata("tree"),
+          tree: [
+            {
+              uuid: "d0000000-0000-4000-8000-000000000000",
+              publicationDateTime: PUBLICATION_DATE,
+              identification: identification({ eng: "Mixed tree" }),
+              items: {
+                resource: [
+                  resource("e0000000-0000-4000-8000-000000000000", "Resource"),
+                ],
+                text: [text("f0000000-0000-4000-8000-000000000000", "Text")],
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    expect(() =>
+      parseItem(rawData, { category: "tree", languages: ["eng"] as const }),
+    ).toThrow("Expected Tree items to contain one category");
+  });
+
+  it("preserves mixed item categories for sets", () => {
+    const rawData: XMLData = {
+      result: {
+        ochre: {
+          uuid: "01000000-0000-4000-8000-000000000000",
+          belongsTo: "TEST",
+          uuidBelongsTo: "02000000-0000-4000-8000-000000000000",
+          publicationDateTime: PUBLICATION_DATE,
+          metadata: metadata("set"),
+          set: [
+            {
+              uuid: "03000000-0000-4000-8000-000000000000",
+              publicationDateTime: PUBLICATION_DATE,
+              identification: identification({ eng: "Mixed set" }),
+              items: {
+                tree: [
+                  {
+                    uuid: "03500000-0000-4000-8000-000000000000",
+                    publicationDateTime: PUBLICATION_DATE,
+                    identification: identification({ eng: "Tree" }),
+                  },
+                ],
+                resource: [
+                  resource("04000000-0000-4000-8000-000000000000", "Resource"),
+                ],
+                text: [text("05000000-0000-4000-8000-000000000000", "Text")],
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    const set = parseItem(rawData, {
+      category: "set",
+      itemCategory: ["tree", "resource", "text"] as const,
+      languages: ["eng"] as const,
+    });
+
+    expect(set.itemsCategory).toStrictEqual(["tree", "resource", "text"]);
+    expect(set.items).toHaveLength(3);
+    const itemCategories: Array<string> = [];
+    for (const item of set.items) {
+      itemCategories.push(item.category);
+    }
+    expect(itemCategories).toStrictEqual(["tree", "resource", "text"]);
   });
 
   it("normalizes top-level variable XML into propertyVariable output", () => {
@@ -158,14 +252,14 @@ describe("parseData", () => {
       },
     };
 
-    const parsedData = parseData(rawData, {
+    const propertyVariable = parseItem(rawData, {
       category: "propertyVariable",
       languages: ["eng"] as const,
     });
 
-    expect(parsedData.metadata.item?.category).toBe("propertyVariable");
-    expect(parsedData.items[0]?.category).toBe("propertyVariable");
-    expect(parsedData.items[0]?.type).toBe("link");
+    expect(propertyVariable.metadata.item?.category).toBe("propertyVariable");
+    expect(propertyVariable.category).toBe("propertyVariable");
+    expect(propertyVariable.type).toBe("link");
   });
 });
 

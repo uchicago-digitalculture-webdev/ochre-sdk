@@ -3,13 +3,12 @@ import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import type {
   BaseItem,
-  Data,
   DataCategory,
   Item,
-  ItemsDataCategory,
   Note,
   Property,
   SetItem,
+  SetItemDataCategory,
   SingleHierarchyProperty,
 } from "#/types/index.js";
 import type {
@@ -39,7 +38,7 @@ import type {
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { fetchItem, withLanguages } from "#/fetchers/item.js";
 import { db } from "#/marklogic.js";
-import { parseData } from "#/parsers/index.js";
+import { parseItem } from "#/parsers/index.js";
 import {
   extractAliases,
   parseXMLContent,
@@ -137,19 +136,20 @@ type XMLTopLevelItem =
   | XMLText
   | XMLSet;
 
-type ParsedTopLevelItem = Item<
+type TopLevelItemForTest = Item<
   DataCategory,
-  ItemsDataCategory,
+  SetItemDataCategory,
   typeof TEST_LANGUAGES
 >;
 
-type ParsedSetItem = SetItem<ItemsDataCategory, typeof TEST_LANGUAGES>;
+type ParsedSetItem = SetItem<SetItemDataCategory, typeof TEST_LANGUAGES>;
 
 type ParsedPropertyFields =
   | Property<typeof TEST_LANGUAGES>
   | SingleHierarchyProperty<typeof TEST_LANGUAGES>;
 
 type XMLSetItem =
+  | XMLTree
   | XMLBibliography
   | XMLConcept
   | XMLSpatialUnit
@@ -161,9 +161,9 @@ type XMLSetItem =
   | XMLText
   | XMLSet;
 
-type RawSetItemEntry = { category: ItemsDataCategory; item: XMLSetItem };
+type RawSetItemEntry = { category: SetItemDataCategory; item: XMLSetItem };
 
-type XMLItemContainer = Partial<{
+type XMLItemHierarchy = Partial<{
   tree: Array<XMLTree>;
   bibliography: Array<XMLBibliography>;
   concept: Array<XMLConcept>;
@@ -304,12 +304,12 @@ async function fetchXMLData(uuid: string): Promise<XMLData> {
 function parseRawData(
   rawData: XMLData,
   category: DataCategory,
-): Data<DataCategory, ItemsDataCategory, typeof TEST_LANGUAGES> {
-  return parseData(rawData, {
+): TopLevelItemForTest {
+  return parseItem(rawData, {
     category,
     languages: TEST_LANGUAGES,
     isRichText: true,
-  }) as Data<DataCategory, ItemsDataCategory, typeof TEST_LANGUAGES>;
+  }) as TopLevelItemForTest;
 }
 
 function getTopLevelRawItems(
@@ -359,32 +359,33 @@ function getTopLevelRawItems(
 
 function expectMetadataMatchesRaw(
   rawMetadata: XMLMetadata,
-  data: Data<DataCategory, ItemsDataCategory, typeof TEST_LANGUAGES>,
+  data: TopLevelItemForTest,
 ): void {
+  const metadata = data.metadata;
   const rawPublisher =
     Array.isArray(rawMetadata.publisher) ?
       rawMetadata.publisher[0]
     : rawMetadata.publisher;
 
-  expect(data.metadata.dataset).toBe(
+  expect(metadata.dataset).toBe(
     parseStringLikeForTest(rawMetadata.dataset, { isRichText: false }),
   );
-  expect(data.metadata.description).toBe(
+  expect(metadata.description).toBe(
     parseStringLikeForTest(rawMetadata.description, { isRichText: false }),
   );
-  expect(data.metadata.publisher).toBe(
+  expect(metadata.publisher).toBe(
     parseStringLikeForTest(rawPublisher, { isRichText: false }),
   );
-  expect(data.metadata.identifier).toBe(
+  expect(metadata.identifier).toBe(
     parseStringLikeForTest(rawMetadata.identifier, { isRichText: false }),
   );
 
   if (rawMetadata.item != null) {
-    expect(data.metadata.item?.category).toBe(
+    expect(metadata.item?.category).toBe(
       normalizeCategory(rawMetadata.item.category),
     );
-    expect(data.metadata.item?.type).toBe(rawMetadata.item.type);
-    expect(data.metadata.item?.maxLength).toBe(
+    expect(metadata.item?.type).toBe(rawMetadata.item.type);
+    expect(metadata.item?.maxLength).toBe(
       parseNumber(rawMetadata.item.maxLength),
     );
   }
@@ -392,7 +393,7 @@ function expectMetadataMatchesRaw(
 
 function expectIdentificationMatchesRaw(
   rawIdentification: XMLIdentification,
-  parsedIdentification: ParsedTopLevelItem["identification"],
+  parsedIdentification: TopLevelItemForTest["identification"],
 ): void {
   expect(parsedIdentification.label.getText("eng")).toBe(
     parseContentLikeForTest(rawIdentification.label),
@@ -470,7 +471,7 @@ function countRawContextItems(rawContext: XMLContext, key: string): number {
 
 function expectContextMatchesRaw(
   rawContext: XMLContext | undefined,
-  parsedContext: ParsedTopLevelItem["context"],
+  parsedContext: TopLevelItemForTest["context"],
 ): void {
   if (rawContext == null) {
     expect(parsedContext).toBeNull();
@@ -506,7 +507,11 @@ function expectBaseItemMatchesRaw(
     uuid?: string;
     publicationDateTime?: string;
   },
-  parsedItem: BaseItem<DataCategory, typeof TEST_LANGUAGES>,
+  parsedItem: BaseItem<
+    DataCategory,
+    typeof TEST_LANGUAGES,
+    "topLevel" | "nested"
+  >,
   category: DataCategory,
 ): void {
   expect(parsedItem.uuid).toBe(rawItem.uuid ?? "");
@@ -696,75 +701,78 @@ function hasCategory(
   return categories == null || categories.includes(category);
 }
 
-function countItemsInContainer(
-  container: XMLItemContainer | undefined,
+function countItemsInHierarchy(
+  hierarchy: XMLItemHierarchy | undefined,
   categories?: ReadonlyArray<DataCategory>,
 ): number {
-  if (container == null) {
+  if (hierarchy == null) {
     return 0;
   }
 
   let count = 0;
-  if (hasCategory(categories, "tree")) count += container.tree?.length ?? 0;
+  if (hasCategory(categories, "tree")) count += hierarchy.tree?.length ?? 0;
   if (hasCategory(categories, "bibliography")) {
-    count += container.bibliography?.length ?? 0;
+    count += hierarchy.bibliography?.length ?? 0;
   }
   if (hasCategory(categories, "concept"))
-    count += container.concept?.length ?? 0;
+    count += hierarchy.concept?.length ?? 0;
   if (hasCategory(categories, "spatialUnit")) {
-    count += container.spatialUnit?.length ?? 0;
+    count += hierarchy.spatialUnit?.length ?? 0;
   }
-  if (hasCategory(categories, "period")) count += container.period?.length ?? 0;
-  if (hasCategory(categories, "person")) count += container.person?.length ?? 0;
+  if (hasCategory(categories, "period")) count += hierarchy.period?.length ?? 0;
+  if (hasCategory(categories, "person")) count += hierarchy.person?.length ?? 0;
   if (hasCategory(categories, "propertyVariable")) {
-    count += container.propertyVariable?.length ?? 0;
-    count += container.variable?.length ?? 0;
+    count += hierarchy.propertyVariable?.length ?? 0;
+    count += hierarchy.variable?.length ?? 0;
   }
   if (hasCategory(categories, "propertyValue")) {
-    count += container.propertyValue?.length ?? 0;
+    count += hierarchy.propertyValue?.length ?? 0;
   }
   if (hasCategory(categories, "resource")) {
-    count += countResourceItems(container.resource);
+    count += countResourceItems(hierarchy.resource);
   }
-  if (hasCategory(categories, "text")) count += container.text?.length ?? 0;
-  if (hasCategory(categories, "set")) count += container.set?.length ?? 0;
+  if (hasCategory(categories, "text")) count += hierarchy.text?.length ?? 0;
+  if (hasCategory(categories, "set")) count += hierarchy.set?.length ?? 0;
 
   return count;
 }
 
 function getRawSetItemEntries(
-  container: XMLItemContainer | undefined,
+  hierarchy: XMLItemHierarchy | undefined,
 ): Array<RawSetItemEntry> {
   const entries: Array<RawSetItemEntry> = [];
-  if (container == null) {
+  if (hierarchy == null) {
     return entries;
   }
 
-  for (const bibliography of container.bibliography ?? []) {
+  for (const tree of hierarchy.tree ?? []) {
+    entries.push({ category: "tree", item: tree });
+  }
+  for (const bibliography of hierarchy.bibliography ?? []) {
     entries.push({ category: "bibliography", item: bibliography });
   }
-  for (const concept of container.concept ?? []) {
+  for (const concept of hierarchy.concept ?? []) {
     entries.push({ category: "concept", item: concept });
   }
-  for (const spatialUnit of container.spatialUnit ?? []) {
+  for (const spatialUnit of hierarchy.spatialUnit ?? []) {
     entries.push({ category: "spatialUnit", item: spatialUnit });
   }
-  for (const period of container.period ?? []) {
+  for (const period of hierarchy.period ?? []) {
     entries.push({ category: "period", item: period });
   }
-  for (const person of container.person ?? []) {
+  for (const person of hierarchy.person ?? []) {
     entries.push({ category: "person", item: person });
   }
-  for (const propertyVariable of container.propertyVariable ?? []) {
+  for (const propertyVariable of hierarchy.propertyVariable ?? []) {
     entries.push({ category: "propertyVariable", item: propertyVariable });
   }
-  for (const propertyVariable of container.variable ?? []) {
+  for (const propertyVariable of hierarchy.variable ?? []) {
     entries.push({ category: "propertyVariable", item: propertyVariable });
   }
-  for (const propertyValue of container.propertyValue ?? []) {
+  for (const propertyValue of hierarchy.propertyValue ?? []) {
     entries.push({ category: "propertyValue", item: propertyValue });
   }
-  for (const resource of container.resource ?? []) {
+  for (const resource of hierarchy.resource ?? []) {
     if (!("uuid" in resource)) {
       for (const nestedResource of resource.resource) {
         entries.push({ category: "resource", item: nestedResource });
@@ -774,10 +782,10 @@ function getRawSetItemEntries(
 
     entries.push({ category: "resource", item: resource });
   }
-  for (const text of container.text ?? []) {
+  for (const text of hierarchy.text ?? []) {
     entries.push({ category: "text", item: text });
   }
-  for (const set of container.set ?? []) {
+  for (const set of hierarchy.set ?? []) {
     entries.push({ category: "set", item: set });
   }
 
@@ -790,27 +798,12 @@ function getRawSetItemProperties(
   return "properties" in rawItem ? rawItem.properties : undefined;
 }
 
-function expectNestedSetItemsMatchRaw(
-  category: ItemsDataCategory,
-  rawItems: ReadonlyArray<XMLSetItem> | undefined,
-  parsedItems: ReadonlyArray<ParsedSetItem>,
-): void {
-  const rawItemEntries: Array<RawSetItemEntry> = [];
-  for (const rawItem of rawItems ?? []) {
-    rawItemEntries.push({ category, item: rawItem });
-  }
-
-  expect(parsedItems).toHaveLength(rawItemEntries.length);
-  for (const [index, rawEntry] of rawItemEntries.entries()) {
-    expectSetItemMatchesRaw(rawEntry, parsedItems[index]!);
-  }
-}
-
 function expectSetItemMatchesRaw(
   rawEntry: RawSetItemEntry,
   parsedItem: ParsedSetItem,
 ): void {
   expectBaseItemMatchesRaw(rawEntry.item, parsedItem, rawEntry.category);
+  expect(Object.hasOwn(parsedItem, "items")).toBe(false);
 
   if ("properties" in parsedItem) {
     expectSingleHierarchyPropertiesMatchRaw(
@@ -820,19 +813,6 @@ function expectSetItemMatchesRaw(
   }
 
   switch (rawEntry.category) {
-    case "bibliography": {
-      const rawBibliography = rawEntry.item as XMLBibliography;
-      const parsedBibliography = parsedItem as SetItem<
-        "bibliography",
-        typeof TEST_LANGUAGES
-      >;
-      expectNestedSetItemsMatchRaw(
-        "bibliography",
-        rawBibliography.bibliography,
-        parsedBibliography.items,
-      );
-      break;
-    }
     case "concept": {
       const rawConcept = rawEntry.item as XMLConcept;
       const parsedConcept = parsedItem as SetItem<
@@ -842,11 +822,6 @@ function expectSetItemMatchesRaw(
       expect(Object.hasOwn(parsedConcept, "interpretations")).toBe(false);
       expect(parsedConcept.coordinates).toHaveLength(
         rawConcept.coordinates?.coord.length ?? 0,
-      );
-      expectNestedSetItemsMatchRaw(
-        "concept",
-        rawConcept.concept,
-        parsedConcept.items,
       );
       break;
     }
@@ -863,45 +838,13 @@ function expectSetItemMatchesRaw(
       expect(parsedSpatialUnit.bibliographies).toHaveLength(
         rawSpatialUnit.bibliographies?.bibliography.length ?? 0,
       );
-      expectNestedSetItemsMatchRaw(
-        "spatialUnit",
-        rawSpatialUnit.spatialUnit,
-        parsedSpatialUnit.items,
-      );
       break;
     }
-    case "period": {
-      const rawPeriod = rawEntry.item as XMLPeriod;
-      const parsedPeriod = parsedItem as SetItem<
-        "period",
-        typeof TEST_LANGUAGES
-      >;
-      expectNestedSetItemsMatchRaw(
-        "period",
-        rawPeriod.period,
-        parsedPeriod.items,
-      );
-      break;
-    }
-    case "resource": {
-      const rawResource = rawEntry.item as XMLResource;
-      const parsedResource = parsedItem as SetItem<
-        "resource",
-        typeof TEST_LANGUAGES
-      >;
-      expectNestedSetItemsMatchRaw(
-        "resource",
-        rawResource.resource,
-        parsedResource.items,
-      );
-      break;
-    }
-    case "set": {
-      const rawSet = rawEntry.item as XMLSet;
-      const parsedSet = parsedItem as SetItem<"set", typeof TEST_LANGUAGES>;
-      expectSetItemsMatchRaw(rawSet, parsedSet);
-      break;
-    }
+    case "tree":
+    case "bibliography":
+    case "period":
+    case "resource":
+    case "set":
     case "person":
     case "propertyVariable":
     case "propertyValue":
@@ -916,7 +859,7 @@ function expectSetItemsMatchRaw(
   parsedSet: { items: ReadonlyArray<ParsedSetItem> },
 ): void {
   const rawItemEntries = getRawSetItemEntries(
-    rawSet.items as XMLItemContainer | undefined,
+    rawSet.items as XMLItemHierarchy | undefined,
   );
   expect(parsedSet.items).toHaveLength(rawItemEntries.length);
 
@@ -933,12 +876,12 @@ function countLinkItems(rawLinks: XMLLinkLike): number {
   if (Array.isArray(rawLinks)) {
     let count = 0;
     for (const rawLink of rawLinks) {
-      count += countItemsInContainer(rawLink as XMLItemContainer);
+      count += countItemsInHierarchy(rawLink as XMLItemHierarchy);
     }
     return count;
   }
 
-  return countItemsInContainer(rawLinks as XMLItemContainer);
+  return countItemsInHierarchy(rawLinks as XMLItemHierarchy);
 }
 
 function expectCommonLinkedStructures(
@@ -948,7 +891,7 @@ function expectCommonLinkedStructures(
     properties?: { property: Array<XMLProperty> };
     bibliographies?: { bibliography: Array<XMLBibliography> };
   },
-  parsedItem: ParsedTopLevelItem,
+  parsedItem: TopLevelItemForTest,
 ): void {
   if ("links" in parsedItem) {
     expect(parsedItem.links).toHaveLength(countLinkItems(rawItem.links));
@@ -969,7 +912,7 @@ function expectCommonLinkedStructures(
 function expectCategorySpecificFields(
   category: DataCategory,
   rawItem: XMLTopLevelItem,
-  parsedItem: ParsedTopLevelItem,
+  parsedItem: TopLevelItemForTest,
 ): void {
   switch (category) {
     case "tree": {
@@ -1168,11 +1111,11 @@ function expectCategorySpecificFields(
       }
       const parsedSet = parsedItem as Item<
         "set",
-        ItemsDataCategory,
+        SetItemDataCategory,
         typeof TEST_LANGUAGES
       >;
       expect(parsedSet.items).toHaveLength(
-        countItemsInContainer(rawSet.items as XMLItemContainer | undefined),
+        countItemsInHierarchy(rawSet.items as XMLItemHierarchy | undefined),
       );
       expectSetItemsMatchRaw(rawSet, parsedSet);
       break;
@@ -1209,29 +1152,21 @@ function countRawTextEditions(rawText: XMLText): number {
 
 function expectDataMatchesRaw(
   rawData: XMLData,
-  data: Data<DataCategory, ItemsDataCategory, typeof TEST_LANGUAGES>,
+  data: TopLevelItemForTest,
   category: DataCategory,
 ): void {
   const rawOchre = rawData.result.ochre;
   const rawItems = getTopLevelRawItems(rawData, category);
+  expect(rawItems).toHaveLength(1);
+  const rawItem = rawItems[0]!;
 
-  expect(data.uuid).toBe(rawOchre.uuid);
   expect(data.belongsTo).toStrictEqual({
     uuid: rawOchre.uuidBelongsTo,
     abbreviation: rawOchre.belongsTo,
   });
-  expect(data.publicationDateTime.toISOString()).toBe(
-    new Date(rawOchre.publicationDateTime.replace(" ", "T")).toISOString(),
-  );
   expectMetadataMatchesRaw(rawOchre.metadata, data);
-  expect(data.items).toHaveLength(rawItems.length);
-
-  for (const [index, rawItem_] of rawItems.entries()) {
-    const rawItem = rawItem_!;
-    const parsedItem = data.items[index]!;
-    expectBaseItemMatchesRaw(rawItem, parsedItem, category);
-    expectCategorySpecificFields(category, rawItem, parsedItem);
-  }
+  expectBaseItemMatchesRaw(rawItem, data, category);
+  expectCategorySpecificFields(category, rawItem, data);
 }
 
 async function expectUuidParsesAndMatchesRaw(
@@ -1280,8 +1215,19 @@ describe("fetchItem", () => {
       });
 
       expect(result.error).toBeNull();
-      expect(result.data?.items[0]?.uuid).toBe(uuid);
-      expect(result.data?.items[0]?.category).toBe("resource");
+      expect(result.item?.uuid).toBe(uuid);
+      expect(result.item?.category).toBe("resource");
+      expect(result.item?.belongsTo.uuid).toBeTruthy();
+      expect(result.item?.metadata.item?.category).toBe("resource");
+
+      const inferredResult = await fetchItem(uuid);
+      expect(inferredResult.error).toBeNull();
+      if (inferredResult.error === null) {
+        const inferredItem: Item = inferredResult.item;
+        expect(inferredItem.uuid).toBe(uuid);
+        expect(inferredItem.category).toBe("resource");
+        expect(inferredResult.item.metadata.item?.category).toBe("resource");
+      }
     },
     LIVE_TEST_TIMEOUT_MS,
   );

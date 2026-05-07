@@ -17,10 +17,35 @@ export type DataCategory =
   | "text"
   | "set";
 
+export type HierarchyDataCategory = Extract<DataCategory, "tree" | "set">;
+
 /**
- * The category of items in a Set or Tree
+ * The category of items in a Tree
  */
 export type ItemsDataCategory = Exclude<DataCategory, "tree">;
+
+/**
+ * The category of items in a Set
+ */
+export type SetItemDataCategory = DataCategory;
+
+export type HierarchyItemDataCategory<U extends DataCategory> =
+  U extends "tree" ? ItemsDataCategory
+  : U extends "set" ? SetItemDataCategory
+  : never;
+
+export type HierarchyItemCategoryOption<U extends DataCategory> =
+  U extends "tree" ? ItemsDataCategory
+  : U extends "set" ? SetItemDataCategory | ReadonlyArray<SetItemDataCategory>
+  : never;
+
+export type HierarchyItemCategoryFromOption<
+  U extends DataCategory,
+  V extends HierarchyItemCategoryOption<U> | undefined,
+> =
+  V extends ReadonlyArray<infer W> ? Extract<W, HierarchyItemDataCategory<U>>
+  : V extends HierarchyItemDataCategory<U> ? V
+  : HierarchyItemDataCategory<U>;
 
 /**
  * The category of items in a heading
@@ -31,7 +56,7 @@ export type HeadingDataCategory = Exclude<
 >;
 
 /**
- * The category of items that are in containers (tree or set)
+ * The category of items that are in hierarchies (tree or set)
  */
 export type RecursiveDataCategory = Exclude<
   DataCategory,
@@ -92,6 +117,14 @@ export type Metadata<T extends ReadonlyArray<string>> = {
   defaultLanguage: T[number];
   languages: T;
 };
+
+export type BelongsTo = { uuid: string; abbreviation: string };
+
+export type ItemLocation = "topLevel" | "nested";
+
+type ItemOrigin<T extends ReadonlyArray<string>, U extends ItemLocation> =
+  U extends "topLevel" ? { belongsTo: BelongsTo; metadata: Metadata<T> }
+  : { belongsTo: null; metadata: null };
 
 /**
  *  License in OCHRE
@@ -230,7 +263,7 @@ export type Note<T extends ReadonlyArray<string>> = {
   number: number;
   title: string | null;
   content: MultilingualString<T>;
-  authors: Array<Person<T>>;
+  authors: Array<Person<T, "nested">>;
 };
 
 /**
@@ -293,9 +326,10 @@ type WithSingleHierarchyProperties<
  *  Base item in OCHRE
  */
 export type BaseItem<
-  U extends DataCategory | undefined = undefined,
+  U extends DataCategory = DataCategory,
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
-> = {
+  V extends ItemLocation = "topLevel",
+> = ItemOrigin<T, V> & {
   uuid: string;
   category: U;
   publicationDateTime: Date | null;
@@ -305,7 +339,7 @@ export type BaseItem<
   copyright: MultilingualString<T> | null;
   watermark: MultilingualString<T> | null;
   identification: Identification<T>;
-  creators: Array<Person<T>>;
+  creators: Array<Person<T, "nested">>;
   description: MultilingualString<T> | null;
   events: Array<Event<T>>;
 };
@@ -314,22 +348,25 @@ export type BaseItem<
  * An Item in OCHRE (can be a tree, set, bibliography, concept, spatial unit, period, person, property value, property variable, or resource)
  */
 export type Item<
-  U extends DataCategory | undefined = undefined,
-  V extends U extends "tree" | "set" ? ItemsDataCategory : never = never,
+  U extends DataCategory = DataCategory,
+  V extends HierarchyItemDataCategory<U> = HierarchyItemDataCategory<U>,
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
-> = BaseItem<U, T> &
-  (U extends "tree" ? Tree<V, T>
-  : U extends "set" ? Set<V, T>
-  : U extends "bibliography" ? Bibliography<T>
-  : U extends "concept" ? Concept<T>
-  : U extends "spatialUnit" ? SpatialUnit<T>
-  : U extends "period" ? Period<T>
-  : U extends "person" ? Person<T>
-  : U extends "propertyVariable" ? PropertyVariable<T>
-  : U extends "propertyValue" ? PropertyValue<T>
-  : U extends "resource" ? Resource<T>
-  : U extends "text" ? Text<T>
-  : never);
+  W extends ItemLocation = "topLevel",
+> =
+  U extends DataCategory ?
+    U extends "tree" ? Tree<Extract<V, ItemsDataCategory>, T, W>
+    : U extends "set" ? Set<Extract<V, SetItemDataCategory>, T, W>
+    : U extends "bibliography" ? Bibliography<T, W>
+    : U extends "concept" ? Concept<T, W>
+    : U extends "spatialUnit" ? SpatialUnit<T, W>
+    : U extends "period" ? Period<T, W>
+    : U extends "person" ? Person<T, W>
+    : U extends "propertyVariable" ? PropertyVariable<T, W>
+    : U extends "propertyValue" ? PropertyValue<T, W>
+    : U extends "resource" ? Resource<T, W>
+    : U extends "text" ? Text<T, W>
+    : never
+  : never;
 
 /**
  *  Heading in OCHRE
@@ -340,7 +377,7 @@ export type Heading<
 > = {
   name: string;
   headings: Array<Heading<U, T>>;
-  items: Array<Item<U, never, T>>;
+  items: Array<Item<U, never, T, "nested">>;
 };
 
 /**
@@ -349,17 +386,18 @@ export type Heading<
 export type Tree<
   U extends ItemsDataCategory,
   T extends ReadonlyArray<string>,
+  V extends ItemLocation = "topLevel",
 > = Prettify<
-  BaseItem<"tree", T> & {
+  BaseItem<"tree", T, V> & {
     type: string | null;
     itemsCategory: U | null;
-    links: Array<Item>;
+    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
-    bibliographies: Array<Bibliography<T>>;
+    bibliographies: Array<Bibliography<T, "nested">>;
     items: U extends HeadingDataCategory ?
-      Array<Heading<U, T> | Item<U, never, T>>
-    : Array<Item<U, never, T>>;
+      Array<Heading<U, T> | Item<U, never, T, "nested">>
+    : Array<Item<U, never, T, "nested">>;
   }
 >;
 
@@ -367,14 +405,15 @@ export type Tree<
  *  Set in OCHRE
  */
 export type Set<
-  U extends ItemsDataCategory,
+  U extends SetItemDataCategory,
   T extends ReadonlyArray<string>,
+  V extends ItemLocation = "topLevel",
 > = Prettify<
-  BaseItem<"set", T> & {
+  BaseItem<"set", T, V> & {
     itemsCategory: Array<U>;
     isTabularStructure: boolean;
     isSuppressingBlanks: boolean;
-    links: Array<Item>;
+    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     items: Array<SetItem<U, T>>;
@@ -382,68 +421,73 @@ export type Set<
 >;
 
 export type SetBibliography<T extends ReadonlyArray<string>> =
-  Bibliography<T> extends infer U ?
-    U extends (
-      { properties: Array<Property<T>>; items: Array<Bibliography<T>> }
-    ) ?
+  Bibliography<T, "nested"> extends infer U ?
+    U extends { properties: Array<Property<T>> } ?
       Prettify<
         Omit<U, "properties" | "items"> & {
           properties: Array<SingleHierarchyProperty<T>>;
-          items: Array<SetBibliography<T>>;
         }
       >
     : never
   : never;
 
 export type SetConcept<T extends ReadonlyArray<string>> = Prettify<
-  Omit<Concept<T>, "interpretations" | "items"> & {
+  Omit<Concept<T, "nested">, "interpretations" | "items"> & {
     properties: Array<SingleHierarchyProperty<T>>;
-    items: Array<SetConcept<T>>;
   }
 >;
 
 export type SetSpatialUnit<T extends ReadonlyArray<string>> = Prettify<
-  Omit<SpatialUnit<T>, "observations" | "items"> & {
+  Omit<SpatialUnit<T, "nested">, "observations" | "items"> & {
     properties: Array<SingleHierarchyProperty<T>>;
-    items: Array<SetSpatialUnit<T>>;
   }
 >;
 
 export type SetPeriod<T extends ReadonlyArray<string>> = Prettify<
-  Omit<WithSingleHierarchyProperties<Period<T>, T>, "items"> & {
-    items: Array<SetPeriod<T>>;
-  }
+  Omit<WithSingleHierarchyProperties<Period<T, "nested">, T>, "items">
 >;
 
 export type SetResource<T extends ReadonlyArray<string>> = Prettify<
-  Omit<WithSingleHierarchyProperties<Resource<T>, T>, "items"> & {
-    items: Array<SetResource<T>>;
-  }
+  Omit<WithSingleHierarchyProperties<Resource<T, "nested">, T>, "items">
+>;
+
+export type SetTree<T extends ReadonlyArray<string>> = Prettify<
+  Omit<
+    WithSingleHierarchyProperties<Tree<ItemsDataCategory, T, "nested">, T>,
+    "items"
+  >
 >;
 
 export type SetItem<
-  U extends ItemsDataCategory,
+  U extends SetItemDataCategory,
   T extends ReadonlyArray<string>,
 > =
-  U extends "bibliography" ? SetBibliography<T>
+  U extends "tree" ? SetTree<T>
+  : U extends "bibliography" ? SetBibliography<T>
   : U extends "concept" ? SetConcept<T>
   : U extends "spatialUnit" ? SetSpatialUnit<T>
   : U extends "period" ? SetPeriod<T>
-  : U extends "person" ? WithSingleHierarchyProperties<Person<T>, T>
-  : U extends "propertyVariable" ? PropertyVariable<T>
+  : U extends "person" ? WithSingleHierarchyProperties<Person<T, "nested">, T>
+  : U extends "propertyVariable" ? PropertyVariable<T, "nested">
   : U extends "propertyValue" ?
-    WithSingleHierarchyProperties<PropertyValue<T>, T>
+    WithSingleHierarchyProperties<PropertyValue<T, "nested">, T>
   : U extends "resource" ? SetResource<T>
-  : U extends "text" ? Text<T>
+  : U extends "text" ? Text<T, "nested">
   : U extends "set" ?
-    WithSingleHierarchyProperties<Set<ItemsDataCategory, T>, T>
+    Omit<
+      WithSingleHierarchyProperties<Set<SetItemDataCategory, T, "nested">, T>,
+      "items"
+    >
   : never;
 
 /**
  *  Person in OCHRE
  */
-export type Person<T extends ReadonlyArray<string>> = Prettify<
-  BaseItem<"person", T> & {
+export type Person<
+  T extends ReadonlyArray<string>,
+  U extends ItemLocation = "topLevel",
+> = Prettify<
+  BaseItem<"person", T, U> & {
     type: string;
     image: Image<T> | null;
     address: {
@@ -454,8 +498,8 @@ export type Person<T extends ReadonlyArray<string>> = Prettify<
     } | null;
     coordinates: Array<Coordinates<T>>;
     content: MultilingualString<T> | null;
-    periods: Array<Period<T>>;
-    links: Array<Item>;
+    periods: Array<Period<T, "nested">>;
+    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
   }
@@ -464,23 +508,29 @@ export type Person<T extends ReadonlyArray<string>> = Prettify<
 /**
  *  Period in OCHRE
  */
-export type Period<T extends ReadonlyArray<string>> = Prettify<
-  BaseItem<"period", T> & {
+export type Period<
+  T extends ReadonlyArray<string>,
+  U extends ItemLocation = "topLevel",
+> = Prettify<
+  BaseItem<"period", T, U> & {
     type: string | null;
     coordinates: Array<Coordinates<T>>;
-    links: Array<Item>;
+    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
-    bibliographies: Array<Bibliography<T>>;
-    items: Array<Period<T>>;
+    bibliographies: Array<Bibliography<T, "nested">>;
+    items: Array<Period<T, "nested">>;
   }
 >;
 
 /**
  *  Bibliography in OCHRE
  */
-export type Bibliography<T extends ReadonlyArray<string>> = Prettify<
-  BaseItem<"bibliography", T> & {
+export type Bibliography<
+  T extends ReadonlyArray<string>,
+  U extends ItemLocation = "topLevel",
+> = Prettify<
+  BaseItem<"bibliography", T, U> & {
     citationDetails: string | null;
     citationFormat: MultilingualString<T> | null;
     citationFormatSpan: string | null;
@@ -493,18 +543,18 @@ export type Bibliography<T extends ReadonlyArray<string>> = Prettify<
       publicationDateTime: Date | null;
     } | null;
     publicationInfo: {
-      publishers: Array<Person<T>>;
+      publishers: Array<Person<T, "nested">>;
       startDate: Date | null;
     } | null;
     entryInfo: { startIssue: string; startVolume: string } | null;
-    source: Item<ItemsDataCategory, never, T> | null;
-    authors: Array<Person<T>>;
-    periods: Array<Period<T>>;
-    links: Array<Item>;
+    source: Item<ItemsDataCategory, never, T, "nested"> | null;
+    authors: Array<Person<T, "nested">>;
+    periods: Array<Period<T, "nested">>;
+    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
-    bibliographies: Array<Bibliography<T>>;
-    items: Array<Bibliography<T>>;
+    bibliographies: Array<Bibliography<T, "nested">>;
+    items: Array<Bibliography<T, "nested">>;
   } & (
       | { type: "zotero"; zoteroId: string; uuid: string | null }
       | { type: string | null }
@@ -514,12 +564,15 @@ export type Bibliography<T extends ReadonlyArray<string>> = Prettify<
 /**
  *  Concept in OCHRE
  */
-export type Concept<T extends ReadonlyArray<string>> = Prettify<
-  BaseItem<"concept", T> & {
+export type Concept<
+  T extends ReadonlyArray<string>,
+  U extends ItemLocation = "topLevel",
+> = Prettify<
+  BaseItem<"concept", T, U> & {
     image: Image<T> | null;
     interpretations: Array<Interpretation<T>>;
     coordinates: Array<Coordinates<T>>;
-    items: Array<Concept<T>>;
+    items: Array<Concept<T, "nested">>;
   }
 >;
 
@@ -529,25 +582,28 @@ export type Concept<T extends ReadonlyArray<string>> = Prettify<
 export type Interpretation<T extends ReadonlyArray<string>> = {
   number: number;
   date: Date | null;
-  observers: Array<Person<T>>;
-  periods: Array<Period<T>>;
-  links: Array<Item>;
+  observers: Array<Person<T, "nested">>;
+  periods: Array<Period<T, "nested">>;
+  links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
   notes: Array<Note<T>>;
   properties: Array<Property<T>>;
-  bibliographies: Array<Bibliography<T>>;
+  bibliographies: Array<Bibliography<T, "nested">>;
 };
 
 /**
  *  Spatial unit in OCHRE
  */
-export type SpatialUnit<T extends ReadonlyArray<string>> = Prettify<
-  BaseItem<"spatialUnit", T> & {
+export type SpatialUnit<
+  T extends ReadonlyArray<string>,
+  U extends ItemLocation = "topLevel",
+> = Prettify<
+  BaseItem<"spatialUnit", T, U> & {
     image: Image<T> | null;
     coordinates: Array<Coordinates<T>>;
     mapData: { geoJSON: { multiPolygon: string; EPSG: number } } | null;
     observations: Array<Observation<T>>;
-    bibliographies: Array<Bibliography<T>>;
-    items: Array<SpatialUnit<T>>;
+    bibliographies: Array<Bibliography<T, "nested">>;
+    items: Array<SpatialUnit<T, "nested">>;
   }
 >;
 
@@ -557,45 +613,54 @@ export type SpatialUnit<T extends ReadonlyArray<string>> = Prettify<
 export type Observation<T extends ReadonlyArray<string>> = {
   number: number;
   date: Date | null;
-  observers: Array<string> | Array<Person<T>>;
-  periods: Array<Period<T>>;
-  links: Array<Item>;
+  observers: Array<string> | Array<Person<T, "nested">>;
+  periods: Array<Period<T, "nested">>;
+  links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
   notes: Array<Note<T>>;
   properties: Array<Property<T>>;
-  bibliographies: Array<Bibliography<T>>;
+  bibliographies: Array<Bibliography<T, "nested">>;
 };
 
 /**
  *  Property variable in OCHRE
  */
-export type PropertyVariable<T extends ReadonlyArray<string>> = Prettify<
-  BaseItem<"propertyVariable", T> & {
+export type PropertyVariable<
+  T extends ReadonlyArray<string>,
+  U extends ItemLocation = "topLevel",
+> = Prettify<
+  BaseItem<"propertyVariable", T, U> & {
     type: string | null;
     coordinates: Array<Coordinates<T>>;
-    links: Array<Item>;
+    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
     notes: Array<Note<T>>;
-    bibliographies: Array<Bibliography<T>>;
+    bibliographies: Array<Bibliography<T, "nested">>;
   }
 >;
 
 /**
  *  Property value in OCHRE
  */
-export type PropertyValue<T extends ReadonlyArray<string>> = Prettify<
-  BaseItem<"propertyValue", T> & {
+export type PropertyValue<
+  T extends ReadonlyArray<string>,
+  U extends ItemLocation = "topLevel",
+> = Prettify<
+  BaseItem<"propertyValue", T, U> & {
     coordinates: Array<Coordinates<T>>;
-    links: Array<Item>;
+    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
-    bibliographies: Array<Bibliography<T>>;
+    bibliographies: Array<Bibliography<T, "nested">>;
   }
 >;
 
 /**
  *  Resource in OCHRE
  */
-export type Resource<T extends ReadonlyArray<string>> = Prettify<
-  BaseItem<"resource", T> & {
+export type Resource<
+  T extends ReadonlyArray<string>,
+  U extends ItemLocation = "topLevel",
+> = Prettify<
+  BaseItem<"resource", T, U> & {
     type: string;
     href: string | null;
     fileFormat: string | null;
@@ -607,33 +672,36 @@ export type Resource<T extends ReadonlyArray<string>> = Prettify<
     document: MultilingualString<T> | null;
     imageMap: ImageMap | null;
     coordinates: Array<Coordinates<T>>;
-    periods: Array<Period<T>>;
-    links: Array<Item>;
-    reverseLinks: Array<Item>;
+    periods: Array<Period<T, "nested">>;
+    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
+    reverseLinks: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
-    bibliographies: Array<Bibliography<T>>;
-    items: Array<Resource<T>>;
+    bibliographies: Array<Bibliography<T, "nested">>;
+    items: Array<Resource<T, "nested">>;
   }
 >;
 
 /**
  *  Text in OCHRE
  */
-export type Text<T extends ReadonlyArray<string>> = Prettify<
-  BaseItem<"text", T> & {
+export type Text<
+  T extends ReadonlyArray<string>,
+  U extends ItemLocation = "topLevel",
+> = Prettify<
+  BaseItem<"text", T, U> & {
     type: string;
     text: string | null;
     language: string | null;
     image: Image<T> | null;
     coordinates: Array<Coordinates<T>>;
-    links: Array<Item>;
-    reverseLinks: Array<Item>;
+    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
+    reverseLinks: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
     notes: Array<Note<T>>;
     sections: Array<Section<T>>;
-    periods: Array<Period<T>>;
-    creators: Array<Person<T>>;
-    editions: Array<Person<T>>;
+    periods: Array<Period<T, "nested">>;
+    creators: Array<Person<T, "nested">>;
+    editions: Array<Person<T, "nested">>;
   }
 >;
 
@@ -645,19 +713,4 @@ export type Section<T extends ReadonlyArray<string>> = {
   publicationDateTime: Date | null;
   identification: Identification<T>;
   project: { identification: Identification<T> } | null;
-};
-
-/**
- * Parsed data returned from the OCHRE API
- */
-export type Data<
-  U extends DataCategory | undefined = undefined,
-  V extends U extends "tree" | "set" ? ItemsDataCategory : never = never,
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
-> = {
-  uuid: string;
-  belongsTo: { uuid: string; abbreviation: string };
-  publicationDateTime: Date;
-  metadata: Metadata<T>;
-  items: Array<Item<U, V, T>>;
 };

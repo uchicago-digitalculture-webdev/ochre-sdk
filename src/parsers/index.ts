@@ -9,11 +9,13 @@ import type {
   ContextNode,
   Coordinates,
   CoordinatesSource,
-  Data,
   DataCategory,
   Event,
   Heading,
   HeadingDataCategory,
+  HierarchyItemCategoryFromOption,
+  HierarchyItemCategoryOption,
+  HierarchyItemDataCategory,
   Identification,
   Image,
   ImageMap,
@@ -36,9 +38,11 @@ import type {
   SetBibliography,
   SetConcept,
   SetItem,
+  SetItemDataCategory,
   SetPeriod,
   SetResource,
   SetSpatialUnit,
+  SetTree,
   SingleHierarchyProperty,
   SpatialUnit,
   Text,
@@ -92,7 +96,14 @@ type ParserOptions<T extends ReadonlyArray<string>> = {
   isRichText: boolean;
 };
 
-type XMLItemContainer = Partial<{
+function getParserOptions<T extends ReadonlyArray<string>>(
+  options: ParserOptions<T>,
+): ParserOptions<T> {
+  return { languages: options.languages, isRichText: options.isRichText };
+}
+
+type XMLItemHierarchy = Partial<{
+  heading: Array<XMLHeading>;
   tree: Array<XMLTree>;
   bibliography: Array<XMLBibliography>;
   concept: Array<XMLConcept>;
@@ -124,12 +135,12 @@ type XMLPropertyValueNode = NonNullable<XMLProperty["value"]>[number] & {
   payload?: string;
 };
 
-type XMLContextValueContainer = Record<
+type XMLContextValueHierarchy = Record<
   string,
   Array<XMLContextValue> | undefined
 >;
 
-const ITEM_DATA_CATEGORIES = [
+const TREE_ITEM_DATA_CATEGORIES = [
   "bibliography",
   "concept",
   "spatialUnit",
@@ -141,6 +152,11 @@ const ITEM_DATA_CATEGORIES = [
   "text",
   "set",
 ] as const satisfies ReadonlyArray<ItemsDataCategory>;
+
+const SET_ITEM_DATA_CATEGORIES = [
+  "tree",
+  ...TREE_ITEM_DATA_CATEGORIES,
+] as const satisfies ReadonlyArray<SetItemDataCategory>;
 
 const HEADING_DATA_CATEGORIES = [
   "person",
@@ -411,7 +427,7 @@ function parseContext(rawContext: XMLContext): Context<ContextDataCategory> {
       };
 
       const rawContextValues =
-        rawContextItem as unknown as XMLContextValueContainer;
+        rawContextItem as unknown as XMLContextValueHierarchy;
       for (const heading of rawContextValues.heading ?? []) {
         node.heading.push(parseContextItem(heading));
       }
@@ -489,13 +505,13 @@ function parseBaseItem<U extends DataCategory, T extends ReadonlyArray<string>>(
     date?: string | XMLString;
   },
   options: ParserOptions<T>,
-): BaseItem<U, T> {
+): BaseItem<U, T, "nested"> {
   const events: Array<Event<T>> = [];
   for (const event of rawItem.events?.event ?? []) {
     events.push(parseEvent(event, options));
   }
 
-  const creators: Array<Person<T>> = [];
+  const creators: Array<Person<T, "nested">> = [];
   for (const creator of rawItem.creators?.creator ?? []) {
     creators.push(parsePerson(creator, options));
   }
@@ -503,6 +519,8 @@ function parseBaseItem<U extends DataCategory, T extends ReadonlyArray<string>>(
   return {
     uuid: rawItem.uuid ?? "",
     category,
+    belongsTo: null,
+    metadata: null,
     publicationDateTime: parseOptionalDate(rawItem.publicationDateTime),
     context: rawItem.context == null ? null : parseContext(rawItem.context),
     date: parseOptionalDateLike(rawItem.date),
@@ -551,48 +569,116 @@ function isHeadingDataCategory(
 }
 
 function pushCategoryIfPresent(
-  categories: Array<ItemsDataCategory>,
-  category: ItemsDataCategory,
+  categories: Array<SetItemDataCategory>,
+  category: SetItemDataCategory,
   items: Array<unknown> | undefined,
 ): void {
   if ((items?.length ?? 0) === 0) {
     return;
   }
 
+  pushCategory(categories, category);
+}
+
+function pushCategory(
+  categories: Array<SetItemDataCategory>,
+  category: SetItemDataCategory,
+): void {
   if (!categories.includes(category)) {
     categories.push(category);
   }
 }
 
 function inferItemCategories(
-  container: XMLItemContainer | undefined,
-): Array<ItemsDataCategory> {
-  const categories: Array<ItemsDataCategory> = [];
-  if (container == null) {
+  hierarchy: XMLItemHierarchy | undefined,
+): Array<SetItemDataCategory> {
+  const categories: Array<SetItemDataCategory> = [];
+  if (hierarchy == null) {
     return categories;
   }
 
-  for (const category of ITEM_DATA_CATEGORIES) {
+  for (const heading of hierarchy.heading ?? []) {
+    for (const category of inferItemCategories(heading as XMLItemHierarchy)) {
+      pushCategory(categories, category);
+    }
+  }
+
+  for (const category of SET_ITEM_DATA_CATEGORIES) {
     if (category === "propertyVariable") {
-      pushCategoryIfPresent(categories, category, container.propertyVariable);
-      pushCategoryIfPresent(categories, category, container.variable);
+      pushCategoryIfPresent(categories, category, hierarchy.propertyVariable);
+      pushCategoryIfPresent(categories, category, hierarchy.variable);
       continue;
     }
 
-    pushCategoryIfPresent(categories, category, container[category]);
+    pushCategoryIfPresent(categories, category, hierarchy[category]);
   }
 
   return categories;
 }
 
-function normalizeItemCategoryArray<U extends ItemsDataCategory>(
-  itemCategory: U | Array<U> | undefined,
+function normalizeSetItemCategories<U extends SetItemDataCategory>(
+  itemCategory: U | ReadonlyArray<U> | undefined,
 ): Array<U> | null {
   if (itemCategory == null) {
     return null;
   }
 
-  return Array.isArray(itemCategory) ? itemCategory : [itemCategory];
+  const categories =
+    typeof itemCategory === "string" ? [itemCategory] : itemCategory;
+  const uniqueCategories: Array<U> = [];
+  for (const category of categories) {
+    if (!uniqueCategories.includes(category)) {
+      uniqueCategories.push(category);
+    }
+  }
+
+  return uniqueCategories;
+}
+
+function normalizeTreeItemCategory(
+  itemCategory:
+    | SetItemDataCategory
+    | ReadonlyArray<SetItemDataCategory>
+    | undefined,
+): ItemsDataCategory | undefined {
+  if (itemCategory != null && typeof itemCategory !== "string") {
+    throw new Error("Tree itemCategory must be a single category");
+  }
+
+  if (itemCategory === "tree") {
+    throw new Error('Tree itemCategory cannot be "tree"');
+  }
+
+  return itemCategory;
+}
+
+function resolveTreeItemCategory<U extends ItemsDataCategory>(
+  rawTree: XMLTree,
+  itemCategory: U | undefined,
+): U | null {
+  const inferredCategories = inferItemCategories(rawTree.items);
+  if (inferredCategories.length > 1) {
+    throw new Error(
+      `Expected Tree items to contain one category, received ${inferredCategories.join(", ")}`,
+    );
+  }
+
+  const inferredCategory = inferredCategories[0] ?? null;
+  if (inferredCategory === "tree") {
+    throw new Error('Tree items cannot contain category "tree"');
+  }
+
+  if (
+    itemCategory != null &&
+    inferredCategory != null &&
+    itemCategory !== inferredCategory
+  ) {
+    throw new Error(
+      `Tree itemCategory "${itemCategory}" does not match XML items category "${inferredCategory}"`,
+    );
+  }
+
+  return itemCategory ?? (inferredCategory as U | null);
 }
 
 function parseImage<T extends ReadonlyArray<string>>(
@@ -768,7 +854,7 @@ function parseNote<T extends ReadonlyArray<string>>(
   rawNote: XMLNote,
   options: ParserOptions<T>,
 ): Note<T> {
-  const authors: Array<Person<T>> = [];
+  const authors: Array<Person<T, "nested">> = [];
   for (const author of rawNote.authors?.author ?? []) {
     authors.push(parsePerson(author, options));
   }
@@ -950,13 +1036,18 @@ function withSingleHierarchyProperties<
   };
 }
 
-function parseItemContainer<T extends ReadonlyArray<string>>(
-  container: XMLItemContainer | undefined,
+function withoutItems<U extends { items: unknown }>(item: U): Omit<U, "items"> {
+  const { items: _items, ...itemWithoutItems } = item;
+  return itemWithoutItems;
+}
+
+function parseItemHierarchy<T extends ReadonlyArray<string>>(
+  hierarchy: XMLItemHierarchy | undefined,
   options: ParserOptions<T>,
   categories?: ReadonlyArray<DataCategory>,
-): Array<Item<DataCategory, ItemsDataCategory, T>> {
-  const items: Array<Item<DataCategory, ItemsDataCategory, T>> = [];
-  if (container == null) {
+): Array<Item<DataCategory, SetItemDataCategory, T, "nested">> {
+  const items: Array<Item<DataCategory, SetItemDataCategory, T, "nested">> = [];
+  if (hierarchy == null) {
     return items;
   }
 
@@ -964,116 +1055,130 @@ function parseItemContainer<T extends ReadonlyArray<string>>(
     categories == null || categories.includes(category);
 
   if (shouldParse("tree")) {
-    for (const tree of container.tree ?? []) {
+    for (const tree of hierarchy.tree ?? []) {
       items.push(
-        parseTree(tree, options) as Item<DataCategory, ItemsDataCategory, T>,
+        parseTree(tree, options) as Item<
+          DataCategory,
+          SetItemDataCategory,
+          T,
+          "nested"
+        >,
       );
     }
   }
 
   if (shouldParse("bibliography")) {
-    for (const bibliography of container.bibliography ?? []) {
+    for (const bibliography of hierarchy.bibliography ?? []) {
       items.push(
         parseBibliography(bibliography, options) as Item<
           DataCategory,
-          ItemsDataCategory,
-          T
+          SetItemDataCategory,
+          T,
+          "nested"
         >,
       );
     }
   }
 
   if (shouldParse("concept")) {
-    for (const concept of container.concept ?? []) {
+    for (const concept of hierarchy.concept ?? []) {
       items.push(
         parseConcept(concept, options) as Item<
           DataCategory,
-          ItemsDataCategory,
-          T
+          SetItemDataCategory,
+          T,
+          "nested"
         >,
       );
     }
   }
 
   if (shouldParse("spatialUnit")) {
-    for (const spatialUnit of container.spatialUnit ?? []) {
+    for (const spatialUnit of hierarchy.spatialUnit ?? []) {
       items.push(
         parseSpatialUnit(spatialUnit, options) as Item<
           DataCategory,
-          ItemsDataCategory,
-          T
+          SetItemDataCategory,
+          T,
+          "nested"
         >,
       );
     }
   }
 
   if (shouldParse("period")) {
-    for (const period of container.period ?? []) {
+    for (const period of hierarchy.period ?? []) {
       items.push(
         parsePeriod(period, options) as Item<
           DataCategory,
-          ItemsDataCategory,
-          T
+          SetItemDataCategory,
+          T,
+          "nested"
         >,
       );
     }
   }
 
   if (shouldParse("person")) {
-    for (const person of container.person ?? []) {
+    for (const person of hierarchy.person ?? []) {
       items.push(
         parsePerson(person, options) as Item<
           DataCategory,
-          ItemsDataCategory,
-          T
+          SetItemDataCategory,
+          T,
+          "nested"
         >,
       );
     }
   }
 
   if (shouldParse("propertyVariable")) {
-    for (const propertyVariable of container.propertyVariable ?? []) {
+    for (const propertyVariable of hierarchy.propertyVariable ?? []) {
       items.push(
         parsePropertyVariable(propertyVariable, options) as Item<
           DataCategory,
-          ItemsDataCategory,
-          T
+          SetItemDataCategory,
+          T,
+          "nested"
         >,
       );
     }
 
-    for (const propertyVariable of container.variable ?? []) {
+    for (const propertyVariable of hierarchy.variable ?? []) {
       items.push(
         parsePropertyVariable(propertyVariable, options) as Item<
           DataCategory,
-          ItemsDataCategory,
-          T
+          SetItemDataCategory,
+          T,
+          "nested"
         >,
       );
     }
   }
 
   if (shouldParse("propertyValue")) {
-    for (const propertyValue of container.propertyValue ?? []) {
+    for (const propertyValue of hierarchy.propertyValue ?? []) {
       items.push(
         parsePropertyValue(propertyValue, options) as Item<
           DataCategory,
-          ItemsDataCategory,
-          T
+          SetItemDataCategory,
+          T,
+          "nested"
         >,
       );
     }
   }
 
   if (shouldParse("resource")) {
-    for (const resource of container.resource ?? []) {
+    for (const resource of hierarchy.resource ?? []) {
       if (!("uuid" in resource)) {
         for (const nestedResource of resource.resource) {
           items.push(
             parseResource(nestedResource, options) as Item<
               DataCategory,
-              ItemsDataCategory,
-              T
+              SetItemDataCategory,
+              T,
+              "nested"
             >,
           );
         }
@@ -1083,25 +1188,36 @@ function parseItemContainer<T extends ReadonlyArray<string>>(
       items.push(
         parseResource(resource, options) as Item<
           DataCategory,
-          ItemsDataCategory,
-          T
+          SetItemDataCategory,
+          T,
+          "nested"
         >,
       );
     }
   }
 
   if (shouldParse("text")) {
-    for (const text of container.text ?? []) {
+    for (const text of hierarchy.text ?? []) {
       items.push(
-        parseText(text, options) as Item<DataCategory, ItemsDataCategory, T>,
+        parseText(text, options) as Item<
+          DataCategory,
+          SetItemDataCategory,
+          T,
+          "nested"
+        >,
       );
     }
   }
 
   if (shouldParse("set")) {
-    for (const set of container.set ?? []) {
+    for (const set of hierarchy.set ?? []) {
       items.push(
-        parseSet(set, options) as Item<DataCategory, ItemsDataCategory, T>,
+        parseSet(set, options) as Item<
+          DataCategory,
+          SetItemDataCategory,
+          T,
+          "nested"
+        >,
       );
     }
   }
@@ -1109,24 +1225,32 @@ function parseItemContainer<T extends ReadonlyArray<string>>(
   return items;
 }
 
-function parseSetItemContainer<T extends ReadonlyArray<string>>(
-  container: XMLItemContainer | undefined,
+function parseSetItemHierarchy<T extends ReadonlyArray<string>>(
+  hierarchy: XMLItemHierarchy | undefined,
   options: ParserOptions<T>,
-  categories?: ReadonlyArray<ItemsDataCategory>,
-): Array<SetItem<ItemsDataCategory, T>> {
-  const items: Array<SetItem<ItemsDataCategory, T>> = [];
-  if (container == null) {
+  categories?: ReadonlyArray<SetItemDataCategory>,
+): Array<SetItem<SetItemDataCategory, T>> {
+  const items: Array<SetItem<SetItemDataCategory, T>> = [];
+  if (hierarchy == null) {
     return items;
   }
 
-  const shouldParse = (category: ItemsDataCategory): boolean =>
+  const shouldParse = (category: SetItemDataCategory): boolean =>
     categories == null || categories.includes(category);
 
+  if (shouldParse("tree")) {
+    for (const tree of hierarchy.tree ?? []) {
+      items.push(
+        parseSetTree(tree, options) as SetItem<SetItemDataCategory, T>,
+      );
+    }
+  }
+
   if (shouldParse("bibliography")) {
-    for (const bibliography of container.bibliography ?? []) {
+    for (const bibliography of hierarchy.bibliography ?? []) {
       items.push(
         parseSetBibliography(bibliography, options) as SetItem<
-          ItemsDataCategory,
+          SetItemDataCategory,
           T
         >,
       );
@@ -1134,18 +1258,18 @@ function parseSetItemContainer<T extends ReadonlyArray<string>>(
   }
 
   if (shouldParse("concept")) {
-    for (const concept of container.concept ?? []) {
+    for (const concept of hierarchy.concept ?? []) {
       items.push(
-        parseSetConcept(concept, options) as SetItem<ItemsDataCategory, T>,
+        parseSetConcept(concept, options) as SetItem<SetItemDataCategory, T>,
       );
     }
   }
 
   if (shouldParse("spatialUnit")) {
-    for (const spatialUnit of container.spatialUnit ?? []) {
+    for (const spatialUnit of hierarchy.spatialUnit ?? []) {
       items.push(
         parseSetSpatialUnit(spatialUnit, options) as SetItem<
-          ItemsDataCategory,
+          SetItemDataCategory,
           T
         >,
       );
@@ -1153,39 +1277,39 @@ function parseSetItemContainer<T extends ReadonlyArray<string>>(
   }
 
   if (shouldParse("period")) {
-    for (const period of container.period ?? []) {
+    for (const period of hierarchy.period ?? []) {
       items.push(
-        parseSetPeriod(period, options) as SetItem<ItemsDataCategory, T>,
+        parseSetPeriod(period, options) as SetItem<SetItemDataCategory, T>,
       );
     }
   }
 
   if (shouldParse("person")) {
-    for (const person of container.person ?? []) {
+    for (const person of hierarchy.person ?? []) {
       items.push(
         withSingleHierarchyProperties(
           parsePerson(person, options),
           person.properties,
           options,
-        ) as SetItem<ItemsDataCategory, T>,
+        ) as SetItem<SetItemDataCategory, T>,
       );
     }
   }
 
   if (shouldParse("propertyVariable")) {
-    for (const propertyVariable of container.propertyVariable ?? []) {
+    for (const propertyVariable of hierarchy.propertyVariable ?? []) {
       items.push(
         parsePropertyVariable(propertyVariable, options) as SetItem<
-          ItemsDataCategory,
+          SetItemDataCategory,
           T
         >,
       );
     }
 
-    for (const propertyVariable of container.variable ?? []) {
+    for (const propertyVariable of hierarchy.variable ?? []) {
       items.push(
         parsePropertyVariable(propertyVariable, options) as SetItem<
-          ItemsDataCategory,
+          SetItemDataCategory,
           T
         >,
       );
@@ -1193,24 +1317,24 @@ function parseSetItemContainer<T extends ReadonlyArray<string>>(
   }
 
   if (shouldParse("propertyValue")) {
-    for (const propertyValue of container.propertyValue ?? []) {
+    for (const propertyValue of hierarchy.propertyValue ?? []) {
       items.push(
         withSingleHierarchyProperties(
           parsePropertyValue(propertyValue, options),
           propertyValue.properties,
           options,
-        ) as SetItem<ItemsDataCategory, T>,
+        ) as SetItem<SetItemDataCategory, T>,
       );
     }
   }
 
   if (shouldParse("resource")) {
-    for (const resource of container.resource ?? []) {
+    for (const resource of hierarchy.resource ?? []) {
       if (!("uuid" in resource)) {
         for (const nestedResource of resource.resource) {
           items.push(
             parseSetResource(nestedResource, options) as SetItem<
-              ItemsDataCategory,
+              SetItemDataCategory,
               T
             >,
           );
@@ -1219,20 +1343,20 @@ function parseSetItemContainer<T extends ReadonlyArray<string>>(
       }
 
       items.push(
-        parseSetResource(resource, options) as SetItem<ItemsDataCategory, T>,
+        parseSetResource(resource, options) as SetItem<SetItemDataCategory, T>,
       );
     }
   }
 
   if (shouldParse("text")) {
-    for (const text of container.text ?? []) {
-      items.push(parseText(text, options) as SetItem<ItemsDataCategory, T>);
+    for (const text of hierarchy.text ?? []) {
+      items.push(parseText(text, options) as SetItem<SetItemDataCategory, T>);
     }
   }
 
   if (shouldParse("set")) {
-    for (const set of container.set ?? []) {
-      items.push(parseSetSet(set, options) as SetItem<ItemsDataCategory, T>);
+    for (const set of hierarchy.set ?? []) {
+      items.push(parseSetSet(set, options) as SetItem<SetItemDataCategory, T>);
     }
   }
 
@@ -1242,18 +1366,18 @@ function parseSetItemContainer<T extends ReadonlyArray<string>>(
 function parseLinks<T extends ReadonlyArray<string>>(
   rawLinks: XMLLink | XMLDataItem | undefined,
   options: ParserOptions<T>,
-): Array<Item> {
-  return parseItemContainer(
-    rawLinks as XMLItemContainer | undefined,
+): Array<Item<DataCategory, SetItemDataCategory, T, "nested">> {
+  return parseItemHierarchy(
+    rawLinks as XMLItemHierarchy | undefined,
     options,
-  ) as Array<Item>;
+  ) as Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
 }
 
 function parseReverseLinks<T extends ReadonlyArray<string>>(
   rawLinks: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem> | undefined,
   options: ParserOptions<T>,
-): Array<Item> {
-  const links: Array<Item> = [];
+): Array<Item<DataCategory, SetItemDataCategory, T, "nested">> {
+  const links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">> = [];
   const rawLinksToParse =
     rawLinks == null ? []
     : Array.isArray(rawLinks) ? rawLinks
@@ -1268,8 +1392,8 @@ function parseReverseLinks<T extends ReadonlyArray<string>>(
 function parsePeriodList<T extends ReadonlyArray<string>>(
   rawPeriods: { period: Array<XMLPeriod> } | undefined,
   options: ParserOptions<T>,
-): Array<Period<T>> {
-  const periods: Array<Period<T>> = [];
+): Array<Period<T, "nested">> {
+  const periods: Array<Period<T, "nested">> = [];
   for (const period of rawPeriods?.period ?? []) {
     periods.push(parsePeriod(period, options));
   }
@@ -1280,8 +1404,8 @@ function parsePeriodList<T extends ReadonlyArray<string>>(
 function parseBibliographyList<T extends ReadonlyArray<string>>(
   rawBibliographies: { bibliography: Array<XMLBibliography> } | undefined,
   options: ParserOptions<T>,
-): Array<Bibliography<T>> {
-  const bibliographies: Array<Bibliography<T>> = [];
+): Array<Bibliography<T, "nested">> {
+  const bibliographies: Array<Bibliography<T, "nested">> = [];
   for (const bibliography of rawBibliographies?.bibliography ?? []) {
     bibliographies.push(parseBibliography(bibliography, options));
   }
@@ -1292,8 +1416,8 @@ function parseBibliographyList<T extends ReadonlyArray<string>>(
 function parsePersonList<T extends ReadonlyArray<string>>(
   rawPersons: Array<XMLPerson> | undefined,
   options: ParserOptions<T>,
-): Array<Person<T>> {
-  const persons: Array<Person<T>> = [];
+): Array<Person<T, "nested">> {
+  const persons: Array<Person<T, "nested">> = [];
   for (const person of rawPersons ?? []) {
     persons.push(parsePerson(person, options));
   }
@@ -1402,9 +1526,9 @@ function parseHeading<
   return {
     name: rawHeading.name,
     headings,
-    items: parseItemContainer(rawHeading as XMLItemContainer, options, [
+    items: parseItemHierarchy(rawHeading as XMLItemHierarchy, options, [
       itemCategory,
-    ]) as Array<Item<U, never, T>>,
+    ]) as Array<Item<U, never, T, "nested">>,
   };
 }
 
@@ -1413,18 +1537,21 @@ function parseTree<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
   rawTree: XMLTree,
-  options: ParserOptions<T> & { itemCategory?: U | Array<U> },
-): Tree<U, T> {
-  const optionCategories = normalizeItemCategoryArray(options.itemCategory);
-  const inferredCategories = inferItemCategories(rawTree.items);
-  const itemCategory = optionCategories?.[0] ?? inferredCategories[0] ?? null;
+  options: ParserOptions<T> & { itemCategory?: U },
+): Tree<U, T, "nested"> {
+  const childOptions = getParserOptions(options);
+  const itemCategory = resolveTreeItemCategory(
+    rawTree,
+    normalizeTreeItemCategory(options.itemCategory),
+  );
 
-  const items: Array<Heading<U & HeadingDataCategory, T> | Item<U, never, T>> =
-    [];
+  const items: Array<
+    Heading<U & HeadingDataCategory, T> | Item<U, never, T, "nested">
+  > = [];
   if (itemCategory != null && isHeadingDataCategory(itemCategory)) {
     for (const heading of rawTree.items?.heading ?? []) {
       items.push(
-        parseHeading(heading, itemCategory, options) as Heading<
+        parseHeading(heading, itemCategory, childOptions) as Heading<
           U & HeadingDataCategory,
           T
         >,
@@ -1434,45 +1561,46 @@ function parseTree<
 
   if (itemCategory != null) {
     items.push(
-      ...(parseItemContainer(rawTree.items, options, [itemCategory]) as Array<
-        Item<U, never, T>
-      >),
+      ...(parseItemHierarchy(rawTree.items, childOptions, [
+        itemCategory,
+      ]) as Array<Item<U, never, T, "nested">>),
     );
   }
 
   return {
-    ...parseBaseItem("tree", rawTree, options),
+    ...parseBaseItem("tree", rawTree, childOptions),
     type: rawTree.type ?? null,
     itemsCategory: itemCategory as U | null,
-    links: parseLinks(rawTree.links, options),
-    notes: parseNotes(rawTree.notes, options),
-    properties: parseProperties(rawTree.properties, options),
-    bibliographies: parseBibliographyList(rawTree.bibliographies, options),
-    items: items as Tree<U, T>["items"],
+    links: parseLinks(rawTree.links, childOptions),
+    notes: parseNotes(rawTree.notes, childOptions),
+    properties: parseProperties(rawTree.properties, childOptions),
+    bibliographies: parseBibliographyList(rawTree.bibliographies, childOptions),
+    items: items as Tree<U, T, "nested">["items"],
   };
 }
 
 function parseSet<
-  U extends ItemsDataCategory = ItemsDataCategory,
+  U extends SetItemDataCategory = SetItemDataCategory,
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
   rawSet: XMLSet,
-  options: ParserOptions<T> & { itemCategory?: U | Array<U> },
-): Set<U, T> {
-  const optionCategories = normalizeItemCategoryArray(options.itemCategory);
+  options: ParserOptions<T> & { itemCategory?: U | ReadonlyArray<U> },
+): Set<U, T, "nested"> {
+  const childOptions = getParserOptions(options);
+  const optionCategories = normalizeSetItemCategories(options.itemCategory);
   const itemCategories = optionCategories ?? inferItemCategories(rawSet.items);
 
   return {
-    ...parseBaseItem("set", rawSet, options),
+    ...parseBaseItem("set", rawSet, childOptions),
     itemsCategory: itemCategories as Array<U>,
     isTabularStructure: parseBoolean(rawSet.tabularStructure),
     isSuppressingBlanks: parseBoolean(rawSet.suppressBlanks),
-    links: parseLinks(rawSet.links, options),
-    notes: parseNotes(rawSet.notes, options),
-    properties: parseProperties(rawSet.properties, options),
-    items: parseSetItemContainer(
+    links: parseLinks(rawSet.links, childOptions),
+    notes: parseNotes(rawSet.notes, childOptions),
+    properties: parseProperties(rawSet.properties, childOptions),
+    items: parseSetItemHierarchy(
       rawSet.items,
-      options,
+      childOptions,
       itemCategories,
     ) as Array<SetItem<U, T>>,
   };
@@ -1482,42 +1610,30 @@ function parseSetBibliography<T extends ReadonlyArray<string>>(
   rawBibliography: XMLBibliography,
   options: ParserOptions<T>,
 ): SetBibliography<T> {
-  const items: Array<SetBibliography<T>> = [];
-  for (const bibliography of rawBibliography.bibliography ?? []) {
-    items.push(parseSetBibliography(bibliography, options));
-  }
-
-  return {
-    ...withSingleHierarchyProperties(
+  return withoutItems(
+    withSingleHierarchyProperties(
       parseBibliography(rawBibliography, options),
       rawBibliography.properties,
       options,
     ),
-    items,
-  } as SetBibliography<T>;
+  ) as SetBibliography<T>;
 }
 
 function parseSetConcept<T extends ReadonlyArray<string>>(
   rawConcept: XMLConcept,
   options: ParserOptions<T>,
 ): SetConcept<T> {
-  const items: Array<SetConcept<T>> = [];
-  for (const concept of rawConcept.concept ?? []) {
-    items.push(parseSetConcept(concept, options));
-  }
-
   return {
     ...parseBaseItem("concept", rawConcept, options),
     image: parseImage(rawConcept.image, options),
     coordinates: parseCoordinates(rawConcept.coordinates, options),
     properties: parseSingleHierarchyProperties(rawConcept.properties, options),
-    items,
   };
 }
 
 function parseSpatialUnitMapData(
   mapData: XMLSpatialUnit["mapData"],
-): SpatialUnit<ReadonlyArray<string>>["mapData"] {
+): SpatialUnit<ReadonlyArray<string>, "nested">["mapData"] {
   if (mapData == null) {
     return null;
   }
@@ -1534,11 +1650,6 @@ function parseSetSpatialUnit<T extends ReadonlyArray<string>>(
   rawSpatialUnit: XMLSpatialUnit,
   options: ParserOptions<T>,
 ): SetSpatialUnit<T> {
-  const items: Array<SetSpatialUnit<T>> = [];
-  for (const spatialUnit of rawSpatialUnit.spatialUnit ?? []) {
-    items.push(parseSetSpatialUnit(spatialUnit, options));
-  }
-
   return {
     ...parseBaseItem("spatialUnit", rawSpatialUnit, options),
     image: parseImage(rawSpatialUnit.image, options),
@@ -1552,7 +1663,6 @@ function parseSetSpatialUnit<T extends ReadonlyArray<string>>(
       rawSpatialUnit.bibliographies,
       options,
     ),
-    items,
   };
 }
 
@@ -1560,64 +1670,67 @@ function parseSetPeriod<T extends ReadonlyArray<string>>(
   rawPeriod: XMLPeriod,
   options: ParserOptions<T>,
 ): SetPeriod<T> {
-  const items: Array<SetPeriod<T>> = [];
-  for (const period of rawPeriod.period ?? []) {
-    items.push(parseSetPeriod(period, options));
-  }
-
-  return {
-    ...withSingleHierarchyProperties(
+  return withoutItems(
+    withSingleHierarchyProperties(
       parsePeriod(rawPeriod, options),
       rawPeriod.properties,
       options,
     ),
-    items,
-  };
+  );
 }
 
 function parseSetResource<T extends ReadonlyArray<string>>(
   rawResource: XMLResource,
   options: ParserOptions<T>,
 ): SetResource<T> {
-  const items: Array<SetResource<T>> = [];
-  for (const resource of rawResource.resource ?? []) {
-    items.push(parseSetResource(resource, options));
-  }
-
-  return {
-    ...withSingleHierarchyProperties(
+  return withoutItems(
+    withSingleHierarchyProperties(
       parseResource(rawResource, options),
       rawResource.properties,
       options,
     ),
-    items,
-  };
+  );
+}
+
+function parseSetTree<T extends ReadonlyArray<string>>(
+  rawTree: XMLTree,
+  options: ParserOptions<T>,
+): SetTree<T> {
+  return withoutItems(
+    withSingleHierarchyProperties(
+      parseTree(rawTree, options),
+      rawTree.properties,
+      options,
+    ),
+  ) as SetTree<T>;
 }
 
 function parseSetSet<T extends ReadonlyArray<string>>(
   rawSet: XMLSet,
   options: ParserOptions<T>,
 ): SetItem<"set", T> {
-  return withSingleHierarchyProperties(
-    parseSet(rawSet, options),
-    rawSet.properties,
-    options,
+  return withoutItems(
+    withSingleHierarchyProperties(
+      parseSet(rawSet, options),
+      rawSet.properties,
+      options,
+    ),
   ) as SetItem<"set", T>;
 }
 
 function parseBibliography<T extends ReadonlyArray<string>>(
   rawBibliography: XMLBibliography,
   options: ParserOptions<T>,
-): Bibliography<T> {
+): Bibliography<T, "nested"> {
   const sourceItems =
     rawBibliography.source == null ?
       []
-    : parseItemContainer(rawBibliography.source as XMLItemContainer, options);
+    : parseItemHierarchy(rawBibliography.source as XMLItemHierarchy, options);
   const bibliographies = parseBibliographyList(
     rawBibliography.bibliographies,
     options,
   );
-  const items: Array<Bibliography<T>> = [];
+  const items: Array<Bibliography<T, "nested">> = [];
   for (const bibliography of rawBibliography.bibliography ?? []) {
     items.push(parseBibliography(bibliography, options));
   }
@@ -1687,7 +1800,7 @@ function parseBibliography<T extends ReadonlyArray<string>>(
     source:
       sourceItems[0] == null ?
         null
-      : (sourceItems[0] as Item<ItemsDataCategory, never, T>),
+      : (sourceItems[0] as Item<ItemsDataCategory, never, T, "nested">),
     authors: parsePersonList(rawBibliography.authors?.person, options),
     periods: parsePeriodList(rawBibliography.periods, options),
     links: parseLinks(rawBibliography.links, options),
@@ -1711,14 +1824,14 @@ function parseBibliography<T extends ReadonlyArray<string>>(
 function parseConcept<T extends ReadonlyArray<string>>(
   rawConcept: XMLConcept,
   options: ParserOptions<T>,
-): Concept<T> {
+): Concept<T, "nested"> {
   const interpretations: Array<Interpretation<T>> = [];
   for (const interpretation of rawConcept.interpretations?.interpretation ??
     []) {
     interpretations.push(parseInterpretation(interpretation, options));
   }
 
-  const items: Array<Concept<T>> = [];
+  const items: Array<Concept<T, "nested">> = [];
   for (const concept of rawConcept.concept ?? []) {
     items.push(parseConcept(concept, options));
   }
@@ -1735,13 +1848,13 @@ function parseConcept<T extends ReadonlyArray<string>>(
 function parseSpatialUnit<T extends ReadonlyArray<string>>(
   rawSpatialUnit: XMLSpatialUnit,
   options: ParserOptions<T>,
-): SpatialUnit<T> {
+): SpatialUnit<T, "nested"> {
   const observations: Array<Observation<T>> = [];
   for (const observation of rawSpatialUnit.observations?.observation ?? []) {
     observations.push(parseObservation(observation, options));
   }
 
-  const items: Array<SpatialUnit<T>> = [];
+  const items: Array<SpatialUnit<T, "nested">> = [];
   for (const spatialUnit of rawSpatialUnit.spatialUnit ?? []) {
     items.push(parseSpatialUnit(spatialUnit, options));
   }
@@ -1763,8 +1876,8 @@ function parseSpatialUnit<T extends ReadonlyArray<string>>(
 function parsePeriod<T extends ReadonlyArray<string>>(
   rawPeriod: XMLPeriod,
   options: ParserOptions<T>,
-): Period<T> {
-  const items: Array<Period<T>> = [];
+): Period<T, "nested"> {
+  const items: Array<Period<T, "nested">> = [];
   for (const period of rawPeriod.period ?? []) {
     items.push(parsePeriod(period, options));
   }
@@ -1784,7 +1897,7 @@ function parsePeriod<T extends ReadonlyArray<string>>(
 function parsePerson<T extends ReadonlyArray<string>>(
   rawPerson: XMLPerson,
   options: ParserOptions<T>,
-): Person<T> {
+): Person<T, "nested"> {
   return {
     ...parseBaseItem("person", rawPerson, options),
     type: rawPerson.type ?? "",
@@ -1819,7 +1932,7 @@ function parsePerson<T extends ReadonlyArray<string>>(
 function parsePropertyVariable<T extends ReadonlyArray<string>>(
   rawPropertyVariable: XMLPropertyVariable,
   options: ParserOptions<T>,
-): PropertyVariable<T> {
+): PropertyVariable<T, "nested"> {
   return {
     ...parseBaseItem("propertyVariable", rawPropertyVariable, options),
     type: rawPropertyVariable.type ?? null,
@@ -1836,7 +1949,7 @@ function parsePropertyVariable<T extends ReadonlyArray<string>>(
 function parsePropertyValue<T extends ReadonlyArray<string>>(
   rawPropertyValue: XMLPropertyValueItem,
   options: ParserOptions<T>,
-): PropertyValue<T> {
+): PropertyValue<T, "nested"> {
   return {
     ...parseBaseItem("propertyValue", rawPropertyValue, options),
     coordinates: parseCoordinates(rawPropertyValue.coordinates, options),
@@ -1853,8 +1966,8 @@ function parsePropertyValue<T extends ReadonlyArray<string>>(
 function parseResource<T extends ReadonlyArray<string>>(
   rawResource: XMLResource,
   options: ParserOptions<T>,
-): Resource<T> {
-  const items: Array<Resource<T>> = [];
+): Resource<T, "nested"> {
+  const items: Array<Resource<T, "nested">> = [];
   for (const resource of rawResource.resource ?? []) {
     items.push(parseResource(resource, options));
   }
@@ -1885,8 +1998,8 @@ function parseResource<T extends ReadonlyArray<string>>(
 function parseText<T extends ReadonlyArray<string>>(
   rawText: XMLText,
   options: ParserOptions<T>,
-): Text<T> {
-  const editions: Array<Person<T>> = [];
+): Text<T, "nested"> {
+  const editions: Array<Person<T, "nested">> = [];
   for (const edition of rawText.editions?.edition ?? []) {
     editions.push(parsePerson(edition, options));
   }
@@ -2081,7 +2194,7 @@ function parseMetadata<T extends ReadonlyArray<string>>(
 }
 
 function inferTopLevelCategory(rawOchre: RawOchre): DataCategory {
-  for (const category of ["tree", ...ITEM_DATA_CATEGORIES] as const) {
+  for (const category of SET_ITEM_DATA_CATEGORIES) {
     if (category in rawOchre) {
       return category;
     }
@@ -2094,180 +2207,216 @@ function inferTopLevelCategory(rawOchre: RawOchre): DataCategory {
   throw new Error("Could not infer OCHRE item category");
 }
 
-function parseTopLevelItems<
+function getSingleTopLevelRawItem<T>(
+  items: Array<T> | null,
+  category: string,
+): T {
+  if (items == null || items.length === 0) {
+    throw new Error(`${category} not found`);
+  }
+
+  if (items.length > 1) {
+    throw new Error(`Expected one ${category}, received ${items.length}`);
+  }
+
+  return items[0]!;
+}
+
+function parseTopLevelItem<
   U extends DataCategory,
-  V extends U extends "tree" | "set" ? ItemsDataCategory : never,
+  V extends HierarchyItemDataCategory<U>,
   T extends ReadonlyArray<string>,
 >(
   rawOchre: RawOchre,
   category: U,
-  options: ParserOptions<T> & { itemCategory?: V | Array<V> },
-): Array<Item<U, V, T>> {
-  const items: Array<Item<U, V, T>> = [];
-
+  options: ParserOptions<T> & { itemCategory?: V | ReadonlyArray<V> },
+): Item<U, V, T, "nested"> {
   switch (category) {
     case "tree": {
-      if (!("tree" in rawOchre)) {
-        throw new Error("Tree not found");
-      }
-      for (const tree of rawOchre.tree) {
-        items.push(parseTree(tree, options) as unknown as Item<U, V, T>);
-      }
-      break;
+      return parseTree(
+        getSingleTopLevelRawItem(
+          "tree" in rawOchre ? rawOchre.tree : null,
+          "tree",
+        ),
+        {
+          ...options,
+          itemCategory: normalizeTreeItemCategory(options.itemCategory),
+        },
+      ) as unknown as Item<U, V, T, "nested">;
     }
     case "bibliography": {
-      if (!("bibliography" in rawOchre)) {
-        throw new Error("Bibliography not found");
-      }
-      for (const bibliography of rawOchre.bibliography) {
-        items.push(
-          parseBibliography(bibliography, options) as unknown as Item<U, V, T>,
-        );
-      }
-      break;
+      return parseBibliography(
+        getSingleTopLevelRawItem(
+          "bibliography" in rawOchre ? rawOchre.bibliography : null,
+          "bibliography",
+        ),
+        options,
+      ) as unknown as Item<U, V, T, "nested">;
     }
     case "concept": {
-      if (!("concept" in rawOchre)) {
-        throw new Error("Concept not found");
-      }
-      for (const concept of rawOchre.concept) {
-        items.push(parseConcept(concept, options) as unknown as Item<U, V, T>);
-      }
-      break;
+      return parseConcept(
+        getSingleTopLevelRawItem(
+          "concept" in rawOchre ? rawOchre.concept : null,
+          "concept",
+        ),
+        options,
+      ) as unknown as Item<U, V, T, "nested">;
     }
     case "spatialUnit": {
-      if (!("spatialUnit" in rawOchre)) {
-        throw new Error("Spatial unit not found");
-      }
-      for (const spatialUnit of rawOchre.spatialUnit) {
-        items.push(
-          parseSpatialUnit(spatialUnit, options) as unknown as Item<U, V, T>,
-        );
-      }
-      break;
+      return parseSpatialUnit(
+        getSingleTopLevelRawItem(
+          "spatialUnit" in rawOchre ? rawOchre.spatialUnit : null,
+          "spatial unit",
+        ),
+        options,
+      ) as unknown as Item<U, V, T, "nested">;
     }
     case "period": {
-      if (!("period" in rawOchre)) {
-        throw new Error("Period not found");
-      }
-      for (const period of rawOchre.period) {
-        items.push(parsePeriod(period, options) as unknown as Item<U, V, T>);
-      }
-      break;
+      return parsePeriod(
+        getSingleTopLevelRawItem(
+          "period" in rawOchre ? rawOchre.period : null,
+          "period",
+        ),
+        options,
+      ) as unknown as Item<U, V, T, "nested">;
     }
     case "person": {
-      if (!("person" in rawOchre)) {
-        throw new Error("Person not found");
-      }
-      for (const person of rawOchre.person) {
-        items.push(parsePerson(person, options) as unknown as Item<U, V, T>);
-      }
-      break;
+      return parsePerson(
+        getSingleTopLevelRawItem(
+          "person" in rawOchre ? rawOchre.person : null,
+          "person",
+        ),
+        options,
+      ) as unknown as Item<U, V, T, "nested">;
     }
     case "propertyVariable": {
       const propertyVariables =
         "propertyVariable" in rawOchre ? rawOchre.propertyVariable
         : "variable" in rawOchre ? rawOchre.variable
         : null;
-      if (propertyVariables == null) {
-        throw new Error("Property variable not found");
-      }
-      for (const propertyVariable of propertyVariables) {
-        items.push(
-          parsePropertyVariable(propertyVariable, options) as unknown as Item<
-            U,
-            V,
-            T
-          >,
-        );
-      }
-      break;
+      return parsePropertyVariable(
+        getSingleTopLevelRawItem(propertyVariables, "property variable"),
+        options,
+      ) as unknown as Item<U, V, T, "nested">;
     }
     case "propertyValue": {
-      if (!("propertyValue" in rawOchre)) {
-        throw new Error("Property value not found");
-      }
-      for (const propertyValue of rawOchre.propertyValue) {
-        items.push(
-          parsePropertyValue(propertyValue, options) as unknown as Item<
-            U,
-            V,
-            T
-          >,
-        );
-      }
-      break;
+      return parsePropertyValue(
+        getSingleTopLevelRawItem(
+          "propertyValue" in rawOchre ? rawOchre.propertyValue : null,
+          "property value",
+        ),
+        options,
+      ) as unknown as Item<U, V, T, "nested">;
     }
     case "resource": {
-      if (!("resource" in rawOchre)) {
-        throw new Error("Resource not found");
-      }
-      for (const resource of rawOchre.resource) {
-        items.push(
-          parseResource(resource, options) as unknown as Item<U, V, T>,
-        );
-      }
-      break;
+      return parseResource(
+        getSingleTopLevelRawItem(
+          "resource" in rawOchre ? rawOchre.resource : null,
+          "resource",
+        ),
+        options,
+      ) as unknown as Item<U, V, T, "nested">;
     }
     case "text": {
-      if (!("text" in rawOchre)) {
-        throw new Error("Text not found");
-      }
-      for (const text of rawOchre.text) {
-        items.push(parseText(text, options) as unknown as Item<U, V, T>);
-      }
-      break;
+      return parseText(
+        getSingleTopLevelRawItem(
+          "text" in rawOchre ? rawOchre.text : null,
+          "text",
+        ),
+        options,
+      ) as unknown as Item<U, V, T, "nested">;
     }
     case "set": {
-      if (!("set" in rawOchre)) {
-        throw new Error("Set not found");
-      }
-      for (const set of rawOchre.set) {
-        items.push(parseSet(set, options) as unknown as Item<U, V, T>);
-      }
-      break;
+      return parseSet(
+        getSingleTopLevelRawItem(
+          "set" in rawOchre ? rawOchre.set : null,
+          "set",
+        ),
+        options,
+      ) as unknown as Item<U, V, T, "nested">;
     }
   }
-
-  return items;
 }
 
-export function parseData<
-  U extends DataCategory,
-  V extends U extends "tree" | "set" ? ItemsDataCategory : never = never,
+export function parseItem<
+  const TItemCategory extends
+    | HierarchyItemCategoryOption<DataCategory>
+    | undefined = undefined,
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
   rawData: XMLData,
   options: {
-    category?: U;
-    itemCategory?: V | Array<V>;
+    category?: undefined;
+    itemCategory?: TItemCategory;
     languages: T;
     isRichText?: boolean;
   },
-): Data<U, V, T> {
+): Item<
+  DataCategory,
+  HierarchyItemCategoryFromOption<DataCategory, TItemCategory>,
+  T
+>;
+export function parseItem<
+  const TCategory extends DataCategory,
+  const TItemCategory extends
+    | HierarchyItemCategoryOption<TCategory>
+    | undefined = undefined,
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  rawData: XMLData,
+  options: {
+    category: TCategory;
+    itemCategory?: TItemCategory;
+    languages: T;
+    isRichText?: boolean;
+  },
+): Item<
+  TCategory,
+  HierarchyItemCategoryFromOption<TCategory, TItemCategory>,
+  T
+>;
+export function parseItem(
+  rawData: XMLData,
+  options: {
+    category?: DataCategory;
+    itemCategory?: HierarchyItemCategoryOption<DataCategory>;
+    languages: ReadonlyArray<string>;
+    isRichText?: boolean;
+  },
+): Item<DataCategory, SetItemDataCategory, ReadonlyArray<string>>;
+export function parseItem(
+  rawData: XMLData,
+  options: {
+    category?: DataCategory;
+    itemCategory?: HierarchyItemCategoryOption<DataCategory>;
+    languages: ReadonlyArray<string>;
+    isRichText?: boolean;
+  },
+): Item<DataCategory, SetItemDataCategory, ReadonlyArray<string>> {
   const rawOchre = rawData.result.ochre;
   const metadataLanguages = parseMetadataLanguages(rawOchre);
   const languagesToUse = resolveLanguages(options.languages, metadataLanguages);
-  const parserOptions: ParserOptions<T> & { itemCategory?: V | Array<V> } = {
+  const parserOptions: ParserOptions<ReadonlyArray<string>> & {
+    itemCategory?: HierarchyItemCategoryOption<DataCategory>;
+  } = {
     languages: languagesToUse,
     isRichText: options.isRichText ?? false,
     itemCategory: options.itemCategory,
   };
   const category =
     options.category ??
-    (normalizeCategory(rawOchre.metadata.item?.category) as U | null) ??
-    (inferTopLevelCategory(rawOchre) as U);
+    normalizeCategory(rawOchre.metadata.item?.category) ??
+    inferTopLevelCategory(rawOchre);
   const defaultLanguage = resolveDefaultLanguage(rawOchre, languagesToUse);
 
+  const item = parseTopLevelItem(rawOchre, category, parserOptions);
+
   return {
-    uuid: rawOchre.uuid,
+    ...item,
     belongsTo: {
       uuid: rawOchre.uuidBelongsTo,
       abbreviation: rawOchre.belongsTo,
     },
-    publicationDateTime:
-      parseOptionalDate(rawOchre.publicationDateTime) ?? new Date(0),
     metadata: parseMetadata(rawOchre, parserOptions, defaultLanguage),
-    items: parseTopLevelItems(rawOchre, category, parserOptions),
   };
 }
