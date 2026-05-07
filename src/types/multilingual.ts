@@ -1,4 +1,4 @@
-import { DEFAULT_LANGUAGES } from "../constants.js";
+import { DEFAULT_LANGUAGES } from "#/constants.js";
 
 /**
  * Options for creating and working with multilingual strings
