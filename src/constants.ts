@@ -21,7 +21,7 @@ export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
   "event",
   "interpretation",
   "observation",
-  "observers",
+  "observer",
   "heading",
   "note",
   "reference",
@@ -40,7 +40,7 @@ export const XML_PARSER_OPTIONS: X2jOptions = {
   parseTagValue: false,
   parseAttributeValue: false,
   attributeNamePrefix: "",
-  textNodeName: "text",
+  textNodeName: "payload",
   stopNodes: ["*.referenceFormatDiv", "*.citationFormatSpan"],
   htmlEntities: true,
   isArray(tagName, jPath, isLeafNode, isAttribute) {
