@@ -1,5 +1,7 @@
 import * as v from "valibot";
 
+const PSEUDO_UUID_REGEX = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
+
 /**
  * Logs Valibot validation issues to the console with detailed formatting
  * @param issues - The validation issues to log
@@ -59,4 +61,14 @@ export function logIssues(
       console.error("");
     }
   }
+}
+
+/**
+ * Validates a pseudo-UUID string
+ * @param value - The string to validate
+ * @returns True if the string is a valid pseudo-UUID, false otherwise
+ * @internal
+ */
+export function isPseudoUuid(value: string): boolean {
+  return PSEUDO_UUID_REGEX.test(value);
 }

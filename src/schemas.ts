@@ -1,10 +1,14 @@
 import * as v from "valibot";
+import { isPseudoUuid } from "#/utils.js";
 
 /**
  * Schema for validating UUIDs
  * @internal
  */
-export const uuidSchema = v.pipe(v.string(), v.uuid("Invalid UUID provided"));
+export const uuidSchema = v.pipe(
+  v.string(),
+  v.check(isPseudoUuid, "Invalid pseudo-UUID provided"),
+);
 
 /**
  * Schema for validating language codes
@@ -52,7 +56,7 @@ export const componentSchema = v.picklist(
  * @internal
  */
 export const gallerySchema = v.object({
-  uuid: v.pipe(v.string(), v.uuid("Invalid UUID")),
+  uuid: v.pipe(v.string(), v.check(isPseudoUuid, "Invalid pseudo-UUID")),
   filter: v.optional(v.string()),
   page: v.pipe(
     v.number("Page must be positive"),
