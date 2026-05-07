@@ -111,6 +111,27 @@ function getLanguagesWithEntries<T extends ReadonlyArray<string>>(
   return availableLanguages;
 }
 
+function getImplicitLanguages(
+  content: Partial<Record<string, ReadonlyArray<string>>>,
+  options: MultilingualOptions,
+): ReadonlyArray<string> {
+  const languages: Array<string> = [];
+
+  for (const language of options.availableLanguages ?? []) {
+    if (!languages.includes(language)) {
+      languages.push(language);
+    }
+  }
+
+  for (const language of Object.keys(content)) {
+    if (!languages.includes(language)) {
+      languages.push(language);
+    }
+  }
+
+  return languages.length > 0 ? languages : [...DEFAULT_LANGUAGES];
+}
+
 /**
  * Multilingual string
  */
@@ -145,12 +166,12 @@ export class MultilingualString<
     content: Partial<Record<string, string>>,
     languages?: undefined,
     options?: MultilingualOptions,
-  ): MultilingualString<typeof DEFAULT_LANGUAGES>;
+  ): MultilingualString<ReadonlyArray<string>>;
   static fromObject<U extends ReadonlyArray<string>>(
     content: Partial<Record<string, string>>,
     languages?: U,
     options: MultilingualOptions = {},
-  ): MultilingualString<U> | MultilingualString<typeof DEFAULT_LANGUAGES> {
+  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
     const entries: Partial<Record<string, ReadonlyArray<string>>> = {};
     for (const [language, text] of Object.entries(content)) {
       if (text != null) {
@@ -177,25 +198,22 @@ export class MultilingualString<
     content: Partial<Record<string, ReadonlyArray<string>>>,
     languages?: undefined,
     options?: MultilingualOptions,
-  ): MultilingualString<typeof DEFAULT_LANGUAGES>;
+  ): MultilingualString<ReadonlyArray<string>>;
   static fromEntries<U extends ReadonlyArray<string>>(
     content: Partial<Record<string, ReadonlyArray<string>>>,
     languages?: U,
     options: MultilingualOptions = {},
-  ): MultilingualString<U> | MultilingualString<typeof DEFAULT_LANGUAGES> {
+  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
     if (languages === undefined) {
-      const actualLanguages = DEFAULT_LANGUAGES;
+      const actualLanguages = getImplicitLanguages(content, options);
       const normalizedContent: Partial<
-        Record<
-          (typeof DEFAULT_LANGUAGES)[number],
-          Array<MultilingualStringEntry>
-        >
+        Record<string, Array<MultilingualStringEntry>>
       > = {};
       for (const language of actualLanguages) {
         normalizedContent[language] = entriesFromTexts(content[language] ?? []);
       }
 
-      const availableLanguages = getLanguagesWithEntries(
+      const availableLanguages = getLanguagesWithEntries<ReadonlyArray<string>>(
         normalizedContent,
         actualLanguages,
       );
@@ -213,7 +231,7 @@ export class MultilingualString<
         normalizedContent,
         defaultOptions,
         availableLanguages,
-      ) as MultilingualString<typeof DEFAULT_LANGUAGES>;
+      ) as MultilingualString<ReadonlyArray<string>>;
     }
 
     const normalizedContent: Partial<
@@ -255,25 +273,22 @@ export class MultilingualString<
     options?: MultilingualOptions,
   ): MultilingualString<U>;
   static create(
-    language: (typeof DEFAULT_LANGUAGES)[number],
+    language: string,
     text: string,
     languages?: undefined,
     options?: MultilingualOptions,
-  ): MultilingualString<typeof DEFAULT_LANGUAGES>;
+  ): MultilingualString<ReadonlyArray<string>>;
   static create<U extends ReadonlyArray<string>>(
     language: string,
     text: string,
     languages?: U,
     options: MultilingualOptions = {},
-  ): MultilingualString<U> | MultilingualString<typeof DEFAULT_LANGUAGES> {
+  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
     if (languages === undefined) {
-      return MultilingualString.fromObject(
-        { [language]: text } as Partial<
-          Record<(typeof DEFAULT_LANGUAGES)[number], string>
-        >,
-        undefined,
-        { ...options, defaultLanguage: language },
-      );
+      return MultilingualString.fromObject({ [language]: text }, undefined, {
+        ...options,
+        defaultLanguage: language,
+      });
     }
 
     return MultilingualString.fromObject(
@@ -293,11 +308,11 @@ export class MultilingualString<
   static empty(
     languages?: undefined,
     options?: MultilingualOptions,
-  ): MultilingualString<typeof DEFAULT_LANGUAGES>;
+  ): MultilingualString<ReadonlyArray<string>>;
   static empty<U extends ReadonlyArray<string>>(
     languages?: U,
     options: MultilingualOptions = {},
-  ): MultilingualString<U> | MultilingualString<typeof DEFAULT_LANGUAGES> {
+  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
     if (languages === undefined) {
       return MultilingualString.fromObject({}, undefined, options);
     }

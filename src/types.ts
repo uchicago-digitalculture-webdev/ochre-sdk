@@ -78,7 +78,6 @@ export type ContextDataCategory = Exclude<
 export type Identification<T extends ReadonlyArray<string>> = {
   label: MultilingualString<T>;
   abbreviation: MultilingualString<T> | null;
-  alias: { label: Array<string>; abbreviation: Array<string> };
   code: string | null;
   email: string | null;
   website: string | null;

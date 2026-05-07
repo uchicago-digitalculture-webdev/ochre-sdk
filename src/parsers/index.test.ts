@@ -403,10 +403,6 @@ describe("parseItem", () => {
       "Alias one",
       "Alias two",
     ]);
-    expect(resource.identification.alias.label).toStrictEqual([
-      "Alias one",
-      "Alias two",
-    ]);
   });
 });
 

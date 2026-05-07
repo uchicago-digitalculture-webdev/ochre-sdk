@@ -10,19 +10,11 @@ import type {
   SetItemDataCategory,
 } from "#/types.js";
 import type { XMLData } from "#/xml/types.js";
-import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
+import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseItem } from "#/parsers/index.js";
 import { iso639_3Schema, uuidSchema } from "#/schemas.js";
 import { logIssues } from "#/utils.js";
 import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
-
-/**
- * Branded type to ensure languages have been validated through withLanguages()
- * @internal
- */
-export type ValidatedLanguages<T extends ReadonlyArray<string>> = T & {
-  readonly __validated: unique symbol;
-};
 
 type FetchFunction = (
   input: string | URL | globalThis.Request,
@@ -30,16 +22,18 @@ type FetchFunction = (
 ) => Promise<Response>;
 
 type FetchItemBaseOptions<
-  TLanguages extends ValidatedLanguages<ReadonlyArray<string>> | undefined =
-    undefined,
+  TLanguages extends ReadonlyArray<string> | undefined = undefined,
 > = { languages?: TLanguages; isRichText?: boolean; fetch?: FetchFunction };
 
-type FetchItemRuntimeOptions = FetchItemBaseOptions<
-  ValidatedLanguages<ReadonlyArray<string>>
-> & {
+type FetchItemRuntimeOptions = FetchItemBaseOptions<ReadonlyArray<string>> & {
   category?: DataCategory;
   itemCategory?: HierarchyItemCategoryOption<DataCategory>;
 };
+
+type FetchItemLanguages<TLanguages extends ReadonlyArray<string> | undefined> =
+  TLanguages extends readonly [] ? ReadonlyArray<string>
+  : TLanguages extends ReadonlyArray<string> ? TLanguages
+  : ReadonlyArray<string>;
 
 function isHierarchyCategory(
   category: DataCategory,
@@ -123,19 +117,42 @@ function inferFetchItemCategory(
 }
 
 /**
- * Helper function to create a languages array with proper type inference
- * @param languages - Array of language codes
- * @returns The same array with preserved literal types and validation branding
+ * Validate language codes while preserving literal tuple inference.
  */
-export function withLanguages<const T extends ReadonlyArray<string>>(
+function parseLanguages<const T extends ReadonlyArray<string>>(
   languages: T,
-): ValidatedLanguages<T> {
-  const parsedLanguages = [];
+): T {
+  const parsedLanguages: Array<string> = [];
   for (const language of languages) {
     parsedLanguages.push(v.parse(iso639_3Schema, language));
   }
 
-  return parsedLanguages as unknown as ValidatedLanguages<T>;
+  return parsedLanguages as unknown as T;
+}
+
+/**
+ * Defines a reusable languages tuple with validation and literal type inference.
+ *
+ * Inline arrays can be passed directly to fetchItem:
+ * `fetchItem(uuid, { languages: ["eng", "spa"] })`.
+ *
+ * Use this helper when the language set is stored separately:
+ * `const languages = defineLanguages("eng", "spa")`.
+ */
+export function defineLanguages<const TLanguages extends ReadonlyArray<string>>(
+  ...languages: TLanguages
+): TLanguages {
+  return parseLanguages(languages);
+}
+
+/**
+ * @deprecated Pass inline language arrays directly to fetchItem, or use
+ * defineLanguages("eng", "spa") for reusable language tuples.
+ */
+export function withLanguages<const TLanguages extends ReadonlyArray<string>>(
+  languages: TLanguages,
+): TLanguages {
+  return parseLanguages(languages);
 }
 
 /**
@@ -145,7 +162,7 @@ export function withLanguages<const T extends ReadonlyArray<string>>(
  * @param options - Required options object
  * @param options.category - The category of the OCHRE item to fetch
  * @param options.itemCategory - The category of items inside the OCHRE item to fetch. Only valid for Trees and Sets. Tree accepts one category; Set accepts one category or an array.
- * @param options.languages - The languages to use ***(must be created with withLanguages())***
+ * @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
  * @param options.isRichText - Whether to parse the text as rich text
  * @param options.fetch - Custom fetch function to use instead of the default fetch
  * @returns An object containing the parsed item
@@ -154,9 +171,7 @@ export async function fetchItem<
   const TItemCategory extends
     | HierarchyItemCategoryOption<HierarchyDataCategory>
     | undefined = undefined,
-  const TLanguages extends
-    | ValidatedLanguages<ReadonlyArray<string>>
-    | undefined = undefined,
+  const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
   options?: FetchItemBaseOptions<TLanguages> & {
@@ -168,8 +183,7 @@ export async function fetchItem<
       item: Item<
         DataCategory,
         HierarchyItemCategoryFromOption<DataCategory, TItemCategory>,
-        TLanguages extends ValidatedLanguages<infer U> ? U
-        : ReadonlyArray<string>
+        FetchItemLanguages<TLanguages>
       >;
       error: null;
     }
@@ -180,9 +194,7 @@ export async function fetchItem<
   const TItemCategory extends
     | HierarchyItemCategoryOption<TCategory>
     | undefined = undefined,
-  const TLanguages extends
-    | ValidatedLanguages<ReadonlyArray<string>>
-    | undefined = undefined,
+  const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
   options: FetchItemBaseOptions<TLanguages> & {
@@ -194,8 +206,7 @@ export async function fetchItem<
       item: Item<
         TCategory,
         HierarchyItemCategoryFromOption<TCategory, TItemCategory>,
-        TLanguages extends ValidatedLanguages<infer U> ? U
-        : ReadonlyArray<string>
+        FetchItemLanguages<TLanguages>
       >;
       error: null;
     }
@@ -203,9 +214,7 @@ export async function fetchItem<
 >;
 export async function fetchItem<
   const TCategory extends DataCategory,
-  const TLanguages extends
-    | ValidatedLanguages<ReadonlyArray<string>>
-    | undefined = undefined,
+  const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
   options: FetchItemBaseOptions<TLanguages> & {
@@ -217,8 +226,7 @@ export async function fetchItem<
       item: Item<
         TCategory,
         HierarchyItemDataCategory<TCategory>,
-        TLanguages extends ValidatedLanguages<infer U> ? U
-        : ReadonlyArray<string>
+        FetchItemLanguages<TLanguages>
       >;
       error: null;
     }
@@ -237,6 +245,8 @@ export async function fetchItem(
   try {
     const parsedUuid = v.parse(uuidSchema, uuid);
     assertItemCategoryAllowed(options?.category, options?.itemCategory);
+    const languages: ReadonlyArray<string> =
+      options?.languages == null ? [] : parseLanguages(options.languages);
 
     const response = await (options?.fetch ?? fetch)(
       `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${parsedUuid}&xsl=none&lang="*"`,
@@ -263,7 +273,7 @@ export async function fetchItem(
     const parsedItem = parseItem(output, {
       category,
       itemCategory: options?.itemCategory,
-      languages: options?.languages ?? DEFAULT_LANGUAGES,
+      languages,
       isRichText: options?.isRichText ?? false,
     });
 

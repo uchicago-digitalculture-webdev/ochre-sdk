@@ -71,7 +71,7 @@ export const XML_PARSER_OPTIONS: X2jOptions = {
   },
 };
 
-export const DEFAULT_LANGUAGES: ReadonlyArray<string> = ["eng"];
+export const DEFAULT_LANGUAGES = ["eng"] as const;
 
 export const PRESENTATION_ITEM_UUID = "f1c131b6-1498-48a4-95bf-a9edae9fd518";
 export const TEXT_ANNOTATION_UUID = "b9ca2732-78f4-416e-b77f-dae7647e68a9";

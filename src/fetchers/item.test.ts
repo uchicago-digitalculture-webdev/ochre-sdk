@@ -1,6 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import type {
   BaseItem,
   DataCategory,
@@ -36,8 +36,8 @@ import type {
   XMLTree,
 } from "#/xml/types.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
-import { fetchItem, withLanguages } from "#/fetchers/item.js";
-import { db } from "#/marklogic.js";
+import { defineLanguages, fetchItem } from "#/fetchers/item.js";
+import { MultilingualString } from "#/multilingual.js";
 import { parseItem } from "#/parsers/index.js";
 import {
   extractAliases,
@@ -48,7 +48,6 @@ import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
 
 const LIVE_TEST_TIMEOUT_MS = 180_000;
 const TEST_LANGUAGES = ["eng"] as const;
-const TEXT_SAMPLE_LIMIT = 5;
 
 const TREE_UUIDS: ReadonlyArray<string> = [
   "55a24a30-15d6-4c2b-aba4-d14d6b3ae883",
@@ -112,6 +111,13 @@ const RESOURCE_UUIDS: ReadonlyArray<string> = [
   "d78f0331-f385-412d-8950-0cf787ea995c",
   "bc79ecae-d95a-40a1-8f25-e19335c65a23",
   "65259615-a8d7-45e3-97c8-6a9ca0b133a0",
+];
+const TEXT_UUIDS: ReadonlyArray<string> = [
+  "1a1fb727-4917-4c93-accf-f4a6d04fa79e",
+  "1daf54b7-ab8c-4e95-b750-e00dc24393e8",
+  "294e6e8e-e336-4d99-863c-62b13e983440",
+  "2aaa4464-eba9-43eb-a974-1fe77a6af70e",
+  "2fb6b468-a82a-4011-8c3c-121bff463ebf",
 ];
 const SET_UUIDS: ReadonlyArray<string> = [
   "e59a10d4-c873-4aad-8a2f-f4e62240c5a3",
@@ -429,8 +435,10 @@ function expectIdentificationMatchesRaw(
       extractAliases(rawIdentification.abbreviation, { isRichText: true })
     : null;
 
-  expect(parsedIdentification.alias.label).toStrictEqual(labelAliases ?? []);
-  expect(parsedIdentification.alias.abbreviation).toStrictEqual(
+  expect(parsedIdentification.label.getAliases()).toStrictEqual(
+    labelAliases ?? [],
+  );
+  expect(parsedIdentification.abbreviation?.getAliases() ?? []).toStrictEqual(
     abbreviationAliases ?? [],
   );
 }
@@ -1178,32 +1186,69 @@ async function expectUuidParsesAndMatchesRaw(
   expectDataMatchesRaw(rawData, data, category);
 }
 
-async function fetchTextUuidsFromMarkLogic(): Promise<Array<string>> {
-  const query = `for $uri in cts:uris((), (), cts:and-query((
-    cts:collection-query("ochre/text"),
-    cts:element-query(xs:QName("translation"), cts:true-query()),
-    cts:element-query(xs:QName("phonemic"), cts:true-query())
-  )))[1 to ${TEXT_SAMPLE_LIMIT}]
-  let $doc := doc($uri)
-  let $item := $doc/*/*[not(local-name(.) = "metadata")][1]
-  return string($item/@uuid)`;
-
-  const result = await db.xqueryEval(query).result();
-  const uuids: Array<string> = [];
-  for (const item of result) {
-    const uuid =
-      typeof item === "object" && "value" in item ?
-        String(item.value)
-      : String(item);
-    if (uuid !== "" && !uuids.includes(uuid)) {
-      uuids.push(uuid);
-    }
-  }
-
-  return uuids;
-}
-
 describe("fetchItem", () => {
+  it("keeps language getters broad when languages are omitted", async () => {
+    const implicitString = MultilingualString.create("spa", "Etiqueta");
+    const explicitString = MultilingualString.create(
+      "eng",
+      "Label",
+      defineLanguages("eng", "spa"),
+    );
+    const result = fetchItem(RESOURCE_UUIDS[0]!, {
+      category: "resource",
+      fetch: async () => new Response("", { status: 500 }),
+    });
+
+    expectTypeOf(implicitString.getExactText)
+      .parameter(0)
+      .toEqualTypeOf<string>();
+    expectTypeOf(explicitString.getExactText)
+      .parameter(0)
+      .toEqualTypeOf<"eng" | "spa">();
+    expectTypeOf(result).toEqualTypeOf<
+      Promise<
+        | { item: Item<"resource", never, ReadonlyArray<string>>; error: null }
+        | { item: null; error: string }
+      >
+    >();
+    await expect(result).resolves.toStrictEqual({
+      item: null,
+      error: "Failed to fetch OCHRE data",
+    });
+  });
+
+  it("defines reusable language tuples without array branding", () => {
+    const languages = defineLanguages("eng", "spa");
+
+    expect(languages).toStrictEqual(["eng", "spa"]);
+    expectTypeOf(languages).toEqualTypeOf<readonly ["eng", "spa"]>();
+    expect(() => defineLanguages("english")).toThrow(
+      "Language code must be exactly 3 characters",
+    );
+  });
+
+  it("infers inline language arrays without a helper", async () => {
+    const result = fetchItem(RESOURCE_UUIDS[0]!, {
+      category: "resource",
+      languages: ["eng", "spa"],
+      fetch: async () => new Response("", { status: 500 }),
+    });
+
+    expectTypeOf(result).toEqualTypeOf<
+      Promise<
+        | {
+            item: Item<"resource", never, readonly ["eng", "spa"]>;
+            error: null;
+          }
+        | { item: null; error: string }
+      >
+    >();
+    await expect(result).resolves.toStrictEqual({
+      item: null,
+      error: "Failed to fetch OCHRE data",
+    });
+  });
+
   it("rejects itemCategory for non-hierarchy categories before fetching", async () => {
     let didFetch = false;
     const result = await fetchItem(RESOURCE_UUIDS[0]!, {
@@ -1228,7 +1273,7 @@ describe("fetchItem", () => {
       const uuid = RESOURCE_UUIDS[0]!;
       const result = await fetchItem(uuid, {
         category: "resource",
-        languages: withLanguages(TEST_LANGUAGES),
+        languages: TEST_LANGUAGES,
         isRichText: true,
       });
 
@@ -1265,12 +1310,9 @@ describe("item parser integration", () => {
   }
 
   it(
-    "discovers representative text items from MarkLogic and preserves their sections",
+    "fetches representative text items through the API and preserves their sections",
     async () => {
-      const textUuids = await fetchTextUuidsFromMarkLogic();
-      expect(textUuids.length).toBe(TEXT_SAMPLE_LIMIT);
-
-      for (const uuid of textUuids) {
+      for (const uuid of TEXT_UUIDS) {
         await expectUuidParsesAndMatchesRaw(uuid, "text");
       }
     },

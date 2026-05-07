@@ -102,11 +102,7 @@ import type {
 } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES } from "#/constants.js";
 import { MultilingualString } from "#/multilingual.js";
-import {
-  extractAliases,
-  parseXMLContent,
-  parseXMLString,
-} from "#/parsers/string.js";
+import { parseXMLContent, parseXMLString } from "#/parsers/string.js";
 
 type ParserOptions<T extends ReadonlyArray<string>> = {
   languages: T;
@@ -357,29 +353,10 @@ function parseIdentification<T extends ReadonlyArray<string>>(
     rawIdentification.abbreviation,
     options,
   );
-  const labelAliases =
-    isXMLContent(rawIdentification.label) ?
-      extractAliases(rawIdentification.label, {
-        isRichText: options.isRichText,
-      })
-    : null;
-  const abbreviationAliases =
-    (
-      rawIdentification.abbreviation != null &&
-      isXMLContent(rawIdentification.abbreviation)
-    ) ?
-      extractAliases(rawIdentification.abbreviation, {
-        isRichText: options.isRichText,
-      })
-    : null;
 
   return {
     label,
     abbreviation,
-    alias: {
-      label: labelAliases ?? [],
-      abbreviation: abbreviationAliases ?? [],
-    },
     code: parseStringLike(rawIdentification.code, { isRichText: false }),
     email: parseStringLike(rawIdentification.email, { isRichText: false }),
     website: parseStringLike(rawIdentification.website, { isRichText: false }),
@@ -394,7 +371,6 @@ function emptyIdentification<T extends ReadonlyArray<string>>(
       isRichText: options.isRichText,
     }),
     abbreviation: null,
-    alias: { label: [], abbreviation: [] },
     code: null,
     email: null,
     website: null,
