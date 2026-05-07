@@ -6,7 +6,7 @@ import type {
   XMLResource,
   XMLString,
   XMLText,
-} from "#/types/xml/types.js";
+} from "#/xml/types.js";
 import {
   PRESENTATION_ITEM_UUID,
   TEXT_ANNOTATION_TEXT_STYLING_HEADING_LEVEL_UUID,
@@ -350,6 +350,63 @@ describe("parseItem", () => {
     expect(propertyVariable.metadata.item?.category).toBe("propertyVariable");
     expect(propertyVariable.category).toBe("propertyVariable");
     expect(propertyVariable.type).toBe("link");
+  });
+
+  it("preserves repeated language entries and aliases on multilingual fields", () => {
+    const rawData: XMLData = {
+      result: {
+        ochre: {
+          uuid: "11000000-0000-4000-8000-000000000000",
+          belongsTo: "TEST",
+          uuidBelongsTo: "12000000-0000-4000-8000-000000000000",
+          publicationDateTime: PUBLICATION_DATE,
+          metadata: metadata("set"),
+          resource: [
+            {
+              uuid: "13000000-0000-4000-8000-000000000000",
+              publicationDateTime: PUBLICATION_DATE,
+              identification: {
+                label: {
+                  content: [
+                    { lang: "eng", string: [xmlString("Primary label")] },
+                    { lang: "eng", string: [xmlString("Secondary label")] },
+                    { lang: "spa", string: [xmlString("Etiqueta")] },
+                    { lang: "zxx", string: [xmlString("Alias one")] },
+                    { lang: "zxx", string: [xmlString("Alias two")] },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    const resource = parseItem(rawData, {
+      category: "resource",
+      languages: ["eng", "spa"] as const,
+      isRichText: true,
+    });
+
+    expect(resource.identification.label.getExactText("eng")).toBe(
+      "Primary label",
+    );
+    expect(resource.identification.label.getExactTexts("eng")).toStrictEqual([
+      "Primary label",
+      "Secondary label",
+    ]);
+    expect(resource.identification.label.getExactEntries("eng")).toStrictEqual([
+      { text: "Primary label", isPrimary: true },
+      { text: "Secondary label", isPrimary: false },
+    ]);
+    expect(resource.identification.label.getAliases()).toStrictEqual([
+      "Alias one",
+      "Alias two",
+    ]);
+    expect(resource.identification.alias.label).toStrictEqual([
+      "Alias one",
+      "Alias two",
+    ]);
   });
 });
 

@@ -53,7 +53,7 @@ import type {
   SpatialUnit,
   Text,
   Tree,
-} from "#/types/index.js";
+} from "#/types.js";
 import type {
   XMLBaseItem,
   XMLBibliography,
@@ -99,14 +99,14 @@ import type {
   XMLString,
   XMLText,
   XMLTree,
-} from "#/types/xml/types.js";
+} from "#/xml/types.js";
 import { DEFAULT_LANGUAGES } from "#/constants.js";
+import { MultilingualString } from "#/multilingual.js";
 import {
   extractAliases,
   parseXMLContent,
   parseXMLString,
 } from "#/parsers/string.js";
-import { MultilingualString } from "#/types/multilingual.js";
 
 type ParserOptions<T extends ReadonlyArray<string>> = {
   languages: T;
@@ -323,34 +323,10 @@ function parseContentLike<T extends ReadonlyArray<string>>(
     );
   }
 
-  const matchedContent: XMLContent["content"] = [];
-  for (const content of value.content) {
-    if (options.languages.includes(content.lang)) {
-      matchedContent.push(content);
-    }
-  }
-
-  if (matchedContent.length > 0) {
-    return parseXMLContent<T>(
-      { content: matchedContent },
-      { languages: options.languages, isRichText: options.isRichText },
-    );
-  }
-
-  const fallbackContent = value.content[0];
-  if (fallbackContent == null) {
-    return MultilingualString.empty(options.languages, {
-      isRichText: options.isRichText,
-    });
-  }
-
-  const fallbackLanguages = [fallbackContent.lang] as const;
-  const fallbackText = parseXMLContent(
-    { content: [fallbackContent] },
-    { languages: fallbackLanguages, isRichText: options.isRichText },
-  ).getText(fallbackContent.lang);
-
-  return multilingualFromText(fallbackText, options);
+  return parseXMLContent<T>(value, {
+    languages: options.languages,
+    isRichText: options.isRichText,
+  });
 }
 
 function parseRequiredContentLike<T extends ReadonlyArray<string>>(
@@ -401,8 +377,8 @@ function parseIdentification<T extends ReadonlyArray<string>>(
     label,
     abbreviation,
     alias: {
-      label: labelAliases?.[0] ?? null,
-      abbreviation: abbreviationAliases?.[0] ?? null,
+      label: labelAliases ?? [],
+      abbreviation: abbreviationAliases ?? [],
     },
     code: parseStringLike(rawIdentification.code, { isRichText: false }),
     email: parseStringLike(rawIdentification.email, { isRichText: false }),
@@ -418,7 +394,7 @@ function emptyIdentification<T extends ReadonlyArray<string>>(
       isRichText: options.isRichText,
     }),
     abbreviation: null,
-    alias: { label: null, abbreviation: null },
+    alias: { label: [], abbreviation: [] },
     code: null,
     email: null,
     website: null,

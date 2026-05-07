@@ -4,7 +4,7 @@ import type {
   XMLLink,
   XMLProperty,
   XMLString,
-} from "#/types/xml/types.js";
+} from "#/xml/types.js";
 import {
   PRESENTATION_ITEM_UUID,
   TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID,
@@ -15,12 +15,12 @@ import {
   TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
   TEXT_ANNOTATION_UUID,
 } from "#/constants.js";
+import { MultilingualString } from "#/multilingual.js";
 import {
   emailSchema,
   renderOptionsSchema,
   whitespaceSchema,
 } from "#/schemas.js";
-import { MultilingualString } from "#/types/multilingual.js";
 
 type XMLRichTextLink =
   | NonNullable<XMLLink["tree"]>[number]
@@ -578,309 +578,248 @@ export function parseXMLContent<V extends ReadonlyArray<string>>(
   options: { languages: V; isRichText: boolean },
 ): MultilingualString<V> {
   const { languages, isRichText } = options;
+  const aliases = extractAliases(item, { isRichText }) ?? [];
+  const content: Partial<Record<V[number], Array<string>>> = {};
 
-  let returnString = MultilingualString.empty(languages, { isRichText });
-
-  const languageStringItems = item.content.filter((content) =>
-    languages.includes(content.lang),
-  );
-  if (languageStringItems.length === 0) {
-    const fallbackContent = item.content[0];
-    if (fallbackContent == null) {
-      return returnString;
+  for (const contentItem of item.content) {
+    if (contentItem.lang === "zxx" || !languages.includes(contentItem.lang)) {
+      continue;
     }
 
-    const fallbackLanguages = [fallbackContent.lang] as const;
-    const fallbackText = parseXMLContent(
-      { content: [fallbackContent] },
-      { languages: fallbackLanguages, isRichText },
-    ).getText(fallbackContent.lang);
-
-    for (const language of languages) {
-      returnString = returnString.withText(language, fallbackText);
-    }
-
-    return returnString;
+    const language = contentItem.lang as V[number];
+    const entries = content[language] ?? [];
+    entries.push(parseXMLContentItem(contentItem, { languages, isRichText }));
+    content[language] = entries;
   }
 
-  for (const stringItems of languageStringItems) {
-    for (const stringItem of stringItems.string) {
-      if (stringItem.payload != null) {
-        const currentText = returnString.getExactText(stringItems.lang) ?? "";
-        const newText =
-          currentText +
-          parseXMLString(stringItem, { isRichText, parseEmail: true });
-        returnString = returnString.withText(stringItems.lang, newText);
-      } else if ("whitespace" in stringItem && stringItem.whitespace != null) {
-        const currentText = returnString.getExactText(stringItems.lang) ?? "";
-        const newText =
-          currentText +
-          parseWhitespace("", stringItem.whitespace, { isRichText });
-        returnString = returnString.withText(stringItems.lang, newText);
-      } else if ("string" in stringItem && stringItem.string != null) {
-        for (const innerStringItem of stringItem.string) {
-          if (innerStringItem.string != null) {
-            let linkString = "";
-            for (const innerInnerStringItem of innerStringItem.string) {
-              if (innerInnerStringItem.payload != null) {
-                linkString += parseXMLString(innerInnerStringItem, {
-                  isRichText,
-                  parseEmail: false,
-                });
-              }
-            }
-            if (innerStringItem.rend != null) {
-              linkString = parseRenderOptions(
-                linkString,
-                innerStringItem.rend,
-                { isRichText },
-              );
-            }
+  if (Object.keys(content).length > 0) {
+    return MultilingualString.fromEntries(content, languages, {
+      isRichText,
+      aliases,
+    });
+  }
 
-            const annotationMetadata = extractAnnotationMetadata(
-              innerStringItem,
-              { language: stringItems.lang, isRichText },
-            );
+  for (const contentItem of item.content) {
+    if (contentItem.lang === "zxx") {
+      continue;
+    }
 
-            const links: Array<XMLRichTextLink> = [];
-            for (const rawLinks of Object.values(innerStringItem.links ?? {})) {
-              if (!Array.isArray(rawLinks)) {
-                continue;
-              }
+    const fallbackLanguages = [contentItem.lang] as const;
+    const fallbackText = parseXMLContentItem(contentItem, {
+      languages: fallbackLanguages,
+      isRichText,
+    });
+    const fallbackContent: Partial<Record<V[number], Array<string>>> = {};
+    for (const language of languages) {
+      fallbackContent[language as V[number]] = [fallbackText];
+    }
 
-              for (const rawLink of rawLinks) {
-                if (isXMLRichTextLink(rawLink)) {
-                  links.push(rawLink);
-                }
-              }
+    return MultilingualString.fromEntries(fallbackContent, languages, {
+      isRichText,
+      aliases,
+    });
+  }
+
+  return MultilingualString.empty(languages, { isRichText, aliases });
+}
+
+function parseXMLContentItem<V extends ReadonlyArray<string>>(
+  contentItem: XMLContent["content"][number],
+  options: { languages: V; isRichText: boolean },
+): string {
+  const { languages, isRichText } = options;
+  let result = "";
+
+  for (const stringItem of contentItem.string) {
+    if (stringItem.payload != null) {
+      result += parseXMLString(stringItem, { isRichText, parseEmail: true });
+    } else if ("whitespace" in stringItem && stringItem.whitespace != null) {
+      result += parseWhitespace("", stringItem.whitespace, { isRichText });
+    } else if ("string" in stringItem && stringItem.string != null) {
+      for (const innerStringItem of stringItem.string) {
+        if (innerStringItem.string != null) {
+          let linkString = "";
+          for (const innerInnerStringItem of innerStringItem.string) {
+            if (innerInnerStringItem.payload != null) {
+              linkString += parseXMLString(innerInnerStringItem, {
+                isRichText,
+                parseEmail: false,
+              });
             }
-            if (links.length === 0) {
-              const currentText =
-                returnString.getExactText(stringItems.lang) ?? "";
-              const text = applyWhitespaceToResult(
-                wrapWithTextStyling(linkString, annotationMetadata.textStyling),
-                innerStringItem.whitespace,
-                { isRichText },
-              );
-              returnString = returnString.withText(
-                stringItems.lang,
-                currentText + text,
-              );
+          }
+          if (innerStringItem.rend != null) {
+            linkString = parseRenderOptions(linkString, innerStringItem.rend, {
+              isRichText,
+            });
+          }
+
+          const annotationMetadata = extractAnnotationMetadata(
+            innerStringItem,
+            { language: contentItem.lang, isRichText },
+          );
+
+          const links: Array<XMLRichTextLink> = [];
+          for (const rawLinks of Object.values(innerStringItem.links ?? {})) {
+            if (!Array.isArray(rawLinks)) {
               continue;
             }
 
-            for (const link of links) {
-              const linkContent =
-                link.identification != null ?
-                  "content" in link.identification.label ?
-                    parseXMLContent(link.identification.label, {
-                      languages,
-                      isRichText,
-                    })
-                  : MultilingualString.create(
-                      stringItems.lang,
-                      parseXMLString(link.identification.label, {
-                        isRichText,
-                        parseEmail: false,
-                      }),
-                      languages,
-                      { isRichText },
-                    )
-                : MultilingualString.create(stringItems.lang, "", languages, {
-                    isRichText,
-                  });
+            for (const rawLink of rawLinks) {
+              if (isXMLRichTextLink(rawLink)) {
+                links.push(rawLink);
+              }
+            }
+          }
+          if (links.length === 0) {
+            result += applyWhitespaceToResult(
+              wrapWithTextStyling(linkString, annotationMetadata.textStyling),
+              innerStringItem.whitespace,
+              { isRichText },
+            );
+            continue;
+          }
 
-              if ("type" in link && link.type != null) {
-                switch (link.type) {
-                  case "IIIF":
-                  case "image": {
-                    if ("rend" in link && link.rend === "inline") {
-                      const currentText =
-                        returnString.getExactText(stringItems.lang) ?? "";
-                      const component = createMDXComponent("inlineImage", {
-                        uuid: getLinkStringProperty(link, "uuid"),
-                        href: getLinkStringProperty(link, "href") ?? undefined,
-                        height:
-                          getLinkStringProperty(link, "height") ?? undefined,
-                        width:
-                          getLinkStringProperty(link, "width") ?? undefined,
-                        content:
-                          linkContent.getExactText(stringItems.lang) ?? "",
-                        text: linkString,
-                      });
-                      const newText =
-                        currentText +
-                        applyWhitespaceToResult(
-                          component,
-                          innerStringItem.whitespace,
-                          { isRichText },
-                        );
-                      returnString = returnString.withText(
-                        stringItems.lang,
-                        newText,
-                      );
-                    } else if (link.publicationDateTime != null) {
-                      const currentText =
-                        returnString.getExactText(stringItems.lang) ?? "";
-                      const component = createInternalLinkComponent({
-                        uuid: getLinkStringProperty(link, "uuid"),
-                        text: linkString,
-                        content:
-                          linkContent.getExactText(stringItems.lang) ?? "",
-                        annotationMetadata,
-                      });
-                      const newText =
-                        currentText +
-                        applyWhitespaceToResult(
-                          component,
-                          innerStringItem.whitespace,
-                          { isRichText },
-                        );
-                      returnString = returnString.withText(
-                        stringItems.lang,
-                        newText,
-                      );
-                    } else {
-                      const currentText =
-                        returnString.getExactText(stringItems.lang) ?? "";
-                      const component = createMDXComponent("tooltipSpan", {
-                        uuid: getLinkStringProperty(link, "uuid"),
-                        text: linkString,
-                        content:
-                          linkContent.getExactText(stringItems.lang) ?? "",
-                      });
-                      const newText =
-                        currentText +
-                        applyWhitespaceToResult(
-                          component,
-                          innerStringItem.whitespace,
-                          { isRichText },
-                        );
-                      returnString = returnString.withText(
-                        stringItems.lang,
-                        newText,
-                      );
-                    }
-                    break;
-                  }
-                  case "internalDocument": {
-                    const currentText =
-                      returnString.getExactText(stringItems.lang) ?? "";
+          for (const link of links) {
+            const linkContent =
+              link.identification != null ?
+                "content" in link.identification.label ?
+                  parseXMLContent(link.identification.label, {
+                    languages,
+                    isRichText,
+                  })
+                : MultilingualString.create(
+                    contentItem.lang,
+                    parseXMLString(link.identification.label, {
+                      isRichText,
+                      parseEmail: false,
+                    }),
+                    languages,
+                    { isRichText },
+                  )
+              : MultilingualString.create(contentItem.lang, "", languages, {
+                  isRichText,
+                });
+            const content = linkContent.getExactText(contentItem.lang) ?? "";
+
+            if ("type" in link && link.type != null) {
+              switch (link.type) {
+                case "IIIF":
+                case "image": {
+                  if ("rend" in link && link.rend === "inline") {
+                    const component = createMDXComponent("inlineImage", {
+                      uuid: getLinkStringProperty(link, "uuid"),
+                      href: getLinkStringProperty(link, "href") ?? undefined,
+                      height:
+                        getLinkStringProperty(link, "height") ?? undefined,
+                      width: getLinkStringProperty(link, "width") ?? undefined,
+                      content,
+                      text: linkString,
+                    });
+                    result += applyWhitespaceToResult(
+                      component,
+                      innerStringItem.whitespace,
+                      { isRichText },
+                    );
+                  } else if (link.publicationDateTime != null) {
                     const component = createInternalLinkComponent({
                       uuid: getLinkStringProperty(link, "uuid"),
                       text: linkString,
-                      content: linkContent.getExactText(stringItems.lang) ?? "",
+                      content,
                       annotationMetadata,
-                      propertyMetadata:
-                        getFirstPropertyMetadata(innerStringItem),
                     });
-                    const newText =
-                      currentText +
-                      applyWhitespaceToResult(
-                        component,
-                        innerStringItem.whitespace,
-                        { isRichText },
-                      );
-                    returnString = returnString.withText(
-                      stringItems.lang,
-                      newText,
+                    result += applyWhitespaceToResult(
+                      component,
+                      innerStringItem.whitespace,
+                      { isRichText },
                     );
-                    break;
-                  }
-                  case "externalDocument": {
-                    const currentText =
-                      returnString.getExactText(stringItems.lang) ?? "";
-                    const component =
-                      link.publicationDateTime != null ?
-                        createMDXComponent("documentLink", {
-                          uuid: getLinkStringProperty(link, "uuid"),
-                          text: linkString,
-                          content:
-                            linkContent.getExactText(stringItems.lang) ?? "",
-                        })
-                      : createMDXComponent("tooltipSpan", {
-                          uuid: getLinkStringProperty(link, "uuid"),
-                          text: linkString,
-                          content:
-                            linkContent.getExactText(stringItems.lang) ?? "",
-                        });
-                    const newText =
-                      currentText +
-                      applyWhitespaceToResult(
-                        component,
-                        innerStringItem.whitespace,
-                        { isRichText },
-                      );
-                    returnString = returnString.withText(
-                      stringItems.lang,
-                      newText,
-                    );
-                    break;
-                  }
-                  case "webpage": {
-                    const currentText =
-                      returnString.getExactText(stringItems.lang) ?? "";
-                    const component = createMDXComponent("externalLink", {
+                  } else {
+                    const component = createMDXComponent("tooltipSpan", {
                       uuid: getLinkStringProperty(link, "uuid"),
-                      href: getLinkStringProperty(link, "href") ?? "#",
                       text: linkString,
-                      content: linkContent.getExactText(stringItems.lang) ?? "",
+                      content,
                     });
-                    const newText =
-                      currentText +
-                      applyWhitespaceToResult(
-                        component,
-                        innerStringItem.whitespace,
-                        { isRichText },
-                      );
-                    returnString = returnString.withText(
-                      stringItems.lang,
-                      newText,
+                    result += applyWhitespaceToResult(
+                      component,
+                      innerStringItem.whitespace,
+                      { isRichText },
                     );
-                    break;
                   }
+                  break;
                 }
-              } else {
-                if (link.publicationDateTime != null) {
-                  const currentText =
-                    returnString.getExactText(stringItems.lang) ?? "";
+                case "internalDocument": {
                   const component = createInternalLinkComponent({
                     uuid: getLinkStringProperty(link, "uuid"),
                     text: linkString,
-                    content: linkContent.getExactText(stringItems.lang) ?? "",
+                    content,
                     annotationMetadata,
+                    propertyMetadata: getFirstPropertyMetadata(innerStringItem),
                   });
-                  const newText =
-                    currentText +
-                    applyWhitespaceToResult(
-                      component,
-                      innerStringItem.whitespace,
-                      { isRichText },
-                    );
-                  returnString = returnString.withText(
-                    stringItems.lang,
-                    newText,
+                  result += applyWhitespaceToResult(
+                    component,
+                    innerStringItem.whitespace,
+                    { isRichText },
                   );
-                } else {
-                  const currentText =
-                    returnString.getExactText(stringItems.lang) ?? "";
-                  const component = createMDXComponent("tooltipSpan", {
-                    uuid: getLinkStringProperty(link, "uuid"),
-                    text: linkString,
-                    content: linkContent.getExactText(stringItems.lang) ?? "",
-                  });
-                  const newText =
-                    currentText +
-                    applyWhitespaceToResult(
-                      component,
-                      innerStringItem.whitespace,
-                      { isRichText },
-                    );
-                  returnString = returnString.withText(
-                    stringItems.lang,
-                    newText,
-                  );
+                  break;
                 }
+                case "externalDocument": {
+                  const component =
+                    link.publicationDateTime != null ?
+                      createMDXComponent("documentLink", {
+                        uuid: getLinkStringProperty(link, "uuid"),
+                        text: linkString,
+                        content,
+                      })
+                    : createMDXComponent("tooltipSpan", {
+                        uuid: getLinkStringProperty(link, "uuid"),
+                        text: linkString,
+                        content,
+                      });
+                  result += applyWhitespaceToResult(
+                    component,
+                    innerStringItem.whitespace,
+                    { isRichText },
+                  );
+                  break;
+                }
+                case "webpage": {
+                  const component = createMDXComponent("externalLink", {
+                    uuid: getLinkStringProperty(link, "uuid"),
+                    href: getLinkStringProperty(link, "href") ?? "#",
+                    text: linkString,
+                    content,
+                  });
+                  result += applyWhitespaceToResult(
+                    component,
+                    innerStringItem.whitespace,
+                    { isRichText },
+                  );
+                  break;
+                }
+              }
+            } else {
+              if (link.publicationDateTime != null) {
+                const component = createInternalLinkComponent({
+                  uuid: getLinkStringProperty(link, "uuid"),
+                  text: linkString,
+                  content,
+                  annotationMetadata,
+                });
+                result += applyWhitespaceToResult(
+                  component,
+                  innerStringItem.whitespace,
+                  { isRichText },
+                );
+              } else {
+                const component = createMDXComponent("tooltipSpan", {
+                  uuid: getLinkStringProperty(link, "uuid"),
+                  text: linkString,
+                  content,
+                });
+                result += applyWhitespaceToResult(
+                  component,
+                  innerStringItem.whitespace,
+                  { isRichText },
+                );
               }
             }
           }
@@ -889,7 +828,7 @@ export function parseXMLContent<V extends ReadonlyArray<string>>(
     }
   }
 
-  return returnString;
+  return result;
 }
 
 /**
@@ -907,17 +846,20 @@ export function extractAliases(
     return null;
   }
 
-  const aliasItems = content.content.find((item) => item.lang === "zxx");
-  if (aliasItems == null) {
-    return null;
+  const aliases: Array<string> = [];
+  for (const contentItem of content.content) {
+    if (contentItem.lang !== "zxx") {
+      continue;
+    }
+
+    const alias = parseXMLContentItem(contentItem, {
+      languages: ["zxx"] as const,
+      isRichText: options.isRichText,
+    });
+    if (alias !== "") {
+      aliases.push(alias);
+    }
   }
 
-  const aliases = parseXMLContent(
-    { content: [aliasItems] },
-    { languages: ["zxx"], isRichText: options.isRichText },
-  );
-
-  return aliases.getExactText("zxx") != null ?
-      [aliases.getExactText("zxx")!]
-    : null;
+  return aliases.length > 0 ? aliases : null;
 }

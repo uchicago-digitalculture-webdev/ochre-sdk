@@ -8,13 +8,13 @@ import type {
   HierarchyItemDataCategory,
   Item,
   SetItemDataCategory,
-} from "#/types/index.js";
-import type { XMLData } from "#/types/xml/types.js";
+} from "#/types.js";
+import type { XMLData } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseItem } from "#/parsers/index.js";
 import { iso639_3Schema, uuidSchema } from "#/schemas.js";
-import { XMLData as XMLDataSchema } from "#/types/xml/schemas.js";
 import { logIssues } from "#/utils.js";
+import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
 
 /**
  * Branded type to ensure languages have been validated through withLanguages()

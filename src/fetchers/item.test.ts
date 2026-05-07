@@ -10,7 +10,7 @@ import type {
   SetItem,
   SetItemDataCategory,
   SingleHierarchyProperty,
-} from "#/types/index.js";
+} from "#/types.js";
 import type {
   XMLBaseItem,
   XMLBibliography,
@@ -34,7 +34,7 @@ import type {
   XMLString,
   XMLText,
   XMLTree,
-} from "#/types/xml/types.js";
+} from "#/xml/types.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { fetchItem, withLanguages } from "#/fetchers/item.js";
 import { db } from "#/marklogic.js";
@@ -44,7 +44,7 @@ import {
   parseXMLContent,
   parseXMLString,
 } from "#/parsers/string.js";
-import { XMLData as XMLDataSchema } from "#/types/xml/schemas.js";
+import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
 
 const LIVE_TEST_TIMEOUT_MS = 180_000;
 const TEST_LANGUAGES = ["eng"] as const;
@@ -429,9 +429,9 @@ function expectIdentificationMatchesRaw(
       extractAliases(rawIdentification.abbreviation, { isRichText: true })
     : null;
 
-  expect(parsedIdentification.alias.label).toBe(labelAliases?.[0] ?? null);
-  expect(parsedIdentification.alias.abbreviation).toBe(
-    abbreviationAliases?.[0] ?? null,
+  expect(parsedIdentification.alias.label).toStrictEqual(labelAliases ?? []);
+  expect(parsedIdentification.alias.abbreviation).toStrictEqual(
+    abbreviationAliases ?? [],
   );
 }
 

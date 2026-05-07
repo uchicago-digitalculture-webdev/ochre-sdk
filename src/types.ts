@@ -1,5 +1,6 @@
-import type { MultilingualString } from "#/types/multilingual.js";
-import type { Prettify } from "#/types/utils.js";
+import type { MultilingualString } from "#/multilingual.js";
+
+type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
 /**
  * The category of an item in OCHRE
@@ -77,7 +78,7 @@ export type ContextDataCategory = Exclude<
 export type Identification<T extends ReadonlyArray<string>> = {
   label: MultilingualString<T>;
   abbreviation: MultilingualString<T> | null;
-  alias: { label: string | null; abbreviation: string | null };
+  alias: { label: Array<string>; abbreviation: Array<string> };
   code: string | null;
   email: string | null;
   website: string | null;

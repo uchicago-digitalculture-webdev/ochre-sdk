@@ -48,7 +48,7 @@ import type {
   XMLString as XMLStringType,
   XMLText as XMLTextType,
   XMLTree as XMLTreeType,
-} from "#/types/xml/types.js";
+} from "#/xml/types.js";
 import { isPseudoUuid } from "#/utils.js";
 
 const DATETIME_REGEX = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}$/;
