@@ -14,6 +14,7 @@ export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
   "resource",
   "text",
   "set",
+  "dictionaryUnit",
   "variable",
   "property",
   "value",

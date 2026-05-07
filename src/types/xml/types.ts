@@ -8,6 +8,7 @@ export type XMLDataCategory =
   | "propertyVariable"
   | "variable"
   | "propertyValue"
+  | "value"
   | "text"
   | "resource"
   | "set";
@@ -301,6 +302,93 @@ export type XMLBibliography = Partial<XMLBaseItem> & {
   bibliography?: Array<XMLBibliography>;
 };
 
+export type XMLLinkedBaseItem = Partial<Omit<XMLBaseItem, "uuid">> & {
+  uuid: string;
+};
+
+export type XMLLinkedTree = XMLLinkedBaseItem & { type?: string };
+
+export type XMLLinkedSet = XMLLinkedBaseItem & { type?: string };
+
+export type XMLLinkedBibliography = XMLLinkedBaseItem & {
+  type?: string;
+  zoteroId?: string;
+  sourceDocument?: XMLBibliography["sourceDocument"];
+  image?: XMLImage;
+  publicationInfo?: {
+    publishers?:
+      | { publisher: Array<XMLLinkedPerson> }
+      | { publishers: { person: Array<XMLLinkedPerson> } };
+    startDate?: {
+      month?: XMLNumber | XMLString;
+      year?: XMLNumber | XMLString;
+      day?: XMLNumber | XMLString;
+    };
+  };
+  entryInfo?: XMLBibliography["entryInfo"];
+  citationDetails?: string;
+  citationFormat?: XMLString | string;
+  citationFormatSpan?: XMLString;
+  referenceFormatDiv?: XMLString;
+  source?: XMLLink | XMLDataItem;
+  authors?: { person: Array<XMLLinkedPerson> };
+  periods?: { period: Array<XMLLinkedPeriod> };
+  properties?: { property: Array<XMLProperty> };
+};
+
+export type XMLLinkedConcept = XMLLinkedBaseItem & {
+  image?: XMLImage;
+  coordinates?: XMLCoordinates;
+};
+
+export type XMLLinkedSpatialUnit = XMLLinkedBaseItem & {
+  image?: XMLImage;
+  coordinates?: XMLCoordinates;
+};
+
+export type XMLLinkedPeriod = XMLLinkedBaseItem & {
+  type?: string;
+  coordinates?: XMLCoordinates;
+};
+
+export type XMLLinkedPerson = XMLLinkedBaseItem & {
+  type?: string;
+  coordinates?: XMLCoordinates;
+};
+
+export type XMLLinkedPropertyVariable = XMLLinkedBaseItem & {
+  type?: string;
+  coordinates?: XMLCoordinates;
+};
+
+export type XMLLinkedPropertyValue = XMLLinkedBaseItem & {
+  coordinates?: XMLCoordinates;
+};
+
+export type XMLLinkedResource = XMLLinkedBaseItem & {
+  type?: string;
+  date?: string | XMLString;
+  href?: string;
+  fileFormat?: string;
+  fileSize?: XMLNumber;
+  rend?: "inline";
+  isPrimary?: XMLBoolean;
+  height?: XMLNumber;
+  width?: XMLNumber;
+  image?: XMLImage;
+  coordinates?: XMLCoordinates;
+};
+
+export type XMLLinkedText = XMLLinkedBaseItem & {
+  type?: string;
+  text?: string;
+  language?: string;
+  image?: XMLImage;
+  coordinates?: XMLCoordinates;
+};
+
+export type XMLDictionaryUnit = XMLLinkedBaseItem;
+
 export type XMLInterpretation = {
   interpretationNo: XMLNumber;
   date?: string;
@@ -500,19 +588,20 @@ export type XMLSet = XMLBaseItem & {
 };
 
 export type XMLLink = {
-  tree?: Array<XMLTree>;
-  bibliography?: Array<XMLBibliography>;
-  concept?: Array<XMLConcept>;
-  spatialUnit?: Array<XMLSpatialUnit>;
-  period?: Array<XMLPeriod>;
-  person?: Array<XMLPerson>;
-  propertyVariable?: Array<XMLPropertyVariable>;
-  variable?: Array<XMLPropertyVariable>;
-  propertyValue?: Array<XMLPropertyValue>;
-  resource?: Array<XMLResource>;
-  text?: Array<XMLText>;
-  set?: Array<XMLSet>;
-  dictionaryUnit?: unknown;
+  tree?: Array<XMLLinkedTree>;
+  bibliography?: Array<XMLLinkedBibliography>;
+  concept?: Array<XMLLinkedConcept>;
+  spatialUnit?: Array<XMLLinkedSpatialUnit>;
+  period?: Array<XMLLinkedPeriod>;
+  person?: Array<XMLLinkedPerson>;
+  propertyVariable?: Array<XMLLinkedPropertyVariable>;
+  variable?: Array<XMLLinkedPropertyVariable>;
+  propertyValue?: Array<XMLLinkedPropertyValue>;
+  value?: Array<XMLLinkedPropertyValue>;
+  resource?: Array<XMLLinkedResource>;
+  text?: Array<XMLLinkedText>;
+  set?: Array<XMLLinkedSet>;
+  dictionaryUnit?: Array<XMLDictionaryUnit>;
 };
 
 export type XMLDataItem =
@@ -525,6 +614,7 @@ export type XMLDataItem =
   | { propertyVariable: Array<XMLPropertyVariable> }
   | { variable: Array<XMLPropertyVariable> }
   | { propertyValue: Array<XMLPropertyValue> }
+  | { value: Array<XMLPropertyValue> }
   | { resource: Array<XMLResource> }
   | { text: Array<XMLText> }
   | { set: Array<XMLSet> };

@@ -183,6 +183,96 @@ describe("parseItem", () => {
     ).toThrow("Expected Tree items to contain one category");
   });
 
+  it("parses links as abridged item links instead of full nested items", () => {
+    const rawData: XMLData = {
+      result: {
+        ochre: {
+          uuid: "a1000000-0000-4000-8000-000000000000",
+          belongsTo: "TEST",
+          uuidBelongsTo: "a2000000-0000-4000-8000-000000000000",
+          publicationDateTime: PUBLICATION_DATE,
+          metadata: metadata("set"),
+          resource: [
+            {
+              uuid: "a3000000-0000-4000-8000-000000000000",
+              publicationDateTime: PUBLICATION_DATE,
+              identification: identification({ eng: "Resource" }),
+              links: {
+                resource: [
+                  {
+                    uuid: "a4000000-0000-4000-8000-000000000000",
+                    publicationDateTime: PUBLICATION_DATE,
+                    type: "image",
+                    href: "https://example.com/image.jpg",
+                    fileFormat: "image/jpeg",
+                    fileSize: "42",
+                    rend: "inline",
+                    isPrimary: "true",
+                    height: "120",
+                    width: "90",
+                    identification: identification({ eng: "Linked image" }),
+                  },
+                ],
+                value: [
+                  {
+                    uuid: "a5000000-0000-4000-8000-000000000000",
+                    identification: identification({ eng: "Linked value" }),
+                  },
+                ],
+                dictionaryUnit: [
+                  {
+                    uuid: "a6000000-0000-4000-8000-000000000000",
+                    identification: identification({
+                      eng: "Linked dictionary unit",
+                    }),
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    const parsedResource = parseItem(rawData, {
+      category: "resource",
+      languages: ["eng"] as const,
+      isRichText: true,
+    });
+
+    expect(parsedResource.links).toHaveLength(3);
+    let linkedResource = parsedResource.links[0]!;
+    for (const link of parsedResource.links) {
+      if (link.category === "resource") {
+        linkedResource = link;
+        break;
+      }
+    }
+    expect(linkedResource.category).toBe("resource");
+    expect(Object.hasOwn(linkedResource, "links")).toBe(false);
+    expect(Object.hasOwn(linkedResource, "items")).toBe(false);
+    if (linkedResource.category !== "resource") {
+      throw new Error("Expected resource item link");
+    }
+    expect(linkedResource.type).toBe("image");
+    expect(linkedResource.href).toBe("https://example.com/image.jpg");
+    expect(linkedResource.fileSize).toBe(42);
+    expect(linkedResource.isInline).toBe(true);
+    expect(linkedResource.isPrimary).toBe(true);
+    expect(linkedResource.height).toBe(120);
+    expect(linkedResource.width).toBe(90);
+    expect(linkedResource.identification.label.getText("eng")).toBe(
+      "Linked image",
+    );
+
+    const linkedCategories: Array<string> = [];
+    for (const link of parsedResource.links) {
+      linkedCategories.push(link.category);
+    }
+    expect(linkedCategories).toContain("propertyValue");
+    expect(linkedCategories).toContain("dictionaryUnit");
+  });
+
   it("preserves mixed item categories for sets", () => {
     const rawData: XMLData = {
       result: {

@@ -1,7 +1,10 @@
 import { parseISO } from "date-fns";
 import type {
   BaseItem,
+  BaseItemLink,
   Bibliography,
+  BibliographyEntryInfo,
+  BibliographySourceDocument,
   Concept,
   Context,
   ContextDataCategory,
@@ -22,6 +25,9 @@ import type {
   ImageMapArea,
   Interpretation,
   Item,
+  ItemLink,
+  ItemLinkCategory,
+  ItemLinks,
   ItemsDataCategory,
   Metadata,
   Note,
@@ -58,8 +64,8 @@ import type {
   XMLCoordinate,
   XMLCoordinates,
   XMLData,
-  XMLDataCategory,
   XMLDataItem,
+  XMLDictionaryUnit,
   XMLEvent,
   XMLHeading,
   XMLIdentification,
@@ -68,6 +74,17 @@ import type {
   XMLImageMapArea,
   XMLInterpretation,
   XMLLink,
+  XMLLinkedBibliography,
+  XMLLinkedConcept,
+  XMLLinkedPeriod,
+  XMLLinkedPerson,
+  XMLLinkedPropertyValue,
+  XMLLinkedPropertyVariable,
+  XMLLinkedResource,
+  XMLLinkedSet,
+  XMLLinkedSpatialUnit,
+  XMLLinkedText,
+  XMLLinkedTree,
   XMLNote,
   XMLObservation,
   XMLPeriod,
@@ -113,9 +130,27 @@ type XMLItemHierarchy = Partial<{
   propertyVariable: Array<XMLPropertyVariable>;
   variable: Array<XMLPropertyVariable>;
   propertyValue: Array<XMLPropertyValueItem>;
+  value: Array<XMLPropertyValueItem>;
   resource: Array<XMLResource | { resource: Array<XMLResource> }>;
   text: Array<XMLText>;
   set: Array<XMLSet>;
+}>;
+
+type XMLItemLinkHierarchy = Partial<{
+  tree: Array<XMLLinkedTree>;
+  bibliography: Array<XMLLinkedBibliography>;
+  concept: Array<XMLLinkedConcept>;
+  spatialUnit: Array<XMLLinkedSpatialUnit>;
+  period: Array<XMLLinkedPeriod>;
+  person: Array<XMLLinkedPerson>;
+  propertyVariable: Array<XMLLinkedPropertyVariable>;
+  variable: Array<XMLLinkedPropertyVariable>;
+  propertyValue: Array<XMLLinkedPropertyValue>;
+  value: Array<XMLLinkedPropertyValue>;
+  resource: Array<XMLLinkedResource | { resource: Array<XMLLinkedResource> }>;
+  text: Array<XMLLinkedText>;
+  set: Array<XMLLinkedSet>;
+  dictionaryUnit: Array<XMLDictionaryUnit>;
 }>;
 
 type RawOchre = XMLData["result"]["ochre"];
@@ -552,14 +587,26 @@ function parseBaseItem<U extends DataCategory, T extends ReadonlyArray<string>>(
   };
 }
 
-function normalizeCategory(
-  category: XMLDataCategory | DataCategory | undefined,
-): DataCategory | null {
+function normalizeCategory(category: string | undefined): DataCategory | null {
   if (category == null) {
     return null;
   }
 
-  return category === "variable" ? "propertyVariable" : category;
+  if (category === "variable") {
+    return "propertyVariable";
+  }
+
+  if (category === "value") {
+    return "propertyValue";
+  }
+
+  for (const dataCategory of SET_ITEM_DATA_CATEGORIES) {
+    if (category === dataCategory) {
+      return dataCategory;
+    }
+  }
+
+  return null;
 }
 
 function isHeadingDataCategory(
@@ -607,6 +654,12 @@ function inferItemCategories(
     if (category === "propertyVariable") {
       pushCategoryIfPresent(categories, category, hierarchy.propertyVariable);
       pushCategoryIfPresent(categories, category, hierarchy.variable);
+      continue;
+    }
+
+    if (category === "propertyValue") {
+      pushCategoryIfPresent(categories, category, hierarchy.propertyValue);
+      pushCategoryIfPresent(categories, category, hierarchy.value);
       continue;
     }
 
@@ -1167,6 +1220,17 @@ function parseItemHierarchy<T extends ReadonlyArray<string>>(
         >,
       );
     }
+
+    for (const propertyValue of hierarchy.value ?? []) {
+      items.push(
+        parsePropertyValue(propertyValue, options) as Item<
+          DataCategory,
+          SetItemDataCategory,
+          T,
+          "nested"
+        >,
+      );
+    }
   }
 
   if (shouldParse("resource")) {
@@ -1326,6 +1390,16 @@ function parseSetItemHierarchy<T extends ReadonlyArray<string>>(
         ) as SetItem<SetItemDataCategory, T>,
       );
     }
+
+    for (const propertyValue of hierarchy.value ?? []) {
+      items.push(
+        withSingleHierarchyProperties(
+          parsePropertyValue(propertyValue, options),
+          propertyValue.properties,
+          options,
+        ) as SetItem<SetItemDataCategory, T>,
+      );
+    }
   }
 
   if (shouldParse("resource")) {
@@ -1363,21 +1437,385 @@ function parseSetItemHierarchy<T extends ReadonlyArray<string>>(
   return items;
 }
 
+function normalizeTreeLinkItemsCategory(
+  type: string | undefined,
+): ItemsDataCategory | null {
+  const category = normalizeCategory(type);
+  if (category == null || category === "tree") {
+    return null;
+  }
+
+  return category;
+}
+
+function normalizeSetLinkItemsCategory(
+  type: string | undefined,
+): Array<SetItemDataCategory> | null {
+  const category = normalizeCategory(type);
+  return category == null ? null : [category];
+}
+
+function parseBaseItemLink<
+  U extends ItemLinkCategory,
+  T extends ReadonlyArray<string>,
+>(
+  category: U,
+  rawItem: {
+    uuid?: string;
+    publicationDateTime?: string;
+    context?: XMLContext;
+    date?: string | XMLString;
+    identification?: XMLIdentification;
+    description?: XMLContent;
+  },
+  options: ParserOptions<T>,
+): BaseItemLink<U, T> {
+  return {
+    uuid: rawItem.uuid ?? "",
+    category,
+    publicationDateTime: parseOptionalDate(rawItem.publicationDateTime),
+    context: rawItem.context == null ? null : parseContext(rawItem.context),
+    date: parseOptionalDateLike(rawItem.date),
+    identification: parseOptionalIdentification(
+      rawItem.identification,
+      options,
+    ),
+    description: parseContentLike(rawItem.description, options),
+  };
+}
+
+function parseBibliographySourceDocument(
+  sourceDocument: XMLBibliography["sourceDocument"] | undefined,
+): BibliographySourceDocument | null {
+  if (sourceDocument == null) {
+    return null;
+  }
+
+  return {
+    uuid: sourceDocument.uuid,
+    content: sourceDocument.payload,
+    href: sourceDocument.href ?? null,
+    publicationDateTime: parseOptionalDate(sourceDocument.publicationDateTime),
+  };
+}
+
+function parseBibliographyStartDate(
+  startDate:
+    | NonNullable<NonNullable<XMLBibliography["publicationInfo"]>["startDate"]>
+    | undefined,
+): Date | null {
+  if (startDate == null) {
+    return null;
+  }
+
+  return new Date(
+    parseNumberOrZero(startDate.year),
+    Math.max(parseNumberOrZero(startDate.month) - 1, 0),
+    parseNumberOrZero(startDate.day),
+  );
+}
+
+function parseBibliographyEntryInfo(
+  entryInfo: XMLBibliography["entryInfo"] | undefined,
+): BibliographyEntryInfo | null {
+  if (
+    entryInfo == null ||
+    (entryInfo.payload == null &&
+      entryInfo.startIssue == null &&
+      entryInfo.startVolume == null &&
+      entryInfo.startPage == null &&
+      entryInfo.endPage == null)
+  ) {
+    return null;
+  }
+
+  return {
+    content: entryInfo.payload ?? null,
+    startIssue: entryInfo.startIssue ?? "",
+    startVolume: entryInfo.startVolume ?? "",
+    startPage: entryInfo.startPage ?? "",
+    endPage: entryInfo.endPage ?? "",
+  };
+}
+
+function firstItemLink<
+  U extends ItemLinkCategory,
+  T extends ReadonlyArray<string>,
+>(
+  rawLinks: XMLLink | XMLDataItem | undefined,
+  options: ParserOptions<T>,
+): ItemLink<U, T> | null {
+  const links = parseLinks(rawLinks, options);
+  const link = links[0];
+  return link == null ? null : (link as ItemLink<U, T>);
+}
+
+function parsePersonItemLinks<T extends ReadonlyArray<string>>(
+  rawPersons: Array<XMLLinkedPerson> | undefined,
+  options: ParserOptions<T>,
+): Array<ItemLink<"person", T>> {
+  const people: Array<ItemLink<"person", T>> = [];
+  for (const person of rawPersons ?? []) {
+    people.push(parsePersonItemLink(person, options));
+  }
+
+  return people;
+}
+
+function parsePeriodItemLinks<T extends ReadonlyArray<string>>(
+  rawPeriods: Array<XMLLinkedPeriod> | undefined,
+  options: ParserOptions<T>,
+): Array<ItemLink<"period", T>> {
+  const periods: Array<ItemLink<"period", T>> = [];
+  for (const period of rawPeriods ?? []) {
+    periods.push(parsePeriodItemLink(period, options));
+  }
+
+  return periods;
+}
+
+function parseTreeItemLink<T extends ReadonlyArray<string>>(
+  rawTree: XMLLinkedTree,
+  options: ParserOptions<T>,
+): ItemLink<"tree", T> {
+  return {
+    ...parseBaseItemLink("tree", rawTree, options),
+    type: rawTree.type ?? null,
+    itemsCategory: normalizeTreeLinkItemsCategory(rawTree.type),
+  };
+}
+
+function parseSetItemLink<T extends ReadonlyArray<string>>(
+  rawSet: XMLLinkedSet,
+  options: ParserOptions<T>,
+): ItemLink<"set", T> {
+  return {
+    ...parseBaseItemLink("set", rawSet, options),
+    type: rawSet.type ?? null,
+    itemsCategory: normalizeSetLinkItemsCategory(rawSet.type),
+  };
+}
+
+function parseBibliographyItemLink<T extends ReadonlyArray<string>>(
+  rawBibliography: XMLLinkedBibliography,
+  options: ParserOptions<T>,
+): ItemLink<"bibliography", T> {
+  return {
+    ...parseBaseItemLink("bibliography", rawBibliography, options),
+    type: rawBibliography.type ?? null,
+    zoteroId: rawBibliography.zoteroId ?? null,
+    citationDetails: rawBibliography.citationDetails ?? null,
+    citationFormat: parseContentLike(rawBibliography.citationFormat, options),
+    citationFormatSpan: parseStringLike(rawBibliography.citationFormatSpan, {
+      isRichText: options.isRichText,
+    }),
+    referenceFormatDiv: parseStringLike(rawBibliography.referenceFormatDiv, {
+      isRichText: options.isRichText,
+    }),
+    image: parseImage(rawBibliography.image, options),
+    sourceDocument: parseBibliographySourceDocument(
+      rawBibliography.sourceDocument,
+    ),
+    publicationInfo:
+      rawBibliography.publicationInfo == null ?
+        null
+      : {
+          publishers: parsePersonItemLinks(
+            rawBibliography.publicationInfo.publishers == null ? undefined
+            : "publisher" in rawBibliography.publicationInfo.publishers ?
+              rawBibliography.publicationInfo.publishers.publisher
+            : rawBibliography.publicationInfo.publishers.publishers.person,
+            options,
+          ),
+          startDate: parseBibliographyStartDate(
+            rawBibliography.publicationInfo.startDate,
+          ),
+        },
+    entryInfo: parseBibliographyEntryInfo(rawBibliography.entryInfo),
+    source: firstItemLink<ItemsDataCategory, T>(
+      rawBibliography.source,
+      options,
+    ),
+    authors: parsePersonItemLinks(rawBibliography.authors?.person, options),
+    periods: parsePeriodItemLinks(rawBibliography.periods?.period, options),
+    properties: parseProperties(rawBibliography.properties, options),
+  };
+}
+
+function parseConceptItemLink<T extends ReadonlyArray<string>>(
+  rawConcept: XMLLinkedConcept,
+  options: ParserOptions<T>,
+): ItemLink<"concept", T> {
+  return {
+    ...parseBaseItemLink("concept", rawConcept, options),
+    image: parseImage(rawConcept.image, options),
+    coordinates: parseCoordinates(rawConcept.coordinates, options),
+  };
+}
+
+function parseSpatialUnitItemLink<T extends ReadonlyArray<string>>(
+  rawSpatialUnit: XMLLinkedSpatialUnit,
+  options: ParserOptions<T>,
+): ItemLink<"spatialUnit", T> {
+  return {
+    ...parseBaseItemLink("spatialUnit", rawSpatialUnit, options),
+    image: parseImage(rawSpatialUnit.image, options),
+    coordinates: parseCoordinates(rawSpatialUnit.coordinates, options),
+  };
+}
+
+function parsePeriodItemLink<T extends ReadonlyArray<string>>(
+  rawPeriod: XMLLinkedPeriod,
+  options: ParserOptions<T>,
+): ItemLink<"period", T> {
+  return {
+    ...parseBaseItemLink("period", rawPeriod, options),
+    type: rawPeriod.type ?? null,
+    coordinates: parseCoordinates(rawPeriod.coordinates, options),
+  };
+}
+
+function parsePersonItemLink<T extends ReadonlyArray<string>>(
+  rawPerson: XMLLinkedPerson,
+  options: ParserOptions<T>,
+): ItemLink<"person", T> {
+  return {
+    ...parseBaseItemLink("person", rawPerson, options),
+    type: rawPerson.type ?? null,
+    coordinates: parseCoordinates(rawPerson.coordinates, options),
+  };
+}
+
+function parsePropertyVariableItemLink<T extends ReadonlyArray<string>>(
+  rawPropertyVariable: XMLLinkedPropertyVariable,
+  options: ParserOptions<T>,
+): ItemLink<"propertyVariable", T> {
+  return {
+    ...parseBaseItemLink("propertyVariable", rawPropertyVariable, options),
+    type: rawPropertyVariable.type ?? null,
+    coordinates: parseCoordinates(rawPropertyVariable.coordinates, options),
+  };
+}
+
+function parsePropertyValueItemLink<T extends ReadonlyArray<string>>(
+  rawPropertyValue: XMLLinkedPropertyValue,
+  options: ParserOptions<T>,
+): ItemLink<"propertyValue", T> {
+  return {
+    ...parseBaseItemLink("propertyValue", rawPropertyValue, options),
+    coordinates: parseCoordinates(rawPropertyValue.coordinates, options),
+  };
+}
+
+function parseResourceItemLink<T extends ReadonlyArray<string>>(
+  rawResource: XMLLinkedResource,
+  options: ParserOptions<T>,
+): ItemLink<"resource", T> {
+  return {
+    ...parseBaseItemLink("resource", rawResource, options),
+    type: rawResource.type ?? null,
+    href: rawResource.href ?? null,
+    fileFormat: rawResource.fileFormat ?? null,
+    fileSize: parseNumber(rawResource.fileSize),
+    isInline: rawResource.rend === "inline",
+    isPrimary: parseBoolean(rawResource.isPrimary),
+    height: parseNumber(rawResource.height),
+    width: parseNumber(rawResource.width),
+    image: parseImage(rawResource.image, options),
+    coordinates: parseCoordinates(rawResource.coordinates, options),
+  };
+}
+
+function parseTextItemLink<T extends ReadonlyArray<string>>(
+  rawText: XMLLinkedText,
+  options: ParserOptions<T>,
+): ItemLink<"text", T> {
+  return {
+    ...parseBaseItemLink("text", rawText, options),
+    type: rawText.type ?? null,
+    text: rawText.text ?? null,
+    language: rawText.language ?? null,
+    image: parseImage(rawText.image, options),
+    coordinates: parseCoordinates(rawText.coordinates, options),
+  };
+}
+
+function parseDictionaryUnitItemLink<T extends ReadonlyArray<string>>(
+  rawDictionaryUnit: XMLDictionaryUnit,
+  options: ParserOptions<T>,
+): ItemLink<"dictionaryUnit", T> {
+  return parseBaseItemLink("dictionaryUnit", rawDictionaryUnit, options);
+}
+
 function parseLinks<T extends ReadonlyArray<string>>(
   rawLinks: XMLLink | XMLDataItem | undefined,
   options: ParserOptions<T>,
-): Array<Item<DataCategory, SetItemDataCategory, T, "nested">> {
-  return parseItemHierarchy(
-    rawLinks as XMLItemHierarchy | undefined,
-    options,
-  ) as Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
+): ItemLinks<T> {
+  const links: ItemLinks<T> = [];
+  if (rawLinks == null) {
+    return links;
+  }
+
+  const hierarchy = rawLinks as XMLItemLinkHierarchy;
+
+  for (const tree of hierarchy.tree ?? []) {
+    links.push(parseTreeItemLink(tree, options));
+  }
+  for (const bibliography of hierarchy.bibliography ?? []) {
+    links.push(parseBibliographyItemLink(bibliography, options));
+  }
+  for (const concept of hierarchy.concept ?? []) {
+    links.push(parseConceptItemLink(concept, options));
+  }
+  for (const spatialUnit of hierarchy.spatialUnit ?? []) {
+    links.push(parseSpatialUnitItemLink(spatialUnit, options));
+  }
+  for (const period of hierarchy.period ?? []) {
+    links.push(parsePeriodItemLink(period, options));
+  }
+  for (const person of hierarchy.person ?? []) {
+    links.push(parsePersonItemLink(person, options));
+  }
+  for (const propertyVariable of hierarchy.propertyVariable ?? []) {
+    links.push(parsePropertyVariableItemLink(propertyVariable, options));
+  }
+  for (const propertyVariable of hierarchy.variable ?? []) {
+    links.push(parsePropertyVariableItemLink(propertyVariable, options));
+  }
+  for (const propertyValue of hierarchy.propertyValue ?? []) {
+    links.push(parsePropertyValueItemLink(propertyValue, options));
+  }
+  for (const propertyValue of hierarchy.value ?? []) {
+    links.push(parsePropertyValueItemLink(propertyValue, options));
+  }
+  for (const resource of hierarchy.resource ?? []) {
+    if (!("uuid" in resource)) {
+      for (const nestedResource of resource.resource) {
+        links.push(parseResourceItemLink(nestedResource, options));
+      }
+      continue;
+    }
+
+    links.push(parseResourceItemLink(resource, options));
+  }
+  for (const text of hierarchy.text ?? []) {
+    links.push(parseTextItemLink(text, options));
+  }
+  for (const set of hierarchy.set ?? []) {
+    links.push(parseSetItemLink(set, options));
+  }
+  for (const dictionaryUnit of hierarchy.dictionaryUnit ?? []) {
+    links.push(parseDictionaryUnitItemLink(dictionaryUnit, options));
+  }
+
+  return links;
 }
 
 function parseReverseLinks<T extends ReadonlyArray<string>>(
   rawLinks: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem> | undefined,
   options: ParserOptions<T>,
-): Array<Item<DataCategory, SetItemDataCategory, T, "nested">> {
-  const links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">> = [];
+): ItemLinks<T> {
+  const links: ItemLinks<T> = [];
   const rawLinksToParse =
     rawLinks == null ? []
     : Array.isArray(rawLinks) ? rawLinks
@@ -1725,7 +2163,7 @@ function parseBibliography<T extends ReadonlyArray<string>>(
   const sourceItems =
     rawBibliography.source == null ?
       []
-    : parseItemHierarchy(rawBibliography.source as XMLItemHierarchy, options);
+    : parseLinks(rawBibliography.source, options);
   const bibliographies = parseBibliographyList(
     rawBibliography.bibliographies,
     options,
@@ -1746,17 +2184,9 @@ function parseBibliography<T extends ReadonlyArray<string>>(
       isRichText: options.isRichText,
     }),
     image: parseImage(rawBibliography.image, options),
-    sourceDocument:
-      rawBibliography.sourceDocument == null ?
-        null
-      : {
-          uuid: rawBibliography.sourceDocument.uuid,
-          content: rawBibliography.sourceDocument.payload,
-          href: rawBibliography.sourceDocument.href ?? null,
-          publicationDateTime: parseOptionalDate(
-            rawBibliography.sourceDocument.publicationDateTime,
-          ),
-        },
+    sourceDocument: parseBibliographySourceDocument(
+      rawBibliography.sourceDocument,
+    ),
     publicationInfo:
       rawBibliography.publicationInfo == null ?
         null
@@ -1768,39 +2198,15 @@ function parseBibliography<T extends ReadonlyArray<string>>(
             : rawBibliography.publicationInfo.publishers.publishers.person,
             options,
           ),
-          startDate:
-            rawBibliography.publicationInfo.startDate == null ?
-              null
-            : new Date(
-                parseNumberOrZero(
-                  rawBibliography.publicationInfo.startDate.year,
-                ),
-                Math.max(
-                  parseNumberOrZero(
-                    rawBibliography.publicationInfo.startDate.month,
-                  ) - 1,
-                  0,
-                ),
-                parseNumberOrZero(
-                  rawBibliography.publicationInfo.startDate.day,
-                ),
-              ),
+          startDate: parseBibliographyStartDate(
+            rawBibliography.publicationInfo.startDate,
+          ),
         },
-    entryInfo:
-      (
-        rawBibliography.entryInfo == null ||
-        (rawBibliography.entryInfo.startIssue == null &&
-          rawBibliography.entryInfo.startVolume == null)
-      ) ?
-        null
-      : {
-          startIssue: rawBibliography.entryInfo.startIssue ?? "",
-          startVolume: rawBibliography.entryInfo.startVolume ?? "",
-        },
+    entryInfo: parseBibliographyEntryInfo(rawBibliography.entryInfo),
     source:
       sourceItems[0] == null ?
         null
-      : (sourceItems[0] as Item<ItemsDataCategory, never, T, "nested">),
+      : (sourceItems[0] as ItemLink<ItemsDataCategory, T>),
     authors: parsePersonList(rawBibliography.authors?.person, options),
     periods: parsePeriodList(rawBibliography.periods, options),
     links: parseLinks(rawBibliography.links, options),
@@ -2204,6 +2610,10 @@ function inferTopLevelCategory(rawOchre: RawOchre): DataCategory {
     return "propertyVariable";
   }
 
+  if ("value" in rawOchre) {
+    return "propertyValue";
+  }
+
   throw new Error("Could not infer OCHRE item category");
 }
 
@@ -2300,11 +2710,12 @@ function parseTopLevelItem<
       ) as unknown as Item<U, V, T, "nested">;
     }
     case "propertyValue": {
+      const propertyValues =
+        "propertyValue" in rawOchre ? rawOchre.propertyValue
+        : "value" in rawOchre ? rawOchre.value
+        : null;
       return parsePropertyValue(
-        getSingleTopLevelRawItem(
-          "propertyValue" in rawOchre ? rawOchre.propertyValue : null,
-          "property value",
-        ),
+        getSingleTopLevelRawItem(propertyValues, "property value"),
         options,
       ) as unknown as Item<U, V, T, "nested">;
     }

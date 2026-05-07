@@ -344,6 +344,170 @@ export type BaseItem<
   events: Array<Event<T>>;
 };
 
+export type ItemLinkCategory = DataCategory | "dictionaryUnit";
+
+/**
+ *  Base item data exposed by OCHRE link and reverse-link payloads.
+ */
+export type BaseItemLink<
+  U extends ItemLinkCategory = ItemLinkCategory,
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+> = {
+  uuid: string;
+  category: U;
+  publicationDateTime: Date | null;
+  context: Context<ContextDataCategory> | null;
+  date: Date | null;
+  identification: Identification<T>;
+  description: MultilingualString<T> | null;
+};
+
+export type BibliographySourceDocument = {
+  uuid: string;
+  content: string;
+  href: string | null;
+  publicationDateTime: Date | null;
+};
+
+export type BibliographyEntryInfo = {
+  content: string | null;
+  startIssue: string;
+  startVolume: string;
+  startPage: string;
+  endPage: string;
+};
+
+export type ItemLinks<T extends ReadonlyArray<string> = ReadonlyArray<string>> =
+  Array<ItemLink<ItemLinkCategory, T>>;
+
+export type TreeItemLink<T extends ReadonlyArray<string>> = Prettify<
+  BaseItemLink<"tree", T> & {
+    type: string | null;
+    itemsCategory: ItemsDataCategory | null;
+  }
+>;
+
+export type SetItemLink<T extends ReadonlyArray<string>> = Prettify<
+  BaseItemLink<"set", T> & {
+    type: string | null;
+    itemsCategory: Array<SetItemDataCategory> | null;
+  }
+>;
+
+export type BibliographyItemLink<T extends ReadonlyArray<string>> = Prettify<
+  BaseItemLink<"bibliography", T> & {
+    type: string | null;
+    zoteroId: string | null;
+    citationDetails: string | null;
+    citationFormat: MultilingualString<T> | null;
+    citationFormatSpan: string | null;
+    referenceFormatDiv: string | null;
+    image: Image<T> | null;
+    sourceDocument: BibliographySourceDocument | null;
+    publicationInfo: {
+      publishers: Array<ItemLink<"person", T>>;
+      startDate: Date | null;
+    } | null;
+    entryInfo: BibliographyEntryInfo | null;
+    source: ItemLink<ItemsDataCategory, T> | null;
+    authors: Array<ItemLink<"person", T>>;
+    periods: Array<ItemLink<"period", T>>;
+    properties: Array<Property<T>>;
+  }
+>;
+
+export type ConceptItemLink<T extends ReadonlyArray<string>> = Prettify<
+  BaseItemLink<"concept", T> & {
+    image: Image<T> | null;
+    coordinates: Array<Coordinates<T>>;
+  }
+>;
+
+export type SpatialUnitItemLink<T extends ReadonlyArray<string>> = Prettify<
+  BaseItemLink<"spatialUnit", T> & {
+    image: Image<T> | null;
+    coordinates: Array<Coordinates<T>>;
+  }
+>;
+
+export type PeriodItemLink<T extends ReadonlyArray<string>> = Prettify<
+  BaseItemLink<"period", T> & {
+    type: string | null;
+    coordinates: Array<Coordinates<T>>;
+  }
+>;
+
+export type PersonItemLink<T extends ReadonlyArray<string>> = Prettify<
+  BaseItemLink<"person", T> & {
+    type: string | null;
+    coordinates: Array<Coordinates<T>>;
+  }
+>;
+
+export type PropertyVariableItemLink<T extends ReadonlyArray<string>> =
+  Prettify<
+    BaseItemLink<"propertyVariable", T> & {
+      type: string | null;
+      coordinates: Array<Coordinates<T>>;
+    }
+  >;
+
+export type PropertyValueItemLink<T extends ReadonlyArray<string>> = Prettify<
+  BaseItemLink<"propertyValue", T> & { coordinates: Array<Coordinates<T>> }
+>;
+
+export type ResourceItemLink<T extends ReadonlyArray<string>> = Prettify<
+  BaseItemLink<"resource", T> & {
+    type: string | null;
+    href: string | null;
+    fileFormat: string | null;
+    fileSize: number | null;
+    isInline: boolean;
+    isPrimary: boolean;
+    height: number | null;
+    width: number | null;
+    image: Image<T> | null;
+    coordinates: Array<Coordinates<T>>;
+  }
+>;
+
+export type TextItemLink<T extends ReadonlyArray<string>> = Prettify<
+  BaseItemLink<"text", T> & {
+    type: string | null;
+    text: string | null;
+    language: string | null;
+    image: Image<T> | null;
+    coordinates: Array<Coordinates<T>>;
+  }
+>;
+
+export type DictionaryUnitItemLink<T extends ReadonlyArray<string>> = Prettify<
+  BaseItemLink<"dictionaryUnit", T>
+>;
+
+/**
+ * An abridged item reference exposed inside OCHRE links and reverse links.
+ */
+export type ItemLink<
+  U extends ItemLinkCategory = ItemLinkCategory,
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+> =
+  U extends ItemLinkCategory ?
+    U extends "tree" ? TreeItemLink<T>
+    : U extends "set" ? SetItemLink<T>
+    : U extends "bibliography" ? BibliographyItemLink<T>
+    : U extends "concept" ? ConceptItemLink<T>
+    : U extends "spatialUnit" ? SpatialUnitItemLink<T>
+    : U extends "period" ? PeriodItemLink<T>
+    : U extends "person" ? PersonItemLink<T>
+    : U extends "propertyVariable" ? PropertyVariableItemLink<T>
+    : U extends "propertyValue" ? PropertyValueItemLink<T>
+    : U extends "resource" ? ResourceItemLink<T>
+    : U extends "text" ? TextItemLink<T>
+    : U extends "dictionaryUnit" ? DictionaryUnitItemLink<T>
+    : never
+  : never;
+
 /**
  * An Item in OCHRE (can be a tree, set, bibliography, concept, spatial unit, period, person, property value, property variable, or resource)
  */
@@ -391,7 +555,7 @@ export type Tree<
   BaseItem<"tree", T, V> & {
     type: string | null;
     itemsCategory: U | null;
-    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
+    links: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "nested">>;
@@ -413,7 +577,7 @@ export type Set<
     itemsCategory: Array<U>;
     isTabularStructure: boolean;
     isSuppressingBlanks: boolean;
-    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
+    links: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     items: Array<SetItem<U, T>>;
@@ -499,7 +663,7 @@ export type Person<
     coordinates: Array<Coordinates<T>>;
     content: MultilingualString<T> | null;
     periods: Array<Period<T, "nested">>;
-    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
+    links: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
   }
@@ -515,7 +679,7 @@ export type Period<
   BaseItem<"period", T, U> & {
     type: string | null;
     coordinates: Array<Coordinates<T>>;
-    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
+    links: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "nested">>;
@@ -536,21 +700,16 @@ export type Bibliography<
     citationFormatSpan: string | null;
     referenceFormatDiv: string | null;
     image: Image<T> | null;
-    sourceDocument: {
-      uuid: string;
-      content: string;
-      href: string | null;
-      publicationDateTime: Date | null;
-    } | null;
+    sourceDocument: BibliographySourceDocument | null;
     publicationInfo: {
       publishers: Array<Person<T, "nested">>;
       startDate: Date | null;
     } | null;
-    entryInfo: { startIssue: string; startVolume: string } | null;
-    source: Item<ItemsDataCategory, never, T, "nested"> | null;
+    entryInfo: BibliographyEntryInfo | null;
+    source: ItemLink<ItemsDataCategory, T> | null;
     authors: Array<Person<T, "nested">>;
     periods: Array<Period<T, "nested">>;
-    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
+    links: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "nested">>;
@@ -584,7 +743,7 @@ export type Interpretation<T extends ReadonlyArray<string>> = {
   date: Date | null;
   observers: Array<Person<T, "nested">>;
   periods: Array<Period<T, "nested">>;
-  links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
+  links: ItemLinks<T>;
   notes: Array<Note<T>>;
   properties: Array<Property<T>>;
   bibliographies: Array<Bibliography<T, "nested">>;
@@ -615,7 +774,7 @@ export type Observation<T extends ReadonlyArray<string>> = {
   date: Date | null;
   observers: Array<string> | Array<Person<T, "nested">>;
   periods: Array<Period<T, "nested">>;
-  links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
+  links: ItemLinks<T>;
   notes: Array<Note<T>>;
   properties: Array<Property<T>>;
   bibliographies: Array<Bibliography<T, "nested">>;
@@ -631,7 +790,7 @@ export type PropertyVariable<
   BaseItem<"propertyVariable", T, U> & {
     type: string | null;
     coordinates: Array<Coordinates<T>>;
-    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
+    links: ItemLinks<T>;
     notes: Array<Note<T>>;
     bibliographies: Array<Bibliography<T, "nested">>;
   }
@@ -646,7 +805,7 @@ export type PropertyValue<
 > = Prettify<
   BaseItem<"propertyValue", T, U> & {
     coordinates: Array<Coordinates<T>>;
-    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
+    links: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "nested">>;
@@ -673,8 +832,8 @@ export type Resource<
     imageMap: ImageMap | null;
     coordinates: Array<Coordinates<T>>;
     periods: Array<Period<T, "nested">>;
-    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
-    reverseLinks: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
+    links: ItemLinks<T>;
+    reverseLinks: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "nested">>;
@@ -695,8 +854,8 @@ export type Text<
     language: string | null;
     image: Image<T> | null;
     coordinates: Array<Coordinates<T>>;
-    links: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
-    reverseLinks: Array<Item<DataCategory, SetItemDataCategory, T, "nested">>;
+    links: ItemLinks<T>;
+    reverseLinks: ItemLinks<T>;
     notes: Array<Note<T>>;
     sections: Array<Section<T>>;
     periods: Array<Period<T, "nested">>;

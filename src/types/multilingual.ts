@@ -13,7 +13,7 @@ export type MultilingualOptions = {
 };
 
 /**
- * Type-safe multilingual string that provides autocomplete for specific language arrays
+ * Multilingual string
  */
 export class MultilingualString<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
@@ -33,7 +33,7 @@ export class MultilingualString<
   }
 
   /**
-   * Create a new typed multilingual string from an object of language codes to text
+   * Create a new multilingual string from an object of language codes to text
    */
   static fromObject<U extends ReadonlyArray<string>>(
     content: Partial<Record<U[number], string>>,
@@ -91,7 +91,7 @@ export class MultilingualString<
   }
 
   /**
-   * Create a new multilingual string with a single language
+   * Create a new multilingual string for a single language
    */
   static create<U extends ReadonlyArray<string>>(
     language: U[number],
@@ -152,7 +152,6 @@ export class MultilingualString<
 
   /**
    * Get text in a specific language with automatic fallback
-   * Provides autocomplete for the exact languages passed to the constructor
    */
   getText(language?: T[number]): string {
     // If no language specified, use default
@@ -181,22 +180,20 @@ export class MultilingualString<
 
   /**
    * Get text in a specific language without fallback
-   * Provides autocomplete for the exact languages passed to the constructor
    */
   getExactText(language: T[number]): string | null {
     return this._content[language] ?? null;
   }
 
   /**
-   * Check if text exists in a specific language
-   * Provides autocomplete for the exact languages passed to the constructor
+   * Check if text exists for a specific language
    */
   hasLanguage(language: T[number]): boolean {
     return this._content[language] != null;
   }
 
   /**
-   * Get all available languages (with proper typing)
+   * Get all available languages
    */
   getAvailableLanguages(): ReadonlyArray<T[number]> {
     return this._availableLanguages;

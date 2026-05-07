@@ -1204,6 +1204,24 @@ async function fetchTextUuidsFromMarkLogic(): Promise<Array<string>> {
 }
 
 describe("fetchItem", () => {
+  it("rejects itemCategory for non-hierarchy categories before fetching", async () => {
+    let didFetch = false;
+    const result = await fetchItem(RESOURCE_UUIDS[0]!, {
+      category: "resource",
+      itemCategory: "text" as never,
+      fetch: async () => {
+        didFetch = true;
+        throw new Error("fetch should not be called");
+      },
+    });
+
+    expect(didFetch).toBe(false);
+    expect(result.item).toBeNull();
+    expect(result.error).toBe(
+      'itemCategory can only be used when category is "tree" or "set"; received category "resource"',
+    );
+  });
+
   it(
     "uses the same schema and transformation path as direct parsing",
     async () => {
