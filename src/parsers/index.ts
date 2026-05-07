@@ -4,6 +4,7 @@ import type {
   Bibliography,
   Concept,
   Context,
+  ContextDataCategory,
   ContextItem,
   ContextNode,
   Coordinates,
@@ -29,10 +30,16 @@ import type {
   PropertyValue,
   PropertyValueContent,
   PropertyVariable,
-  RecursiveDataCategory,
   Resource,
   Section,
   Set,
+  SetBibliography,
+  SetConcept,
+  SetItem,
+  SetPeriod,
+  SetResource,
+  SetSpatialUnit,
+  SingleHierarchyProperty,
   SpatialUnit,
   Text,
   Tree,
@@ -117,6 +124,11 @@ type XMLPropertyValueNode = NonNullable<XMLProperty["value"]>[number] & {
   payload?: string;
 };
 
+type XMLContextValueContainer = Record<
+  string,
+  Array<XMLContextValue> | undefined
+>;
+
 const ITEM_DATA_CATEGORIES = [
   "bibliography",
   "concept",
@@ -139,14 +151,21 @@ const HEADING_DATA_CATEGORIES = [
   "set",
 ] as const satisfies ReadonlyArray<HeadingDataCategory>;
 
-const RECURSIVE_CONTEXT_CATEGORIES = [
-  "bibliography",
-  "concept",
-  "spatialUnit",
-  "period",
-  "resource",
-  "text",
-] as const satisfies ReadonlyArray<RecursiveDataCategory>;
+const CONTEXT_CATEGORY_MAPPINGS = [
+  { raw: "bibliography", parsed: "bibliography" },
+  { raw: "concept", parsed: "concept" },
+  { raw: "spatialUnit", parsed: "spatialUnit" },
+  { raw: "period", parsed: "period" },
+  { raw: "propertyVariable", parsed: "propertyVariable" },
+  { raw: "variable", parsed: "propertyVariable" },
+  { raw: "propertyValue", parsed: "propertyValue" },
+  { raw: "value", parsed: "propertyValue" },
+  { raw: "resource", parsed: "resource" },
+  { raw: "text", parsed: "text" },
+] as const satisfies ReadonlyArray<{
+  raw: string;
+  parsed: ContextDataCategory;
+}>;
 
 const PROPERTY_DATA_TYPES = [
   "string",
@@ -178,16 +197,16 @@ function parseOptionalDateLike(
   return parseOptionalDate(value);
 }
 
-function parseNumber(value: string | undefined): number | null {
+function parseNumber(value: string | XMLString | undefined): number | null {
   if (value == null || value === "") {
     return null;
   }
 
-  const parsedValue = Number(value);
+  const parsedValue = Number(typeof value === "string" ? value : value.payload);
   return Number.isNaN(parsedValue) ? null : parsedValue;
 }
 
-function parseNumberOrZero(value: string | undefined): number {
+function parseNumberOrZero(value: string | XMLString | undefined): number {
   return parseNumber(value) ?? 0;
 }
 
@@ -232,11 +251,15 @@ function multilingualFromText<T extends ReadonlyArray<string>>(
 }
 
 function parseContentLike<T extends ReadonlyArray<string>>(
-  value: XMLContent | XMLString | undefined,
+  value: XMLContent | XMLString | string | undefined,
   options: ParserOptions<T>,
 ): MultilingualString<T> | null {
   if (value == null) {
     return null;
+  }
+
+  if (typeof value === "string") {
+    return multilingualFromText(value, options);
   }
 
   if (!isXMLContent(value)) {
@@ -373,29 +396,32 @@ function emptyContextItem(): ContextItem {
   return { uuid: null, publicationDateTime: null, index: 0, content: "" };
 }
 
-function parseContext(rawContext: XMLContext): Context<RecursiveDataCategory> {
-  const nodes: Array<ContextNode<RecursiveDataCategory>> = [];
+function parseContext(rawContext: XMLContext): Context<ContextDataCategory> {
+  const nodes: Array<ContextNode<ContextDataCategory>> = [];
 
   for (const rawContextOuterItem of rawContext) {
     for (const rawContextItem of rawContextOuterItem.context) {
-      const node: ContextNode<RecursiveDataCategory> = {
+      const node: ContextNode<ContextDataCategory> = {
         tree:
           rawContextItem.tree[0] == null ?
             emptyContextItem()
           : parseContextItem(rawContextItem.tree[0]),
         project: parseContextItem(rawContextItem.project),
-        bibliography: [],
-        concept: [],
-        spatialUnit: [],
-        period: [],
-        resource: [],
-        text: [],
+        heading: [],
       };
 
-      for (const category of RECURSIVE_CONTEXT_CATEGORIES) {
-        const contextValues = rawContextItem[category] ?? [];
+      const rawContextValues =
+        rawContextItem as unknown as XMLContextValueContainer;
+      for (const heading of rawContextValues.heading ?? []) {
+        node.heading.push(parseContextItem(heading));
+      }
+
+      for (const { raw, parsed } of CONTEXT_CATEGORY_MAPPINGS) {
+        const contextValues = rawContextValues[raw] ?? [];
         for (const contextValue of contextValues) {
-          node[category].push(parseContextItem(contextValue));
+          const parsedItems = node[parsed] ?? [];
+          parsedItems.push(parseContextItem(contextValue));
+          node[parsed] = parsedItems;
         }
       }
 
@@ -493,23 +519,11 @@ function parseBaseItem<U extends DataCategory, T extends ReadonlyArray<string>>(
     copyright:
       rawItem.copyright == null ?
         null
-      : multilingualFromText(
-          parseXMLString(rawItem.copyright, {
-            isRichText: options.isRichText,
-            parseEmail: false,
-          }),
-          options,
-        ),
+      : parseContentLike(rawItem.copyright, options),
     watermark:
       rawItem.watermark == null ?
         null
-      : multilingualFromText(
-          parseXMLString(rawItem.watermark, {
-            isRichText: options.isRichText,
-            parseEmail: false,
-          }),
-          options,
-        ),
+      : parseContentLike(rawItem.watermark, options),
     identification: parseOptionalIdentification(
       rawItem.identification,
       options,
@@ -761,7 +775,7 @@ function parseNote<T extends ReadonlyArray<string>>(
 
   let title = rawNote.title ?? null;
   if (title == null) {
-    for (const content of rawNote.content) {
+    for (const content of rawNote.content ?? []) {
       if (options.languages.includes(content.lang) && content.title != null) {
         title = content.title;
         break;
@@ -769,12 +783,18 @@ function parseNote<T extends ReadonlyArray<string>>(
     }
   }
 
-  return {
-    number: parseNumberOrZero(rawNote.noteNo),
-    title,
-    content: parseRequiredContentLike(rawNote, options),
-    authors,
-  };
+  const content =
+    rawNote.content == null ?
+      multilingualFromText(
+        parseXMLString(rawNote, {
+          isRichText: options.isRichText,
+          parseEmail: true,
+        }),
+        options,
+      )
+    : parseRequiredContentLike(rawNote as XMLContent, options);
+
+  return { number: parseNumberOrZero(rawNote.noteNo), title, content, authors };
 }
 
 function parseNotes<T extends ReadonlyArray<string>>(
@@ -819,7 +839,7 @@ function parsePropertyValueContent<T extends ReadonlyArray<string>>(
       isLeaf: value.inherited == null || !parseBoolean(value.inherited),
       level: parseNumber(value.i),
     },
-    label: value.rawValue == null ? null : rawLabel,
+    label: rawLabel,
     isUncertain: value.isUncertain === "true",
     category: value.category ?? null,
     type: value.type ?? null,
@@ -890,6 +910,44 @@ function parseProperties<T extends ReadonlyArray<string>>(
   }
 
   return properties;
+}
+
+function parseSingleHierarchyProperty<T extends ReadonlyArray<string>>(
+  rawProperty: XMLProperty,
+  options: ParserOptions<T>,
+): SingleHierarchyProperty<T> {
+  const property = parseProperty(rawProperty, options);
+  return {
+    label: property.label,
+    values: property.values,
+    comment: property.comment,
+  };
+}
+
+function parseSingleHierarchyProperties<T extends ReadonlyArray<string>>(
+  rawProperties: { property: Array<XMLProperty> } | undefined,
+  options: ParserOptions<T>,
+): Array<SingleHierarchyProperty<T>> {
+  const properties: Array<SingleHierarchyProperty<T>> = [];
+  for (const property of rawProperties?.property ?? []) {
+    properties.push(parseSingleHierarchyProperty(property, options));
+  }
+
+  return properties;
+}
+
+function withSingleHierarchyProperties<
+  U extends { properties: Array<Property<T>> },
+  T extends ReadonlyArray<string>,
+>(
+  item: U,
+  rawProperties: { property: Array<XMLProperty> } | undefined,
+  options: ParserOptions<T>,
+): Omit<U, "properties"> & { properties: Array<SingleHierarchyProperty<T>> } {
+  return {
+    ...item,
+    properties: parseSingleHierarchyProperties(rawProperties, options),
+  };
 }
 
 function parseItemContainer<T extends ReadonlyArray<string>>(
@@ -1045,6 +1103,136 @@ function parseItemContainer<T extends ReadonlyArray<string>>(
       items.push(
         parseSet(set, options) as Item<DataCategory, ItemsDataCategory, T>,
       );
+    }
+  }
+
+  return items;
+}
+
+function parseSetItemContainer<T extends ReadonlyArray<string>>(
+  container: XMLItemContainer | undefined,
+  options: ParserOptions<T>,
+  categories?: ReadonlyArray<ItemsDataCategory>,
+): Array<SetItem<ItemsDataCategory, T>> {
+  const items: Array<SetItem<ItemsDataCategory, T>> = [];
+  if (container == null) {
+    return items;
+  }
+
+  const shouldParse = (category: ItemsDataCategory): boolean =>
+    categories == null || categories.includes(category);
+
+  if (shouldParse("bibliography")) {
+    for (const bibliography of container.bibliography ?? []) {
+      items.push(
+        parseSetBibliography(bibliography, options) as SetItem<
+          ItemsDataCategory,
+          T
+        >,
+      );
+    }
+  }
+
+  if (shouldParse("concept")) {
+    for (const concept of container.concept ?? []) {
+      items.push(
+        parseSetConcept(concept, options) as SetItem<ItemsDataCategory, T>,
+      );
+    }
+  }
+
+  if (shouldParse("spatialUnit")) {
+    for (const spatialUnit of container.spatialUnit ?? []) {
+      items.push(
+        parseSetSpatialUnit(spatialUnit, options) as SetItem<
+          ItemsDataCategory,
+          T
+        >,
+      );
+    }
+  }
+
+  if (shouldParse("period")) {
+    for (const period of container.period ?? []) {
+      items.push(
+        parseSetPeriod(period, options) as SetItem<ItemsDataCategory, T>,
+      );
+    }
+  }
+
+  if (shouldParse("person")) {
+    for (const person of container.person ?? []) {
+      items.push(
+        withSingleHierarchyProperties(
+          parsePerson(person, options),
+          person.properties,
+          options,
+        ) as SetItem<ItemsDataCategory, T>,
+      );
+    }
+  }
+
+  if (shouldParse("propertyVariable")) {
+    for (const propertyVariable of container.propertyVariable ?? []) {
+      items.push(
+        parsePropertyVariable(propertyVariable, options) as SetItem<
+          ItemsDataCategory,
+          T
+        >,
+      );
+    }
+
+    for (const propertyVariable of container.variable ?? []) {
+      items.push(
+        parsePropertyVariable(propertyVariable, options) as SetItem<
+          ItemsDataCategory,
+          T
+        >,
+      );
+    }
+  }
+
+  if (shouldParse("propertyValue")) {
+    for (const propertyValue of container.propertyValue ?? []) {
+      items.push(
+        withSingleHierarchyProperties(
+          parsePropertyValue(propertyValue, options),
+          propertyValue.properties,
+          options,
+        ) as SetItem<ItemsDataCategory, T>,
+      );
+    }
+  }
+
+  if (shouldParse("resource")) {
+    for (const resource of container.resource ?? []) {
+      if (!("uuid" in resource)) {
+        for (const nestedResource of resource.resource) {
+          items.push(
+            parseSetResource(nestedResource, options) as SetItem<
+              ItemsDataCategory,
+              T
+            >,
+          );
+        }
+        continue;
+      }
+
+      items.push(
+        parseSetResource(resource, options) as SetItem<ItemsDataCategory, T>,
+      );
+    }
+  }
+
+  if (shouldParse("text")) {
+    for (const text of container.text ?? []) {
+      items.push(parseText(text, options) as SetItem<ItemsDataCategory, T>);
+    }
+  }
+
+  if (shouldParse("set")) {
+    for (const set of container.set ?? []) {
+      items.push(parseSetSet(set, options) as SetItem<ItemsDataCategory, T>);
     }
   }
 
@@ -1282,10 +1470,139 @@ function parseSet<
     links: parseLinks(rawSet.links, options),
     notes: parseNotes(rawSet.notes, options),
     properties: parseProperties(rawSet.properties, options),
-    items: parseItemContainer(rawSet.items, options, itemCategories) as Array<
-      Item<U, never, T>
-    >,
+    items: parseSetItemContainer(
+      rawSet.items,
+      options,
+      itemCategories,
+    ) as Array<SetItem<U, T>>,
   };
+}
+
+function parseSetBibliography<T extends ReadonlyArray<string>>(
+  rawBibliography: XMLBibliography,
+  options: ParserOptions<T>,
+): SetBibliography<T> {
+  const items: Array<SetBibliography<T>> = [];
+  for (const bibliography of rawBibliography.bibliography ?? []) {
+    items.push(parseSetBibliography(bibliography, options));
+  }
+
+  return {
+    ...withSingleHierarchyProperties(
+      parseBibliography(rawBibliography, options),
+      rawBibliography.properties,
+      options,
+    ),
+    items,
+  } as SetBibliography<T>;
+}
+
+function parseSetConcept<T extends ReadonlyArray<string>>(
+  rawConcept: XMLConcept,
+  options: ParserOptions<T>,
+): SetConcept<T> {
+  const items: Array<SetConcept<T>> = [];
+  for (const concept of rawConcept.concept ?? []) {
+    items.push(parseSetConcept(concept, options));
+  }
+
+  return {
+    ...parseBaseItem("concept", rawConcept, options),
+    image: parseImage(rawConcept.image, options),
+    coordinates: parseCoordinates(rawConcept.coordinates, options),
+    properties: parseSingleHierarchyProperties(rawConcept.properties, options),
+    items,
+  };
+}
+
+function parseSpatialUnitMapData(
+  mapData: XMLSpatialUnit["mapData"],
+): SpatialUnit<ReadonlyArray<string>>["mapData"] {
+  if (mapData == null) {
+    return null;
+  }
+
+  return {
+    geoJSON: {
+      multiPolygon: mapData.geoJSON.multiPolygon.payload,
+      EPSG: parseNumberOrZero(mapData.geoJSON.EPSG),
+    },
+  };
+}
+
+function parseSetSpatialUnit<T extends ReadonlyArray<string>>(
+  rawSpatialUnit: XMLSpatialUnit,
+  options: ParserOptions<T>,
+): SetSpatialUnit<T> {
+  const items: Array<SetSpatialUnit<T>> = [];
+  for (const spatialUnit of rawSpatialUnit.spatialUnit ?? []) {
+    items.push(parseSetSpatialUnit(spatialUnit, options));
+  }
+
+  return {
+    ...parseBaseItem("spatialUnit", rawSpatialUnit, options),
+    image: parseImage(rawSpatialUnit.image, options),
+    coordinates: parseCoordinates(rawSpatialUnit.coordinates, options),
+    mapData: parseSpatialUnitMapData(rawSpatialUnit.mapData),
+    properties: parseSingleHierarchyProperties(
+      rawSpatialUnit.properties,
+      options,
+    ),
+    bibliographies: parseBibliographyList(
+      rawSpatialUnit.bibliographies,
+      options,
+    ),
+    items,
+  };
+}
+
+function parseSetPeriod<T extends ReadonlyArray<string>>(
+  rawPeriod: XMLPeriod,
+  options: ParserOptions<T>,
+): SetPeriod<T> {
+  const items: Array<SetPeriod<T>> = [];
+  for (const period of rawPeriod.period ?? []) {
+    items.push(parseSetPeriod(period, options));
+  }
+
+  return {
+    ...withSingleHierarchyProperties(
+      parsePeriod(rawPeriod, options),
+      rawPeriod.properties,
+      options,
+    ),
+    items,
+  };
+}
+
+function parseSetResource<T extends ReadonlyArray<string>>(
+  rawResource: XMLResource,
+  options: ParserOptions<T>,
+): SetResource<T> {
+  const items: Array<SetResource<T>> = [];
+  for (const resource of rawResource.resource ?? []) {
+    items.push(parseSetResource(resource, options));
+  }
+
+  return {
+    ...withSingleHierarchyProperties(
+      parseResource(rawResource, options),
+      rawResource.properties,
+      options,
+    ),
+    items,
+  };
+}
+
+function parseSetSet<T extends ReadonlyArray<string>>(
+  rawSet: XMLSet,
+  options: ParserOptions<T>,
+): SetItem<"set", T> {
+  return withSingleHierarchyProperties(
+    parseSet(rawSet, options),
+    rawSet.properties,
+    options,
+  ) as SetItem<"set", T>;
 }
 
 function parseBibliography<T extends ReadonlyArray<string>>(
@@ -1315,6 +1632,18 @@ function parseBibliography<T extends ReadonlyArray<string>>(
     referenceFormatDiv: parseStringLike(rawBibliography.referenceFormatDiv, {
       isRichText: options.isRichText,
     }),
+    image: parseImage(rawBibliography.image, options),
+    sourceDocument:
+      rawBibliography.sourceDocument == null ?
+        null
+      : {
+          uuid: rawBibliography.sourceDocument.uuid,
+          content: rawBibliography.sourceDocument.payload,
+          href: rawBibliography.sourceDocument.href ?? null,
+          publicationDateTime: parseOptionalDate(
+            rawBibliography.sourceDocument.publicationDateTime,
+          ),
+        },
     publicationInfo:
       rawBibliography.publicationInfo == null ?
         null
@@ -1421,15 +1750,7 @@ function parseSpatialUnit<T extends ReadonlyArray<string>>(
     ...parseBaseItem("spatialUnit", rawSpatialUnit, options),
     image: parseImage(rawSpatialUnit.image, options),
     coordinates: parseCoordinates(rawSpatialUnit.coordinates, options),
-    mapData:
-      rawSpatialUnit.mapData == null ?
-        null
-      : {
-          geoJSON: {
-            multiPolygon: rawSpatialUnit.mapData.geoJSON.multiPolygon.payload,
-            EPSG: parseNumberOrZero(rawSpatialUnit.mapData.geoJSON.EPSG),
-          },
-        },
+    mapData: parseSpatialUnitMapData(rawSpatialUnit.mapData),
     observations,
     bibliographies: parseBibliographyList(
       rawSpatialUnit.bibliographies,
@@ -1472,9 +1793,16 @@ function parsePerson<T extends ReadonlyArray<string>>(
       rawPerson.address == null ?
         null
       : {
-          country: rawPerson.address.country ?? null,
-          city: rawPerson.address.city ?? null,
-          state: rawPerson.address.state ?? null,
+          country: parseStringLike(rawPerson.address.country, {
+            isRichText: false,
+          }),
+          city: parseStringLike(rawPerson.address.city, { isRichText: false }),
+          state: parseStringLike(rawPerson.address.state, {
+            isRichText: false,
+          }),
+          postalCode: parseStringLike(rawPerson.address.postalCode, {
+            isRichText: false,
+          }),
         },
     coordinates: parseCoordinates(rawPerson.coordinates, options),
     content:
@@ -1673,6 +2001,14 @@ function resolveDefaultLanguage<T extends ReadonlyArray<string>>(
   return firstLanguage;
 }
 
+function parseMetadataPublisher(
+  rawPublisher: RawOchre["metadata"]["publisher"],
+): string {
+  const publisher =
+    Array.isArray(rawPublisher) ? rawPublisher[0] : rawPublisher;
+  return parseStringLike(publisher, { isRichText: false }) ?? "";
+}
+
 function parseMetadata<T extends ReadonlyArray<string>>(
   rawOchre: RawOchre,
   options: ParserOptions<T>,
@@ -1685,8 +2021,7 @@ function parseMetadata<T extends ReadonlyArray<string>>(
     dataset: parseStringLike(rawMetadata.dataset, { isRichText: false }) ?? "",
     description:
       parseStringLike(rawMetadata.description, { isRichText: false }) ?? "",
-    publisher:
-      parseStringLike(rawMetadata.publisher, { isRichText: false }) ?? "",
+    publisher: parseMetadataPublisher(rawMetadata.publisher),
     identifier:
       parseStringLike(rawMetadata.identifier, { isRichText: false }) ?? "",
     project:

@@ -39,6 +39,14 @@ export type RecursiveDataCategory = Exclude<
 >;
 
 /**
+ *  The category names that can appear in OCHRE context paths
+ */
+export type ContextDataCategory = Exclude<
+  DataCategory,
+  "tree" | "person" | "set"
+>;
+
+/**
  *  Basic identification information
  */
 export type Identification<T extends ReadonlyArray<string>> = {
@@ -103,15 +111,16 @@ export type ContextItem = {
 /**
  *  Context node in OCHRE
  */
-export type ContextNode<U extends RecursiveDataCategory> = {
+export type ContextNode<U extends ContextDataCategory> = {
   tree: ContextItem;
   project: ContextItem;
-} & Record<U, Array<ContextItem>>;
+  heading: Array<ContextItem>;
+} & Partial<Record<U, Array<ContextItem>>>;
 
 /**
  *  Context in OCHRE
  */
-export type Context<U extends RecursiveDataCategory> = {
+export type Context<U extends ContextDataCategory> = {
   nodes: Array<ContextNode<U>>;
   displayPath: string;
 };
@@ -263,6 +272,24 @@ export type Property<T extends ReadonlyArray<string>> = {
 };
 
 /**
+ *  Property in a Set item. OCHRE exposes Set item properties as a flat list.
+ */
+export type SingleHierarchyProperty<T extends ReadonlyArray<string>> = Omit<
+  Property<T>,
+  "properties"
+>;
+
+type WithSingleHierarchyProperties<
+  U extends { properties: Array<Property<T>> },
+  T extends ReadonlyArray<string>,
+> =
+  U extends { properties: Array<Property<T>> } ?
+    Prettify<
+      Omit<U, "properties"> & { properties: Array<SingleHierarchyProperty<T>> }
+    >
+  : never;
+
+/**
  *  Base item in OCHRE
  */
 export type BaseItem<
@@ -272,7 +299,7 @@ export type BaseItem<
   uuid: string;
   category: U;
   publicationDateTime: Date | null;
-  context: Context<RecursiveDataCategory> | null;
+  context: Context<ContextDataCategory> | null;
   date: Date | null;
   license: License | null;
   copyright: MultilingualString<T> | null;
@@ -350,9 +377,67 @@ export type Set<
     links: Array<Item>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
-    items: Array<Item<U, never, T>>;
+    items: Array<SetItem<U, T>>;
   }
 >;
+
+export type SetBibliography<T extends ReadonlyArray<string>> =
+  Bibliography<T> extends infer U ?
+    U extends (
+      { properties: Array<Property<T>>; items: Array<Bibliography<T>> }
+    ) ?
+      Prettify<
+        Omit<U, "properties" | "items"> & {
+          properties: Array<SingleHierarchyProperty<T>>;
+          items: Array<SetBibliography<T>>;
+        }
+      >
+    : never
+  : never;
+
+export type SetConcept<T extends ReadonlyArray<string>> = Prettify<
+  Omit<Concept<T>, "interpretations" | "items"> & {
+    properties: Array<SingleHierarchyProperty<T>>;
+    items: Array<SetConcept<T>>;
+  }
+>;
+
+export type SetSpatialUnit<T extends ReadonlyArray<string>> = Prettify<
+  Omit<SpatialUnit<T>, "observations" | "items"> & {
+    properties: Array<SingleHierarchyProperty<T>>;
+    items: Array<SetSpatialUnit<T>>;
+  }
+>;
+
+export type SetPeriod<T extends ReadonlyArray<string>> = Prettify<
+  Omit<WithSingleHierarchyProperties<Period<T>, T>, "items"> & {
+    items: Array<SetPeriod<T>>;
+  }
+>;
+
+export type SetResource<T extends ReadonlyArray<string>> = Prettify<
+  Omit<WithSingleHierarchyProperties<Resource<T>, T>, "items"> & {
+    items: Array<SetResource<T>>;
+  }
+>;
+
+export type SetItem<
+  U extends ItemsDataCategory,
+  T extends ReadonlyArray<string>,
+> =
+  U extends "bibliography" ? SetBibliography<T>
+  : U extends "concept" ? SetConcept<T>
+  : U extends "spatialUnit" ? SetSpatialUnit<T>
+  : U extends "period" ? SetPeriod<T>
+  : U extends "person" ? WithSingleHierarchyProperties<Person<T>, T>
+  : U extends "propertyVariable" ? PropertyVariable<T>
+  : U extends "propertyValue" ?
+    WithSingleHierarchyProperties<PropertyValue<T>, T>
+  : U extends "resource" ? SetResource<T>
+  : U extends "text" ? Text<T>
+  : U extends "set" ?
+    WithSingleHierarchyProperties<Set<ItemsDataCategory, T>, T>
+  : never;
 
 /**
  *  Person in OCHRE
@@ -365,6 +450,7 @@ export type Person<T extends ReadonlyArray<string>> = Prettify<
       country: string | null;
       city: string | null;
       state: string | null;
+      postalCode: string | null;
     } | null;
     coordinates: Array<Coordinates<T>>;
     content: MultilingualString<T> | null;
@@ -399,6 +485,13 @@ export type Bibliography<T extends ReadonlyArray<string>> = Prettify<
     citationFormat: MultilingualString<T> | null;
     citationFormatSpan: string | null;
     referenceFormatDiv: string | null;
+    image: Image<T> | null;
+    sourceDocument: {
+      uuid: string;
+      content: string;
+      href: string | null;
+      publicationDateTime: Date | null;
+    } | null;
     publicationInfo: {
       publishers: Array<Person<T>>;
       startDate: Date | null;
