@@ -1,11 +1,11 @@
-import type { XMLContent, XMLText } from "../types/xml/types.js";
 import * as v from "valibot";
+import type { XMLContent, XMLString } from "#/types/xml/types.js";
 import {
   emailSchema,
   renderOptionsSchema,
   whitespaceSchema,
-} from "../schemas.js";
-import { MultilingualString } from "../types/multilingual.js";
+} from "#/schemas.js";
+import { MultilingualString } from "#/types/multilingual.js";
 
 /**
  * Parses email addresses in a string into HTML links
@@ -129,9 +129,9 @@ function parseWhitespace(
 }
 
 /**
- * Parses XML text into a formatted string with whitespace and rendering options
+ * Parses XML string into a formatted string with whitespace and rendering options
  *
- * @param item - XML text item to parse
+ * @param string - XML string to parse
  * @param options - Options for parsing
  * @param options.isRichText - Whether to parse as rich text
  * @param options.parseEmail - Whether to parse email addresses
@@ -139,22 +139,22 @@ function parseWhitespace(
  *
  * @internal
  */
-export function parseXMLText(
-  item: XMLText,
+export function parseXMLString(
+  string: XMLString,
   options: { isRichText: boolean; parseEmail: boolean },
 ): string {
-  let returnString = (item.text ?? "")
+  let returnString = (string.payload ?? "")
     .replaceAll("{", String.raw`\{`)
     .replaceAll("}", String.raw`\}`);
 
-  if (item.whitespace != null) {
-    returnString = parseWhitespace(returnString, item.whitespace, {
+  if (string.whitespace != null) {
+    returnString = parseWhitespace(returnString, string.whitespace, {
       isRichText: options.isRichText,
     });
   }
 
-  if (item.rend != null) {
-    returnString = parseRenderOptions(returnString, item.rend, {
+  if (string.rend != null) {
+    returnString = parseRenderOptions(returnString, string.rend, {
       isRichText: options.isRichText,
     });
   }
@@ -216,7 +216,7 @@ function createMDXComponent(
       break;
     }
     case "documentLink": {
-      returnString = `<ExternalLink href="https:\\/\\/ochre.lib.uchicago.edu/ochre?uuid=${uuid}&load"${
+      returnString = String.raw`<ExternalLink href="https:\/\/ochre.lib.uchicago.edu/ochre?uuid=${uuid}&load"${
         content !== "" ? ` content="${content}"` : ""
       }>${text}</ExternalLink>`;
       break;
@@ -260,11 +260,11 @@ export function parseXMLContent<V extends ReadonlyArray<string>>(
 
   for (const stringItems of languageStringItems) {
     for (const stringItem of stringItems.string) {
-      if ("text" in stringItem && stringItem.text != null) {
+      if (stringItem.payload != null) {
         const currentText = returnString.getExactText(stringItems.lang) ?? "";
         const newText =
           currentText +
-          parseXMLText(stringItem, { isRichText, parseEmail: true });
+          parseXMLString(stringItem, { isRichText, parseEmail: true });
         returnString = returnString.withText(stringItems.lang, newText);
       } else if ("whitespace" in stringItem && stringItem.whitespace != null) {
         const currentText = returnString.getExactText(stringItems.lang) ?? "";
@@ -272,30 +272,29 @@ export function parseXMLContent<V extends ReadonlyArray<string>>(
           currentText +
           parseWhitespace(currentText, stringItem.whitespace, { isRichText });
         returnString = returnString.withText(stringItems.lang, newText);
-      } else if ("string" in stringItem) {
+      } else if ("string" in stringItem && stringItem.string != null) {
         for (const innerStringItem of stringItem.string) {
-          if ("text" in innerStringItem && innerStringItem.text != null) {
-            const currentText =
-              returnString.getExactText(stringItems.lang) ?? "";
-            const newText =
-              currentText +
-              parseXMLText(innerStringItem, { isRichText, parseEmail: true });
-            returnString = returnString.withText(stringItems.lang, newText);
-          } else if (
-            "string" in innerStringItem &&
-            innerStringItem.string != null
-          ) {
+          if (innerStringItem.string != null) {
             let linkString = "";
             for (const innerInnerStringItem of innerStringItem.string) {
-              if (innerInnerStringItem.text != null) {
-                linkString += parseXMLText(innerInnerStringItem, {
+              if (innerInnerStringItem.payload != null) {
+                linkString += parseXMLString(innerInnerStringItem, {
                   isRichText,
                   parseEmail: false,
                 });
               }
             }
 
-            const links = Object.values(innerStringItem.links).flat();
+            const links = Object.values(innerStringItem.links ?? {}).flat();
+            if (links.length === 0) {
+              const currentText =
+                returnString.getExactText(stringItems.lang) ?? "";
+              returnString = returnString.withText(
+                stringItems.lang,
+                currentText + linkString,
+              );
+              continue;
+            }
 
             for (const link of links) {
               const linkContent =
@@ -307,7 +306,7 @@ export function parseXMLContent<V extends ReadonlyArray<string>>(
                     })
                   : MultilingualString.create(
                       stringItems.lang,
-                      parseXMLText(link.identification.label, {
+                      parseXMLString(link.identification.label, {
                         isRichText,
                         parseEmail: false,
                       }),
@@ -433,4 +432,34 @@ export function parseXMLContent<V extends ReadonlyArray<string>>(
   }
 
   return returnString;
+}
+
+/**
+ * Extracts alias strings from XMLContent where lang="zxx"
+ * @param content - The XMLContent to extract aliases from
+ * @returns Array of alias strings, or null if none found
+ *
+ * @internal
+ */
+export function extractAliases(
+  content: XMLContent | undefined,
+  options: { isRichText: boolean },
+): Array<string> | null {
+  if (content == null) {
+    return null;
+  }
+
+  const aliasItems = content.content.find((item) => item.lang === "zxx");
+  if (aliasItems == null) {
+    return null;
+  }
+
+  const aliases = parseXMLContent(
+    { content: [aliasItems] },
+    { languages: ["zxx"], isRichText: options.isRichText },
+  );
+
+  return aliases.getExactText("zxx") != null ?
+      [aliases.getExactText("zxx")!]
+    : null;
 }
