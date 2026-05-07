@@ -55,7 +55,7 @@ export type XMLIdentification = {
 export type XMLMetadata = {
   dataset: XMLString;
   description: XMLString;
-  publisher: XMLString;
+  publisher: XMLString | Array<XMLString>;
   identifier: XMLString;
   language?: Array<{ payload: string; default?: "true" }>;
   project?: {
@@ -96,7 +96,17 @@ export type XMLContextItem = {
   project: XMLContextValue;
   tree: Array<XMLContextValue>;
   displayPath: string;
-} & Partial<Record<XMLRecursiveDataCategory, Array<XMLContextValue>>>;
+} & Partial<
+  Record<
+    | XMLRecursiveDataCategory
+    | "heading"
+    | "propertyVariable"
+    | "variable"
+    | "propertyValue"
+    | "value",
+    Array<XMLContextValue>
+  >
+>;
 
 export type XMLContext = Array<{
   context: Array<XMLContextItem>;
@@ -173,11 +183,12 @@ export type XMLImageMap = {
   height: XMLNumber;
 };
 
-export type XMLNote = XMLContent & {
-  noteNo: XMLNumber;
-  title?: string;
-  authors?: { author: Array<XMLPerson> };
-};
+export type XMLNote = Partial<XMLContent> &
+  XMLString & {
+    noteNo: XMLNumber;
+    title?: string;
+    authors?: { author: Array<XMLPerson> };
+  };
 
 export type XMLProperty = {
   label: (XMLContent | XMLString) & {
@@ -240,8 +251,8 @@ export type XMLBaseItem = {
   publicationDateTime?: string;
   date?: string | XMLString;
   availability?: { license: XMLLicense };
-  copyright?: XMLString;
-  watermark?: XMLString;
+  copyright?: XMLContent | XMLString;
+  watermark?: XMLContent | XMLString;
   identification: XMLIdentification;
   context?: XMLContext;
   creators?: { creator: Array<XMLPerson> };
@@ -252,12 +263,22 @@ export type XMLBaseItem = {
 export type XMLBibliography = Partial<XMLBaseItem> & {
   type?: string;
   zoteroId?: string;
-  sourceDocument?: { uuid: string; payload: string };
+  sourceDocument?: {
+    uuid: string;
+    payload: string;
+    href?: string;
+    publicationDateTime?: string;
+  };
+  image?: XMLImage;
   publicationInfo?: {
     publishers?:
       | { publisher: Array<XMLPerson> }
       | { publishers: { person: Array<XMLPerson> } };
-    startDate?: { month: XMLNumber; year: XMLNumber; day: XMLNumber };
+    startDate?: {
+      month?: XMLNumber | XMLString;
+      year?: XMLNumber | XMLString;
+      day?: XMLNumber | XMLString;
+    };
   };
   entryInfo?: {
     payload?: string;
@@ -267,7 +288,7 @@ export type XMLBibliography = Partial<XMLBaseItem> & {
     endPage?: string;
   };
   citationDetails?: string;
-  citationFormat?: XMLString;
+  citationFormat?: XMLString | string;
   citationFormatSpan?: XMLString;
   referenceFormatDiv?: XMLString;
   source?: XMLDataItem;
@@ -296,6 +317,7 @@ export type XMLConcept = XMLBaseItem & {
   image?: XMLImage;
   interpretations?: { interpretation: Array<XMLInterpretation> };
   coordinates?: XMLCoordinates;
+  properties?: { property: Array<XMLProperty> };
   concept?: Array<XMLConcept>;
 };
 
@@ -315,6 +337,7 @@ export type XMLSpatialUnit = XMLBaseItem & {
   coordinates?: XMLCoordinates;
   mapData?: { geoJSON: { multiPolygon: { payload: string }; EPSG: XMLNumber } };
   observations?: { observation: Array<XMLObservation> };
+  properties?: { property: Array<XMLProperty> };
   bibliographies?: { bibliography: Array<XMLBibliography> };
   spatialUnit?: Array<XMLSpatialUnit>;
 };
@@ -333,7 +356,12 @@ export type XMLPerson = XMLBaseItem &
   Partial<XMLContent> & {
     type?: string;
     image?: XMLImage;
-    address?: { country?: string; city?: string; state?: string };
+    address?: {
+      country?: XMLString | string;
+      city?: XMLString | string;
+      state?: XMLString | string;
+      postalCode?: XMLString | string;
+    };
     coordinates?: XMLCoordinates;
     periods?: { period: Array<XMLPeriod> };
     links?: XMLLink;

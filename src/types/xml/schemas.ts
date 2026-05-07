@@ -173,16 +173,13 @@ const XMLIdentification: v.GenericSchema<XMLIdentificationType> = v.object(
 const XMLMetadata: v.GenericSchema<XMLMetadataType> = v.object({
   dataset: XMLString,
   description: XMLString,
-  publisher: XMLString,
+  publisher: v.union([XMLString, v.array(XMLString)]),
   identifier: XMLString,
   language: v.optional(
     v.array(
       v.object(
         {
-          payload: v.pipe(
-            v.string("XMLMetadata: language is string and required"),
-            v.length(3),
-          ),
+          payload: v.string("XMLMetadata: language is string and required"),
           default: v.optional(
             v.literal("true", "XMLMetadata: default is true"),
           ),
@@ -561,7 +558,12 @@ const XMLImageMap: v.GenericSchema<XMLImageMapType> = v.object(
 
 const XMLNote: v.GenericSchema<XMLNoteType> = v.object(
   {
-    ...XMLContent.entries,
+    content: v.optional(XMLContent.entries.content),
+    payload: v.optional(v.string("XMLNote: payload is string and optional")),
+    rend: v.optional(v.string("XMLNote: rend is string and optional")),
+    whitespace: v.optional(
+      v.string("XMLNote: whitespace is string and optional"),
+    ),
     noteNo: XMLNumber,
     date: v.optional(customDateTime("XMLNote: date is not a valid datetime")),
     authors: v.optional(
@@ -774,8 +776,8 @@ const XMLBaseItem = v.object(
     ),
     date: v.optional(v.union([customDateTime(), XMLString])),
     availability: v.optional(v.object({ license: XMLLicense })),
-    copyright: v.optional(XMLString),
-    watermark: v.optional(XMLString),
+    copyright: v.optional(v.union([XMLContent, XMLString])),
+    watermark: v.optional(v.union([XMLContent, XMLString])),
     identification: XMLIdentification,
     context: v.optional(XMLContext),
     creators: v.optional(
@@ -934,10 +936,19 @@ const XMLBibliography: v.GenericSchema<XMLBibliographyType> = v.object(
             ),
           ),
           payload: v.string("XMLBibliography: payload is string and required"),
+          href: v.optional(
+            v.string("XMLBibliography: href is string and optional"),
+          ),
+          publicationDateTime: v.optional(
+            customDateTime(
+              "XMLBibliography: publicationDateTime is not a valid datetime",
+            ),
+          ),
         },
         "XMLBibliography: sourceDocument is object with uuid and payload",
       ),
     ),
+    image: v.optional(XMLImage),
     publicationInfo: v.optional(
       v.object(
         {
@@ -952,7 +963,11 @@ const XMLBibliography: v.GenericSchema<XMLBibliographyType> = v.object(
             ]),
           ),
           startDate: v.optional(
-            v.object({ month: XMLNumber, year: XMLNumber, day: XMLNumber }),
+            v.object({
+              month: v.optional(v.union([XMLNumber, XMLString])),
+              year: v.optional(v.union([XMLNumber, XMLString])),
+              day: v.optional(v.union([XMLNumber, XMLString])),
+            }),
           ),
         },
         "XMLBibliography: publicationInfo is object with publishers and startDate",
@@ -983,7 +998,7 @@ const XMLBibliography: v.GenericSchema<XMLBibliographyType> = v.object(
     citationDetails: v.optional(
       v.string("XMLBibliography: citationDetails is string and optional"),
     ),
-    citationFormat: v.optional(XMLString),
+    citationFormat: v.optional(v.union([XMLString, v.string()])),
     citationFormatSpan: v.optional(XMLString),
     referenceFormatDiv: v.optional(XMLString),
     source: v.optional(v.lazy(() => XMLDataItem)),
@@ -1028,6 +1043,7 @@ const XMLConcept: v.GenericSchema<XMLConceptType> = v.object(
       v.object({ interpretation: v.array(XMLInterpretation) }),
     ),
     coordinates: v.optional(XMLCoordinates),
+    properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     concept: v.optional(v.array(v.lazy(() => XMLConcept))),
   },
   "XMLConcept: Shape error",
@@ -1076,6 +1092,7 @@ const XMLSpatialUnit: v.GenericSchema<XMLSpatialUnitType> = v.object(
     observations: v.optional(
       v.object({ observation: v.array(XMLObservation) }),
     ),
+    properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     bibliographies: v.optional(
       v.object({ bibliography: v.array(XMLBibliography) }),
     ),
@@ -1110,11 +1127,28 @@ const XMLPerson: v.GenericSchema<XMLPersonType> = v.object(
       v.object(
         {
           country: v.optional(
-            v.string("XMLPerson: country is string and optional"),
+            v.union([
+              XMLString,
+              v.string("XMLPerson: country is string and optional"),
+            ]),
           ),
-          city: v.optional(v.string("XMLPerson: city is string and optional")),
+          city: v.optional(
+            v.union([
+              XMLString,
+              v.string("XMLPerson: city is string and optional"),
+            ]),
+          ),
           state: v.optional(
-            v.string("XMLPerson: state is string and optional"),
+            v.union([
+              XMLString,
+              v.string("XMLPerson: state is string and optional"),
+            ]),
+          ),
+          postalCode: v.optional(
+            v.union([
+              XMLString,
+              v.string("XMLPerson: postalCode is string and optional"),
+            ]),
           ),
         },
         "XMLPerson: address is object with country, city, and state",
@@ -1386,18 +1420,7 @@ export const XMLData: v.GenericSchema<XMLDataType> = v.object(
               ),
             ),
             languages: v.optional(
-              v.pipe(
-                v.string("XMLData: languages is string and optional"),
-                v.check((val) =>
-                  val
-                    .split(";")
-                    .every(
-                      (lang) =>
-                        lang.length === 3 &&
-                        lang === lang.toLocaleLowerCase("en-US"),
-                    ),
-                ),
-              ),
+              v.string("XMLData: languages is string and optional"),
             ),
           },
           "XMLData: ochre is object with uuid, belongsTo, uuidBelongsTo, publicationDateTime, metadata, and languages",
