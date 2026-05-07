@@ -6,6 +6,7 @@ export type XMLDataCategory =
   | "period"
   | "person"
   | "propertyVariable"
+  | "variable"
   | "propertyValue"
   | "text"
   | "resource"
@@ -29,12 +30,14 @@ export type XMLString = {
     links?: XMLLink;
     properties?: { property: Array<XMLProperty> };
     string?: Array<XMLString>;
-    annotation: string;
+    annotation?: string;
+    rend?: string;
+    whitespace?: string;
   }>;
 };
 
 export type XMLContent = {
-  content: Array<{ string: Array<XMLString>; lang: string }>;
+  content: Array<{ string: Array<XMLString>; lang: string; title?: string }>;
 };
 
 export type XMLNumber = string;
@@ -42,11 +45,11 @@ export type XMLNumber = string;
 export type XMLBoolean = string;
 
 export type XMLIdentification = {
-  label: XMLContent;
-  abbreviation?: XMLContent;
-  code?: { payload: string };
-  email?: { payload: string };
-  website?: { payload: string };
+  label: XMLContent | XMLString;
+  abbreviation?: XMLContent | XMLString;
+  code?: XMLString | string;
+  email?: XMLString | string;
+  website?: XMLString | string;
 };
 
 export type XMLMetadata = {
@@ -56,7 +59,7 @@ export type XMLMetadata = {
   identifier: XMLString;
   language?: Array<{ payload: string; default?: "true" }>;
   project?: {
-    uuid: string;
+    uuid?: string;
     identification: XMLIdentification;
     dateFormat?: string;
     page?: "item" | "entry";
@@ -72,7 +75,7 @@ export type XMLMetadata = {
     page: "item" | "entry";
   };
   item?: {
-    uuid: string;
+    uuid?: string;
     identification: XMLIdentification;
     category: XMLDataCategory;
     type: string;
@@ -83,7 +86,7 @@ export type XMLMetadata = {
 export type XMLLicense = XMLString & { target?: string };
 
 export type XMLContextValue = {
-  uuid: string;
+  uuid?: string;
   publicationDateTime?: string;
   n: XMLNumber;
   payload: string;
@@ -115,28 +118,34 @@ export type XMLCoordinatesSource =
   | {
       context: "related";
       label: XMLContent & { uuid: string };
-      value: XMLContent & { uuid: string };
+      value: Array<(XMLContent | XMLString) & { uuid?: string }>;
     }
   | {
       context: "inherited";
       label: XMLContent & { uuid: string };
-      item: { label: XMLContent & { uuid: string } };
+      value?: Array<(XMLContent | XMLString) & { uuid?: string }>;
+      item: {
+        uuid?: string;
+        label: (XMLContent | XMLString) & { uuid?: string };
+      };
     };
 
-export type XMLCoordinates =
+export type XMLCoordinate =
   | {
       type: "point";
       latitude: XMLNumber;
       longitude: XMLNumber;
       altitude?: XMLNumber;
-      source: XMLCoordinatesSource;
+      source?: XMLCoordinatesSource;
     }
   | {
       type: "plane";
       minimum: { latitude: XMLNumber; longitude: XMLNumber };
       maximum: { latitude: XMLNumber; longitude: XMLNumber };
-      source: XMLCoordinatesSource;
+      source?: XMLCoordinatesSource;
     };
+
+export type XMLCoordinates = { coord: Array<XMLCoordinate> };
 
 export type XMLImage = {
   publicationDateTime?: string;
@@ -171,7 +180,10 @@ export type XMLNote = XMLContent & {
 };
 
 export type XMLProperty = {
-  label: XMLContent & { uuid: string; publicationDateTime?: string };
+  label: (XMLContent | XMLString) & {
+    uuid: string;
+    publicationDateTime?: string;
+  };
   value?: Array<
     Partial<XMLContent> & {
       i?: XMLNumber;
@@ -189,6 +201,7 @@ export type XMLProperty = {
       href?: string;
       rawValue?: string;
       isUncertain?: "true";
+      payload?: string;
     }
   >;
   comment?: XMLContent;
@@ -196,7 +209,10 @@ export type XMLProperty = {
 };
 
 export type XMLSimplifiedProperty = {
-  label: XMLContent & { uuid: string; publicationDateTime?: string };
+  label: (XMLContent | XMLString) & {
+    uuid: string;
+    publicationDateTime?: string;
+  };
   value?: Array<{
     i?: XMLNumber;
     inherited?: XMLBoolean;
@@ -222,7 +238,7 @@ export type XMLSimplifiedProperty = {
 export type XMLBaseItem = {
   uuid: string;
   publicationDateTime?: string;
-  date?: string;
+  date?: string | XMLString;
   availability?: { license: XMLLicense };
   copyright?: XMLString;
   watermark?: XMLString;
@@ -238,10 +254,18 @@ export type XMLBibliography = Partial<XMLBaseItem> & {
   zoteroId?: string;
   sourceDocument?: { uuid: string; payload: string };
   publicationInfo?: {
-    publishers?: { publisher: Array<XMLPerson> };
+    publishers?:
+      | { publisher: Array<XMLPerson> }
+      | { publishers: { person: Array<XMLPerson> } };
     startDate?: { month: XMLNumber; year: XMLNumber; day: XMLNumber };
   };
-  entryInfo?: { startIssue: string; startVolume: string };
+  entryInfo?: {
+    payload?: string;
+    startIssue?: string;
+    startVolume?: string;
+    startPage?: string;
+    endPage?: string;
+  };
   citationDetails?: string;
   citationFormat?: XMLString;
   citationFormatSpan?: XMLString;
@@ -253,6 +277,7 @@ export type XMLBibliography = Partial<XMLBaseItem> & {
   notes?: { note: Array<XMLNote> };
   properties?: { property: Array<XMLProperty> };
   bibliographies?: { bibliography: Array<XMLBibliography> };
+  bibliography?: Array<XMLBibliography>;
 };
 
 export type XMLInterpretation = {
@@ -335,7 +360,7 @@ export type XMLPropertyValue = XMLBaseItem & {
 
 export type XMLResource = XMLBaseItem & {
   type?: string;
-  date?: string;
+  date?: string | XMLString;
   href?: string;
   fileFormat?: string;
   fileSize?: XMLNumber;
@@ -348,7 +373,7 @@ export type XMLResource = XMLBaseItem & {
   coordinates?: XMLCoordinates;
   periods?: { period: Array<XMLPeriod> };
   links?: XMLLink;
-  reverseLinks?: Array<XMLLink>;
+  reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;
   notes?: { note: Array<XMLNote> };
   properties?: { property: Array<XMLProperty> };
   bibliographies?: { bibliography: Array<XMLBibliography> };
@@ -370,15 +395,21 @@ export type XMLText = XMLBaseItem & {
   image?: XMLImage;
   coordinates?: XMLCoordinates;
   links?: XMLLink;
-  reverseLinks?: Array<XMLLink>;
+  reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;
   notes?: { note: Array<XMLNote> };
-  sections?: {
-    translation?: { section: Array<XMLSection> };
-    phonemic?: { section: Array<XMLSection> };
-  };
+  sections?:
+    | {
+        translation?: Array<{ section: Array<XMLSection> }>;
+        phonemic?: Array<{ section: Array<XMLSection> }>;
+      }
+    | XMLString;
   periods?: { period: Array<XMLPeriod> };
   creators?: { creator: Array<XMLPerson> };
-  editions?: { edition: Array<XMLPerson> };
+  editions?: {
+    edition?: Array<XMLPerson>;
+    editor?: Array<XMLPerson>;
+    publisher?: Array<XMLPerson>;
+  };
 };
 
 export type XMLHeading = {
@@ -388,29 +419,33 @@ export type XMLHeading = {
 } & (
   | { person?: Array<XMLPerson> }
   | { propertyVariable?: Array<XMLPropertyVariable> }
+  | { variable?: Array<XMLPropertyVariable> }
   | { propertyValue?: Array<XMLPropertyValue> }
-  | { resource?: Array<XMLResource> }
+  | { resource?: Array<XMLResource | { resource: Array<XMLResource> }> }
+  | { text?: Array<XMLText> }
   | { set?: Array<XMLSet> }
 );
 
 export type XMLTree = XMLBaseItem & {
   type?: string;
-  date?: string;
+  date?: string | XMLString;
   links?: XMLLink;
   notes?: { note: Array<XMLNote> };
   properties?: { property: Array<XMLProperty> };
-  items?: { heading?: Array<XMLHeading> } & (
-    | { bibliography: Array<XMLBibliography> }
-    | { concept: Array<XMLConcept> }
-    | { spatialUnit: Array<XMLSpatialUnit> }
-    | { period: Array<XMLPeriod> }
-    | { person: Array<XMLPerson> }
-    | { propertyVariable: Array<XMLPropertyVariable> }
-    | { propertyValue: Array<XMLPropertyValue> }
-    | { resource: Array<XMLResource> }
-    | { text: Array<XMLText> }
-    | { set: Array<XMLSet> }
-  );
+  bibliographies?: { bibliography: Array<XMLBibliography> };
+  items?: { heading?: Array<XMLHeading> } & Partial<{
+    bibliography: Array<XMLBibliography>;
+    concept: Array<XMLConcept>;
+    spatialUnit: Array<XMLSpatialUnit>;
+    period: Array<XMLPeriod>;
+    person: Array<XMLPerson>;
+    propertyVariable: Array<XMLPropertyVariable>;
+    variable: Array<XMLPropertyVariable>;
+    propertyValue: Array<XMLPropertyValue>;
+    resource: Array<XMLResource | { resource: Array<XMLResource> }>;
+    text: Array<XMLText>;
+    set: Array<XMLSet>;
+  }>;
 };
 
 export type XMLSet = XMLBaseItem & {
@@ -428,8 +463,9 @@ export type XMLSet = XMLBaseItem & {
     period?: Array<XMLPeriod>;
     person?: Array<XMLPerson>;
     propertyVariable?: Array<XMLPropertyVariable>;
+    variable?: Array<XMLPropertyVariable>;
     propertyValue?: Array<XMLPropertyValue>;
-    resource?: Array<XMLResource>;
+    resource?: Array<XMLResource | { resource: Array<XMLResource> }>;
     text?: Array<XMLText>;
     set?: Array<XMLSet>;
   };
@@ -443,10 +479,12 @@ export type XMLLink = {
   period?: Array<XMLPeriod>;
   person?: Array<XMLPerson>;
   propertyVariable?: Array<XMLPropertyVariable>;
+  variable?: Array<XMLPropertyVariable>;
   propertyValue?: Array<XMLPropertyValue>;
   resource?: Array<XMLResource>;
   text?: Array<XMLText>;
   set?: Array<XMLSet>;
+  dictionaryUnit?: unknown;
 };
 
 export type XMLDataItem =
@@ -457,6 +495,7 @@ export type XMLDataItem =
   | { period: Array<XMLPeriod> }
   | { person: Array<XMLPerson> }
   | { propertyVariable: Array<XMLPropertyVariable> }
+  | { variable: Array<XMLPropertyVariable> }
   | { propertyValue: Array<XMLPropertyValue> }
   | { resource: Array<XMLResource> }
   | { text: Array<XMLText> }

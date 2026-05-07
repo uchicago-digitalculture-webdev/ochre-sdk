@@ -12,7 +12,9 @@ export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
   "propertyValue",
   "propertyVariable",
   "resource",
+  "text",
   "set",
+  "variable",
   "property",
   "value",
   "context",
@@ -29,6 +31,11 @@ export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
   "area",
   "footnote",
   "language",
+  "section",
+  "translation",
+  "phonemic",
+  "editor",
+  "publisher",
 ];
 
 export const XML_PARSER_OPTIONS: X2jOptions = {
@@ -66,12 +73,16 @@ export const XML_PARSER_OPTIONS: X2jOptions = {
 export const DEFAULT_LANGUAGES: ReadonlyArray<string> = ["eng"];
 
 export const PRESENTATION_ITEM_UUID = "f1c131b6-1498-48a4-95bf-a9edae9fd518";
-export const WEBSITE_UUID = "0e500a69-13c3-44e8-82ac-806fbdeaddfd";
-export const WEBPAGE_UUID = "a6a82c55-44da-469c-a205-de2276a8e3d2";
-export const WEB_BLOCK_UUID = "43861c62-4c0f-4861-8bb5-9cba87055062";
-export const WEB_ELEMENT_UUID = "45e7e18c-b1d7-4cba-9503-ca419c62e6ec";
-export const COMPONENT_UUID = "d68be7c7-da77-4515-b3e3-9f0f095df52f";
-export const CSS_STYLE_UUID = "82e502c1-6631-4b46-b4c4-c49519451030";
-export const MOBILE_CSS_STYLE_UUID = "dad47330-c02c-4744-80b6-4a77f19014b7";
-export const TITLE_UUID = "52d199a0-26d9-42b2-93df-0153210d7d3e";
-export const CITATION_UUID = "b9ca2732-78f4-416e-b77f-dae7647e68a9";
+export const TEXT_ANNOTATION_UUID = "b9ca2732-78f4-416e-b77f-dae7647e68a9";
+export const TEXT_ANNOTATION_HOVER_CARD_UUID =
+  "c7f6a08a-f07b-49b6-bcb1-af485da3c58f";
+export const TEXT_ANNOTATION_ITEM_PAGE_VARIANT_UUID =
+  "bf4476ab-6bc8-40d0-a001-1446213c72ce";
+export const TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID =
+  "9d52db95-a9cf-45f7-a0bf-fc9ba9f0aae0";
+export const TEXT_ANNOTATION_TEXT_STYLING_UUID =
+  "3e6f86ab-df81-45ae-8257-e2867357df56";
+export const TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID =
+  "e1647bef-d801-4100-bdde-d081c422f763";
+export const TEXT_ANNOTATION_TEXT_STYLING_HEADING_LEVEL_UUID =
+  "d4266f0b-3f8d-4b32-8c15-4b229c8bb11e";

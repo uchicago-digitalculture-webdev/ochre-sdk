@@ -66,6 +66,7 @@ const DATA_CATEGORIES = [
   "period",
   "person",
   "propertyVariable",
+  "variable",
   "propertyValue",
   "resource",
   "text",
@@ -99,7 +100,13 @@ const XMLString: v.GenericSchema<XMLStringType> = v.object(
               "XMLString: string is array of XMLString",
             ),
           ),
-          annotation: v.string("XMLString: annotation is string and required"),
+          annotation: v.optional(
+            v.string("XMLString: annotation is string and optional"),
+          ),
+          rend: v.optional(v.string("XMLString: rend is string and optional")),
+          whitespace: v.optional(
+            v.string("XMLString: whitespace is string and optional"),
+          ),
         }),
       ),
     ),
@@ -139,22 +146,25 @@ const XMLBoolean: v.GenericSchema<XMLBooleanType> = v.pipe(
 
 const XMLIdentification: v.GenericSchema<XMLIdentificationType> = v.object(
   {
-    label: XMLContent,
-    abbreviation: v.optional(XMLContent),
+    label: v.union([XMLContent, XMLString]),
+    abbreviation: v.optional(v.union([XMLContent, XMLString])),
     code: v.optional(
-      v.object({
-        payload: v.string("XMLIdentification: code is string and optional"),
-      }),
+      v.union([
+        XMLString,
+        v.string("XMLIdentification: code is string and optional"),
+      ]),
     ),
     email: v.optional(
-      v.object({
-        payload: v.string("XMLIdentification: email is string and optional"),
-      }),
+      v.union([
+        XMLString,
+        v.string("XMLIdentification: email is string and optional"),
+      ]),
     ),
     website: v.optional(
-      v.object({
-        payload: v.string("XMLIdentification: website is string and optional"),
-      }),
+      v.union([
+        XMLString,
+        v.string("XMLIdentification: website is string and optional"),
+      ]),
     ),
   },
   "XMLIdentification: Shape error",
@@ -185,9 +195,14 @@ const XMLMetadata: v.GenericSchema<XMLMetadataType> = v.object({
   project: v.optional(
     v.object(
       {
-        uuid: v.pipe(
-          v.string("XMLMetadata: uuid is string and required"),
-          v.check(isPseudoUuid, "XMLMetadata: uuid is not a valid pseudo-UUID"),
+        uuid: v.optional(
+          v.pipe(
+            v.string("XMLMetadata: uuid is string and optional"),
+            v.check(
+              isPseudoUuid,
+              "XMLMetadata: uuid is not a valid pseudo-UUID",
+            ),
+          ),
         ),
         identification: XMLIdentification,
         dateFormat: v.optional(
@@ -238,9 +253,14 @@ const XMLMetadata: v.GenericSchema<XMLMetadataType> = v.object({
   item: v.optional(
     v.object(
       {
-        uuid: v.pipe(
-          v.string("XMLMetadata: uuid is string and required"),
-          v.check(isPseudoUuid, "XMLMetadata: uuid is not a valid pseudo-UUID"),
+        uuid: v.optional(
+          v.pipe(
+            v.string("XMLMetadata: uuid is string and optional"),
+            v.check(
+              isPseudoUuid,
+              "XMLMetadata: uuid is not a valid pseudo-UUID",
+            ),
+          ),
         ),
         identification: XMLIdentification,
         category: XMLDataCategory,
@@ -267,9 +287,14 @@ const XMLLicense: v.GenericSchema<XMLLicenseType> = v.object(
 
 const XMLContextValue: v.GenericSchema<XMLContextValueType> = v.object(
   {
-    uuid: v.pipe(
-      v.string("XMLContextValue: uuid is string and required"),
-      v.check(isPseudoUuid, "XMLContextValue: uuid is not a valid pseudo-UUID"),
+    uuid: v.optional(
+      v.pipe(
+        v.string("XMLContextValue: uuid is string and optional"),
+        v.check(
+          isPseudoUuid,
+          "XMLContextValue: uuid is not a valid pseudo-UUID",
+        ),
+      ),
     ),
     publicationDateTime: v.optional(
       customDateTime(
@@ -371,24 +396,35 @@ const XMLEvent: v.GenericSchema<XMLEventType> = v.object(
   "XMLEvent: Shape error",
 );
 
+const XMLCoordinatesSourceLabel = v.object(
+  {
+    ...XMLContent.entries,
+    uuid: v.pipe(
+      v.string("XMLCoordinatesSource: uuid is string and required"),
+      v.check(isPseudoUuid, "XMLCoordinatesSource: uuid is not a valid UUID"),
+    ),
+  },
+  "XMLCoordinatesSource: Shape error",
+);
+
+const XMLCoordinatesSourceValue = v.intersect([
+  v.union([XMLContent, XMLString]),
+  v.object({
+    uuid: v.optional(
+      v.pipe(
+        v.string("XMLCoordinatesSource: uuid is string and optional"),
+        v.check(isPseudoUuid, "XMLCoordinatesSource: uuid is not a valid UUID"),
+      ),
+    ),
+  }),
+]);
+
 const XMLCoordinatesSource: v.GenericSchema<XMLCoordinatesSourceType> =
   v.variant("context", [
     v.object(
       {
         context: v.literal("self", "XMLCoordinatesSource: context is self"),
-        label: v.object(
-          {
-            ...XMLContent.entries,
-            uuid: v.pipe(
-              v.string("XMLCoordinatesSource: uuid is string and required"),
-              v.check(
-                isPseudoUuid,
-                "XMLCoordinatesSource: uuid is not a valid pseudo-UUID",
-              ),
-            ),
-          },
-          "XMLCoordinatesSource: Shape error",
-        ),
+        label: XMLCoordinatesSourceLabel,
       },
       "XMLCoordinatesSource: Shape error",
     ),
@@ -398,32 +434,8 @@ const XMLCoordinatesSource: v.GenericSchema<XMLCoordinatesSourceType> =
           "related",
           "XMLCoordinatesSource: context is related",
         ),
-        label: v.object(
-          {
-            ...XMLContent.entries,
-            uuid: v.pipe(
-              v.string("XMLCoordinatesSource: uuid is string and required"),
-              v.regex(
-                /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i,
-                "XMLCoordinatesSource: uuid is not a valid UUID",
-              ),
-            ),
-          },
-          "XMLCoordinatesSource: Shape error",
-        ),
-        value: v.object(
-          {
-            ...XMLContent.entries,
-            uuid: v.pipe(
-              v.string("XMLCoordinatesSource: uuid is string and required"),
-              v.check(
-                isPseudoUuid,
-                "XMLCoordinatesSource: uuid is not a valid pseudo-UUID",
-              ),
-            ),
-          },
-          "XMLCoordinatesSource: Shape error",
-        ),
+        label: XMLCoordinatesSourceLabel,
+        value: v.array(XMLCoordinatesSourceValue),
       },
       "XMLCoordinatesSource: Shape error",
     ),
@@ -433,34 +445,20 @@ const XMLCoordinatesSource: v.GenericSchema<XMLCoordinatesSourceType> =
           "inherited",
           "XMLCoordinatesSource: context is inherited",
         ),
-        label: v.object(
-          {
-            ...XMLContent.entries,
-            uuid: v.pipe(
-              v.string("XMLCoordinatesSource: uuid is string and required"),
-              v.check(
-                isPseudoUuid,
-                "XMLCoordinatesSource: uuid is not a valid pseudo-UUID",
-              ),
-            ),
-          },
-          "XMLCoordinatesSource: Shape error",
-        ),
+        label: XMLCoordinatesSourceLabel,
+        value: v.optional(v.array(XMLCoordinatesSourceValue)),
         item: v.object(
           {
-            label: v.object(
-              {
-                ...XMLContent.entries,
-                uuid: v.pipe(
-                  v.string("XMLCoordinatesSource: uuid is string and required"),
-                  v.check(
-                    isPseudoUuid,
-                    "XMLCoordinatesSource: uuid is not a valid pseudo-UUID",
-                  ),
+            uuid: v.optional(
+              v.pipe(
+                v.string("XMLCoordinatesSource: uuid is string and optional"),
+                v.check(
+                  isPseudoUuid,
+                  "XMLCoordinatesSource: uuid is not a valid UUID",
                 ),
-              },
-              "XMLCoordinatesSource: Shape error",
+              ),
             ),
+            label: XMLCoordinatesSourceValue,
           },
           "XMLCoordinatesSource: Shape error",
         ),
@@ -469,7 +467,7 @@ const XMLCoordinatesSource: v.GenericSchema<XMLCoordinatesSourceType> =
     ),
   ]);
 
-const XMLCoordinates: v.GenericSchema<XMLCoordinatesType> = v.variant(
+const XMLCoordinate = v.variant(
   "type",
   [
     v.object(
@@ -478,7 +476,7 @@ const XMLCoordinates: v.GenericSchema<XMLCoordinatesType> = v.variant(
         latitude: XMLNumber,
         longitude: XMLNumber,
         altitude: v.optional(XMLNumber),
-        source: XMLCoordinatesSource,
+        source: v.optional(XMLCoordinatesSource),
       },
       "XMLCoordinates: Shape error",
     ),
@@ -493,11 +491,16 @@ const XMLCoordinates: v.GenericSchema<XMLCoordinatesType> = v.variant(
           { latitude: XMLNumber, longitude: XMLNumber },
           "XMLCoordinates: maximum is object with latitude and longitude",
         ),
-        source: XMLCoordinatesSource,
+        source: v.optional(XMLCoordinatesSource),
       },
       "XMLCoordinates: Shape error",
     ),
   ],
+  "XMLCoordinates: Shape error",
+);
+
+const XMLCoordinates: v.GenericSchema<XMLCoordinatesType> = v.object(
+  { coord: v.array(XMLCoordinate) },
   "XMLCoordinates: Shape error",
 );
 
@@ -574,24 +577,26 @@ const XMLNote: v.GenericSchema<XMLNoteType> = v.object(
 const XMLProperty: v.GenericSchema<XMLPropertyType> = v.lazy(() =>
   v.object(
     {
-      label: v.object(
-        {
-          ...XMLContent.entries,
-          uuid: v.pipe(
-            v.string("XMLProperty: uuid is string and required"),
-            v.check(
-              isPseudoUuid,
-              "XMLProperty: uuid is not a valid pseudo-UUID",
+      label: v.intersect([
+        v.union([XMLContent, XMLString]),
+        v.object(
+          {
+            uuid: v.pipe(
+              v.string("XMLProperty: uuid is string and required"),
+              v.check(
+                isPseudoUuid,
+                "XMLProperty: uuid is not a valid pseudo-UUID",
+              ),
             ),
-          ),
-          publicationDateTime: v.optional(
-            customDateTime(
-              "XMLProperty: publicationDateTime is not a valid datetime",
+            publicationDateTime: v.optional(
+              customDateTime(
+                "XMLProperty: publicationDateTime is not a valid datetime",
+              ),
             ),
-          ),
-        },
-        "XMLProperty: label is object with uuid",
-      ),
+          },
+          "XMLProperty: label is object with uuid",
+        ),
+      ]),
       value: v.optional(
         v.array(
           v.object({
@@ -642,6 +647,9 @@ const XMLProperty: v.GenericSchema<XMLPropertyType> = v.lazy(() =>
             href: v.optional(
               v.string("XMLProperty: href is string and optional"),
             ),
+            payload: v.optional(
+              v.string("XMLProperty: payload is string and optional"),
+            ),
           }),
           "XMLProperty: value is array of objects with payload",
         ),
@@ -659,24 +667,26 @@ const XMLSimplifiedProperty: v.GenericSchema<XMLSimplifiedPropertyType> =
   v.lazy(() =>
     v.object(
       {
-        label: v.object(
-          {
-            ...XMLContent.entries,
-            uuid: v.pipe(
-              v.string("XMLSimplifiedProperty: uuid is string and required"),
-              v.check(
-                isPseudoUuid,
-                "XMLSimplifiedProperty: uuid is not a valid pseudo-UUID",
+        label: v.intersect([
+          v.union([XMLContent, XMLString]),
+          v.object(
+            {
+              uuid: v.pipe(
+                v.string("XMLSimplifiedProperty: uuid is string and required"),
+                v.check(
+                  isPseudoUuid,
+                  "XMLSimplifiedProperty: uuid is not a valid pseudo-UUID",
+                ),
               ),
-            ),
-            publicationDateTime: v.optional(
-              customDateTime(
-                "XMLSimplifiedProperty: publicationDateTime is not a valid datetime",
+              publicationDateTime: v.optional(
+                customDateTime(
+                  "XMLSimplifiedProperty: publicationDateTime is not a valid datetime",
+                ),
               ),
-            ),
-          },
-          "XMLSimplifiedProperty: label is object with uuid",
-        ),
+            },
+            "XMLSimplifiedProperty: label is object with uuid",
+          ),
+        ]),
         value: v.optional(
           v.array(
             v.object({
@@ -762,8 +772,10 @@ const XMLBaseItem = v.object(
         "XMLBaseItem: publicationDateTime is not a valid datetime",
       ),
     ),
-    date: v.optional(customDateTime()),
+    date: v.optional(v.union([customDateTime(), XMLString])),
     availability: v.optional(v.object({ license: XMLLicense })),
+    copyright: v.optional(XMLString),
+    watermark: v.optional(XMLString),
     identification: XMLIdentification,
     context: v.optional(XMLContext),
     creators: v.optional(
@@ -802,9 +814,22 @@ const XMLHeading: v.GenericSchema<XMLHeadingType> = v.intersect([
       }),
     ),
     v.optional(
+      v.object({ variable: v.array(v.lazy(() => XMLPropertyVariable)) }),
+    ),
+    v.optional(
       v.object({ propertyValue: v.array(v.lazy(() => XMLPropertyValue)) }),
     ),
-    v.optional(v.object({ resource: v.array(v.lazy(() => XMLResource)) })),
+    v.optional(
+      v.object({
+        resource: v.array(
+          v.union([
+            v.lazy(() => XMLResource),
+            v.object({ resource: v.array(v.lazy(() => XMLResource)) }),
+          ]),
+        ),
+      }),
+    ),
+    v.optional(v.object({ text: v.array(v.lazy(() => XMLText)) })),
     v.optional(v.object({ set: v.array(v.lazy(() => XMLSet)) })),
   ]),
 ]);
@@ -812,28 +837,42 @@ const XMLHeading: v.GenericSchema<XMLHeadingType> = v.intersect([
 const XMLTree: v.GenericSchema<XMLTreeType> = v.object(
   {
     ...XMLBaseItem.entries,
-    date: v.optional(customDateTime("XMLTree: date is not a valid datetime")),
+    date: v.optional(
+      v.union([
+        customDateTime("XMLTree: date is not a valid datetime"),
+        XMLString,
+      ]),
+    ),
     links: v.optional(v.lazy(() => XMLLink)),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
+    bibliographies: v.optional(
+      v.object({ bibliography: v.array(v.lazy(() => XMLBibliography)) }),
+    ),
     items: v.optional(
-      v.intersect([
-        v.object({ heading: v.optional(v.array(v.lazy(() => XMLHeading))) }),
-        v.union([
-          v.object({ bibliography: v.array(v.lazy(() => XMLBibliography)) }),
-          v.object({ concept: v.array(v.lazy(() => XMLConcept)) }),
-          v.object({ spatialUnit: v.array(v.lazy(() => XMLSpatialUnit)) }),
-          v.object({ period: v.array(v.lazy(() => XMLPeriod)) }),
-          v.object({ person: v.array(v.lazy(() => XMLPerson)) }),
-          v.object({
-            propertyVariable: v.array(v.lazy(() => XMLPropertyVariable)),
-          }),
-          v.object({ propertyValue: v.array(v.lazy(() => XMLPropertyValue)) }),
-          v.object({ resource: v.array(v.lazy(() => XMLResource)) }),
-          v.object({ text: v.array(v.lazy(() => XMLText)) }),
-          v.object({ set: v.array(v.lazy(() => XMLSet)) }),
-        ]),
-      ]),
+      v.object({
+        heading: v.optional(v.array(v.lazy(() => XMLHeading))),
+        bibliography: v.optional(v.array(v.lazy(() => XMLBibliography))),
+        concept: v.optional(v.array(v.lazy(() => XMLConcept))),
+        spatialUnit: v.optional(v.array(v.lazy(() => XMLSpatialUnit))),
+        period: v.optional(v.array(v.lazy(() => XMLPeriod))),
+        person: v.optional(v.array(v.lazy(() => XMLPerson))),
+        propertyVariable: v.optional(
+          v.array(v.lazy(() => XMLPropertyVariable)),
+        ),
+        variable: v.optional(v.array(v.lazy(() => XMLPropertyVariable))),
+        propertyValue: v.optional(v.array(v.lazy(() => XMLPropertyValue))),
+        resource: v.optional(
+          v.array(
+            v.union([
+              v.lazy(() => XMLResource),
+              v.object({ resource: v.array(v.lazy(() => XMLResource)) }),
+            ]),
+          ),
+        ),
+        text: v.optional(v.array(v.lazy(() => XMLText))),
+        set: v.optional(v.array(v.lazy(() => XMLSet))),
+      }),
     ),
   },
   "XMLTree: Shape error",
@@ -849,29 +888,29 @@ const XMLSet: v.GenericSchema<XMLSetType> = v.object(
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     items: v.optional(
-      v.union([
-        v.optional(v.object({ tree: v.array(v.lazy(() => XMLTree)) })),
-        v.optional(
-          v.object({ bibliography: v.array(v.lazy(() => XMLBibliography)) }),
+      v.object({
+        tree: v.optional(v.array(v.lazy(() => XMLTree))),
+        bibliography: v.optional(v.array(v.lazy(() => XMLBibliography))),
+        concept: v.optional(v.array(v.lazy(() => XMLConcept))),
+        spatialUnit: v.optional(v.array(v.lazy(() => XMLSpatialUnit))),
+        period: v.optional(v.array(v.lazy(() => XMLPeriod))),
+        person: v.optional(v.array(v.lazy(() => XMLPerson))),
+        propertyVariable: v.optional(
+          v.array(v.lazy(() => XMLPropertyVariable)),
         ),
-        v.optional(v.object({ concept: v.array(v.lazy(() => XMLConcept)) })),
-        v.optional(
-          v.object({ spatialUnit: v.array(v.lazy(() => XMLSpatialUnit)) }),
+        variable: v.optional(v.array(v.lazy(() => XMLPropertyVariable))),
+        propertyValue: v.optional(v.array(v.lazy(() => XMLPropertyValue))),
+        resource: v.optional(
+          v.array(
+            v.union([
+              v.lazy(() => XMLResource),
+              v.object({ resource: v.array(v.lazy(() => XMLResource)) }),
+            ]),
+          ),
         ),
-        v.optional(v.object({ period: v.array(v.lazy(() => XMLPeriod)) })),
-        v.optional(v.object({ person: v.array(v.lazy(() => XMLPerson)) })),
-        v.optional(
-          v.object({
-            propertyVariable: v.array(v.lazy(() => XMLPropertyVariable)),
-          }),
-        ),
-        v.optional(
-          v.object({ propertyValue: v.array(v.lazy(() => XMLPropertyValue)) }),
-        ),
-        v.optional(v.object({ resource: v.array(v.lazy(() => XMLResource)) })),
-        v.optional(v.object({ text: v.array(v.lazy(() => XMLText)) })),
-        v.optional(v.object({ set: v.array(v.lazy(() => XMLSet)) })),
-      ]),
+        text: v.optional(v.array(v.lazy(() => XMLText))),
+        set: v.optional(v.array(v.lazy(() => XMLSet))),
+      }),
     ),
   },
   "XMLSet: Shape error",
@@ -903,7 +942,14 @@ const XMLBibliography: v.GenericSchema<XMLBibliographyType> = v.object(
       v.object(
         {
           publishers: v.optional(
-            v.object({ publisher: v.array(v.lazy(() => XMLPerson)) }),
+            v.union([
+              v.object({ publisher: v.array(v.lazy(() => XMLPerson)) }),
+              v.object({
+                publishers: v.object({
+                  person: v.array(v.lazy(() => XMLPerson)),
+                }),
+              }),
+            ]),
           ),
           startDate: v.optional(
             v.object({ month: XMLNumber, year: XMLNumber, day: XMLNumber }),
@@ -915,14 +961,23 @@ const XMLBibliography: v.GenericSchema<XMLBibliographyType> = v.object(
     entryInfo: v.optional(
       v.object(
         {
-          startIssue: v.string(
-            "XMLBibliography: startIssue is string and required",
+          payload: v.optional(
+            v.string("XMLBibliography: payload is string and optional"),
           ),
-          startVolume: v.string(
-            "XMLBibliography: startVolume is string and required",
+          startIssue: v.optional(
+            v.string("XMLBibliography: startIssue is string and optional"),
+          ),
+          startVolume: v.optional(
+            v.string("XMLBibliography: startVolume is string and optional"),
+          ),
+          startPage: v.optional(
+            v.string("XMLBibliography: startPage is string and optional"),
+          ),
+          endPage: v.optional(
+            v.string("XMLBibliography: endPage is string and optional"),
           ),
         },
-        "XMLBibliography: entryInfo is object with startIssue and startVolume",
+        "XMLBibliography: entryInfo is object",
       ),
     ),
     citationDetails: v.optional(
@@ -940,6 +995,7 @@ const XMLBibliography: v.GenericSchema<XMLBibliographyType> = v.object(
     bibliographies: v.optional(
       v.object({ bibliography: v.array(v.lazy(() => XMLBibliography)) }),
     ),
+    bibliography: v.optional(v.array(v.lazy(() => XMLBibliography))),
   },
   "XMLBibliography: Shape error",
 );
@@ -1032,6 +1088,7 @@ const XMLPeriod: v.GenericSchema<XMLPeriodType> = v.object(
   {
     ...XMLBaseItem.entries,
     type: v.optional(v.string("XMLPeriod: type is string and optional")),
+    coordinates: v.optional(XMLCoordinates),
     links: v.optional(v.lazy(() => XMLDataItem)),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
@@ -1076,7 +1133,7 @@ const XMLPropertyValue: v.GenericSchema<XMLPropertyValueType> = v.object(
   {
     ...XMLBaseItem.entries,
     coordinates: v.optional(XMLCoordinates),
-    links: v.optional(v.lazy(() => XMLDataItem)),
+    links: v.optional(v.lazy(() => XMLLink)),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     bibliographies: v.optional(
@@ -1107,7 +1164,10 @@ const XMLResource: v.GenericSchema<XMLResourceType> = v.object(
     ...XMLBaseItem.entries,
     type: v.optional(v.string("XMLResource: type is string and optional")),
     date: v.optional(
-      customDateTime("XMLResource: date is not a valid datetime"),
+      v.union([
+        customDateTime("XMLResource: date is not a valid datetime"),
+        XMLString,
+      ]),
     ),
     href: v.optional(
       v.pipe(
@@ -1128,7 +1188,13 @@ const XMLResource: v.GenericSchema<XMLResourceType> = v.object(
     coordinates: v.optional(XMLCoordinates),
     periods: v.optional(v.object({ period: v.array(XMLPeriod) })),
     links: v.optional(v.lazy(() => XMLLink)),
-    reverseLinks: v.optional(v.array(v.lazy(() => XMLDataItem))),
+    reverseLinks: v.optional(
+      v.union([
+        v.lazy(() => XMLLink),
+        v.lazy(() => XMLDataItem),
+        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+      ]),
+    ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     bibliographies: v.optional(
@@ -1139,12 +1205,69 @@ const XMLResource: v.GenericSchema<XMLResourceType> = v.object(
   "XMLResource: Shape error",
 );
 
+const XMLSection = v.object(
+  {
+    uuid: v.pipe(
+      v.string("XMLSection: uuid is string and required"),
+      v.check(isPseudoUuid, "XMLSection: uuid is not a valid pseudo-UUID"),
+    ),
+    publicationDateTime: v.optional(
+      customDateTime("XMLSection: publicationDateTime is not a valid datetime"),
+    ),
+    type: v.string("XMLSection: type is string and required"),
+    identification: XMLIdentification,
+    project: v.optional(v.object({ identification: XMLIdentification })),
+  },
+  "XMLSection: Shape error",
+);
+
 const XMLText: v.GenericSchema<XMLTextType> = v.object(
   {
     ...XMLBaseItem.entries,
     type: v.optional(v.string("XMLText: type is string and optional")),
     text: v.optional(v.string("XMLText: text is string and optional")),
+    language: v.optional(v.string("XMLText: language is string and optional")),
+    image: v.optional(XMLImage),
+    coordinates: v.optional(XMLCoordinates),
     links: v.optional(v.lazy(() => XMLLink)),
+    reverseLinks: v.optional(
+      v.union([
+        v.lazy(() => XMLLink),
+        v.lazy(() => XMLDataItem),
+        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+      ]),
+    ),
+    notes: v.optional(v.object({ note: v.array(XMLNote) })),
+    sections: v.optional(
+      v.union([
+        XMLString,
+        v.object({
+          translation: v.optional(
+            v.array(v.object({ section: v.array(XMLSection) })),
+          ),
+          phonemic: v.optional(
+            v.array(v.object({ section: v.array(XMLSection) })),
+          ),
+        }),
+      ]),
+    ),
+    periods: v.optional(v.object({ period: v.array(XMLPeriod) })),
+    creators: v.optional(
+      v.object(
+        { creator: v.array(v.lazy(() => XMLPerson)) },
+        "XMLText: creators is object with creator array of XMLPerson",
+      ),
+    ),
+    editions: v.optional(
+      v.object(
+        {
+          edition: v.optional(v.array(v.lazy(() => XMLPerson))),
+          editor: v.optional(v.array(v.lazy(() => XMLPerson))),
+          publisher: v.optional(v.array(v.lazy(() => XMLPerson))),
+        },
+        "XMLText: editions is object with edition array of XMLPerson",
+      ),
+    ),
   },
   "XMLText: Shape error",
 );
@@ -1159,14 +1282,20 @@ export const XMLLink: v.GenericSchema<XMLLinkType> = v.pipe(
       period: v.optional(v.array(XMLPeriod)),
       person: v.optional(v.array(XMLPerson)),
       propertyVariable: v.optional(v.array(XMLPropertyVariable)),
+      variable: v.optional(v.array(XMLPropertyVariable)),
       propertyValue: v.optional(v.array(XMLPropertyValue)),
       resource: v.optional(v.array(XMLResource)),
       text: v.optional(v.array(XMLText)),
       set: v.optional(v.array(XMLSet)),
+      dictionaryUnit: v.optional(v.unknown()),
     },
     "XMLLink: Shape error",
   ),
   v.check((val) => {
+    if (Object.keys(val).length > 0) {
+      return true;
+    }
+
     for (const dataCategory of DATA_CATEGORIES) {
       if (val[dataCategory] != null) {
         return true;
@@ -1206,6 +1335,10 @@ export const XMLDataItem: v.GenericSchema<XMLDataItemType> = v.union(
     v.object(
       { propertyVariable: v.array(XMLPropertyVariable) },
       "XMLDataItem: propertyVariable is array of XMLPropertyVariable",
+    ),
+    v.object(
+      { variable: v.array(XMLPropertyVariable) },
+      "XMLDataItem: variable is array of XMLPropertyVariable",
     ),
     v.object(
       { propertyValue: v.array(XMLPropertyValue) },

@@ -94,7 +94,7 @@ export type License = { content: string; target: string | null };
  *  Context item in OCHRE
  */
 export type ContextItem = {
-  uuid: string;
+  uuid: string | null;
   publicationDateTime: Date | null;
   index: number;
   content: string;
@@ -123,14 +123,18 @@ export type Event<T extends ReadonlyArray<string>> = {
   date: Date | { start: Date; end: Date } | null;
   label: MultilingualString<T>;
   comment: string | null;
-  agent: Person<T> | null;
+  agent: {
+    uuid: string;
+    label: MultilingualString<T>;
+    publicationDateTime: Date | null;
+  } | null;
   location: {
     uuid: string;
     label: MultilingualString<T>;
     publicationDateTime: Date | null;
   } | null;
   other: {
-    uuid: string;
+    uuid: string | null;
     category: string | null;
     label: MultilingualString<T>;
   } | null;
@@ -149,7 +153,7 @@ export type CoordinatesSource<T extends ReadonlyArray<string>> =
     }
   | {
       context: "inherited";
-      item: { uuid: string; label: MultilingualString<T> };
+      item: { uuid: string | null; label: MultilingualString<T> };
       uuid: string;
       label: MultilingualString<T>;
     };
@@ -321,7 +325,7 @@ export type Tree<
 > = Prettify<
   BaseItem<"tree", T> & {
     type: string | null;
-    itemsCategory: U;
+    itemsCategory: U | null;
     links: Array<Item>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
@@ -340,7 +344,7 @@ export type Set<
   T extends ReadonlyArray<string>,
 > = Prettify<
   BaseItem<"set", T> & {
-    itemsCategory: U;
+    itemsCategory: Array<U>;
     isTabularStructure: boolean;
     isSuppressingBlanks: boolean;
     links: Array<Item>;
