@@ -1,5 +1,4 @@
 import { XMLParser } from "fast-xml-parser";
-import { writeFileSync } from "node:fs";
 import * as v from "valibot";
 import type { Data, DataCategory, ItemsDataCategory } from "#/types/index.js";
 import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
@@ -82,15 +81,11 @@ export async function fetchItem<
     const parser = new XMLParser(XML_PARSER_OPTIONS);
     const data = parser.parse(dataRaw) as unknown;
 
-    writeFileSync("raw-xml.json", JSON.stringify(data, null, 2));
-
     const { success, issues, output } = v.safeParse(XMLDataSchema, data);
     if (!success) {
       logIssues(issues);
       throw new Error("Failed to parse OCHRE data");
     }
-
-    writeFileSync("parsed-xml.json", JSON.stringify(output, null, 2));
 
     const parsedData = parseData(output, {
       category: options?.category,
