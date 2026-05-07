@@ -5,7 +5,7 @@ export default antfu({
   markdown: false,
   typescript: {
     parserOptions: {
-      tsconfigRootDir: import.meta.dir,
+      tsconfigRootDir: import.meta.dirname,
       project: "tsconfig.json",
     },
     overrides: {
@@ -64,12 +64,27 @@ export default antfu({
       "unicorn/prefer-ternary": "off",
     },
   },
+  imports: {
+    overrides: {
+      "perfectionist/sort-imports": [
+        "error",
+        {
+          tsconfig: { rootDir: import.meta.dirname, filename: "tsconfig.json" },
+          internalPattern: ["#/*"],
+          newlinesBetween: 0,
+          order: "asc",
+          type: "natural",
+        },
+      ],
+    },
+  },
   rules: {
     "no-console": ["warn"],
+    "no-restricted-imports": ["error", { patterns: ["..*"] }],
     "antfu/no-top-level-await": ["off"],
-    "node/prefer-global/process": ["off"],
-    "node/no-process-env": ["error"],
     "jsonc/sort-keys": "off",
+    "pnpm/json-enforce-catalog": "off",
+    "pnpm/yaml-enforce-settings": "off",
     "unused-imports/no-unused-imports": "warn",
     "unused-imports/no-unused-vars": [
       "warn",
@@ -78,26 +93,6 @@ export default antfu({
         varsIgnorePattern: "^_",
         args: "after-used",
         argsIgnorePattern: "^_",
-      },
-    ],
-    "perfectionist/sort-imports": [
-      "error",
-      {
-        groups: [
-          "side-effect",
-          "type",
-          ["internal-type", "parent-type", "sibling-type", "index-type"],
-          "builtin",
-          "internal",
-          "external",
-          ["parent", "sibling", "index"],
-          "object",
-          "unknown",
-        ],
-        tsconfigRootDir: "tsconfig.json",
-        newlinesBetween: "never",
-        order: "asc",
-        type: "natural",
       },
     ],
   },

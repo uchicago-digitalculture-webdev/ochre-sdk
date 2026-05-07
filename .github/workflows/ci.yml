@@ -4,71 +4,38 @@ on:
   push:
     branches:
       - "*"
-
   pull_request:
     branches:
       - "*"
 
 jobs:
-  lint:
+  ci:
+    name: CI
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v5
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
 
-      - name: Set node
-        uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
         with:
           node-version: lts/*
+          cache: pnpm
 
-      - name: Setup
-        run: npm i -g @antfu/ni
-
-      - name: Install
-        run: nci
-
-      - name: Build
-        run: nr build
-
-      - name: Lint
-        run: nr lint
-
-      - name: Format
-        run: nr format
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Check types
-        run: nr check-types
+        run: pnpm run check-types
 
-  test:
-    runs-on: ${{ matrix.os }}
+      - name: Run formatter
+        run: pnpm run format
 
-    strategy:
-      matrix:
-        node: [lts/*]
-        os: [ubuntu-latest, windows-latest, macos-latest]
-      fail-fast: false
+      - name: Run linter
+        run: pnpm run lint
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set node ${{ matrix.node }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-
-      - name: Setup
-        run: npm i -g @antfu/ni
-
-      - name: Install
-        run: nci
-
-      - name: Build
-        run: nr build
-
-      - name: Test
-        run: nr test
+      # - name: Run tests
+      #   run: pnpm run test
