@@ -8,7 +8,7 @@ import type {
   HierarchyItemDataCategory,
   Item,
   SetItemDataCategory,
-} from "#/types.js";
+} from "#/types/index.js";
 import type { XMLData } from "#/xml/types.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseItem } from "#/parsers/index.js";
