@@ -1,11 +1,12 @@
-import type { Data, DataCategory, ItemsDataCategory } from "../types/index.js";
 import { XMLParser } from "fast-xml-parser";
+import { writeFileSync } from "node:fs";
 import * as v from "valibot";
-import { XML_PARSER_OPTIONS } from "../constants.js";
-import { parseData } from "../parsers/index.js";
-import { iso639_3Schema, uuidSchema } from "../schemas.js";
-import { XMLData as XMLDataSchema } from "../types/xml/schemas.js";
-import { logIssues } from "../utils.js";
+import type { Data, DataCategory, ItemsDataCategory } from "#/types/index.js";
+import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
+import { parseData } from "#/parsers/index.js";
+import { iso639_3Schema, uuidSchema } from "#/schemas.js";
+import { XMLData as XMLDataSchema } from "#/types/xml/schemas.js";
+import { logIssues } from "#/utils.js";
 
 /**
  * Branded type to ensure languages have been validated through withLanguages()
@@ -35,13 +36,13 @@ export function withLanguages<const T extends ReadonlyArray<string>>(
  * Fetches an OCHRE item by UUID from the OCHRE API
  *
  * @param uuid - The UUID of the OCHRE item to fetch
- * @param options - Optional options object
+ * @param options - Required options object
  * @param options.category - The category of the OCHRE item to fetch
  * @param options.itemCategory - The category of items contained in the OCHRE item to fetch (only used for tree and set)
- * @param options.languages - The languages to use (must be created with withLanguages())
+ * @param options.languages - The languages to use ***(must be created with withLanguages())***
  * @param options.isRichText - Whether to parse the text as rich text
  * @param options.fetch - Custom fetch function to use instead of the default fetch
- * @returns An object containing the parsed data or an error message
+ * @returns An object containing the parsed data
  */
 export async function fetchItem<
   T extends DataCategory | undefined = undefined,
@@ -60,13 +61,17 @@ export async function fetchItem<
     ) => Promise<Response>;
   },
 ): Promise<
-  { data: Data<T, U, V>; error: null } | { data: null; error: string }
+  | {
+      data: Data<T, U, V extends undefined ? ReadonlyArray<string> : V>;
+      error: null;
+    }
+  | { data: null; error: string }
 > {
   try {
     const parsedUuid = v.parse(uuidSchema, uuid);
 
     const response = await (options?.fetch ?? fetch)(
-      `https://ochre.lib.uchicago.edu/ochre?uuid=${parsedUuid}&xsl=none&lang="*"`,
+      `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${parsedUuid}&xsl=none&lang="*"`,
     );
     if (!response.ok) {
       throw new Error("Failed to fetch OCHRE data");
@@ -75,8 +80,9 @@ export async function fetchItem<
     const dataRaw = await response.text();
 
     const parser = new XMLParser(XML_PARSER_OPTIONS);
-
     const data = parser.parse(dataRaw) as unknown;
+
+    writeFileSync("raw-xml.json", JSON.stringify(data, null, 2));
 
     const { success, issues, output } = v.safeParse(XMLDataSchema, data);
     if (!success) {
@@ -84,14 +90,23 @@ export async function fetchItem<
       throw new Error("Failed to parse OCHRE data");
     }
 
+    writeFileSync("parsed-xml.json", JSON.stringify(output, null, 2));
+
     const parsedData = parseData(output, {
       category: options?.category,
       itemCategory: options?.itemCategory,
-      languages: options?.languages,
+      languages: options?.languages ?? DEFAULT_LANGUAGES,
       isRichText: options?.isRichText ?? false,
     });
 
-    return { data: parsedData as Data<T, U, V>, error: null };
+    return {
+      data: parsedData as Data<
+        T,
+        U,
+        V extends undefined ? ReadonlyArray<string> : V
+      >,
+      error: null,
+    };
   } catch (error) {
     console.error(error);
     return {

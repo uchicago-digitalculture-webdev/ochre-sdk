@@ -519,9 +519,7 @@ const XMLImage: v.GenericSchema<XMLImageType> = v.object(
     height: v.optional(XMLNumber),
     width: v.optional(XMLNumber),
     fileSize: v.optional(XMLNumber),
-    content: v.optional(
-      v.array(v.string("XMLImage: content is string and optional")),
-    ),
+    payload: v.optional(v.string("XMLImage: payload is string and optional")),
   },
   "XMLImage: Shape error",
 );

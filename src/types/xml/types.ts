@@ -146,7 +146,7 @@ export type XMLImage = {
   height?: XMLNumber;
   width?: XMLNumber;
   fileSize?: XMLNumber;
-  content?: Array<string>;
+  payload?: string;
 };
 
 export type XMLImageMapArea = {
