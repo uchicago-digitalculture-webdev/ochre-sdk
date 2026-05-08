@@ -1,0 +1,883 @@
+import { deepEqual } from "fast-equals";
+import type { Property, PropertyValueContent } from "#/types/index.js";
+
+/**
+ * Options for property search operations.
+ */
+export type PropertyOptions = {
+  /** Whether to recursively search through nested properties. */
+  includeNestedProperties?: boolean;
+  /** Whether to limit property values to leaf values. */
+  limitToLeafPropertyValues?: boolean;
+};
+
+const DEFAULT_OPTIONS: PropertyOptions = {
+  includeNestedProperties: false,
+  limitToLeafPropertyValues: true,
+};
+
+type PropertyContent<T extends ReadonlyArray<string>> =
+  PropertyValueContent<T>["content"];
+
+function withDefaultOptions(
+  options: PropertyOptions,
+): Required<PropertyOptions> {
+  return {
+    includeNestedProperties: options.includeNestedProperties ?? false,
+    limitToLeafPropertyValues: options.limitToLeafPropertyValues ?? true,
+  };
+}
+
+function findPropertyByLabelUuid<T extends ReadonlyArray<string>>(
+  properties: ReadonlyArray<Property<T>>,
+  labelUuid: string,
+): Property<T> | null {
+  for (const property of properties) {
+    if (property.label.uuid === labelUuid) {
+      return property;
+    }
+  }
+
+  return null;
+}
+
+function findPropertyByLabelName<T extends ReadonlyArray<string>>(
+  properties: ReadonlyArray<Property<T>>,
+  labelName: string,
+): Property<T> | null {
+  for (const property of properties) {
+    if (property.label.name === labelName) {
+      return property;
+    }
+  }
+
+  return null;
+}
+
+function propertyHasValue<T extends ReadonlyArray<string>>(
+  property: Property<T>,
+  value: PropertyValueContent<T>,
+): boolean {
+  for (const candidateValue of property.values) {
+    if (deepEqual(candidateValue, value)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function propertyHasValueContent<T extends ReadonlyArray<string>>(
+  property: Property<T>,
+  valueContent: PropertyContent<T>,
+): boolean {
+  for (const value of property.values) {
+    if (deepEqual(value.content, valueContent)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function propertyValueContentsEqual<T extends ReadonlyArray<string>>(
+  property: Property<T>,
+  valueContents: ReadonlyArray<PropertyContent<T>>,
+): boolean {
+  if (property.values.length !== valueContents.length) {
+    return false;
+  }
+
+  for (const [index, value] of property.values.entries()) {
+    if (!deepEqual(value.content, valueContents[index])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function searchPropertyResult<T extends ReadonlyArray<string>, TResult>(
+  properties: ReadonlyArray<Property<T>>,
+  options: Pick<PropertyOptions, "includeNestedProperties">,
+  findDirectResult: (properties: ReadonlyArray<Property<T>>) => TResult | null,
+  transformNestedResult?: (result: TResult) => TResult | null,
+): TResult | null {
+  const directResult = findDirectResult(properties);
+  if (directResult !== null) {
+    return directResult;
+  }
+
+  if (options.includeNestedProperties) {
+    for (const property of properties) {
+      const nestedResult = searchPropertyResult(
+        property.properties,
+        options,
+        findDirectResult,
+        transformNestedResult,
+      );
+      if (nestedResult !== null) {
+        const transformedResult =
+          transformNestedResult != null ?
+            transformNestedResult(nestedResult)
+          : nestedResult;
+        if (transformedResult !== null) {
+          return transformedResult;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function getPropertyValuesResult<T extends ReadonlyArray<string>>(
+  values: ReadonlyArray<PropertyValueContent<T>>,
+  limitToLeafPropertyValues: boolean,
+  copyValuesWhenUnfiltered: boolean,
+): Array<PropertyValueContent<T>> {
+  if (limitToLeafPropertyValues) {
+    return getLeafPropertyValues(values);
+  }
+
+  if (copyValuesWhenUnfiltered) {
+    return clonePropertyValues(values);
+  }
+
+  return [...values];
+}
+
+function clonePropertyValues<T extends ReadonlyArray<string>>(
+  values: ReadonlyArray<PropertyValueContent<T>>,
+): Array<PropertyValueContent<T>> {
+  const clonedValues: Array<PropertyValueContent<T>> = [];
+  for (const value of values) {
+    switch (value.dataType) {
+      case "IDREF":
+      case "coordinate":
+      case "date":
+      case "dateTime":
+      case "string": {
+        clonedValues.push({ ...value, content: value.content });
+        break;
+      }
+      case "decimal":
+      case "integer":
+      case "time": {
+        clonedValues.push({ ...value, content: value.content });
+        break;
+      }
+      case "boolean": {
+        clonedValues.push({ ...value, content: value.content });
+        break;
+      }
+    }
+  }
+
+  return clonedValues;
+}
+
+function getNormalizedProperty<T extends ReadonlyArray<string>>(
+  property: Property<T>,
+  limitToLeafPropertyValues: boolean,
+  transformValues?: (
+    values: Array<PropertyValueContent<T>>,
+  ) => Array<PropertyValueContent<T>>,
+): Property<T> {
+  if (!limitToLeafPropertyValues) {
+    return property;
+  }
+
+  const values = getLeafPropertyValues(property.values);
+
+  return {
+    ...property,
+    values: transformValues != null ? transformValues(values) : values,
+  };
+}
+
+function getFirstPropertyValueResult<T extends ReadonlyArray<string>>(
+  values: ReadonlyArray<PropertyValueContent<T>>,
+  limitToLeafPropertyValues: boolean,
+): PropertyValueContent<T> | null {
+  if (limitToLeafPropertyValues) {
+    return getLeafPropertyValues(values)[0] ?? null;
+  }
+
+  return values[0] ?? null;
+}
+
+function getFirstPropertyValueContentResult<T extends ReadonlyArray<string>>(
+  values: ReadonlyArray<PropertyValueContent<T>>,
+  limitToLeafPropertyValues: boolean,
+): PropertyContent<T> | null {
+  if (limitToLeafPropertyValues) {
+    return getLeafPropertyValues(values)[0]?.content ?? null;
+  }
+
+  return values[0]?.content ?? null;
+}
+
+function visitProperties<T extends ReadonlyArray<string>>(
+  properties: ReadonlyArray<Property<T>>,
+  includeNestedProperties: boolean,
+  visit: (property: Property<T>) => void,
+): void {
+  for (const property of properties) {
+    visit(property);
+
+    if (includeNestedProperties) {
+      visitProperties(property.properties, includeNestedProperties, visit);
+    }
+  }
+}
+
+/**
+ * Finds a property by its label UUID in an array of properties.
+ *
+ * @param properties - Array of properties to search through
+ * @param labelUuid - The property label UUID to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns The matching Property object, or null if not found
+ */
+export function getPropertyByLabelUuid<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  labelUuid: string,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): Property<T> | null {
+  const { includeNestedProperties } = withDefaultOptions(options);
+
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) =>
+      findPropertyByLabelUuid(currentProperties, labelUuid),
+  );
+}
+
+/**
+ * Retrieves all values for a property with the given label UUID.
+ *
+ * @param properties - Array of properties to search through
+ * @param labelUuid - The property label UUID to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns Array of property values, or null if property not found
+ */
+export function getPropertyValuesByLabelUuid<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  labelUuid: string,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): Array<PropertyValueContent<T>> | null {
+  const { includeNestedProperties, limitToLeafPropertyValues } =
+    withDefaultOptions(options);
+
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const property = findPropertyByLabelUuid(currentProperties, labelUuid);
+      if (property == null) {
+        return null;
+      }
+
+      return getPropertyValuesResult(
+        property.values,
+        limitToLeafPropertyValues,
+        true,
+      );
+    },
+    (nestedResult) =>
+      getPropertyValuesResult(nestedResult, limitToLeafPropertyValues, true),
+  );
+}
+
+/**
+ * Retrieves all value contents for a property with the given label UUID.
+ *
+ * @param properties - Array of properties to search through
+ * @param labelUuid - The property label UUID to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns Array of property value contents, or null if property not found
+ */
+export function getPropertyValueContentsByLabelUuid<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  labelUuid: string,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): Array<PropertyContent<T>> | null {
+  const { includeNestedProperties, limitToLeafPropertyValues } =
+    withDefaultOptions(options);
+
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const property = findPropertyByLabelUuid(currentProperties, labelUuid);
+      if (property == null) {
+        return null;
+      }
+
+      const valueContents: Array<PropertyContent<T>> = [];
+      for (const value of getPropertyValuesResult(
+        property.values,
+        limitToLeafPropertyValues,
+        false,
+      )) {
+        valueContents.push(value.content);
+      }
+
+      return valueContents;
+    },
+  );
+}
+
+/**
+ * Gets the first value of a property with the given label UUID.
+ *
+ * @param properties - Array of properties to search through
+ * @param labelUuid - The property label UUID to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns The first property value, or null if property not found
+ */
+export function getPropertyValueByLabelUuid<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  labelUuid: string,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): PropertyValueContent<T> | null {
+  const { includeNestedProperties, limitToLeafPropertyValues } =
+    withDefaultOptions(options);
+
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const values = getPropertyValuesByLabelUuid<T>(
+        currentProperties,
+        labelUuid,
+        { includeNestedProperties: false, limitToLeafPropertyValues },
+      );
+      if (values === null || values.length === 0) {
+        return null;
+      }
+
+      return getFirstPropertyValueResult(values, limitToLeafPropertyValues);
+    },
+    (nestedResult) =>
+      getFirstPropertyValueResult([nestedResult], limitToLeafPropertyValues),
+  );
+}
+
+/**
+ * Gets the first value content of a property with the given label UUID.
+ *
+ * @param properties - Array of properties to search through
+ * @param labelUuid - The property label UUID to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns The first property value content, or null if property not found
+ */
+export function getPropertyValueContentByLabelUuid<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  labelUuid: string,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): PropertyContent<T> | null {
+  const { includeNestedProperties, limitToLeafPropertyValues } =
+    withDefaultOptions(options);
+
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const values = getPropertyValuesByLabelUuid<T>(
+        currentProperties,
+        labelUuid,
+        { includeNestedProperties: false, limitToLeafPropertyValues },
+      );
+      if (values === null || values.length === 0) {
+        return null;
+      }
+
+      return getFirstPropertyValueContentResult(
+        values,
+        limitToLeafPropertyValues,
+      );
+    },
+  );
+}
+
+/**
+ * Finds a property by its label name in an array of properties.
+ *
+ * @param properties - Array of properties to search through
+ * @param labelName - The property label name to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns The matching Property object, or null if not found
+ */
+export function getPropertyByLabelName<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  labelName: string,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): Property<T> | null {
+  const { includeNestedProperties } = withDefaultOptions(options);
+
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) =>
+      findPropertyByLabelName(currentProperties, labelName),
+  );
+}
+
+/**
+ * Finds a property by its label name and all values.
+ *
+ * @param properties - Array of properties to search through
+ * @param labelName - The property label name to search for
+ * @param values - The property values to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns The matching Property object, or null if not found or all values do not match
+ */
+export function getPropertyByLabelNameAndValues<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  labelName: string,
+  values: ReadonlyArray<PropertyValueContent<T>>,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): Property<T> | null {
+  const { includeNestedProperties, limitToLeafPropertyValues } =
+    withDefaultOptions(options);
+
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      for (const property of currentProperties) {
+        if (
+          property.label.name === labelName &&
+          deepEqual(property.values, values)
+        ) {
+          return getNormalizedProperty(property, limitToLeafPropertyValues);
+        }
+      }
+
+      return null;
+    },
+    (nestedResult) =>
+      getNormalizedProperty(nestedResult, limitToLeafPropertyValues),
+  );
+}
+
+/**
+ * Finds a property by its label name and all value contents.
+ *
+ * @param properties - Array of properties to search through
+ * @param labelName - The property label name to search for
+ * @param valueContents - The value contents to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns The matching Property object, or null if not found or all value contents do not match
+ */
+export function getPropertyByLabelNameAndValueContents<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  labelName: string,
+  valueContents: ReadonlyArray<PropertyContent<T>>,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): Property<T> | null {
+  const { includeNestedProperties, limitToLeafPropertyValues } =
+    withDefaultOptions(options);
+
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      for (const property of currentProperties) {
+        if (
+          property.label.name === labelName &&
+          propertyValueContentsEqual(property, valueContents)
+        ) {
+          return getNormalizedProperty(
+            property,
+            limitToLeafPropertyValues,
+            clonePropertyValues,
+          );
+        }
+      }
+
+      return null;
+    },
+    (nestedResult) =>
+      getNormalizedProperty(nestedResult, limitToLeafPropertyValues),
+  );
+}
+
+/**
+ * Finds a property by its label name and one value.
+ *
+ * @param properties - Array of properties to search through
+ * @param labelName - The property label name to search for
+ * @param value - The property value to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns The matching Property object, or null if not found or value does not match
+ */
+export function getPropertyByLabelNameAndValue<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  labelName: string,
+  value: PropertyValueContent<T>,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): Property<T> | null {
+  const { includeNestedProperties, limitToLeafPropertyValues } =
+    withDefaultOptions(options);
+
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      for (const property of currentProperties) {
+        if (
+          property.label.name === labelName &&
+          propertyHasValue(property, value)
+        ) {
+          return getNormalizedProperty(property, limitToLeafPropertyValues);
+        }
+      }
+
+      return null;
+    },
+    (nestedResult) =>
+      getNormalizedProperty(nestedResult, limitToLeafPropertyValues),
+  );
+}
+
+/**
+ * Finds a property by its label name and one value content.
+ *
+ * @param properties - Array of properties to search through
+ * @param labelName - The property label name to search for
+ * @param valueContent - The value content to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns The matching Property object, or null if not found or value content does not match
+ */
+export function getPropertyByLabelNameAndValueContent<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  labelName: string,
+  valueContent: PropertyContent<T>,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): Property<T> | null {
+  const { includeNestedProperties, limitToLeafPropertyValues } =
+    withDefaultOptions(options);
+
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      for (const property of currentProperties) {
+        if (
+          property.label.name === labelName &&
+          propertyHasValueContent(property, valueContent)
+        ) {
+          return getNormalizedProperty(property, limitToLeafPropertyValues);
+        }
+      }
+
+      return null;
+    },
+    (nestedResult) =>
+      getNormalizedProperty(nestedResult, limitToLeafPropertyValues),
+  );
+}
+
+/**
+ * Retrieves all values for a property with the given label name.
+ *
+ * @param properties - Array of properties to search through
+ * @param labelName - The property label name to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns Array of property values, or null if property not found
+ */
+export function getPropertyValuesByLabelName<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  labelName: string,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): Array<PropertyValueContent<T>> | null {
+  const { includeNestedProperties, limitToLeafPropertyValues } =
+    withDefaultOptions(options);
+
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const property = findPropertyByLabelName(currentProperties, labelName);
+      if (property == null) {
+        return null;
+      }
+
+      return getPropertyValuesResult(
+        property.values,
+        limitToLeafPropertyValues,
+        false,
+      );
+    },
+    (nestedResult) =>
+      getPropertyValuesResult(nestedResult, limitToLeafPropertyValues, false),
+  );
+}
+
+/**
+ * Gets the first value of a property with the given label name.
+ *
+ * @param properties - Array of properties to search through
+ * @param labelName - The property label name to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns The first property value, or null if property not found
+ */
+export function getPropertyValueByLabelName<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  labelName: string,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): PropertyValueContent<T> | null {
+  const { includeNestedProperties, limitToLeafPropertyValues } =
+    withDefaultOptions(options);
+
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const values = getPropertyValuesByLabelName<T>(
+        currentProperties,
+        labelName,
+        { includeNestedProperties: false, limitToLeafPropertyValues },
+      );
+      if (values === null || values.length === 0) {
+        return null;
+      }
+
+      return getFirstPropertyValueResult(values, limitToLeafPropertyValues);
+    },
+    (nestedResult) =>
+      getFirstPropertyValueResult([nestedResult], limitToLeafPropertyValues),
+  );
+}
+
+/**
+ * Gets the first value content of a property with the given label name.
+ *
+ * @param properties - Array of properties to search through
+ * @param labelName - The property label name to search for
+ * @param options - Search options, including whether to include nested properties
+ * @returns The first property value content, or null if property not found
+ */
+export function getPropertyValueContentByLabelName<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  labelName: string,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): PropertyContent<T> | null {
+  const { includeNestedProperties, limitToLeafPropertyValues } =
+    withDefaultOptions(options);
+
+  return searchPropertyResult(
+    properties,
+    { includeNestedProperties },
+    (currentProperties) => {
+      const values = getPropertyValuesByLabelName<T>(
+        currentProperties,
+        labelName,
+        { includeNestedProperties: false, limitToLeafPropertyValues },
+      );
+      if (values === null || values.length === 0) {
+        return null;
+      }
+
+      return getFirstPropertyValueContentResult(
+        values,
+        limitToLeafPropertyValues,
+      );
+    },
+  );
+}
+
+/**
+ * Gets all unique properties from an array of properties.
+ *
+ * @param properties - Array of properties to get unique properties from
+ * @param options - Search options, including whether to include nested properties
+ * @returns Array of unique properties
+ */
+export function getUniqueProperties<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): Array<Property<T>> {
+  const { includeNestedProperties, limitToLeafPropertyValues } =
+    withDefaultOptions(options);
+  const uniqueProperties: Array<Property<T>> = [];
+
+  visitProperties(properties, includeNestedProperties, (property) => {
+    for (const uniqueProperty of uniqueProperties) {
+      if (uniqueProperty.label.uuid === property.label.uuid) {
+        return;
+      }
+    }
+
+    uniqueProperties.push(property);
+  });
+
+  if (limitToLeafPropertyValues) {
+    const normalizedProperties: Array<Property<T>> = [];
+    for (const property of uniqueProperties) {
+      normalizedProperties.push(
+        getNormalizedProperty(property, limitToLeafPropertyValues),
+      );
+    }
+
+    return normalizedProperties;
+  }
+
+  return uniqueProperties;
+}
+
+/**
+ * Gets all unique property label names from an array of properties.
+ *
+ * @param properties - Array of properties to get unique property labels from
+ * @param options - Search options, including whether to include nested properties
+ * @returns Array of unique property label names
+ */
+export function getUniquePropertyLabelNames<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T>>,
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): Array<string> {
+  const { includeNestedProperties } = withDefaultOptions(options);
+  const uniquePropertyLabels: Array<string> = [];
+
+  visitProperties(properties, includeNestedProperties, (property) => {
+    if (uniquePropertyLabels.includes(property.label.name)) {
+      return;
+    }
+
+    uniquePropertyLabels.push(property.label.name);
+  });
+
+  return uniquePropertyLabels;
+}
+
+/**
+ * Get the leaf property values from an array of property values.
+ *
+ * @param propertyValues - The array of property values to get the leaf property values from
+ * @returns The array of leaf property values
+ */
+export function getLeafPropertyValues<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  propertyValues: ReadonlyArray<PropertyValueContent<T>>,
+): Array<PropertyValueContent<T>> {
+  const leafPropertyValues: Array<PropertyValueContent<T>> = [];
+  for (const value of propertyValues) {
+    if (value.hierarchy.isLeaf) {
+      leafPropertyValues.push(value);
+    }
+  }
+
+  return leafPropertyValues;
+}
+
+function contentMatchesFilter<T extends ReadonlyArray<string>>(
+  content: PropertyContent<T>,
+  filterContent: PropertyContent<T>,
+): boolean {
+  if (typeof content === "string") {
+    return (
+      typeof filterContent === "string" &&
+      content
+        .toLocaleLowerCase("en-US")
+        .includes(filterContent.toLocaleLowerCase("en-US"))
+    );
+  }
+
+  if (typeof content === "number") {
+    return typeof filterContent === "number" && content === filterContent;
+  }
+
+  return typeof filterContent === "boolean" && content === filterContent;
+}
+
+/**
+ * Filters a property based on a label and value criterion.
+ *
+ * @param property - The property to filter
+ * @param filter - Filter criteria containing label and value to match
+ * @param filter.labelName - The label name to filter by
+ * @param filter.value - The value to filter by
+ * @param options - Search options, including whether to include nested properties
+ * @returns True if the property matches the filter criteria, false otherwise
+ */
+export function filterProperties<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  property: Property<T>,
+  filter: { labelName: string; value: PropertyValueContent<T> },
+  options: PropertyOptions = DEFAULT_OPTIONS,
+): boolean {
+  const { includeNestedProperties, limitToLeafPropertyValues } =
+    withDefaultOptions(options);
+
+  const isAllFields =
+    filter.labelName.toLocaleLowerCase("en-US") === "all fields";
+
+  if (
+    isAllFields ||
+    property.label.name.toLocaleLowerCase("en-US") ===
+      filter.labelName.toLocaleLowerCase("en-US")
+  ) {
+    const values = getPropertyValuesResult(
+      property.values,
+      limitToLeafPropertyValues,
+      false,
+    );
+    for (const value of values) {
+      if (contentMatchesFilter(value.content, filter.value.content)) {
+        return true;
+      }
+    }
+  }
+
+  if (includeNestedProperties) {
+    for (const nestedProperty of property.properties) {
+      if (
+        filterProperties(nestedProperty, filter, {
+          includeNestedProperties: true,
+          limitToLeafPropertyValues,
+        })
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
