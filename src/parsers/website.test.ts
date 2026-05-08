@@ -5,9 +5,6 @@ import type {
   XMLIdentification,
   XMLSimplifiedProperty,
   XMLString,
-  XMLWebsiteData,
-  XMLWebsiteResource,
-  XMLWebsiteTree,
 } from "#/xml/types.js";
 import { fetchWebsite } from "#/fetchers/website.js";
 import { parseWebsite } from "#/parsers/website.js";
@@ -56,7 +53,7 @@ function property(
   };
 }
 
-function documentWithDirectLinkedString(): XMLContent {
+function documentWithDirectLinkedString() {
   return {
     content: [
       {
@@ -91,7 +88,7 @@ function documentWithDirectLinkedString(): XMLContent {
   };
 }
 
-function elementResource(): XMLWebsiteResource {
+function elementResource() {
   return {
     uuid: UUID.element,
     publicationDateTime: PUBLICATION_DATE,
@@ -108,7 +105,7 @@ function elementResource(): XMLWebsiteResource {
   };
 }
 
-function segmentTree(): XMLWebsiteTree {
+function segmentTree() {
   return {
     uuid: UUID.segmentTree,
     publicationDateTime: PUBLICATION_DATE,
@@ -123,7 +120,7 @@ function segmentTree(): XMLWebsiteTree {
   };
 }
 
-function pageResource(): XMLWebsiteResource {
+function pageResource() {
   return {
     uuid: UUID.page,
     publicationDateTime: PUBLICATION_DATE,
@@ -144,7 +141,7 @@ function pageResource(): XMLWebsiteResource {
   };
 }
 
-function websiteData(): XMLWebsiteData {
+function websiteData() {
   return {
     result: {
       ochre: {
@@ -179,23 +176,31 @@ function websiteData(): XMLWebsiteData {
             },
             options: {
               scopes: {
-                scope: {
-                  uuid: { payload: UUID.scope, type: "tree" },
-                  identification: identification("Scope"),
-                },
-              },
-              filterContexts: {
-                context: {
-                  identification: identification("Filter"),
-                  filterOption: "inline-displayed",
-                  levels: {
-                    level: {
-                      payload: `${UUID.variable},${UUID.value}`,
-                      dataType: "string",
-                    },
+                scope: [
+                  {
+                    uuid: { payload: UUID.scope, type: "tree" },
+                    identification: identification("Scope"),
                   },
-                },
+                ],
               },
+              filterContexts: [
+                {
+                  context: [
+                    {
+                      identification: identification("Filter"),
+                      filterOption: "inline-displayed",
+                      levels: {
+                        level: [
+                          {
+                            payload: `${UUID.variable},${UUID.value}`,
+                            dataType: "string",
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              ],
               notes: {
                 note: [
                   {
@@ -207,14 +212,16 @@ function websiteData(): XMLWebsiteData {
               },
             },
             styleOptions: {
-              style: {
-                payload: "Important",
-                variableUuid: UUID.variable,
-                valueUuid: UUID.value,
-                category: "value",
-                textColor: "#880000",
-                lucideIcon: "search",
-              },
+              style: [
+                {
+                  payload: "Important",
+                  variableUuid: UUID.variable,
+                  valueUuid: UUID.value,
+                  category: "value",
+                  textColor: "#880000",
+                  lucideIcon: "search",
+                },
+              ],
             },
             items: { resource: [pageResource()] },
           },

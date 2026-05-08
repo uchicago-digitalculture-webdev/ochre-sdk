@@ -18,7 +18,7 @@ import {
 import { parseItem } from "#/parsers/index.js";
 import { parseXMLContent, parseXMLString } from "#/parsers/string.js";
 
-const PUBLICATION_DATE = "2026-01-01T00:00:00Z";
+const PUBLICATION_DATE = new Date("2026-01-01T00:00:00Z");
 
 function xmlString(payload: string): XMLString {
   return { payload };
@@ -266,11 +266,11 @@ describe("parseItem", () => {
                     type: "image",
                     href: "https://example.com/image.jpg",
                     fileFormat: "image/jpeg",
-                    fileSize: "42",
+                    fileSize: 42,
                     rend: "inline",
-                    isPrimary: "true",
-                    height: "120",
-                    width: "90",
+                    isPrimary: true,
+                    height: 120,
+                    width: 90,
                     identification: identification({ eng: "Linked image" }),
                   },
                 ],
@@ -741,7 +741,7 @@ describe("string parser integration", () => {
                           uuid: "4cbd30d0-18dc-4ef2-b872-b4dce7880c04",
                           type: "webpage",
                           href: "https://ark.lib.uchicago.edu/ark:61001/b23w8rj3328d",
-                          publicationDateTime: "2026-04-11T01:59:27Z",
+                          publicationDateTime: new Date("2026-04-11T01:59:27Z"),
                           identification: identification({
                             eng: "Snyder's 1885 map",
                           }),
@@ -762,7 +762,7 @@ describe("string parser integration", () => {
                           uuid: "fdb5bc51-a2d2-4378-aa25-df501a87f6b5",
                           type: "webpage",
                           href: "https://node.uchicago.edu/collection/mapping-chicagoland",
-                          publicationDateTime: "2026-04-11T02:10:27Z",
+                          publicationDateTime: new Date("2026-04-11T02:10:27Z"),
                           identification: identification({
                             eng: "Mapping Chicagoland",
                           }),
@@ -848,8 +848,8 @@ describe("string parser integration", () => {
                           uuid: "f4000000-0000-4000-8000-000000000000",
                           type: "IIIF",
                           rend: "inline",
-                          height: "120",
-                          width: "90",
+                          height: 120,
+                          width: 90,
                           identification: identification({ eng: "Image" }),
                         },
                       ],

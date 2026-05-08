@@ -80,13 +80,13 @@ function getLinkStringProperty(
       return "href" in link && typeof link.href === "string" ? link.href : null;
     }
     case "height": {
-      return "height" in link && typeof link.height === "string" ?
-          link.height
+      return "height" in link && link.height != null ?
+          link.height.toString()
         : null;
     }
     case "width": {
-      return "width" in link && typeof link.width === "string" ?
-          link.width
+      return "width" in link && link.width != null ?
+          link.width.toString()
         : null;
     }
   }

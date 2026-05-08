@@ -37,9 +37,9 @@ export type XMLContent = {
   content: Array<{ string: Array<XMLString>; lang: string; title?: string }>;
 };
 
-export type XMLNumber = string;
+export type XMLNumber = number;
 
-export type XMLBoolean = string;
+export type XMLBoolean = boolean;
 
 export type XMLIdentification = {
   label: XMLContent | XMLString;
@@ -84,7 +84,7 @@ export type XMLLicense = XMLString & { target?: string };
 
 export type XMLContextValue = {
   uuid?: string;
-  publicationDateTime?: string;
+  publicationDateTime?: Date;
   n: XMLNumber;
   payload: string;
 };
@@ -111,10 +111,10 @@ export type XMLContext = Array<{
 }>;
 
 export type XMLEvent = {
-  dateTime?: string;
-  endDateTime?: string;
-  agent?: XMLContent & { uuid: string; publicationDateTime?: string };
-  location?: XMLContent & { uuid: string; publicationDateTime?: string };
+  dateTime?: Date;
+  endDateTime?: Date;
+  agent?: XMLContent & { uuid: string; publicationDateTime?: Date };
+  location?: XMLContent & { uuid: string; publicationDateTime?: Date };
   comment?: XMLContent;
   label: XMLContent;
   other?: XMLContent & { uuid?: string; category?: XMLDataCategory };
@@ -155,7 +155,7 @@ export type XMLCoordinate =
 export type XMLCoordinates = { coord: Array<XMLCoordinate> };
 
 export type XMLImage = {
-  publicationDateTime?: string;
+  publicationDateTime?: Date;
   identification?: XMLIdentification;
   href?: string;
   htmlImgSrcPrefix?: string;
@@ -167,7 +167,7 @@ export type XMLImage = {
 
 export type XMLImageMapArea = {
   uuid: string;
-  publicationDateTime: string;
+  publicationDateTime: Date;
   type: string;
   title: string;
   shape: string;
@@ -190,14 +190,14 @@ export type XMLNote = Partial<XMLContent> &
 export type XMLProperty = {
   label: (XMLContent | XMLString) & {
     uuid: string;
-    publicationDateTime?: string;
+    publicationDateTime?: Date;
   };
   value?: Array<
     Partial<XMLContent> & {
       i?: XMLNumber;
       inherited?: XMLBoolean;
       uuid?: string;
-      publicationDateTime?: string;
+      publicationDateTime?: Date;
       dataType?: string;
       category?: string;
       type?: string;
@@ -219,14 +219,14 @@ export type XMLProperty = {
 export type XMLSimplifiedProperty = {
   label: (XMLContent | XMLString) & {
     uuid: string;
-    publicationDateTime?: string;
+    publicationDateTime?: Date;
   };
   value?: Array<
     Partial<XMLContent> & {
       i?: XMLNumber;
       inherited?: XMLBoolean;
       uuid?: string;
-      publicationDateTime?: string;
+      publicationDateTime?: Date;
       dataType?: string;
       category?: string;
       type?: string;
@@ -247,8 +247,8 @@ export type XMLSimplifiedProperty = {
 
 export type XMLBaseItem = {
   uuid: string;
-  publicationDateTime?: string;
-  date?: string | XMLString;
+  publicationDateTime?: Date;
+  date?: Date | XMLString;
   availability?: { license: XMLLicense };
   copyright?: XMLContent | XMLString;
   watermark?: XMLContent | XMLString;
@@ -266,18 +266,14 @@ export type XMLBibliography = Partial<XMLBaseItem> & {
     uuid: string;
     payload: string;
     href?: string;
-    publicationDateTime?: string;
+    publicationDateTime?: Date;
   };
   image?: XMLImage;
   publicationInfo?: {
     publishers?:
       | { publisher: Array<XMLPerson> }
       | { publishers: { person: Array<XMLPerson> } };
-    startDate?: {
-      month?: XMLNumber | XMLString;
-      year?: XMLNumber | XMLString;
-      day?: XMLNumber | XMLString;
-    };
+    startDate?: { month?: XMLNumber; year?: XMLNumber; day?: XMLNumber };
   };
   entryInfo?: {
     payload?: string;
@@ -317,11 +313,7 @@ export type XMLLinkedBibliography = XMLLinkedBaseItem & {
     publishers?:
       | { publisher: Array<XMLLinkedPerson> }
       | { publishers: { person: Array<XMLLinkedPerson> } };
-    startDate?: {
-      month?: XMLNumber | XMLString;
-      year?: XMLNumber | XMLString;
-      day?: XMLNumber | XMLString;
-    };
+    startDate?: { month?: XMLNumber; year?: XMLNumber; day?: XMLNumber };
   };
   entryInfo?: XMLBibliography["entryInfo"];
   citationDetails?: string;
@@ -365,7 +357,7 @@ export type XMLLinkedPropertyValue = XMLLinkedBaseItem & {
 
 export type XMLLinkedResource = XMLLinkedBaseItem & {
   type?: string;
-  date?: string | XMLString;
+  date?: Date | XMLString;
   href?: string;
   fileFormat?: string;
   fileSize?: XMLNumber;
@@ -389,7 +381,7 @@ export type XMLDictionaryUnit = XMLLinkedBaseItem;
 
 export type XMLInterpretation = {
   interpretationNo: XMLNumber;
-  date?: string;
+  date?: Date;
   observers?: { observer: Array<XMLPerson> };
   periods?: { period: Array<XMLPeriod> };
   links?: XMLLink;
@@ -409,7 +401,7 @@ export type XMLConcept = XMLBaseItem & {
 
 export type XMLObservation = {
   observationNo: XMLNumber;
-  date?: string;
+  date?: Date;
   observers?: { observer: Array<XMLPerson> };
   periods?: { period: Array<XMLPeriod> };
   links?: XMLLink;
@@ -474,7 +466,7 @@ export type XMLPropertyValue = XMLBaseItem & {
 
 export type XMLResource = XMLBaseItem & {
   type?: string;
-  date?: string | XMLString;
+  date?: Date | XMLString;
   href?: string;
   fileFormat?: string;
   fileSize?: XMLNumber;
@@ -496,7 +488,7 @@ export type XMLResource = XMLBaseItem & {
 
 export type XMLSection = {
   uuid: string;
-  publicationDateTime?: string;
+  publicationDateTime?: Date;
   type: string;
   identification: XMLIdentification;
   project?: { identification: XMLIdentification };
@@ -542,7 +534,7 @@ export type XMLHeading = {
 
 export type XMLTree = XMLBaseItem & {
   type?: string;
-  date?: string | XMLString;
+  date?: Date | XMLString;
   links?: XMLLink;
   notes?: { note: Array<XMLNote> };
   properties?: { property: Array<XMLProperty> };
@@ -569,7 +561,7 @@ export type XMLWebsiteContextLevel = XMLString & {
 
 export type XMLWebsiteContextItem = {
   identification: XMLIdentification;
-  levels?: { level: XMLWebsiteContextLevel | Array<XMLWebsiteContextLevel> };
+  levels?: { level: Array<XMLWebsiteContextLevel> };
 };
 
 export type XMLWebsiteFilterContextItem = XMLWebsiteContextItem & {
@@ -583,12 +575,10 @@ export type XMLWebsiteFilterContextItem = XMLWebsiteContextItem & {
     | "inline-sidebar-hidden";
 };
 
-export type XMLWebsiteContext = {
-  context: XMLWebsiteContextItem | Array<XMLWebsiteContextItem>;
-};
+export type XMLWebsiteContext = { context: Array<XMLWebsiteContextItem> };
 
 export type XMLWebsiteFilterContext = {
-  context: XMLWebsiteFilterContextItem | Array<XMLWebsiteFilterContextItem>;
+  context: Array<XMLWebsiteFilterContextItem>;
 };
 
 export type XMLWebsiteScope = {
@@ -598,15 +588,15 @@ export type XMLWebsiteScope = {
 
 export type XMLWebsiteOptions = {
   notes?: { note: Array<XMLNote> };
-  scopes?: { scope: XMLWebsiteScope | Array<XMLWebsiteScope> };
-  flattenContexts?: XMLWebsiteContext | Array<XMLWebsiteContext>;
-  suppressContexts?: XMLWebsiteContext | Array<XMLWebsiteContext>;
-  filterContexts?: XMLWebsiteFilterContext | Array<XMLWebsiteFilterContext>;
-  sortContexts?: XMLWebsiteContext | Array<XMLWebsiteContext>;
-  detailContexts?: XMLWebsiteContext | Array<XMLWebsiteContext>;
-  downloadContexts?: XMLWebsiteContext | Array<XMLWebsiteContext>;
-  labelContexts?: XMLWebsiteContext | Array<XMLWebsiteContext>;
-  prominentContexts?: XMLWebsiteContext | Array<XMLWebsiteContext>;
+  scopes?: { scope: Array<XMLWebsiteScope> };
+  flattenContexts?: Array<XMLWebsiteContext>;
+  suppressContexts?: Array<XMLWebsiteContext>;
+  filterContexts?: Array<XMLWebsiteFilterContext>;
+  sortContexts?: Array<XMLWebsiteContext>;
+  detailContexts?: Array<XMLWebsiteContext>;
+  downloadContexts?: Array<XMLWebsiteContext>;
+  labelContexts?: Array<XMLWebsiteContext>;
+  prominentContexts?: Array<XMLWebsiteContext>;
 };
 
 export type XMLWebsiteStyle = XMLString & {
@@ -627,7 +617,7 @@ export type XMLWebsiteResourceGroup = { resource: Array<XMLWebsiteResource> };
 export type XMLWebsiteSegment = {
   segments: { tree: Array<XMLWebsiteTree> };
   uuid: string;
-  publicationDateTime?: string;
+  publicationDateTime?: Date;
 };
 
 export type XMLWebsiteResourceItem =
@@ -648,7 +638,7 @@ export type XMLWebsiteResource = Omit<
 
 export type XMLWebsiteTree = Omit<XMLTree, "items" | "properties"> & {
   options?: XMLWebsiteOptions;
-  styleOptions?: { style: XMLWebsiteStyle | Array<XMLWebsiteStyle> };
+  styleOptions?: { style: Array<XMLWebsiteStyle> };
   properties?: XMLWebsiteProperties;
   items?: { resource?: Array<XMLWebsiteResourceItem> };
 };
@@ -764,7 +754,7 @@ export type XMLData = {
       uuid: string;
       belongsTo: string;
       uuidBelongsTo: string;
-      publicationDateTime: string;
+      publicationDateTime: Date;
       metadata: XMLMetadata;
       persistentUrl?: string;
       languages?: string;
@@ -778,7 +768,7 @@ export type XMLWebsiteData = {
       uuid: string;
       belongsTo: string;
       uuidBelongsTo: string;
-      publicationDateTime: string;
+      publicationDateTime: Date;
       metadata: XMLMetadata;
       persistentUrl?: string;
       languages?: string;

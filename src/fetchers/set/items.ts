@@ -13,7 +13,7 @@ import {
   DEFAULT_LANGUAGES,
   XML_PARSER_OPTIONS,
 } from "#/constants.js";
-import { parseNumberOrZero, parseSetDataItems } from "#/parsers/index.js";
+import { parseSetDataItems } from "#/parsers/index.js";
 import {
   buildAndCtsQueryExpression,
   buildBelongsToCollectionQueryExpression,
@@ -623,9 +623,9 @@ export async function fetchSetItems(
     const uniqueItems = [...itemsByUuid.values()];
 
     return {
-      totalCount: parseNumberOrZero(output.result.ochre.items.totalCount),
-      page: parseNumberOrZero(output.result.ochre.items.page),
-      pageSize: parseNumberOrZero(output.result.ochre.items.pageSize),
+      totalCount: output.result.ochre.items.totalCount,
+      page: output.result.ochre.items.page,
+      pageSize: output.result.ochre.items.pageSize,
       items: uniqueItems,
       error: null,
     };

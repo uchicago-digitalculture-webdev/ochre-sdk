@@ -214,27 +214,6 @@ function normalizeCategory(category: string | undefined): string | null {
   return category === "variable" ? "propertyVariable" : category;
 }
 
-function parseOptionalDate(value: string | undefined): Date | null {
-  if (value == null || value === "") {
-    return null;
-  }
-
-  return new Date(value.replace(" ", "T"));
-}
-
-function parseNumber(value: string | XMLString | undefined): number | null {
-  if (value == null || value === "") {
-    return null;
-  }
-
-  const parsedValue = Number(typeof value === "string" ? value : value.payload);
-  return Number.isNaN(parsedValue) ? null : parsedValue;
-}
-
-function parseNumberOrZero(value: string | XMLString | undefined): number {
-  return parseNumber(value) ?? 0;
-}
-
 function isXMLContent(value: XMLContent | XMLString): value is XMLContent {
   return "content" in value;
 }
@@ -390,9 +369,7 @@ function expectMetadataMatchesRaw(
       normalizeCategory(rawMetadata.item.category),
     );
     expect(metadata.item?.type).toBe(rawMetadata.item.type);
-    expect(metadata.item?.maxLength).toBe(
-      parseNumber(rawMetadata.item.maxLength),
-    );
+    expect(metadata.item?.maxLength).toBe(rawMetadata.item.maxLength ?? null);
   }
 }
 
@@ -510,10 +487,7 @@ function expectContextMatchesRaw(
 }
 
 function expectBaseItemMatchesRaw(
-  rawItem: Partial<XMLBaseItem> & {
-    uuid?: string;
-    publicationDateTime?: string;
-  },
+  rawItem: Partial<XMLBaseItem> & { uuid?: string; publicationDateTime?: Date },
   parsedItem: BaseItem<
     DataCategory,
     typeof TEST_LANGUAGES,
@@ -524,7 +498,7 @@ function expectBaseItemMatchesRaw(
   expect(parsedItem.uuid).toBe(rawItem.uuid ?? "");
   expect(parsedItem.category).toBe(category);
   expect(parsedItem.publicationDateTime?.toISOString() ?? null).toBe(
-    parseOptionalDate(rawItem.publicationDateTime)?.toISOString() ?? null,
+    rawItem.publicationDateTime?.toISOString() ?? null,
   );
   expectContextMatchesRaw(rawItem.context, parsedItem.context);
 
@@ -599,6 +573,7 @@ function expectPropertyFieldsMatchRaw(
       : parseContentLikeForTest(rawValue as XMLContent);
     const expectedContent =
       rawValue.rawValue ?? rawValue.payload ?? rawLabel ?? rawValue.slug ?? "";
+    const expectedNumericContent = Number(expectedContent);
 
     expect(parsedValue.uuid).toBe(
       rawValue.uuid == null || rawValue.uuid === "" ? null : rawValue.uuid,
@@ -612,7 +587,9 @@ function expectPropertyFieldsMatchRaw(
         parsedValue.dataType === "decimal" ||
         parsedValue.dataType === "time"
       ) ?
-        parseNumberOrZero(expectedContent)
+        Number.isNaN(expectedNumericContent) ?
+          0
+        : expectedNumericContent
       : expectedContent,
     );
 
@@ -676,7 +653,7 @@ function expectNotesMatchRaw(
         parseXMLString(rawNote, { parseEmail: true }).text
       : parseContentLikeForTest(rawNote as XMLContent);
 
-    expect(parsedNote.number).toBe(parseNumberOrZero(rawNote.noteNo));
+    expect(parsedNote.number).toBe(rawNote.noteNo ?? 0);
     expect(parsedNote.content.getText("eng")).toBe(expectedContent);
   }
 }
@@ -1062,7 +1039,7 @@ function expectCategorySpecificFields(
         transformPermanentIdentificationUrlForTest(rawResource.href),
       );
       expect(parsedItem.fileFormat).toBe(rawResource.fileFormat ?? null);
-      expect(parsedItem.fileSize).toBe(parseNumber(rawResource.fileSize));
+      expect(parsedItem.fileSize).toBe(rawResource.fileSize ?? null);
       expect(parsedItem.image == null).toBe(rawResource.image == null);
       expect(parsedItem.document?.getText("eng") ?? null).toBe(
         parseContentLikeForTest(rawResource.document),

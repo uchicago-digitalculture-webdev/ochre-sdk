@@ -1,4 +1,4 @@
-import { parseISO } from "date-fns";
+import type { ParserOptions } from "#/parsers/helpers.js";
 import type {
   BaseItem,
   BaseItemLink,
@@ -106,20 +106,23 @@ import type {
   XMLTree,
 } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES } from "#/constants.js";
+import {
+  getParserOptions,
+  multilingualFromText,
+  parseContentLike,
+  parseContentLikeText,
+  parseLicense,
+  parseRequiredContentLike,
+  parseStringLike,
+} from "#/parsers/helpers.js";
 import { MultilingualString } from "#/parsers/multilingual.js";
 import {
-  parseXMLContent,
   parseXMLString,
   transformPermanentIdentificationUrl,
 } from "#/parsers/string.js";
 
-export type ParserOptions<T extends ReadonlyArray<string>> = { languages: T };
-
-export function getParserOptions<T extends ReadonlyArray<string>>(
-  options: ParserOptions<T>,
-): ParserOptions<T> {
-  return { languages: options.languages };
-}
+export type { ParserOptions } from "#/parsers/helpers.js";
+export { getParserOptions, parseStringLike } from "#/parsers/helpers.js";
 
 type XMLItemHierarchy = Partial<{
   heading: Array<XMLHeading>;
@@ -238,118 +241,6 @@ const PROPERTY_DATA_TYPES = [
   "boolean",
 ] as const satisfies ReadonlyArray<PropertyDataType>;
 
-export function parseOptionalDate(value: string | undefined): Date | null {
-  if (value == null || value === "") {
-    return null;
-  }
-
-  return parseISO(value.replace(" ", "T"));
-}
-
-function parseOptionalDateLike(
-  value: string | XMLString | undefined,
-): Date | null {
-  if (value == null || typeof value !== "string") {
-    return null;
-  }
-
-  return parseOptionalDate(value);
-}
-
-export function parseNumber(
-  value: string | XMLString | undefined,
-): number | null {
-  if (value == null || value === "") {
-    return null;
-  }
-
-  const parsedValue = Number(typeof value === "string" ? value : value.payload);
-  return Number.isNaN(parsedValue) ? null : parsedValue;
-}
-
-export function parseNumberOrZero(
-  value: string | XMLString | undefined,
-): number {
-  return parseNumber(value) ?? 0;
-}
-
-export function parseBoolean(value: string | undefined): boolean {
-  return value === "true";
-}
-
-export function parseStringLike(
-  value: XMLString | string | undefined,
-  options: { parseEmail?: boolean } = {},
-): string | null {
-  if (value == null) {
-    return null;
-  }
-
-  if (typeof value === "string") {
-    return value;
-  }
-
-  return parseXMLString(value, { parseEmail: options.parseEmail ?? false })
-    .text;
-}
-
-function isXMLContent(value: XMLContent | XMLString): value is XMLContent {
-  return "content" in value;
-}
-
-function multilingualFromText<T extends ReadonlyArray<string>>(
-  text: string | { text: string; richText: string },
-  options: ParserOptions<T>,
-): MultilingualString<T> {
-  const content: Partial<
-    Record<T[number], string | { text: string; richText: string }>
-  > = {};
-  for (const language of options.languages) {
-    content[language as T[number]] = text;
-  }
-
-  return MultilingualString.fromObject(content, options.languages);
-}
-
-function parseContentLike<T extends ReadonlyArray<string>>(
-  value: XMLContent | XMLString | string | undefined,
-  options: ParserOptions<T>,
-): MultilingualString<T> | null {
-  if (value == null) {
-    return null;
-  }
-
-  if (typeof value === "string") {
-    return multilingualFromText(value, options);
-  }
-
-  if (!isXMLContent(value)) {
-    return multilingualFromText(
-      parseXMLString(value, { parseEmail: true }),
-      options,
-    );
-  }
-
-  return parseXMLContent<T>(value, { languages: options.languages });
-}
-
-function parseRequiredContentLike<T extends ReadonlyArray<string>>(
-  value: XMLContent | XMLString,
-  options: ParserOptions<T>,
-): MultilingualString<T> {
-  return (
-    parseContentLike(value, options) ??
-    MultilingualString.empty(options.languages)
-  );
-}
-
-function parseContentLikeText<T extends ReadonlyArray<string>>(
-  value: XMLContent | XMLString | undefined,
-  options: ParserOptions<T>,
-): string {
-  return parseContentLike(value, options)?.getText().trim() ?? "";
-}
-
 export function parseIdentification<T extends ReadonlyArray<string>>(
   rawIdentification: XMLIdentification,
   options: ParserOptions<T>,
@@ -393,8 +284,8 @@ function parseOptionalIdentification<T extends ReadonlyArray<string>>(
 function parseContextItem(contextItem: XMLContextValue): ContextItem {
   return {
     uuid: contextItem.uuid ?? null,
-    publicationDateTime: parseOptionalDate(contextItem.publicationDateTime),
-    index: parseNumberOrZero(contextItem.n),
+    publicationDateTime: contextItem.publicationDateTime ?? null,
+    index: contextItem.n,
     content: contextItem.payload,
   };
 }
@@ -441,7 +332,7 @@ function parseContext(rawContext: XMLContext): Context<ContextDataCategory> {
 
 function parseEventReference<T extends ReadonlyArray<string>>(
   rawReference:
-    | (XMLContent & { uuid: string; publicationDateTime?: string })
+    | (XMLContent & { uuid: string; publicationDateTime?: Date })
     | undefined,
   options: ParserOptions<T>,
 ): {
@@ -456,7 +347,7 @@ function parseEventReference<T extends ReadonlyArray<string>>(
   return {
     uuid: rawReference.uuid,
     label: parseRequiredContentLike(rawReference, options),
-    publicationDateTime: parseOptionalDate(rawReference.publicationDateTime),
+    publicationDateTime: rawReference.publicationDateTime ?? null,
   };
 }
 
@@ -464,8 +355,8 @@ function parseEvent<T extends ReadonlyArray<string>>(
   rawEvent: XMLEvent,
   options: ParserOptions<T>,
 ): Event<T> {
-  const startDate = parseOptionalDate(rawEvent.dateTime);
-  const endDate = parseOptionalDate(rawEvent.endDateTime);
+  const startDate = rawEvent.dateTime ?? null;
+  const endDate = rawEvent.endDateTime ?? null;
   const date =
     startDate == null ? null
     : endDate == null ? startDate
@@ -492,8 +383,8 @@ function parseBaseItem<U extends DataCategory, T extends ReadonlyArray<string>>(
   category: U,
   rawItem: Partial<XMLBaseItem> & {
     uuid?: string;
-    publicationDateTime?: string;
-    date?: string | XMLString;
+    publicationDateTime?: Date;
+    date?: Date | XMLString;
   },
   options: ParserOptions<T>,
 ): BaseItem<U, T, "nested"> {
@@ -513,16 +404,10 @@ function parseBaseItem<U extends DataCategory, T extends ReadonlyArray<string>>(
     belongsTo: null,
     metadata: null,
     persistentUrl: null,
-    publicationDateTime: parseOptionalDate(rawItem.publicationDateTime),
+    publicationDateTime: rawItem.publicationDateTime ?? null,
     context: rawItem.context == null ? null : parseContext(rawItem.context),
-    date: parseOptionalDateLike(rawItem.date),
-    license:
-      rawItem.availability == null ?
-        null
-      : {
-          content: parseStringLike(rawItem.availability.license) ?? "",
-          target: rawItem.availability.license.target ?? null,
-        },
+    date: rawItem.date instanceof Date ? rawItem.date : null,
+    license: parseLicense(rawItem.availability),
     copyright:
       rawItem.copyright == null ?
         null
@@ -697,16 +582,16 @@ function parseImage<T extends ReadonlyArray<string>>(
   }
 
   return {
-    publicationDateTime: parseOptionalDate(rawImage.publicationDateTime),
+    publicationDateTime: rawImage.publicationDateTime ?? null,
     identification:
       rawImage.identification == null ?
         null
       : parseIdentification(rawImage.identification, options),
     href: parseHref(rawImage.href),
     htmlImgSrcPrefix: rawImage.htmlImgSrcPrefix ?? null,
-    height: parseNumber(rawImage.height),
-    width: parseNumber(rawImage.width),
-    fileSize: parseNumber(rawImage.fileSize),
+    height: rawImage.height ?? null,
+    width: rawImage.width ?? null,
+    fileSize: rawImage.fileSize ?? null,
     base64: rawImage.payload ?? null,
   };
 }
@@ -765,9 +650,9 @@ function parseCoordinate<T extends ReadonlyArray<string>>(
     case "point": {
       return {
         type: "point",
-        latitude: parseNumberOrZero(coordinate.latitude),
-        longitude: parseNumberOrZero(coordinate.longitude),
-        altitude: parseNumber(coordinate.altitude),
+        latitude: coordinate.latitude,
+        longitude: coordinate.longitude,
+        altitude: coordinate.altitude ?? null,
         source: parseCoordinatesSource(coordinate.source, options),
       };
     }
@@ -775,12 +660,12 @@ function parseCoordinate<T extends ReadonlyArray<string>>(
       return {
         type: "plane",
         minimum: {
-          latitude: parseNumberOrZero(coordinate.minimum.latitude),
-          longitude: parseNumberOrZero(coordinate.minimum.longitude),
+          latitude: coordinate.minimum.latitude,
+          longitude: coordinate.minimum.longitude,
         },
         maximum: {
-          latitude: parseNumberOrZero(coordinate.maximum.latitude),
-          longitude: parseNumberOrZero(coordinate.maximum.longitude),
+          latitude: coordinate.maximum.latitude,
+          longitude: coordinate.maximum.longitude,
         },
         source: parseCoordinatesSource(coordinate.source, options),
       };
@@ -814,7 +699,7 @@ function parseImageMapArea(area: XMLImageMapArea): ImageMapArea {
 
   return {
     uuid: area.uuid,
-    publicationDateTime: parseOptionalDate(area.publicationDateTime),
+    publicationDateTime: area.publicationDateTime,
     type: area.type,
     title: area.title,
     items:
@@ -852,11 +737,7 @@ function parseImageMap(rawImageMap: XMLImageMap | undefined): ImageMap | null {
     areas.push(parseImageMapArea(area));
   }
 
-  return {
-    areas,
-    width: parseNumberOrZero(rawImageMap.width),
-    height: parseNumberOrZero(rawImageMap.height),
-  };
+  return { areas, width: rawImageMap.width, height: rawImageMap.height };
 }
 
 function parseNote<T extends ReadonlyArray<string>>(
@@ -886,7 +767,7 @@ function parseNote<T extends ReadonlyArray<string>>(
       )
     : parseRequiredContentLike(rawNote as XMLContent, options);
 
-  return { number: parseNumberOrZero(rawNote.noteNo), title, content, authors };
+  return { number: rawNote.noteNo ?? 0, title, content, authors };
 }
 
 export function parseNotes<T extends ReadonlyArray<string>>(
@@ -928,20 +809,20 @@ function parsePropertyValueContent<T extends ReadonlyArray<string>>(
   const contentText = value.rawValue ?? value.payload ?? displayText;
   const common = {
     hierarchy: {
-      isLeaf: value.inherited == null || !parseBoolean(value.inherited),
-      level: parseNumber(value.i),
+      isLeaf: value.inherited == null || !value.inherited,
+      level: value.i ?? null,
     },
     label: rawLabel,
     isUncertain: value.isUncertain === "true",
     category: value.category ?? null,
     type: value.type ?? null,
     uuid: value.uuid == null || value.uuid === "" ? null : value.uuid,
-    publicationDateTime: parseOptionalDate(value.publicationDateTime),
+    publicationDateTime: value.publicationDateTime ?? null,
     unit: value.unit ?? null,
     href: parseHref(value.href),
-    height: parseNumber(value.height),
-    width: parseNumber(value.width),
-    fileSize: parseNumber(value.fileSize),
+    height: value.height ?? null,
+    width: value.width ?? null,
+    fileSize: value.fileSize ?? null,
     slug: value.slug ?? null,
   };
 
@@ -949,7 +830,12 @@ function parsePropertyValueContent<T extends ReadonlyArray<string>>(
     case "integer":
     case "decimal":
     case "time": {
-      return { ...common, dataType, content: parseNumberOrZero(contentText) };
+      const numericContent = Number(contentText);
+      return {
+        ...common,
+        dataType,
+        content: Number.isNaN(numericContent) ? 0 : numericContent,
+      };
     }
     case "boolean": {
       return { ...common, dataType, content: contentText === "true" };
@@ -981,9 +867,7 @@ function parseProperty<T extends ReadonlyArray<string>>(
   return {
     label: {
       uuid: rawProperty.label.uuid,
-      publicationDateTime: parseOptionalDate(
-        rawProperty.label.publicationDateTime,
-      ),
+      publicationDateTime: rawProperty.label.publicationDateTime ?? null,
       name: parseContentLikeText(rawProperty.label, options),
     },
     values,
@@ -1415,9 +1299,9 @@ function parseBaseItemLink<
   category: U,
   rawItem: {
     uuid?: string;
-    publicationDateTime?: string;
+    publicationDateTime?: Date;
     context?: XMLContext;
-    date?: string | XMLString;
+    date?: Date | XMLString;
     identification?: XMLIdentification;
     description?: XMLContent;
   },
@@ -1426,9 +1310,9 @@ function parseBaseItemLink<
   return {
     uuid: rawItem.uuid ?? "",
     category,
-    publicationDateTime: parseOptionalDate(rawItem.publicationDateTime),
+    publicationDateTime: rawItem.publicationDateTime ?? null,
     context: rawItem.context == null ? null : parseContext(rawItem.context),
-    date: parseOptionalDateLike(rawItem.date),
+    date: rawItem.date instanceof Date ? rawItem.date : null,
     identification: parseOptionalIdentification(
       rawItem.identification,
       options,
@@ -1448,7 +1332,7 @@ function parseBibliographySourceDocument(
     uuid: sourceDocument.uuid,
     content: sourceDocument.payload,
     href: parseHref(sourceDocument.href),
-    publicationDateTime: parseOptionalDate(sourceDocument.publicationDateTime),
+    publicationDateTime: sourceDocument.publicationDateTime ?? null,
   };
 }
 
@@ -1462,9 +1346,9 @@ function parseBibliographyStartDate(
   }
 
   return new Date(
-    parseNumberOrZero(startDate.year),
-    Math.max(parseNumberOrZero(startDate.month) - 1, 0),
-    parseNumberOrZero(startDate.day),
+    startDate.year ?? 0,
+    Math.max((startDate.month ?? 0) - 1, 0),
+    startDate.day ?? 0,
   );
 }
 
@@ -1665,11 +1549,11 @@ function parseResourceItemLink<T extends ReadonlyArray<string>>(
     type: rawResource.type ?? null,
     href: parseHref(rawResource.href),
     fileFormat: rawResource.fileFormat ?? null,
-    fileSize: parseNumber(rawResource.fileSize),
+    fileSize: rawResource.fileSize ?? null,
     isInline: rawResource.rend === "inline",
-    isPrimary: parseBoolean(rawResource.isPrimary),
-    height: parseNumber(rawResource.height),
-    width: parseNumber(rawResource.width),
+    isPrimary: rawResource.isPrimary ?? false,
+    height: rawResource.height ?? null,
+    width: rawResource.width ?? null,
     image: parseImage(rawResource.image, options),
     coordinates: parseCoordinates(rawResource.coordinates, options),
   };
@@ -1817,8 +1701,8 @@ function parseInterpretation<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
 ): Interpretation<T> {
   return {
-    number: parseNumberOrZero(rawInterpretation.interpretationNo),
-    date: parseOptionalDate(rawInterpretation.date),
+    number: rawInterpretation.interpretationNo,
+    date: rawInterpretation.date ?? null,
     observers: parsePersonList(rawInterpretation.observers?.observer, options),
     periods: parsePeriodList(rawInterpretation.periods, options),
     links: parseLinks(rawInterpretation.links, options),
@@ -1836,8 +1720,8 @@ function parseObservation<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
 ): Observation<T> {
   return {
-    number: parseNumberOrZero(rawObservation.observationNo),
-    date: parseOptionalDate(rawObservation.date),
+    number: rawObservation.observationNo,
+    date: rawObservation.date ?? null,
     observers: parsePersonList(rawObservation.observers?.observer, options),
     periods: parsePeriodList(rawObservation.periods, options),
     links: parseLinks(rawObservation.links, options),
@@ -1856,7 +1740,7 @@ function parseSection<T extends ReadonlyArray<string>>(
 ): Section<T> {
   return {
     uuid: rawSection.uuid,
-    publicationDateTime: parseOptionalDate(rawSection.publicationDateTime),
+    publicationDateTime: rawSection.publicationDateTime ?? null,
     identification: parseIdentification(rawSection.identification, options),
     project:
       rawSection.project == null ?
@@ -1980,8 +1864,8 @@ function parseSet<
   return {
     ...parseBaseItem("set", rawSet, childOptions),
     itemsCategory: itemCategories as Array<U>,
-    isTabularStructure: parseBoolean(rawSet.tabularStructure),
-    isSuppressingBlanks: parseBoolean(rawSet.suppressBlanks),
+    isTabularStructure: rawSet.tabularStructure ?? false,
+    isSuppressingBlanks: rawSet.suppressBlanks ?? false,
     links: parseLinks(rawSet.links, childOptions),
     notes: parseNotes(rawSet.notes, childOptions),
     properties: parseProperties(rawSet.properties, childOptions),
@@ -2028,7 +1912,7 @@ function parseSpatialUnitMapData(
   return {
     geoJSON: {
       multiPolygon: mapData.geoJSON.multiPolygon.payload,
-      EPSG: parseNumberOrZero(mapData.geoJSON.EPSG),
+      EPSG: mapData.geoJSON.EPSG,
     },
   };
 }
@@ -2322,10 +2206,10 @@ function parseResource<T extends ReadonlyArray<string>>(
     type: rawResource.type ?? "",
     href: parseHref(rawResource.href),
     fileFormat: rawResource.fileFormat ?? null,
-    fileSize: parseNumber(rawResource.fileSize),
+    fileSize: rawResource.fileSize ?? null,
     isInline: rawResource.rend === "inline",
-    height: parseNumber(rawResource.height),
-    width: parseNumber(rawResource.width),
+    height: rawResource.height ?? null,
+    width: rawResource.width ?? null,
     image: parseImage(rawResource.image, options),
     document: parseContentLike(rawResource.document, options),
     imageMap: parseImageMap(rawResource.imagemap),
@@ -2532,7 +2416,7 @@ export function parseMetadata<T extends ReadonlyArray<string>>(
             normalizeCategory(rawMetadata.item.category) ??
             rawMetadata.item.category,
           type: rawMetadata.item.type,
-          maxLength: parseNumber(rawMetadata.item.maxLength),
+          maxLength: rawMetadata.item.maxLength ?? null,
         },
     defaultLanguage,
     languages: options.languages,
@@ -2812,7 +2696,7 @@ export function parseGallery<T extends ReadonlyArray<string>>(
       options,
     ),
     resources,
-    maxLength: parseNumberOrZero(gallery.maxLength),
+    maxLength: gallery.maxLength,
   };
 }
 

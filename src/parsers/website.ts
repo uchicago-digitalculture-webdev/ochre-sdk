@@ -1,10 +1,10 @@
 import * as v from "valibot";
-import type { ParserOptions } from "#/parsers/index.js";
+import type { ParserOptions } from "#/parsers/helpers.js";
 import type {
   Identification,
   ItemLink,
+  ItemLinkCategory,
   ItemLinks,
-  License,
   Property,
 } from "#/types/index.js";
 import type {
@@ -24,13 +24,12 @@ import type {
   WebTitle,
 } from "#/types/website.js";
 import type {
-  XMLContent,
-  XMLString,
   XMLWebsiteContext,
   XMLWebsiteContextItem,
   XMLWebsiteData,
   XMLWebsiteFilterContext,
   XMLWebsiteFilterContextItem,
+  XMLWebsiteOptions,
   XMLWebsiteProperties,
   XMLWebsiteResource,
   XMLWebsiteResourceItem,
@@ -43,62 +42,50 @@ import {
   getPropertyValueContentByLabelName,
 } from "#/getters.js";
 import {
+  cleanObject,
+  parseLicense,
+  parseStringContent,
+} from "#/parsers/helpers.js";
+import {
   parseBibliographyList,
   parseIdentification,
   parseLinks,
   parseMetadata,
   parseMetadataLanguages,
   parseNotes,
-  parseOptionalDate,
   parsePersonList,
   parseProperties,
   resolveDefaultLanguage,
   resolveLanguages,
 } from "#/parsers/index.js";
-import { parseXMLContent, parseXMLString } from "#/parsers/string.js";
+import { parseXMLContent } from "#/parsers/string.js";
 import { componentSchema } from "#/schemas.js";
 
-const FALLBACK_WEBSITE_OPTIONS: ParserOptions<ReadonlyArray<string>> = {
-  languages: ["eng"],
-};
+type WebsiteLinkCategory = Extract<
+  ItemLinkCategory,
+  "resource" | "set" | "tree"
+>;
 
-function parseWebsiteLinks<T extends ReadonlyArray<string>>(
-  rawLinks: XMLWebsiteResource["links"] | undefined,
-  options: ParserOptions<T>,
-): ItemLinks<T> {
-  return parseLinks(rawLinks, options);
+function isWebsiteLink<
+  U extends WebsiteLinkCategory,
+  T extends ReadonlyArray<string>,
+>(link: ItemLinks<T>[number], category: U): link is ItemLink<U, T> {
+  return link.category === category;
 }
 
-function isWebsiteResourceLink<T extends ReadonlyArray<string>>(
-  link: ItemLinks<T>[number],
-): link is ItemLink<"resource", T> {
-  return link.category === "resource";
-}
-
-function isWebsiteSetLink<T extends ReadonlyArray<string>>(
-  link: ItemLinks<T>[number],
-): link is ItemLink<"set", T> {
-  return link.category === "set";
-}
-
-function isWebsiteTreeLink<T extends ReadonlyArray<string>>(
-  link: ItemLinks<T>[number],
-): link is ItemLink<"tree", T> {
-  return link.category === "tree";
-}
-
-function isWebsiteSetOrTreeLink<T extends ReadonlyArray<string>>(
-  link: ItemLinks<T>[number],
-): link is ItemLink<"set", T> | ItemLink<"tree", T> {
-  return isWebsiteSetLink(link) || isWebsiteTreeLink(link);
-}
-
-function findWebsiteResourceLink<T extends ReadonlyArray<string>>(
+function findWebsiteLink<
+  U extends WebsiteLinkCategory,
+  T extends ReadonlyArray<string>,
+>(
   links: ItemLinks<T>,
-  predicate: (link: ItemLink<"resource", T>) => boolean,
-): ItemLink<"resource", T> | null {
+  category: U,
+  predicate?: (link: ItemLink<U, T>) => boolean,
+): ItemLink<U, T> | null {
   for (const link of links) {
-    if (isWebsiteResourceLink(link) && predicate(link)) {
+    if (
+      isWebsiteLink(link, category) &&
+      (predicate == null || predicate(link))
+    ) {
       return link;
     }
   }
@@ -106,121 +93,37 @@ function findWebsiteResourceLink<T extends ReadonlyArray<string>>(
   return null;
 }
 
-function getWebsiteResourceLinks<T extends ReadonlyArray<string>>(
-  links: ItemLinks<T>,
-): Array<ItemLink<"resource", T>> {
-  const resourceLinks: Array<ItemLink<"resource", T>> = [];
+function findWebsiteLinkByCategories<
+  U extends WebsiteLinkCategory,
+  T extends ReadonlyArray<string>,
+>(links: ItemLinks<T>, categories: ReadonlyArray<U>): ItemLink<U, T> | null {
   for (const link of links) {
-    if (isWebsiteResourceLink(link)) {
-      resourceLinks.push(link);
-    }
-  }
-
-  return resourceLinks;
-}
-
-function getWebsiteSetLinks<T extends ReadonlyArray<string>>(
-  links: ItemLinks<T>,
-): Array<ItemLink<"set", T>> {
-  const setLinks: Array<ItemLink<"set", T>> = [];
-  for (const link of links) {
-    if (isWebsiteSetLink(link)) {
-      setLinks.push(link);
-    }
-  }
-
-  return setLinks;
-}
-
-function findWebsiteSetLink<T extends ReadonlyArray<string>>(
-  links: ItemLinks<T>,
-): ItemLink<"set", T> | null {
-  for (const link of links) {
-    if (isWebsiteSetLink(link)) {
-      return link;
+    for (const category of categories) {
+      if (isWebsiteLink(link, category)) {
+        return link;
+      }
     }
   }
 
   return null;
 }
 
-function findWebsiteTreeLink<T extends ReadonlyArray<string>>(
-  links: ItemLinks<T>,
-): ItemLink<"tree", T> | null {
+function getWebsiteLinks<
+  U extends WebsiteLinkCategory,
+  T extends ReadonlyArray<string>,
+>(links: ItemLinks<T>, category: U): Array<ItemLink<U, T>> {
+  const matchedLinks: Array<ItemLink<U, T>> = [];
   for (const link of links) {
-    if (isWebsiteTreeLink(link)) {
-      return link;
+    if (isWebsiteLink(link, category)) {
+      matchedLinks.push(link);
     }
   }
 
-  return null;
-}
-
-function findWebsiteSetOrTreeLink<T extends ReadonlyArray<string>>(
-  links: ItemLinks<T>,
-): ItemLink<"set", T> | ItemLink<"tree", T> | null {
-  for (const link of links) {
-    if (isWebsiteSetOrTreeLink(link)) {
-      return link;
-    }
-  }
-
-  return null;
-}
-
-function ensureArray<T>(value: T | Array<T>): Array<T> {
-  return Array.isArray(value) ? value : [value];
-}
-
-function cleanObject<T extends Record<string, unknown>>(obj: T): Partial<T> {
-  const cleaned: Partial<T> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (value !== undefined) {
-      cleaned[key as keyof T] = value as T[keyof T];
-    }
-  }
-
-  return cleaned;
-}
-
-function isXMLContent(value: XMLContent | XMLString): value is XMLContent {
-  return "content" in value;
-}
-
-function parseStringContent(
-  value: XMLContent | XMLString | string | undefined,
-  options: ParserOptions<ReadonlyArray<string>> = FALLBACK_WEBSITE_OPTIONS,
-): string {
-  if (value == null) {
-    return "";
-  }
-
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (isXMLContent(value)) {
-    return parseXMLContent(value, { languages: options.languages }).getText();
-  }
-
-  return parseXMLString(value, { parseEmail: true }).text;
+  return matchedLinks;
 }
 
 function transformPermanentIdentificationUrlToItemLink(url: string): string {
   return url.replace("https://pi.lib.uchicago.edu/1001/org/ochre/", "/item/");
-}
-
-function parseLicense(
-  availability: XMLWebsiteTree["availability"] | undefined,
-): License | null {
-  if (availability == null) {
-    return null;
-  }
-
-  return {
-    content: parseXMLString(availability.license, { parseEmail: false }).text,
-    target: availability.license.target ?? null,
-  };
 }
 
 function normalizeWebsiteResources(
@@ -364,34 +267,27 @@ export function parseBounds(
  */
 function parseAllOptionContexts<T extends ReadonlyArray<string>>(
   options: {
-    flattenContexts?: XMLWebsiteContext | Array<XMLWebsiteContext> | null;
-    suppressContexts?: XMLWebsiteContext | Array<XMLWebsiteContext> | null;
-    filterContexts?:
-      | XMLWebsiteFilterContext
-      | Array<XMLWebsiteFilterContext>
-      | null;
-    sortContexts?: XMLWebsiteContext | Array<XMLWebsiteContext> | null;
-    detailContexts?: XMLWebsiteContext | Array<XMLWebsiteContext> | null;
-    downloadContexts?: XMLWebsiteContext | Array<XMLWebsiteContext> | null;
-    labelContexts?: XMLWebsiteContext | Array<XMLWebsiteContext> | null;
-    prominentContexts?: XMLWebsiteContext | Array<XMLWebsiteContext> | null;
+    flattenContexts?: Array<XMLWebsiteContext> | null;
+    suppressContexts?: Array<XMLWebsiteContext> | null;
+    filterContexts?: Array<XMLWebsiteFilterContext> | null;
+    sortContexts?: Array<XMLWebsiteContext> | null;
+    detailContexts?: Array<XMLWebsiteContext> | null;
+    downloadContexts?: Array<XMLWebsiteContext> | null;
+    labelContexts?: Array<XMLWebsiteContext> | null;
+    prominentContexts?: Array<XMLWebsiteContext> | null;
   },
   parserOptions: ParserOptions<T>,
 ): ContextTree<T> {
   function handleContexts(
-    v: XMLWebsiteContext | Array<XMLWebsiteContext> | null | undefined,
+    v: Array<XMLWebsiteContext> | null | undefined,
   ): Array<ContextTreeLevel<T>> {
-    return parseContexts(v != null ? ensureArray(v) : [], parserOptions);
+    return parseContexts(v ?? [], parserOptions);
   }
 
   function handleFilterContexts(
-    v:
-      | XMLWebsiteFilterContext
-      | Array<XMLWebsiteFilterContext>
-      | null
-      | undefined,
+    v: Array<XMLWebsiteFilterContext> | null | undefined,
   ): ContextTree<T>["filter"] {
-    return parseFilterContexts(v != null ? ensureArray(v) : [], parserOptions);
+    return parseFilterContexts(v ?? [], parserOptions);
   }
 
   return {
@@ -406,10 +302,58 @@ function parseAllOptionContexts<T extends ReadonlyArray<string>>(
   };
 }
 
+type ParsedWebsiteOptions<T extends ReadonlyArray<string>> = Extract<
+  WebElementComponent<T>,
+  { component: "collection" }
+>["options"];
+
+function parseWebsiteScopes<T extends ReadonlyArray<string>>(
+  scopes: XMLWebsiteOptions["scopes"] | undefined,
+  options: ParserOptions<T>,
+): ParsedWebsiteOptions<T>["scopes"] {
+  if (scopes == null) {
+    return null;
+  }
+
+  const parsedScopes: NonNullable<ParsedWebsiteOptions<T>["scopes"]> = [];
+  for (const scope of scopes.scope) {
+    parsedScopes.push({
+      uuid: scope.uuid.payload,
+      type: scope.uuid.type,
+      identification: parseIdentification(scope.identification, options),
+    });
+  }
+
+  return parsedScopes;
+}
+
+function parseWebsiteOptions<T extends ReadonlyArray<string>>(
+  rawOptions: XMLWebsiteOptions | undefined,
+  options: ParserOptions<T>,
+): ParsedWebsiteOptions<T> {
+  const parsedOptions: ParsedWebsiteOptions<T> = {
+    scopes: parseWebsiteScopes(rawOptions?.scopes, options),
+    contextTree:
+      rawOptions == null ? null : parseAllOptionContexts(rawOptions, options),
+    labels: { title: null },
+  };
+
+  for (const note of parseNotes(rawOptions?.notes, options)) {
+    if (note.title === "Title label") {
+      parsedOptions.labels.title = note.content;
+      break;
+    }
+  }
+
+  return parsedOptions;
+}
+
 function parseStylesheets(
   styles: Array<XMLWebsiteStyle>,
 ): Array<StylesheetItem> {
-  return styles.map((style) => {
+  const parsedStyles: Array<StylesheetItem> = [];
+
+  for (const style of styles) {
     const defaultStyles: Array<Style> = [];
 
     for (const [label, value] of Object.entries(style)) {
@@ -442,22 +386,25 @@ function parseStylesheets(
         );
       }
 
-      return {
+      parsedStyles.push({
         uuid: style.valueUuid,
         category: "propertyValue",
         variableUuid: style.variableUuid,
         icon: style.lucideIcon ?? null,
         styles: stylesByViewport,
-      };
+      });
+      continue;
     }
 
-    return {
+    parsedStyles.push({
       uuid: style.variableUuid,
       category: "propertyVariable",
       icon: style.lucideIcon ?? null,
       styles: stylesByViewport,
-    };
-  });
+    });
+  }
+
+  return parsedStyles;
 }
 
 /**
@@ -482,12 +429,13 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
 
   let properties: WebElementComponent<T> | null = null;
 
-  const websiteLinks = parseWebsiteLinks(elementResource.links, options);
+  const websiteLinks = parseLinks(elementResource.links, options);
 
   switch (componentName) {
     case "3d-viewer": {
-      const resourceLink = findWebsiteResourceLink(
+      const resourceLink = findWebsiteLink(
         websiteLinks,
+        "resource",
         (link) => link.fileFormat === "model/obj",
       );
       if (resourceLink == null) {
@@ -565,8 +513,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "annotated-document": {
-      const documentLink = findWebsiteResourceLink(
+      const documentLink = findWebsiteLink(
         websiteLinks,
+        "resource",
         (link) => link.type === "internalDocument",
       );
       if (documentLink == null) {
@@ -586,7 +535,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "annotated-image": {
-      const imageLinks = getWebsiteResourceLinks(websiteLinks).filter(
+      const imageLinks = getWebsiteLinks(websiteLinks, "resource").filter(
         (link) => link.type === "image" || link.type === "IIIF",
       );
 
@@ -655,8 +604,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "audio-player": {
-      const audioLink = findWebsiteResourceLink(
+      const audioLink = findWebsiteLink(
         websiteLinks,
+        "resource",
         (link) => link.type === "audio",
       );
       if (audioLink == null) {
@@ -824,8 +774,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       endIcon ??= null;
 
       let image: WebImage<T> | null = null;
-      const imageLink = findWebsiteResourceLink(
+      const imageLink = findWebsiteLink(
         websiteLinks,
+        "resource",
         (link) => link.type === "image" || link.type === "IIIF",
       );
       if (imageLink != null) {
@@ -856,7 +807,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "collection": {
-      const setLinks = getWebsiteSetLinks(websiteLinks);
+      const setLinks = getWebsiteLinks(websiteLinks, "set");
       if (setLinks.length === 0) {
         throw new Error(
           formatComponentError(
@@ -1005,41 +956,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         | null;
       imageLayout ??= "start";
 
-      const componentOptions: Extract<
-        WebElementComponent<T>,
-        { component: "collection" }
-      >["options"] = {
-        scopes:
-          elementResource.options?.scopes != null ?
-            ensureArray(elementResource.options.scopes.scope).map((scope) => ({
-              uuid: scope.uuid.payload,
-              type: scope.uuid.type,
-              identification: parseIdentification(
-                scope.identification,
-                options,
-              ),
-            }))
-          : null,
-        contextTree: null,
-        labels: { title: null },
-      };
-
-      if ("options" in elementResource && elementResource.options) {
-        componentOptions.contextTree = parseAllOptionContexts(
-          elementResource.options,
-          options,
-        );
-
-        if (
-          "notes" in elementResource.options &&
-          elementResource.options.notes
-        ) {
-          const labelNotes = parseNotes(elementResource.options.notes, options);
-          componentOptions.labels.title =
-            labelNotes.find((note) => note.title === "Title label")?.content ??
-            null;
-        }
-      }
+      const componentOptions = parseWebsiteOptions(
+        elementResource.options,
+        options,
+      );
 
       properties = {
         component: "collection",
@@ -1085,7 +1005,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "entries": {
-      const entriesLink = findWebsiteSetOrTreeLink(websiteLinks);
+      const entriesLink = findWebsiteLinkByCategories(websiteLinks, [
+        "set",
+        "tree",
+      ]);
       if (entriesLink == null) {
         throw new Error(
           formatComponentError(
@@ -1124,8 +1047,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "iframe": {
-      const webpageLink = findWebsiteResourceLink(
+      const webpageLink = findWebsiteLink(
         websiteLinks,
+        "resource",
         (link) => link.type === "webpage",
       );
       if (webpageLink?.href == null) {
@@ -1152,8 +1076,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "iiif-viewer": {
-      const manifestLink = findWebsiteResourceLink(
+      const manifestLink = findWebsiteLink(
         websiteLinks,
+        "resource",
         (link) => link.type === "IIIF",
       );
       if (manifestLink == null) {
@@ -1185,7 +1110,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "image": {
-      const imageLinks = getWebsiteResourceLinks(websiteLinks).filter(
+      const imageLinks = getWebsiteLinks(websiteLinks, "resource").filter(
         (link) => link.type === "image" || link.type === "IIIF",
       );
       if (imageLinks.length === 0) {
@@ -1411,7 +1336,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "image-gallery": {
-      const galleryLink = findWebsiteSetOrTreeLink(websiteLinks);
+      const galleryLink = findWebsiteLinkByCategories(websiteLinks, [
+        "set",
+        "tree",
+      ]);
       if (galleryLink == null) {
         throw new Error(
           formatComponentError(
@@ -1441,7 +1369,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "map": {
-      const mapLink = findWebsiteSetOrTreeLink(websiteLinks);
+      const mapLink = findWebsiteLinkByCategories(websiteLinks, [
+        "set",
+        "tree",
+      ]);
       if (mapLink == null) {
         throw new Error(
           formatComponentError(
@@ -1540,7 +1471,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "query": {
-      const setLinks = getWebsiteSetLinks(websiteLinks);
+      const setLinks = getWebsiteLinks(websiteLinks, "set");
       if (setLinks.length === 0) {
         throw new Error(
           formatComponentError(
@@ -1669,41 +1600,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      const componentOptions: Extract<
-        WebElementComponent<T>,
-        { component: "query" }
-      >["options"] = {
-        scopes:
-          elementResource.options?.scopes != null ?
-            ensureArray(elementResource.options.scopes.scope).map((scope) => ({
-              uuid: scope.uuid.payload,
-              type: scope.uuid.type,
-              identification: parseIdentification(
-                scope.identification,
-                options,
-              ),
-            }))
-          : null,
-        contextTree: null,
-        labels: { title: null },
-      };
-
-      if ("options" in elementResource && elementResource.options) {
-        componentOptions.contextTree = parseAllOptionContexts(
-          elementResource.options,
-          options,
-        );
-
-        if (
-          "notes" in elementResource.options &&
-          elementResource.options.notes
-        ) {
-          const labelNotes = parseNotes(elementResource.options.notes, options);
-          componentOptions.labels.title =
-            labelNotes.find((note) => note.title === "Title label")?.content ??
-            null;
-        }
-      }
+      const componentOptions = parseWebsiteOptions(
+        elementResource.options,
+        options,
+      );
 
       const displayedProperties = getPropertyByLabelName(
         componentProperty.properties,
@@ -1774,7 +1674,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "table": {
-      const tableLink = findWebsiteSetLink(websiteLinks);
+      const tableLink = findWebsiteLink(websiteLinks, "set");
       if (tableLink == null) {
         throw new Error(
           formatComponentError(
@@ -1932,7 +1832,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "timeline": {
-      const timelineLink = findWebsiteTreeLink(websiteLinks);
+      const timelineLink = findWebsiteLink(websiteLinks, "tree");
       if (timelineLink == null) {
         throw new Error(
           formatComponentError(
@@ -1947,8 +1847,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "video": {
-      const videoLink = findWebsiteResourceLink(
+      const videoLink = findWebsiteLink(
         websiteLinks,
+        "resource",
         (link) => link.type === "video",
       );
       if (videoLink == null) {
@@ -2257,7 +2158,7 @@ function parseWebpage<T extends ReadonlyArray<string>>(
       slugPrefix != null ?
         `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
       : slug,
-    publicationDateTime: parseOptionalDate(webpageResource.publicationDateTime),
+    publicationDateTime: webpageResource.publicationDateTime ?? null,
     items: [],
     properties: {
       width: "default",
@@ -2272,9 +2173,10 @@ function parseWebpage<T extends ReadonlyArray<string>>(
     webpages: [],
   };
 
-  const websiteLinks = parseWebsiteLinks(webpageResource.links, options);
-  const imageLink = findWebsiteResourceLink(
+  const websiteLinks = parseLinks(webpageResource.links, options);
+  const imageLink = findWebsiteLink(
     websiteLinks,
+    "resource",
     (link) => link.type === "image" || link.type === "IIIF",
   );
 
@@ -2462,7 +2364,7 @@ function parseWebSegment<T extends ReadonlyArray<string>>(
     type: "segment",
     title: identification.label,
     slug,
-    publicationDateTime: parseOptionalDate(segmentResource.publicationDateTime),
+    publicationDateTime: segmentResource.publicationDateTime ?? null,
     items: [],
   };
 
@@ -2554,9 +2456,7 @@ function parseWebSegmentItem<T extends ReadonlyArray<string>>(
     type: "segment-item",
     title: identification.label,
     slug,
-    publicationDateTime: parseOptionalDate(
-      segmentItemResource.publicationDateTime,
-    ),
+    publicationDateTime: segmentItemResource.publicationDateTime ?? null,
     items: [],
   };
 
@@ -3396,33 +3296,16 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
       "universal-viewer";
   }
 
-  if ("options" in websiteTree && websiteTree.options) {
-    returnProperties.options.scopes =
-      websiteTree.options.scopes != null ?
-        ensureArray(websiteTree.options.scopes.scope).map((scope) => ({
-          uuid: scope.uuid.payload,
-          type: scope.uuid.type,
-          identification: parseIdentification(scope.identification, options),
-        }))
-      : null;
-
-    returnProperties.options.contextTree = parseAllOptionContexts(
-      websiteTree.options,
-      options,
-    );
-
-    if ("notes" in websiteTree.options && websiteTree.options.notes != null) {
-      const labelNotes = parseNotes(websiteTree.options.notes, options);
-
-      returnProperties.options.labels.title =
-        labelNotes.find((note) => note.title === "Title label")?.content ??
-        null;
-    }
+  if (websiteTree.options != null) {
+    const parsedOptions = parseWebsiteOptions(websiteTree.options, options);
+    returnProperties.options.scopes = parsedOptions.scopes;
+    returnProperties.options.contextTree = parsedOptions.contextTree;
+    returnProperties.options.labels = parsedOptions.labels;
   }
 
   if ("styleOptions" in websiteTree && websiteTree.styleOptions != null) {
     returnProperties.options.stylesheets.properties = parseStylesheets(
-      ensureArray(websiteTree.styleOptions.style),
+      websiteTree.styleOptions.style,
     );
   }
 
@@ -3433,22 +3316,18 @@ function parseContextItem<T extends ReadonlyArray<string>>(
   contextItemToParse: XMLWebsiteContextItem | XMLWebsiteFilterContextItem,
   options: ParserOptions<T>,
 ): ContextTreeLevel<T> {
-  const levelsToParse =
-    contextItemToParse.levels != null ?
-      ensureArray(contextItemToParse.levels.level)
-    : [];
-
   let type = "";
-
-  const levels: Array<ContextTreeLevelItem> = levelsToParse.map((level) => {
-    const splitLevel = level.payload.split(",").map((item) => item.trim());
-    const variableUuid = splitLevel[0] ?? "";
+  const levels: Array<ContextTreeLevelItem> = [];
+  for (const level of contextItemToParse.levels?.level ?? []) {
+    const [rawVariableUuid = "", rawValueUuid] = level.payload.split(",");
     const valueUuid =
-      splitLevel[1] == null || splitLevel[1] === "null" ? null : splitLevel[1];
+      rawValueUuid == null || rawValueUuid.trim() === "null" ?
+        null
+      : rawValueUuid.trim();
     type = level.dataType ?? type;
 
-    return { variableUuid, valueUuid };
-  });
+    levels.push({ variableUuid: rawVariableUuid.trim(), valueUuid });
+  }
 
   return {
     context: levels,
@@ -3526,7 +3405,7 @@ function parseContexts<T extends ReadonlyArray<string>>(
   const contextTreeLevels: Array<ContextTreeLevel<T>> = [];
 
   for (const contextLevel of contextLevels) {
-    for (const contextItemToParse of ensureArray(contextLevel.context)) {
+    for (const contextItemToParse of contextLevel.context) {
       contextTreeLevels.push(parseContextItem(contextItemToParse, options));
     }
   }
@@ -3541,7 +3420,7 @@ function parseFilterContexts<T extends ReadonlyArray<string>>(
   const filterContextTreeLevels: ContextTree<T>["filter"] = [];
 
   for (const filterContextLevel of filterContextLevels) {
-    for (const contextItemToParse of ensureArray(filterContextLevel.context)) {
+    for (const contextItemToParse of filterContextLevel.context) {
       filterContextTreeLevels.push({
         ...parseContextItem(contextItemToParse, options),
         filterType: contextItemToParse.filterType ?? "property",
@@ -3591,7 +3470,7 @@ export function parseWebsite<
   const sidebar = parseSidebar(resources, parserOptions);
 
   const properties = parseWebsiteProperties(
-    ensureArray(websiteTree.properties.property),
+    websiteTree.properties.property,
     websiteTree,
     sidebar,
     parserOptions,
@@ -3604,7 +3483,7 @@ export function parseWebsite<
       abbreviation: rawOchre.belongsTo,
     },
     metadata: parseMetadata(rawOchre, parserOptions, defaultLanguage),
-    publicationDateTime: parseOptionalDate(websiteTree.publicationDateTime),
+    publicationDateTime: websiteTree.publicationDateTime ?? null,
     identification: parseIdentification(
       websiteTree.identification,
       parserOptions,

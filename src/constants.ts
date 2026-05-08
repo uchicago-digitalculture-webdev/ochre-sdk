@@ -37,6 +37,17 @@ export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
   "phonemic",
   "editor",
   "publisher",
+  "scope",
+  "level",
+  "style",
+  "flattenContexts",
+  "suppressContexts",
+  "filterContexts",
+  "sortContexts",
+  "detailContexts",
+  "downloadContexts",
+  "labelContexts",
+  "prominentContexts",
 ];
 
 export const XML_PARSER_OPTIONS: X2jOptions = {
