@@ -19,6 +19,8 @@ import type {
   XMLImageMap as XMLImageMapType,
   XMLImage as XMLImageType,
   XMLInterpretation as XMLInterpretationType,
+  XMLItemLinksData as XMLItemLinksDataType,
+  XMLItemLinks as XMLItemLinksType,
   XMLLicense as XMLLicenseType,
   XMLLinkedBibliography as XMLLinkedBibliographyType,
   XMLLinkedConcept as XMLLinkedConceptType,
@@ -1979,6 +1981,79 @@ export const XMLDataItem: v.GenericSchema<XMLDataItemType> = v.union(
     v.object({ set: v.array(XMLSet) }, "XMLDataItem: set is array of XMLSet"),
   ],
   "XMLDataItem: Shape error",
+);
+
+const XMLItemLinks: v.GenericSchema<XMLItemLinksType> = v.object(
+  {
+    payload: v.optional(
+      v.string("XMLItemLinks: payload is string and optional"),
+    ),
+    tree: v.optional(
+      v.array(XMLTree, "XMLItemLinks: tree is array of XMLTree"),
+    ),
+    bibliography: v.optional(
+      v.array(
+        XMLBibliography,
+        "XMLItemLinks: bibliography is array of XMLBibliography",
+      ),
+    ),
+    concept: v.optional(
+      v.array(XMLConcept, "XMLItemLinks: concept is array of XMLConcept"),
+    ),
+    spatialUnit: v.optional(
+      v.array(
+        XMLSpatialUnit,
+        "XMLItemLinks: spatialUnit is array of XMLSpatialUnit",
+      ),
+    ),
+    period: v.optional(
+      v.array(XMLPeriod, "XMLItemLinks: period is array of XMLPeriod"),
+    ),
+    person: v.optional(
+      v.array(XMLPerson, "XMLItemLinks: person is array of XMLPerson"),
+    ),
+    propertyVariable: v.optional(
+      v.array(
+        XMLPropertyVariable,
+        "XMLItemLinks: propertyVariable is array of XMLPropertyVariable",
+      ),
+    ),
+    variable: v.optional(
+      v.array(
+        XMLPropertyVariable,
+        "XMLItemLinks: variable is array of XMLPropertyVariable",
+      ),
+    ),
+    propertyValue: v.optional(
+      v.array(
+        XMLPropertyValue,
+        "XMLItemLinks: propertyValue is array of XMLPropertyValue",
+      ),
+    ),
+    value: v.optional(
+      v.array(
+        XMLPropertyValue,
+        "XMLItemLinks: value is array of XMLPropertyValue",
+      ),
+    ),
+    resource: v.optional(
+      v.array(XMLResource, "XMLItemLinks: resource is array of XMLResource"),
+    ),
+    text: v.optional(
+      v.array(XMLText, "XMLItemLinks: text is array of XMLText"),
+    ),
+    set: v.optional(v.array(XMLSet, "XMLItemLinks: set is array of XMLSet")),
+  },
+  "XMLItemLinks: Shape error",
+);
+
+export const XMLItemLinksData: v.GenericSchema<XMLItemLinksDataType> = v.object(
+  {
+    result: v.object({
+      ochre: v.object({ items: XMLItemLinks }, "XMLItemLinksData: ochre"),
+    }),
+  },
+  "XMLItemLinksData: Shape error",
 );
 
 export const XMLData: v.GenericSchema<XMLDataType> = v.object(

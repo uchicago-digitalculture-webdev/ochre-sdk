@@ -73,6 +73,7 @@ import type {
   XMLImageMap,
   XMLImageMapArea,
   XMLInterpretation,
+  XMLItemLinks,
   XMLLink,
   XMLLinkedBibliography,
   XMLLinkedConcept,
@@ -2707,6 +2708,98 @@ function parseTopLevelItem<
       ) as unknown as Item<U, V, T, "nested">;
     }
   }
+}
+
+export function parseDataItems<
+  const TItemCategory extends
+    | HierarchyItemCategoryOption<DataCategory>
+    | undefined = undefined,
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  rawItems: XMLItemLinks | undefined,
+  options: { itemCategory?: TItemCategory; languages: T; isRichText?: boolean },
+): Array<
+  Item<
+    DataCategory,
+    HierarchyItemCategoryFromOption<DataCategory, TItemCategory>,
+    T,
+    "nested"
+  >
+> {
+  const parserOptions: ParserOptions<T> & {
+    itemCategory?: HierarchyItemCategoryOption<DataCategory>;
+  } = {
+    languages: options.languages,
+    isRichText: options.isRichText ?? false,
+    itemCategory: options.itemCategory,
+  };
+  const items: Array<Item<DataCategory, SetItemDataCategory, T, "nested">> = [];
+
+  for (const tree of rawItems?.tree ?? []) {
+    items.push(
+      parseTree(tree, {
+        ...parserOptions,
+        itemCategory: normalizeTreeItemCategory(options.itemCategory),
+      }) as Item<DataCategory, SetItemDataCategory, T, "nested">,
+    );
+  }
+
+  for (const bibliography of rawItems?.bibliography ?? []) {
+    items.push(parseBibliography(bibliography, parserOptions));
+  }
+
+  for (const concept of rawItems?.concept ?? []) {
+    items.push(parseConcept(concept, parserOptions));
+  }
+
+  for (const spatialUnit of rawItems?.spatialUnit ?? []) {
+    items.push(parseSpatialUnit(spatialUnit, parserOptions));
+  }
+
+  for (const period of rawItems?.period ?? []) {
+    items.push(parsePeriod(period, parserOptions));
+  }
+
+  for (const person of rawItems?.person ?? []) {
+    items.push(parsePerson(person, parserOptions));
+  }
+
+  for (const propertyVariable of rawItems?.propertyVariable ?? []) {
+    items.push(parsePropertyVariable(propertyVariable, parserOptions));
+  }
+
+  for (const propertyVariable of rawItems?.variable ?? []) {
+    items.push(parsePropertyVariable(propertyVariable, parserOptions));
+  }
+
+  for (const propertyValue of rawItems?.propertyValue ?? []) {
+    items.push(parsePropertyValue(propertyValue, parserOptions));
+  }
+
+  for (const propertyValue of rawItems?.value ?? []) {
+    items.push(parsePropertyValue(propertyValue, parserOptions));
+  }
+
+  for (const resource of rawItems?.resource ?? []) {
+    items.push(parseResource(resource, parserOptions));
+  }
+
+  for (const text of rawItems?.text ?? []) {
+    items.push(parseText(text, parserOptions));
+  }
+
+  for (const set of rawItems?.set ?? []) {
+    items.push(parseSet(set, parserOptions));
+  }
+
+  return items as Array<
+    Item<
+      DataCategory,
+      HierarchyItemCategoryFromOption<DataCategory, TItemCategory>,
+      T,
+      "nested"
+    >
+  >;
 }
 
 export function parseItem<

@@ -708,6 +708,25 @@ export type XMLDataItem =
   | { text: Array<XMLText> }
   | { set: Array<XMLSet> };
 
+export type XMLItemLinks = Partial<{
+  payload: string;
+  tree: Array<XMLTree>;
+  bibliography: Array<XMLBibliography>;
+  concept: Array<XMLConcept>;
+  spatialUnit: Array<XMLSpatialUnit>;
+  period: Array<XMLPeriod>;
+  person: Array<XMLPerson>;
+  propertyVariable: Array<XMLPropertyVariable>;
+  variable: Array<XMLPropertyVariable>;
+  propertyValue: Array<XMLPropertyValue>;
+  value: Array<XMLPropertyValue>;
+  resource: Array<XMLResource>;
+  text: Array<XMLText>;
+  set: Array<XMLSet>;
+}>;
+
+export type XMLItemLinksData = { result: { ochre: { items: XMLItemLinks } } };
+
 export type XMLData = {
   result: {
     ochre: {
