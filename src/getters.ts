@@ -1,5 +1,9 @@
 import { deepEqual } from "fast-equals";
-import type { Property, PropertyValueContent } from "#/types/index.js";
+import type {
+  Property,
+  PropertyValueContent,
+  SingleHierarchyProperty,
+} from "#/types/index.js";
 
 /**
  * Options for property search operations.
@@ -19,6 +23,10 @@ const DEFAULT_OPTIONS: PropertyOptions = {
 type PropertyContent<T extends ReadonlyArray<string>> =
   PropertyValueContent<T>["content"];
 
+type SearchableProperty<T extends ReadonlyArray<string>> =
+  | Property<T>
+  | SingleHierarchyProperty<T>;
+
 function withDefaultOptions(
   options: PropertyOptions,
 ): Required<PropertyOptions> {
@@ -29,9 +37,9 @@ function withDefaultOptions(
 }
 
 function findPropertyByLabelUuid<T extends ReadonlyArray<string>>(
-  properties: ReadonlyArray<Property<T>>,
+  properties: ReadonlyArray<SearchableProperty<T>>,
   labelUuid: string,
-): Property<T> | null {
+): SearchableProperty<T> | null {
   for (const property of properties) {
     if (property.label.uuid === labelUuid) {
       return property;
@@ -42,9 +50,9 @@ function findPropertyByLabelUuid<T extends ReadonlyArray<string>>(
 }
 
 function findPropertyByLabelName<T extends ReadonlyArray<string>>(
-  properties: ReadonlyArray<Property<T>>,
+  properties: ReadonlyArray<SearchableProperty<T>>,
   labelName: string,
-): Property<T> | null {
+): SearchableProperty<T> | null {
   for (const property of properties) {
     if (property.label.name === labelName) {
       return property;
@@ -55,7 +63,7 @@ function findPropertyByLabelName<T extends ReadonlyArray<string>>(
 }
 
 function propertyHasValue<T extends ReadonlyArray<string>>(
-  property: Property<T>,
+  property: SearchableProperty<T>,
   value: PropertyValueContent<T>,
 ): boolean {
   for (const candidateValue of property.values) {
@@ -68,7 +76,7 @@ function propertyHasValue<T extends ReadonlyArray<string>>(
 }
 
 function propertyHasValueContent<T extends ReadonlyArray<string>>(
-  property: Property<T>,
+  property: SearchableProperty<T>,
   valueContent: PropertyContent<T>,
 ): boolean {
   for (const value of property.values) {
@@ -81,7 +89,7 @@ function propertyHasValueContent<T extends ReadonlyArray<string>>(
 }
 
 function propertyValueContentsEqual<T extends ReadonlyArray<string>>(
-  property: Property<T>,
+  property: SearchableProperty<T>,
   valueContents: ReadonlyArray<PropertyContent<T>>,
 ): boolean {
   if (property.values.length !== valueContents.length) {
@@ -98,9 +106,11 @@ function propertyValueContentsEqual<T extends ReadonlyArray<string>>(
 }
 
 function searchPropertyResult<T extends ReadonlyArray<string>, TResult>(
-  properties: ReadonlyArray<Property<T>>,
+  properties: ReadonlyArray<SearchableProperty<T>>,
   options: Pick<PropertyOptions, "includeNestedProperties">,
-  findDirectResult: (properties: ReadonlyArray<Property<T>>) => TResult | null,
+  findDirectResult: (
+    properties: ReadonlyArray<SearchableProperty<T>>,
+  ) => TResult | null,
   transformNestedResult?: (result: TResult) => TResult | null,
 ): TResult | null {
   const directResult = findDirectResult(properties);
@@ -110,6 +120,10 @@ function searchPropertyResult<T extends ReadonlyArray<string>, TResult>(
 
   if (options.includeNestedProperties) {
     for (const property of properties) {
+      if (!("properties" in property)) {
+        continue;
+      }
+
       const nestedResult = searchPropertyResult(
         property.properties,
         options,
@@ -177,13 +191,16 @@ function clonePropertyValues<T extends ReadonlyArray<string>>(
   return clonedValues;
 }
 
-function getNormalizedProperty<T extends ReadonlyArray<string>>(
-  property: Property<T>,
+function getNormalizedProperty<
+  T extends ReadonlyArray<string>,
+  TProperty extends SearchableProperty<T>,
+>(
+  property: TProperty,
   limitToLeafPropertyValues: boolean,
   transformValues?: (
     values: Array<PropertyValueContent<T>>,
   ) => Array<PropertyValueContent<T>>,
-): Property<T> {
+): TProperty {
   if (!limitToLeafPropertyValues) {
     return property;
   }
@@ -193,7 +210,7 @@ function getNormalizedProperty<T extends ReadonlyArray<string>>(
   return {
     ...property,
     values: transformValues != null ? transformValues(values) : values,
-  };
+  } as TProperty;
 }
 
 function getFirstPropertyValueResult<T extends ReadonlyArray<string>>(
@@ -219,14 +236,14 @@ function getFirstPropertyValueContentResult<T extends ReadonlyArray<string>>(
 }
 
 function visitProperties<T extends ReadonlyArray<string>>(
-  properties: ReadonlyArray<Property<T>>,
+  properties: ReadonlyArray<SearchableProperty<T>>,
   includeNestedProperties: boolean,
-  visit: (property: Property<T>) => void,
+  visit: (property: SearchableProperty<T>) => void,
 ): void {
   for (const property of properties) {
     visit(property);
 
-    if (includeNestedProperties) {
+    if (includeNestedProperties && "properties" in property) {
       visitProperties(property.properties, includeNestedProperties, visit);
     }
   }
@@ -245,8 +262,22 @@ export function getPropertyByLabelUuid<
 >(
   properties: ReadonlyArray<Property<T>>,
   labelUuid: string,
+  options?: PropertyOptions,
+): Property<T> | null;
+export function getPropertyByLabelUuid<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SingleHierarchyProperty<T>>,
+  labelUuid: string,
+  options?: PropertyOptions,
+): SingleHierarchyProperty<T> | null;
+export function getPropertyByLabelUuid<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SearchableProperty<T>>,
+  labelUuid: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
-): Property<T> | null {
+): SearchableProperty<T> | null {
   const { includeNestedProperties } = withDefaultOptions(options);
 
   return searchPropertyResult(
@@ -268,7 +299,7 @@ export function getPropertyByLabelUuid<
 export function getPropertyValuesByLabelUuid<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
-  properties: ReadonlyArray<Property<T>>,
+  properties: ReadonlyArray<SearchableProperty<T>>,
   labelUuid: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Array<PropertyValueContent<T>> | null {
@@ -306,7 +337,7 @@ export function getPropertyValuesByLabelUuid<
 export function getPropertyValueContentsByLabelUuid<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
-  properties: ReadonlyArray<Property<T>>,
+  properties: ReadonlyArray<SearchableProperty<T>>,
   labelUuid: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Array<PropertyContent<T>> | null {
@@ -347,7 +378,7 @@ export function getPropertyValueContentsByLabelUuid<
 export function getPropertyValueByLabelUuid<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
-  properties: ReadonlyArray<Property<T>>,
+  properties: ReadonlyArray<SearchableProperty<T>>,
   labelUuid: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): PropertyValueContent<T> | null {
@@ -385,7 +416,7 @@ export function getPropertyValueByLabelUuid<
 export function getPropertyValueContentByLabelUuid<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
-  properties: ReadonlyArray<Property<T>>,
+  properties: ReadonlyArray<SearchableProperty<T>>,
   labelUuid: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): PropertyContent<T> | null {
@@ -426,8 +457,22 @@ export function getPropertyByLabelName<
 >(
   properties: ReadonlyArray<Property<T>>,
   labelName: string,
+  options?: PropertyOptions,
+): Property<T> | null;
+export function getPropertyByLabelName<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SingleHierarchyProperty<T>>,
+  labelName: string,
+  options?: PropertyOptions,
+): SingleHierarchyProperty<T> | null;
+export function getPropertyByLabelName<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SearchableProperty<T>>,
+  labelName: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
-): Property<T> | null {
+): SearchableProperty<T> | null {
   const { includeNestedProperties } = withDefaultOptions(options);
 
   return searchPropertyResult(
@@ -453,8 +498,24 @@ export function getPropertyByLabelNameAndValues<
   properties: ReadonlyArray<Property<T>>,
   labelName: string,
   values: ReadonlyArray<PropertyValueContent<T>>,
+  options?: PropertyOptions,
+): Property<T> | null;
+export function getPropertyByLabelNameAndValues<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SingleHierarchyProperty<T>>,
+  labelName: string,
+  values: ReadonlyArray<PropertyValueContent<T>>,
+  options?: PropertyOptions,
+): SingleHierarchyProperty<T> | null;
+export function getPropertyByLabelNameAndValues<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SearchableProperty<T>>,
+  labelName: string,
+  values: ReadonlyArray<PropertyValueContent<T>>,
   options: PropertyOptions = DEFAULT_OPTIONS,
-): Property<T> | null {
+): SearchableProperty<T> | null {
   const { includeNestedProperties, limitToLeafPropertyValues } =
     withDefaultOptions(options);
 
@@ -493,8 +554,24 @@ export function getPropertyByLabelNameAndValueContents<
   properties: ReadonlyArray<Property<T>>,
   labelName: string,
   valueContents: ReadonlyArray<PropertyContent<T>>,
+  options?: PropertyOptions,
+): Property<T> | null;
+export function getPropertyByLabelNameAndValueContents<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SingleHierarchyProperty<T>>,
+  labelName: string,
+  valueContents: ReadonlyArray<PropertyContent<T>>,
+  options?: PropertyOptions,
+): SingleHierarchyProperty<T> | null;
+export function getPropertyByLabelNameAndValueContents<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SearchableProperty<T>>,
+  labelName: string,
+  valueContents: ReadonlyArray<PropertyContent<T>>,
   options: PropertyOptions = DEFAULT_OPTIONS,
-): Property<T> | null {
+): SearchableProperty<T> | null {
   const { includeNestedProperties, limitToLeafPropertyValues } =
     withDefaultOptions(options);
 
@@ -537,8 +614,24 @@ export function getPropertyByLabelNameAndValue<
   properties: ReadonlyArray<Property<T>>,
   labelName: string,
   value: PropertyValueContent<T>,
+  options?: PropertyOptions,
+): Property<T> | null;
+export function getPropertyByLabelNameAndValue<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SingleHierarchyProperty<T>>,
+  labelName: string,
+  value: PropertyValueContent<T>,
+  options?: PropertyOptions,
+): SingleHierarchyProperty<T> | null;
+export function getPropertyByLabelNameAndValue<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SearchableProperty<T>>,
+  labelName: string,
+  value: PropertyValueContent<T>,
   options: PropertyOptions = DEFAULT_OPTIONS,
-): Property<T> | null {
+): SearchableProperty<T> | null {
   const { includeNestedProperties, limitToLeafPropertyValues } =
     withDefaultOptions(options);
 
@@ -577,8 +670,24 @@ export function getPropertyByLabelNameAndValueContent<
   properties: ReadonlyArray<Property<T>>,
   labelName: string,
   valueContent: PropertyContent<T>,
+  options?: PropertyOptions,
+): Property<T> | null;
+export function getPropertyByLabelNameAndValueContent<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SingleHierarchyProperty<T>>,
+  labelName: string,
+  valueContent: PropertyContent<T>,
+  options?: PropertyOptions,
+): SingleHierarchyProperty<T> | null;
+export function getPropertyByLabelNameAndValueContent<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SearchableProperty<T>>,
+  labelName: string,
+  valueContent: PropertyContent<T>,
   options: PropertyOptions = DEFAULT_OPTIONS,
-): Property<T> | null {
+): SearchableProperty<T> | null {
   const { includeNestedProperties, limitToLeafPropertyValues } =
     withDefaultOptions(options);
 
@@ -613,7 +722,7 @@ export function getPropertyByLabelNameAndValueContent<
 export function getPropertyValuesByLabelName<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
-  properties: ReadonlyArray<Property<T>>,
+  properties: ReadonlyArray<SearchableProperty<T>>,
   labelName: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Array<PropertyValueContent<T>> | null {
@@ -651,7 +760,7 @@ export function getPropertyValuesByLabelName<
 export function getPropertyValueByLabelName<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
-  properties: ReadonlyArray<Property<T>>,
+  properties: ReadonlyArray<SearchableProperty<T>>,
   labelName: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): PropertyValueContent<T> | null {
@@ -689,7 +798,7 @@ export function getPropertyValueByLabelName<
 export function getPropertyValueContentByLabelName<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
-  properties: ReadonlyArray<Property<T>>,
+  properties: ReadonlyArray<SearchableProperty<T>>,
   labelName: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): PropertyContent<T> | null {
@@ -728,11 +837,23 @@ export function getUniqueProperties<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
   properties: ReadonlyArray<Property<T>>,
+  options?: PropertyOptions,
+): Array<Property<T>>;
+export function getUniqueProperties<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SingleHierarchyProperty<T>>,
+  options?: PropertyOptions,
+): Array<SingleHierarchyProperty<T>>;
+export function getUniqueProperties<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SearchableProperty<T>>,
   options: PropertyOptions = DEFAULT_OPTIONS,
-): Array<Property<T>> {
+): Array<SearchableProperty<T>> {
   const { includeNestedProperties, limitToLeafPropertyValues } =
     withDefaultOptions(options);
-  const uniqueProperties: Array<Property<T>> = [];
+  const uniqueProperties: Array<SearchableProperty<T>> = [];
 
   visitProperties(properties, includeNestedProperties, (property) => {
     for (const uniqueProperty of uniqueProperties) {
@@ -745,7 +866,7 @@ export function getUniqueProperties<
   });
 
   if (limitToLeafPropertyValues) {
-    const normalizedProperties: Array<Property<T>> = [];
+    const normalizedProperties: Array<SearchableProperty<T>> = [];
     for (const property of uniqueProperties) {
       normalizedProperties.push(
         getNormalizedProperty(property, limitToLeafPropertyValues),
@@ -768,7 +889,7 @@ export function getUniqueProperties<
 export function getUniquePropertyLabelNames<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
-  properties: ReadonlyArray<Property<T>>,
+  properties: ReadonlyArray<SearchableProperty<T>>,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Array<string> {
   const { includeNestedProperties } = withDefaultOptions(options);
@@ -839,7 +960,7 @@ function contentMatchesFilter<T extends ReadonlyArray<string>>(
 export function filterProperties<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
-  property: Property<T>,
+  property: SearchableProperty<T>,
   filter: { labelName: string; value: PropertyValueContent<T> },
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): boolean {
@@ -866,7 +987,7 @@ export function filterProperties<
     }
   }
 
-  if (includeNestedProperties) {
+  if (includeNestedProperties && "properties" in property) {
     for (const nestedProperty of property.properties) {
       if (
         filterProperties(nestedProperty, filter, {
