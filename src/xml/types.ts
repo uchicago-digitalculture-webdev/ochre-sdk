@@ -182,7 +182,7 @@ export type XMLImageMap = {
 
 export type XMLNote = Partial<XMLContent> &
   XMLString & {
-    noteNo: XMLNumber;
+    noteNo?: XMLNumber;
     title?: string;
     authors?: { author: Array<XMLPerson> };
   };
@@ -726,6 +726,14 @@ export type XMLItemLinks = Partial<{
 }>;
 
 export type XMLItemLinksData = { result: { ochre: { items: XMLItemLinks } } };
+
+export type XMLSetItems = XMLItemLinks & {
+  totalCount: XMLNumber;
+  page: XMLNumber;
+  pageSize: XMLNumber;
+};
+
+export type XMLSetItemsData = { result: { ochre: { items: XMLSetItems } } };
 
 export type XMLData = {
   result: {

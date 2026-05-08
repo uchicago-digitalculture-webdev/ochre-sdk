@@ -75,6 +75,16 @@ export function isPseudoUuid(value: string): boolean {
 }
 
 /**
+ * Build a string literal for an XQuery string
+ * @param value - The string value to escape
+ * @returns The escaped string literal
+ */
+export function stringLiteral(value: string): string {
+  const escapedDoubleQuote = value.replaceAll('"', '""');
+  return `"${escapedDoubleQuote}"`;
+}
+
+/**
  * Flatten a properties array
  * @param properties - The properties to flatten
  * @returns The flattened properties

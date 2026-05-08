@@ -44,6 +44,8 @@ import type {
   XMLPropertyValue as XMLPropertyValueType,
   XMLPropertyVariable as XMLPropertyVariableType,
   XMLResource as XMLResourceType,
+  XMLSetItemsData as XMLSetItemsDataType,
+  XMLSetItems as XMLSetItemsType,
   XMLSet as XMLSetType,
   XMLSimplifiedProperty as XMLSimplifiedPropertyType,
   XMLSpatialUnit as XMLSpatialUnitType,
@@ -584,7 +586,7 @@ const XMLNote: v.GenericSchema<XMLNoteType> = v.object(
     whitespace: v.optional(
       v.string("XMLNote: whitespace is string and optional"),
     ),
-    noteNo: XMLNumber,
+    noteNo: v.optional(XMLNumber),
     title: v.optional(v.string("XMLNote: title is string and optional")),
     date: v.optional(customDateTime("XMLNote: date is not a valid datetime")),
     authors: v.optional(
@@ -2054,6 +2056,23 @@ export const XMLItemLinksData: v.GenericSchema<XMLItemLinksDataType> = v.object(
     }),
   },
   "XMLItemLinksData: Shape error",
+);
+
+const XMLSetItems: v.GenericSchema<XMLSetItemsType> = v.intersect([
+  XMLItemLinks,
+  v.object(
+    { totalCount: XMLNumber, page: XMLNumber, pageSize: XMLNumber },
+    "XMLSetItems: Shape error",
+  ),
+]);
+
+export const XMLSetItemsData: v.GenericSchema<XMLSetItemsDataType> = v.object(
+  {
+    result: v.object({
+      ochre: v.object({ items: XMLSetItems }, "XMLSetItemsData: ochre"),
+    }),
+  },
+  "XMLSetItemsData: Shape error",
 );
 
 export const XMLData: v.GenericSchema<XMLDataType> = v.object(

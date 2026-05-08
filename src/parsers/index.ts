@@ -97,6 +97,7 @@ import type {
   XMLResource,
   XMLSection,
   XMLSet,
+  XMLSetItems,
   XMLSpatialUnit,
   XMLString,
   XMLText,
@@ -152,6 +153,12 @@ type XMLItemLinkHierarchy = Partial<{
 }>;
 
 export type RawOchre = XMLData["result"]["ochre"];
+
+type SetItemCategoryFromCategories<
+  T extends ReadonlyArray<SetItemDataCategory> | undefined,
+> =
+  T extends ReadonlyArray<infer U> ? Extract<U, SetItemDataCategory>
+  : SetItemDataCategory;
 
 type PropertyDataType =
   | "string"
@@ -2800,6 +2807,31 @@ export function parseDataItems<
       "nested"
     >
   >;
+}
+
+export function parseSetDataItems<
+  const TItemCategories extends ReadonlyArray<SetItemDataCategory> | undefined =
+    undefined,
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  rawItems: XMLSetItems | undefined,
+  options: {
+    itemCategories?: TItemCategories;
+    languages: T;
+    isRichText?: boolean;
+  },
+): Array<SetItem<SetItemCategoryFromCategories<TItemCategories>, T>> {
+  const parserOptions: ParserOptions<T> = {
+    languages: options.languages,
+    isRichText: options.isRichText ?? false,
+  };
+  const categories = normalizeSetItemCategories(options.itemCategories);
+
+  return parseSetItemHierarchy(
+    rawItems,
+    parserOptions,
+    categories ?? undefined,
+  ) as Array<SetItem<SetItemCategoryFromCategories<TItemCategories>, T>>;
 }
 
 export function parseItem<

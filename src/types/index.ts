@@ -873,3 +873,141 @@ export type Section<T extends ReadonlyArray<string>> = {
   identification: Identification<T>;
   project: { identification: Identification<T> } | null;
 };
+
+/**
+ * Represents a property query item with its UUID, raw value, count, and content
+ */
+export type PropertyValueQueryItem = {
+  count: number;
+  dataType: Exclude<
+    PropertyValueContent<ReadonlyArray<string>>["dataType"],
+    "coordinate"
+  >;
+  content: string | number | boolean | null;
+  label: string | null;
+};
+
+/**
+ * Represents a grouped Set attribute value query item
+ */
+export type SetAttributeValueQueryItem = { count: number; content: string };
+
+/**
+ * Represents sorting direction for Set items
+ */
+export type SetItemsSortDirection = "asc" | "desc";
+
+/**
+ * Represents sorting options for Set items
+ */
+export type SetItemsSort =
+  | { target: "none" }
+  | { target: "title"; direction?: SetItemsSortDirection; language?: string }
+  | {
+      target: "propertyValue";
+      propertyVariableUuid: string;
+      dataType: Exclude<
+        PropertyValueContent<ReadonlyArray<string>>["dataType"],
+        "coordinate"
+      >;
+      direction?: SetItemsSortDirection;
+      language?: string;
+    };
+
+/**
+ * Represents a leaf query for Set items
+ */
+export type QueryLeaf =
+  | {
+      target: "property";
+      propertyVariable?: string;
+      dataType: Exclude<
+        PropertyValueContent<ReadonlyArray<string>>["dataType"],
+        "coordinate" | "date" | "dateTime"
+      >;
+      value?: string;
+      from?: never;
+      to?: never;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
+      language: string;
+      isNegated?: boolean;
+    }
+  | {
+      target: "property";
+      propertyVariable: string;
+      dataType: "date" | "dateTime";
+      value: string;
+      from?: never;
+      to?: never;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
+      language: string;
+      isNegated?: boolean;
+    }
+  | {
+      target: "property";
+      propertyVariable: string;
+      dataType: "date" | "dateTime";
+      value?: never;
+      from: string;
+      to?: string;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
+      language: string;
+      isNegated?: boolean;
+    }
+  | {
+      target: "property";
+      propertyVariable: string;
+      dataType: "date" | "dateTime";
+      value?: never;
+      from?: string;
+      to: string;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
+      language: string;
+      isNegated?: boolean;
+    }
+  | {
+      target: "property";
+      propertyVariable?: string;
+      dataType: "all";
+      value: string;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
+      language: string;
+      isNegated?: boolean;
+    }
+  | {
+      target: "string";
+      value: string;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
+      language: string;
+      isNegated?: boolean;
+    }
+  | {
+      target:
+        | "title"
+        | "description"
+        | "image"
+        | "periods"
+        | "bibliography"
+        | "notes";
+      value: string;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
+      language: string;
+      isNegated?: boolean;
+    };
+
+/**
+ * Represents a boolean query group for Set items
+ */
+export type QueryGroup = { and: Array<Query> } | { or: Array<Query> };
+
+/**
+ * Represents a query for Set items
+ */
+export type Query = QueryLeaf | QueryGroup;
