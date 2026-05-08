@@ -1,4 +1,5 @@
 import * as v from "valibot";
+import type { Property, SingleHierarchyProperty } from "./types/index.js";
 
 const PSEUDO_UUID_REGEX = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
 
@@ -71,4 +72,32 @@ export function logIssues(
  */
 export function isPseudoUuid(value: string): boolean {
   return PSEUDO_UUID_REGEX.test(value);
+}
+
+/**
+ * Flatten a properties array
+ * @param properties - The properties to flatten
+ * @returns The flattened properties
+ * @internal
+ */
+export function flattenProperties<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<Property<T> | SingleHierarchyProperty<T>>,
+): Array<SingleHierarchyProperty<T>> {
+  const result: Array<SingleHierarchyProperty<T>> = [];
+
+  for (const property of properties) {
+    result.push({
+      label: property.label,
+      values: property.values,
+      comment: property.comment,
+    });
+
+    if ("properties" in property) {
+      result.push(...flattenProperties(property.properties));
+    }
+  }
+
+  return result;
 }
