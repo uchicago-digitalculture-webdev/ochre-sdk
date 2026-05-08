@@ -244,10 +244,7 @@ function parseXMLStringVariant(
   string: XMLString,
   options: { rendering: TextRendering; parseEmail: boolean },
 ): string {
-  let returnString = (string.payload ?? "")
-    .replaceAll("<", options.rendering === "rich" ? String.raw`\<` : "<")
-    .replaceAll("{", String.raw`\{`)
-    .replaceAll("}", String.raw`\}`);
+  let returnString = parseXMLStringPayload(string, options);
 
   if (string.whitespace != null) {
     returnString = parseWhitespace(
@@ -264,6 +261,18 @@ function parseXMLStringVariant(
       options.rendering,
     );
   }
+
+  return returnString;
+}
+
+function parseXMLStringPayload(
+  string: XMLString,
+  options: { rendering: TextRendering; parseEmail: boolean },
+): string {
+  const returnString = (string.payload ?? "")
+    .replaceAll("<", options.rendering === "rich" ? String.raw`\<` : "<")
+    .replaceAll("{", String.raw`\{`)
+    .replaceAll("}", String.raw`\}`);
 
   return options.parseEmail ? parseEmail(returnString) : returnString;
 }
@@ -614,26 +623,25 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
   contentItem: XMLContent["content"][number],
   options: { languages: V; rendering: TextRendering; parseEmail: boolean },
 ): string {
-  if (item.payload != null) {
-    return parseXMLStringVariant(item, {
-      rendering: options.rendering,
-      parseEmail: options.parseEmail,
-    });
-  }
-
-  if (item.string == null && item.whitespace != null) {
+  if (item.payload == null && item.string == null && item.whitespace != null) {
     return parseWhitespace("", item.whitespace, options.rendering);
   }
 
-  if (item.string == null) {
+  if (item.payload == null && item.string == null) {
     return "";
   }
 
   if (hasRichTextEnvelope(item)) {
-    let linkString = parseNestedStringItems(item.string, contentItem, {
-      ...options,
-      parseEmail: false,
-    });
+    let linkString =
+      item.payload != null ?
+        parseXMLStringPayload(item, {
+          rendering: options.rendering,
+          parseEmail: false,
+        })
+      : parseNestedStringItems(item.string ?? [], contentItem, {
+          ...options,
+          parseEmail: false,
+        });
 
     if (item.rend != null) {
       linkString = parseRenderOptions(linkString, item.rend, options.rendering);
@@ -650,7 +658,14 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
     return renderRichTextItem(item, linkString, contentItem, options);
   }
 
-  let result = parseNestedStringItems(item.string, contentItem, options);
+  if (item.payload != null) {
+    return parseXMLStringVariant(item, {
+      rendering: options.rendering,
+      parseEmail: options.parseEmail,
+    });
+  }
+
+  let result = parseNestedStringItems(item.string ?? [], contentItem, options);
 
   if (item.rend != null) {
     result = parseRenderOptions(result, item.rend, options.rendering);

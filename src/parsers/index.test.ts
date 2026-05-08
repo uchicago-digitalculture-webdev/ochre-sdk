@@ -549,6 +549,45 @@ describe("string parser integration", () => {
     );
   });
 
+  it("renders rich text links whose text is carried by the same XML string node", () => {
+    const parsedContent = parseXMLContent(
+      {
+        content: [
+          {
+            lang: "eng",
+            string: [
+              {
+                string: [
+                  { payload: "Before ", whitespace: "trailing" },
+                  {
+                    links: {
+                      resource: [
+                        {
+                          uuid: "b0000000-0000-4000-8000-000000000000",
+                          type: "webpage",
+                          href: "http://example.com",
+                          publicationDateTime: PUBLICATION_DATE,
+                          identification: identification({ eng: "Example" }),
+                        },
+                      ],
+                    },
+                    payload: "linked text",
+                  },
+                  { payload: " after", whitespace: "leading" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      { languages: ["eng"] as const },
+    );
+
+    expect(parsedContent.getExactRichText("eng")).toBe(
+      'Before  <ExternalLink href="http://example.com" content="Example">linked text</ExternalLink>  after',
+    );
+  });
+
   it("renders text-styling annotations carried by rich text properties", () => {
     const parsedContent = parseXMLContent(
       {
