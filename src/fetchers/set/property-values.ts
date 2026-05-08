@@ -6,7 +6,14 @@ import type {
   Query,
   SetAttributeValueQueryItem,
 } from "#/types/index.js";
-import { BELONGS_TO_COLLECTION_UUID, XML_PARSER_OPTIONS } from "#/constants.js";
+import type { XMLContent } from "#/xml/types.js";
+import {
+  BELONGS_TO_COLLECTION_UUID,
+  DEFAULT_LANGUAGES,
+  XML_PARSER_OPTIONS,
+} from "#/constants.js";
+import { MultilingualString } from "#/parsers/multilingual.js";
+import { parseXMLContent } from "#/parsers/string.js";
 import {
   buildAndCtsQueryExpression,
   buildBelongsToCollectionQueryExpression,
@@ -22,7 +29,7 @@ type ParsedPropertyValueItem = {
   globalCount: number | null;
   dataType: PropertyValueQueryDataType;
   content: string | number | boolean | null;
-  label: string | null;
+  label: MultilingualString | null;
 };
 
 type ParsedAttributeValueItem = {
@@ -36,14 +43,48 @@ type PropertyValueQueryDataType = Exclude<
   "coordinate"
 >;
 
-function parsePropertyValueLabel(
-  content: string | null | undefined,
+type ParsedPropertyValueLabelContent = XMLContent["content"];
+
+function getLabelContentLanguages(
+  content: ParsedPropertyValueLabelContent,
+): Array<string> {
+  const languages: Array<string> = [];
+  for (const contentItem of content) {
+    if (contentItem.lang !== "zxx" && !languages.includes(contentItem.lang)) {
+      languages.push(contentItem.lang);
+    }
+  }
+
+  return languages.length > 0 ? languages : [...DEFAULT_LANGUAGES];
+}
+
+function parsePropertyValueLabelText(
+  text: string | null | undefined,
 ): string | null {
-  if (content == null || content === "") {
+  if (text == null || text === "") {
     return null;
   }
 
-  return content === "<unassigned>" ? null : content;
+  return text === "<unassigned>" ? null : text;
+}
+
+function parsePropertyValueLabel(
+  content: ParsedPropertyValueLabelContent | undefined,
+  text: string | null | undefined,
+): MultilingualString | null {
+  if (content != null && content.length > 0) {
+    return parseXMLContent(
+      { content },
+      { languages: getLabelContentLanguages(content) },
+    );
+  }
+
+  const parsedText = parsePropertyValueLabelText(text);
+  if (parsedText == null) {
+    return null;
+  }
+
+  return MultilingualString.fromObject({ [DEFAULT_LANGUAGES[0]]: parsedText });
 }
 
 function parsePropertyValueBooleanContent(
@@ -87,8 +128,10 @@ function sortPropertyValues(
       return b.count - a.count;
     }
 
-    if (a.label !== b.label) {
-      return a.label?.localeCompare(b.label ?? "") ?? 0;
+    const label = a.label?.getText() ?? null;
+    const otherLabel = b.label?.getText() ?? null;
+    if (label !== otherLabel) {
+      return label?.localeCompare(otherLabel ?? "") ?? 0;
     }
 
     return (
@@ -128,6 +171,15 @@ const countSchema = v.pipe(
     return Number.isFinite(count) ? count : 1;
   }),
 );
+
+const propertyValueLabelStringSchema = v.object({
+  payload: v.optional(v.string(), ""),
+});
+
+const propertyValueLabelContentSchema = v.object({
+  lang: v.string(),
+  string: v.array(propertyValueLabelStringSchema),
+});
 
 function getPropertyVariableUuidsFromQueries(
   queries: Query | null,
@@ -216,10 +268,11 @@ const propertyValueQueryItemSchema = v.pipe(
     dataType: v.optional(v.string(), "string"),
     rawValue: v.optional(v.string()),
     payload: v.optional(v.string()),
+    content: v.optional(v.array(propertyValueLabelContentSchema)),
   }),
   v.transform((val): ParsedPropertyValueItem => {
     const dataType = normalizePropertyValueDataType(val.dataType);
-    const label = parsePropertyValueLabel(val.payload);
+    const label = parsePropertyValueLabel(val.content, val.payload);
     const returnValue: ParsedPropertyValueItem = {
       scope: val.scope,
       variableUuid:
@@ -253,10 +306,11 @@ const propertyValueQueryItemSchema = v.pipe(
         break;
       }
       default: {
+        const labelText = label?.getText() ?? null;
         returnValue.content =
           val.rawValue != null && val.rawValue !== "" ?
             val.rawValue.toString()
-          : (label ?? null);
+          : labelText;
         break;
       }
     }
@@ -377,10 +431,18 @@ function buildXQuery(params: {
   )
 };
 
-declare function local:value-display($v) {
+declare function local:value-display-text($v) {
   if ($v/content)
   then string-join($v/content[@xml:lang="eng"]//text(), "")
   else string($v)
+};
+
+declare function local:value-label-content($v) {
+  if ($v/content) then
+    for $content in $v/content
+    let $lang := string($content/@xml:lang)
+    return <content lang="{$lang}"><string>{string-join($content//text(), "")}</string></content>
+  else ()
 };
 
 declare function local:value-content($data-type, $raw-value, $value-uuid, $display) {
@@ -417,7 +479,8 @@ declare function local:put-property-detail(
   $value-uuid,
   $raw-value,
   $data-type,
-  $display
+  $display,
+  $label-content
 ) {
   let $existing := map:get($details, $key)
   return
@@ -428,7 +491,7 @@ declare function local:put-property-detail(
       map:put(
         $details,
         $key,
-        <propertyValue scope="{$scope}" variableUuid="{$variable-uuid}" uuid="{$value-uuid}" rawValue="{$raw-value}" dataType="{$data-type}">{$display}</propertyValue>
+        <propertyValue scope="{$scope}" variableUuid="{$variable-uuid}" uuid="{$value-uuid}" rawValue="{$raw-value}" dataType="{$data-type}">{$label-content}{$display}</propertyValue>
       )
     else ()
 };
@@ -443,13 +506,14 @@ declare function local:add-property-facet(
   $value-uuid,
   $raw-value,
   $data-type,
-  $display
+  $display,
+  $label-content
 ) {
   if (exists(map:get($seen, $key))) then ()
   else (
     map:put($seen, $key, true()),
     local:increment-count($counts, $key),
-    local:put-property-detail($details, $key, $scope, $variable-uuid, $value-uuid, $raw-value, $data-type, $display)
+    local:put-property-detail($details, $key, $scope, $variable-uuid, $value-uuid, $raw-value, $data-type, $display, $label-content)
   )
 };
 
@@ -489,7 +553,8 @@ let $_property-aggregation := xdmp:eager(
     let $value-uuid := string($v/@uuid)
     let $raw-value := string($v/@rawValue)
     let $data-type := string($v/@dataType)
-    let $display := local:value-display($v)
+    let $display := local:value-display-text($v)
+    let $label-content := local:value-label-content($v)
     let $content := local:value-content($data-type, $raw-value, $value-uuid, $display)
     let $value-kind := local:value-kind($data-type)
     let $output-raw-value := local:property-output-raw-value($data-type, $raw-value, $content)
@@ -498,7 +563,7 @@ let $_property-aggregation := xdmp:eager(
     where $content != ""
     return (
       local:add-attribute-facet($global-property-counts, $global-seen, $global-key),
-      local:add-property-facet($variable-property-counts, $variable-property-details, $variable-seen, $variable-key, "variable", $variable-uuid, $value-uuid, $output-raw-value, $data-type, $display),
+      local:add-property-facet($variable-property-counts, $variable-property-details, $variable-seen, $variable-key, "variable", $variable-uuid, $value-uuid, $output-raw-value, $data-type, $display, $label-content),
       map:put($variable-property-global-keys, $variable-key, $global-key)
     )
 )

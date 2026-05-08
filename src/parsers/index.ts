@@ -50,6 +50,7 @@ import type {
   SetResource,
   SetSpatialUnit,
   SetTree,
+  SimplifiedProperty,
   SingleHierarchyProperty,
   SpatialUnit,
   Text,
@@ -100,6 +101,7 @@ import type {
   XMLSection,
   XMLSet,
   XMLSetItems,
+  XMLSimplifiedProperty,
   XMLSpatialUnit,
   XMLString,
   XMLText,
@@ -365,7 +367,7 @@ function parseEvent<T extends ReadonlyArray<string>>(
   return {
     date,
     label: parseRequiredContentLike(rawEvent.label, options),
-    comment: parseContentLike(rawEvent.comment, options)?.getText() ?? null,
+    comment: parseContentLike(rawEvent.comment, options),
     agent: parseEventReference(rawEvent.agent, options),
     location: parseEventReference(rawEvent.location, options),
     other:
@@ -749,16 +751,6 @@ function parseNote<T extends ReadonlyArray<string>>(
     authors.push(parsePerson(author, options));
   }
 
-  let title = rawNote.title ?? null;
-  if (title == null) {
-    for (const content of rawNote.content ?? []) {
-      if (options.languages.includes(content.lang) && content.title != null) {
-        title = content.title;
-        break;
-      }
-    }
-  }
-
   const content =
     rawNote.content == null ?
       multilingualFromText(
@@ -767,7 +759,42 @@ function parseNote<T extends ReadonlyArray<string>>(
       )
     : parseRequiredContentLike(rawNote as XMLContent, options);
 
-  return { number: rawNote.noteNo ?? 0, title, content, authors };
+  return {
+    number: rawNote.noteNo ?? 0,
+    title: parseNoteTitle(rawNote, options),
+    content,
+    authors,
+  };
+}
+
+function parseNoteTitle<T extends ReadonlyArray<string>>(
+  rawNote: XMLNote,
+  options: ParserOptions<T>,
+): MultilingualString<T> | null {
+  if (rawNote.title != null) {
+    return multilingualFromText(rawNote.title, options);
+  }
+
+  const titleContent: Partial<Record<T[number], string>> = {};
+  for (const content of rawNote.content ?? []) {
+    if (!options.languages.includes(content.lang) || content.title == null) {
+      continue;
+    }
+
+    titleContent[content.lang as T[number]] = content.title;
+  }
+
+  if (Object.keys(titleContent).length > 0) {
+    return MultilingualString.fromObject(titleContent, options.languages);
+  }
+
+  for (const content of rawNote.content ?? []) {
+    if (content.lang !== "zxx" && content.title != null) {
+      return multilingualFromText(content.title, options);
+    }
+  }
+
+  return null;
 }
 
 export function parseNotes<T extends ReadonlyArray<string>>(
@@ -865,10 +892,10 @@ function parseProperty<T extends ReadonlyArray<string>>(
   }
 
   return {
-    label: {
+    variable: {
       uuid: rawProperty.label.uuid,
+      label: parseRequiredContentLike(rawProperty.label, options),
       publicationDateTime: rawProperty.label.publicationDateTime ?? null,
-      name: parseContentLikeText(rawProperty.label, options),
     },
     values,
     comment: parseContentLike(rawProperty.comment, options),
@@ -888,13 +915,51 @@ export function parseProperties<T extends ReadonlyArray<string>>(
   return properties;
 }
 
+function parseSimplifiedProperty<T extends ReadonlyArray<string>>(
+  rawProperty: XMLSimplifiedProperty,
+  options: ParserOptions<T>,
+): SimplifiedProperty<T> {
+  const values: Array<PropertyValueContent<T>> = [];
+  for (const value of rawProperty.value ?? []) {
+    values.push(parsePropertyValueContent(value, options));
+  }
+
+  const properties: Array<SimplifiedProperty<T>> = [];
+  for (const property of rawProperty.property ?? []) {
+    properties.push(parseSimplifiedProperty(property, options));
+  }
+
+  return {
+    variable: {
+      uuid: rawProperty.label.uuid,
+      label: parseContentLikeText(rawProperty.label, options),
+      publicationDateTime: rawProperty.label.publicationDateTime ?? null,
+    },
+    values,
+    comment: parseContentLike(rawProperty.comment, options),
+    properties,
+  };
+}
+
+export function parseSimplifiedProperties<T extends ReadonlyArray<string>>(
+  rawProperties: { property: Array<XMLSimplifiedProperty> } | undefined,
+  options: ParserOptions<T>,
+): Array<SimplifiedProperty<T>> {
+  const properties: Array<SimplifiedProperty<T>> = [];
+  for (const property of rawProperties?.property ?? []) {
+    properties.push(parseSimplifiedProperty(property, options));
+  }
+
+  return properties;
+}
+
 function parseSingleHierarchyProperty<T extends ReadonlyArray<string>>(
   rawProperty: XMLProperty,
   options: ParserOptions<T>,
 ): SingleHierarchyProperty<T> {
   const property = parseProperty(rawProperty, options);
   return {
-    label: property.label,
+    variable: property.variable,
     values: property.values,
     comment: property.comment,
   };

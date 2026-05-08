@@ -433,7 +433,7 @@ export type WebElementComponent<
       component: "query";
       linkUuids: Array<string>;
       items: Array<{
-        label: string;
+        label: MultilingualString<T>;
         queries: Array<WebsitePropertyQuery<T>>;
         startIcon: string | null;
         endIcon: string | null;
@@ -469,7 +469,7 @@ export type WebElementComponent<
   | {
       component: "search-bar";
       queryVariant: "submit" | "change";
-      placeholder: string | null;
+      placeholder: MultilingualString<T> | null;
       baseFilterQueries: string | null;
       boundElementUuid: string | null;
       href: string | null;

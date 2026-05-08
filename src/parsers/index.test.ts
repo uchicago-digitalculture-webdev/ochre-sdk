@@ -161,6 +161,7 @@ describe("parseItem", () => {
                     label: {
                       payload: "presentation",
                       uuid: "50000000-0000-4000-8000-000000000000",
+                      publicationDateTime: PUBLICATION_DATE,
                     },
                     value: [
                       {
@@ -203,7 +204,13 @@ describe("parseItem", () => {
     expect(tree.metadata.dataset).toBe("Dataset");
     expect(tree.identification.label.getExactText("spa")).toBe("Arbol");
     expect(tree.itemsCategory).toBe("resource");
-    expect(tree.properties[0]?.label.name).toBe("presentation");
+    expect(tree.properties[0]?.variable.uuid).toBe(
+      "50000000-0000-4000-8000-000000000000",
+    );
+    expect(tree.properties[0]?.variable.publicationDateTime).toStrictEqual(
+      PUBLICATION_DATE,
+    );
+    expect(tree.properties[0]?.variable.label.getText()).toBe("presentation");
     expect(tree.properties[0]?.values[0]?.content).toBe("website");
     const firstTreeItem = tree.items[0];
     expect(

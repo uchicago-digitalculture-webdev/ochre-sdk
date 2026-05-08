@@ -99,7 +99,7 @@ export function flattenProperties<
 
   for (const property of properties) {
     result.push({
-      label: property.label,
+      variable: property.variable,
       values: property.values,
       comment: property.comment,
     });

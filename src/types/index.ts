@@ -169,7 +169,7 @@ export type Context<U extends ContextDataCategory> = {
 export type Event<T extends ReadonlyArray<string>> = {
   date: Date | { start: Date; end: Date } | null;
   label: MultilingualString<T>;
-  comment: string | null;
+  comment: MultilingualString<T> | null;
   agent: {
     uuid: string;
     label: MultilingualString<T>;
@@ -266,7 +266,7 @@ export type ImageMap = {
  */
 export type Note<T extends ReadonlyArray<string>> = {
   number: number;
-  title: string | null;
+  title: MultilingualString<T> | null;
   content: MultilingualString<T>;
   authors: Array<Person<T, "nested">>;
 };
@@ -303,10 +303,25 @@ export type PropertyValueContent<T extends ReadonlyArray<string>> = Prettify<
  *  Property in OCHRE
  */
 export type Property<T extends ReadonlyArray<string>> = {
-  label: { uuid: string; publicationDateTime: Date | null; name: string };
+  variable: {
+    uuid: string;
+    label: MultilingualString<T>;
+    publicationDateTime: Date | null;
+  };
   values: Array<PropertyValueContent<T>>;
   comment: MultilingualString<T> | null;
   properties: Array<Property<T>>;
+};
+
+/**
+ * Simplified property in OCHRE website payloads. Simplified property variables
+ * expose scalar labels rather than multilingual labels.
+ */
+export type SimplifiedProperty<T extends ReadonlyArray<string>> = {
+  variable: { uuid: string; label: string; publicationDateTime: Date | null };
+  values: Array<PropertyValueContent<T>>;
+  comment: MultilingualString<T> | null;
+  properties: Array<SimplifiedProperty<T>>;
 };
 
 /**
@@ -316,6 +331,9 @@ export type SingleHierarchyProperty<T extends ReadonlyArray<string>> = Omit<
   Property<T>,
   "properties"
 >;
+
+export type SingleHierarchySimplifiedProperty<T extends ReadonlyArray<string>> =
+  Omit<SimplifiedProperty<T>, "properties">;
 
 type WithSingleHierarchyProperties<
   U extends { properties: Array<Property<T>> },
@@ -899,7 +917,7 @@ export type PropertyValueQueryItem = {
     "coordinate"
   >;
   content: string | number | boolean | null;
-  label: string | null;
+  label: MultilingualString | null;
 };
 
 /**

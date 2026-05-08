@@ -2,7 +2,9 @@ import { deepEqual } from "fast-equals";
 import type {
   Property,
   PropertyValueContent,
+  SimplifiedProperty,
   SingleHierarchyProperty,
+  SingleHierarchySimplifiedProperty,
 } from "#/types/index.js";
 
 /**
@@ -25,7 +27,9 @@ type PropertyContent<T extends ReadonlyArray<string>> =
 
 type SearchableProperty<T extends ReadonlyArray<string>> =
   | Property<T>
-  | SingleHierarchyProperty<T>;
+  | SingleHierarchyProperty<T>
+  | SimplifiedProperty<T>
+  | SingleHierarchySimplifiedProperty<T>;
 
 function withDefaultOptions(
   options: PropertyOptions,
@@ -36,12 +40,12 @@ function withDefaultOptions(
   };
 }
 
-function findPropertyByLabelUuid<T extends ReadonlyArray<string>>(
+function findPropertyByVariableUuid<T extends ReadonlyArray<string>>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   labelUuid: string,
 ): SearchableProperty<T> | null {
   for (const property of properties) {
-    if (property.label.uuid === labelUuid) {
+    if (property.variable.uuid === labelUuid) {
       return property;
     }
   }
@@ -49,17 +53,25 @@ function findPropertyByLabelUuid<T extends ReadonlyArray<string>>(
   return null;
 }
 
-function findPropertyByLabelName<T extends ReadonlyArray<string>>(
+function findPropertyByVariableLabelName<T extends ReadonlyArray<string>>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   labelName: string,
 ): SearchableProperty<T> | null {
   for (const property of properties) {
-    if (property.label.name === labelName) {
+    if (getPropertyVariableLabelName(property) === labelName) {
       return property;
     }
   }
 
   return null;
+}
+
+function getPropertyVariableLabelName<T extends ReadonlyArray<string>>(
+  property: SearchableProperty<T>,
+): string {
+  return typeof property.variable.label === "string" ?
+      property.variable.label
+    : property.variable.label.getText();
 }
 
 function propertyHasValue<T extends ReadonlyArray<string>>(
@@ -250,10 +262,10 @@ function visitProperties<T extends ReadonlyArray<string>>(
 }
 
 /**
- * Finds a property by its label UUID in an array of properties.
+ * Finds a property by its variable UUID in an array of properties.
  *
  * @param properties - Array of properties to search through
- * @param labelUuid - The property label UUID to search for
+ * @param labelUuid - The property variable UUID to search for
  * @param options - Search options, including whether to include nested properties
  * @returns The matching Property object, or null if not found
  */
@@ -274,6 +286,20 @@ export function getPropertyByLabelUuid<
 export function getPropertyByLabelUuid<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
+  properties: ReadonlyArray<SimplifiedProperty<T>>,
+  labelUuid: string,
+  options?: PropertyOptions,
+): SimplifiedProperty<T> | null;
+export function getPropertyByLabelUuid<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
+  labelUuid: string,
+  options?: PropertyOptions,
+): SingleHierarchySimplifiedProperty<T> | null;
+export function getPropertyByLabelUuid<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   labelUuid: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
@@ -284,15 +310,15 @@ export function getPropertyByLabelUuid<
     properties,
     { includeNestedProperties },
     (currentProperties) =>
-      findPropertyByLabelUuid(currentProperties, labelUuid),
+      findPropertyByVariableUuid(currentProperties, labelUuid),
   );
 }
 
 /**
- * Retrieves all values for a property with the given label UUID.
+ * Retrieves all values for a property with the given variable UUID.
  *
  * @param properties - Array of properties to search through
- * @param labelUuid - The property label UUID to search for
+ * @param labelUuid - The property variable UUID to search for
  * @param options - Search options, including whether to include nested properties
  * @returns Array of property values, or null if property not found
  */
@@ -310,7 +336,7 @@ export function getPropertyValuesByLabelUuid<
     properties,
     { includeNestedProperties },
     (currentProperties) => {
-      const property = findPropertyByLabelUuid(currentProperties, labelUuid);
+      const property = findPropertyByVariableUuid(currentProperties, labelUuid);
       if (property == null) {
         return null;
       }
@@ -327,10 +353,10 @@ export function getPropertyValuesByLabelUuid<
 }
 
 /**
- * Retrieves all value contents for a property with the given label UUID.
+ * Retrieves all value contents for a property with the given variable UUID.
  *
  * @param properties - Array of properties to search through
- * @param labelUuid - The property label UUID to search for
+ * @param labelUuid - The property variable UUID to search for
  * @param options - Search options, including whether to include nested properties
  * @returns Array of property value contents, or null if property not found
  */
@@ -348,7 +374,7 @@ export function getPropertyValueContentsByLabelUuid<
     properties,
     { includeNestedProperties },
     (currentProperties) => {
-      const property = findPropertyByLabelUuid(currentProperties, labelUuid);
+      const property = findPropertyByVariableUuid(currentProperties, labelUuid);
       if (property == null) {
         return null;
       }
@@ -368,10 +394,10 @@ export function getPropertyValueContentsByLabelUuid<
 }
 
 /**
- * Gets the first value of a property with the given label UUID.
+ * Gets the first value of a property with the given variable UUID.
  *
  * @param properties - Array of properties to search through
- * @param labelUuid - The property label UUID to search for
+ * @param labelUuid - The property variable UUID to search for
  * @param options - Search options, including whether to include nested properties
  * @returns The first property value, or null if property not found
  */
@@ -406,10 +432,10 @@ export function getPropertyValueByLabelUuid<
 }
 
 /**
- * Gets the first value content of a property with the given label UUID.
+ * Gets the first value content of a property with the given variable UUID.
  *
  * @param properties - Array of properties to search through
- * @param labelUuid - The property label UUID to search for
+ * @param labelUuid - The property variable UUID to search for
  * @param options - Search options, including whether to include nested properties
  * @returns The first property value content, or null if property not found
  */
@@ -445,10 +471,10 @@ export function getPropertyValueContentByLabelUuid<
 }
 
 /**
- * Finds a property by its label name in an array of properties.
+ * Finds a property by its variable label name in an array of properties.
  *
  * @param properties - Array of properties to search through
- * @param labelName - The property label name to search for
+ * @param labelName - The property variable label name to search for
  * @param options - Search options, including whether to include nested properties
  * @returns The matching Property object, or null if not found
  */
@@ -469,6 +495,20 @@ export function getPropertyByLabelName<
 export function getPropertyByLabelName<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
+  properties: ReadonlyArray<SimplifiedProperty<T>>,
+  labelName: string,
+  options?: PropertyOptions,
+): SimplifiedProperty<T> | null;
+export function getPropertyByLabelName<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
+  labelName: string,
+  options?: PropertyOptions,
+): SingleHierarchySimplifiedProperty<T> | null;
+export function getPropertyByLabelName<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   labelName: string,
   options: PropertyOptions = DEFAULT_OPTIONS,
@@ -479,15 +519,15 @@ export function getPropertyByLabelName<
     properties,
     { includeNestedProperties },
     (currentProperties) =>
-      findPropertyByLabelName(currentProperties, labelName),
+      findPropertyByVariableLabelName(currentProperties, labelName),
   );
 }
 
 /**
- * Finds a property by its label name and all values.
+ * Finds a property by its variable label name and all values.
  *
  * @param properties - Array of properties to search through
- * @param labelName - The property label name to search for
+ * @param labelName - The property variable label name to search for
  * @param values - The property values to search for
  * @param options - Search options, including whether to include nested properties
  * @returns The matching Property object, or null if not found or all values do not match
@@ -511,6 +551,22 @@ export function getPropertyByLabelNameAndValues<
 export function getPropertyByLabelNameAndValues<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
+  properties: ReadonlyArray<SimplifiedProperty<T>>,
+  labelName: string,
+  values: ReadonlyArray<PropertyValueContent<T>>,
+  options?: PropertyOptions,
+): SimplifiedProperty<T> | null;
+export function getPropertyByLabelNameAndValues<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
+  labelName: string,
+  values: ReadonlyArray<PropertyValueContent<T>>,
+  options?: PropertyOptions,
+): SingleHierarchySimplifiedProperty<T> | null;
+export function getPropertyByLabelNameAndValues<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   labelName: string,
   values: ReadonlyArray<PropertyValueContent<T>>,
@@ -525,7 +581,7 @@ export function getPropertyByLabelNameAndValues<
     (currentProperties) => {
       for (const property of currentProperties) {
         if (
-          property.label.name === labelName &&
+          getPropertyVariableLabelName(property) === labelName &&
           deepEqual(property.values, values)
         ) {
           return getNormalizedProperty(property, limitToLeafPropertyValues);
@@ -540,10 +596,10 @@ export function getPropertyByLabelNameAndValues<
 }
 
 /**
- * Finds a property by its label name and all value contents.
+ * Finds a property by its variable label name and all value contents.
  *
  * @param properties - Array of properties to search through
- * @param labelName - The property label name to search for
+ * @param labelName - The property variable label name to search for
  * @param valueContents - The value contents to search for
  * @param options - Search options, including whether to include nested properties
  * @returns The matching Property object, or null if not found or all value contents do not match
@@ -567,6 +623,22 @@ export function getPropertyByLabelNameAndValueContents<
 export function getPropertyByLabelNameAndValueContents<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
+  properties: ReadonlyArray<SimplifiedProperty<T>>,
+  labelName: string,
+  valueContents: ReadonlyArray<PropertyContent<T>>,
+  options?: PropertyOptions,
+): SimplifiedProperty<T> | null;
+export function getPropertyByLabelNameAndValueContents<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
+  labelName: string,
+  valueContents: ReadonlyArray<PropertyContent<T>>,
+  options?: PropertyOptions,
+): SingleHierarchySimplifiedProperty<T> | null;
+export function getPropertyByLabelNameAndValueContents<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   labelName: string,
   valueContents: ReadonlyArray<PropertyContent<T>>,
@@ -581,7 +653,7 @@ export function getPropertyByLabelNameAndValueContents<
     (currentProperties) => {
       for (const property of currentProperties) {
         if (
-          property.label.name === labelName &&
+          getPropertyVariableLabelName(property) === labelName &&
           propertyValueContentsEqual(property, valueContents)
         ) {
           return getNormalizedProperty(
@@ -600,10 +672,10 @@ export function getPropertyByLabelNameAndValueContents<
 }
 
 /**
- * Finds a property by its label name and one value.
+ * Finds a property by its variable label name and one value.
  *
  * @param properties - Array of properties to search through
- * @param labelName - The property label name to search for
+ * @param labelName - The property variable label name to search for
  * @param value - The property value to search for
  * @param options - Search options, including whether to include nested properties
  * @returns The matching Property object, or null if not found or value does not match
@@ -627,6 +699,22 @@ export function getPropertyByLabelNameAndValue<
 export function getPropertyByLabelNameAndValue<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
+  properties: ReadonlyArray<SimplifiedProperty<T>>,
+  labelName: string,
+  value: PropertyValueContent<T>,
+  options?: PropertyOptions,
+): SimplifiedProperty<T> | null;
+export function getPropertyByLabelNameAndValue<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
+  labelName: string,
+  value: PropertyValueContent<T>,
+  options?: PropertyOptions,
+): SingleHierarchySimplifiedProperty<T> | null;
+export function getPropertyByLabelNameAndValue<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   labelName: string,
   value: PropertyValueContent<T>,
@@ -641,7 +729,7 @@ export function getPropertyByLabelNameAndValue<
     (currentProperties) => {
       for (const property of currentProperties) {
         if (
-          property.label.name === labelName &&
+          getPropertyVariableLabelName(property) === labelName &&
           propertyHasValue(property, value)
         ) {
           return getNormalizedProperty(property, limitToLeafPropertyValues);
@@ -656,10 +744,10 @@ export function getPropertyByLabelNameAndValue<
 }
 
 /**
- * Finds a property by its label name and one value content.
+ * Finds a property by its variable label name and one value content.
  *
  * @param properties - Array of properties to search through
- * @param labelName - The property label name to search for
+ * @param labelName - The property variable label name to search for
  * @param valueContent - The value content to search for
  * @param options - Search options, including whether to include nested properties
  * @returns The matching Property object, or null if not found or value content does not match
@@ -683,6 +771,22 @@ export function getPropertyByLabelNameAndValueContent<
 export function getPropertyByLabelNameAndValueContent<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
+  properties: ReadonlyArray<SimplifiedProperty<T>>,
+  labelName: string,
+  valueContent: PropertyContent<T>,
+  options?: PropertyOptions,
+): SimplifiedProperty<T> | null;
+export function getPropertyByLabelNameAndValueContent<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
+  labelName: string,
+  valueContent: PropertyContent<T>,
+  options?: PropertyOptions,
+): SingleHierarchySimplifiedProperty<T> | null;
+export function getPropertyByLabelNameAndValueContent<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   labelName: string,
   valueContent: PropertyContent<T>,
@@ -697,7 +801,7 @@ export function getPropertyByLabelNameAndValueContent<
     (currentProperties) => {
       for (const property of currentProperties) {
         if (
-          property.label.name === labelName &&
+          getPropertyVariableLabelName(property) === labelName &&
           propertyHasValueContent(property, valueContent)
         ) {
           return getNormalizedProperty(property, limitToLeafPropertyValues);
@@ -712,10 +816,10 @@ export function getPropertyByLabelNameAndValueContent<
 }
 
 /**
- * Retrieves all values for a property with the given label name.
+ * Retrieves all values for a property with the given variable label name.
  *
  * @param properties - Array of properties to search through
- * @param labelName - The property label name to search for
+ * @param labelName - The property variable label name to search for
  * @param options - Search options, including whether to include nested properties
  * @returns Array of property values, or null if property not found
  */
@@ -733,7 +837,10 @@ export function getPropertyValuesByLabelName<
     properties,
     { includeNestedProperties },
     (currentProperties) => {
-      const property = findPropertyByLabelName(currentProperties, labelName);
+      const property = findPropertyByVariableLabelName(
+        currentProperties,
+        labelName,
+      );
       if (property == null) {
         return null;
       }
@@ -750,10 +857,10 @@ export function getPropertyValuesByLabelName<
 }
 
 /**
- * Gets the first value of a property with the given label name.
+ * Gets the first value of a property with the given variable label name.
  *
  * @param properties - Array of properties to search through
- * @param labelName - The property label name to search for
+ * @param labelName - The property variable label name to search for
  * @param options - Search options, including whether to include nested properties
  * @returns The first property value, or null if property not found
  */
@@ -788,10 +895,10 @@ export function getPropertyValueByLabelName<
 }
 
 /**
- * Gets the first value content of a property with the given label name.
+ * Gets the first value content of a property with the given variable label name.
  *
  * @param properties - Array of properties to search through
- * @param labelName - The property label name to search for
+ * @param labelName - The property variable label name to search for
  * @param options - Search options, including whether to include nested properties
  * @returns The first property value content, or null if property not found
  */
@@ -848,6 +955,18 @@ export function getUniqueProperties<
 export function getUniqueProperties<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
+  properties: ReadonlyArray<SimplifiedProperty<T>>,
+  options?: PropertyOptions,
+): Array<SimplifiedProperty<T>>;
+export function getUniqueProperties<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
+  options?: PropertyOptions,
+): Array<SingleHierarchySimplifiedProperty<T>>;
+export function getUniqueProperties<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Array<SearchableProperty<T>> {
@@ -857,7 +976,7 @@ export function getUniqueProperties<
 
   visitProperties(properties, includeNestedProperties, (property) => {
     for (const uniqueProperty of uniqueProperties) {
-      if (uniqueProperty.label.uuid === property.label.uuid) {
+      if (uniqueProperty.variable.uuid === property.variable.uuid) {
         return;
       }
     }
@@ -880,11 +999,11 @@ export function getUniqueProperties<
 }
 
 /**
- * Gets all unique property label names from an array of properties.
+ * Gets all unique property variable label names from an array of properties.
  *
- * @param properties - Array of properties to get unique property labels from
+ * @param properties - Array of properties to get unique property variable labels from
  * @param options - Search options, including whether to include nested properties
- * @returns Array of unique property label names
+ * @returns Array of unique property variable label names
  */
 export function getUniquePropertyLabelNames<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
@@ -896,11 +1015,12 @@ export function getUniquePropertyLabelNames<
   const uniquePropertyLabels: Array<string> = [];
 
   visitProperties(properties, includeNestedProperties, (property) => {
-    if (uniquePropertyLabels.includes(property.label.name)) {
+    const labelName = getPropertyVariableLabelName(property);
+    if (uniquePropertyLabels.includes(labelName)) {
       return;
     }
 
-    uniquePropertyLabels.push(property.label.name);
+    uniquePropertyLabels.push(labelName);
   });
 
   return uniquePropertyLabels;
@@ -948,11 +1068,11 @@ function contentMatchesFilter<T extends ReadonlyArray<string>>(
 }
 
 /**
- * Filters a property based on a label and value criterion.
+ * Filters a property based on a variable label and value criterion.
  *
  * @param property - The property to filter
- * @param filter - Filter criteria containing label and value to match
- * @param filter.labelName - The label name to filter by
+ * @param filter - Filter criteria containing variable label and value to match
+ * @param filter.labelName - The variable label name to filter by
  * @param filter.value - The value to filter by
  * @param options - Search options, including whether to include nested properties
  * @returns True if the property matches the filter criteria, false otherwise
@@ -972,7 +1092,7 @@ export function filterProperties<
 
   if (
     isAllFields ||
-    property.label.name.toLocaleLowerCase("en-US") ===
+    getPropertyVariableLabelName(property).toLocaleLowerCase("en-US") ===
       filter.labelName.toLocaleLowerCase("en-US")
   ) {
     const values = getPropertyValuesResult(

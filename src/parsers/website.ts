@@ -1,11 +1,13 @@
 import * as v from "valibot";
 import type { ParserOptions } from "#/parsers/helpers.js";
+import type { MultilingualString } from "#/parsers/multilingual.js";
 import type {
   Identification,
   ItemLink,
   ItemLinkCategory,
   ItemLinks,
-  Property,
+  PropertyValueContent,
+  SimplifiedProperty,
 } from "#/types/index.js";
 import type {
   ContextTree,
@@ -39,10 +41,12 @@ import type {
 import {
   getPropertyByLabelName,
   getPropertyByLabelNameAndValueContent,
+  getPropertyValueByLabelName,
   getPropertyValueContentByLabelName,
 } from "#/getters.js";
 import {
   cleanObject,
+  multilingualFromText,
   parseLicense,
   parseStringContent,
 } from "#/parsers/helpers.js";
@@ -54,7 +58,7 @@ import {
   parseMetadataLanguages,
   parseNotes,
   parsePersonList,
-  parseProperties,
+  parseSimplifiedProperties,
   resolveDefaultLanguage,
   resolveLanguages,
 } from "#/parsers/index.js";
@@ -188,7 +192,7 @@ function formatComponentError(
  * @returns Array of CSS styles
  */
 function parseCssStylesFromProperties(
-  properties: Array<Property<ReadonlyArray<string>>>,
+  properties: Array<SimplifiedProperty<ReadonlyArray<string>>>,
   cssVariant?: string,
 ): Array<Style> {
   const label = cssVariant != null ? `css-${cssVariant}` : "css";
@@ -199,10 +203,42 @@ function parseCssStylesFromProperties(
   for (const property of cssProperties) {
     const value = property.values[0]?.content.toString();
     if (value != null) {
-      styles.push({ label: property.label.name, value });
+      styles.push({ label: property.variable.label, value });
     }
   }
   return styles;
+}
+
+function getPropertyValueMultilingualContent<T extends ReadonlyArray<string>>(
+  propertyValue: PropertyValueContent<T> | null,
+  options: ParserOptions<T>,
+): MultilingualString<T> | null {
+  if (propertyValue == null) {
+    return null;
+  }
+
+  if (propertyValue.label != null) {
+    return propertyValue.label;
+  }
+
+  if (typeof propertyValue.content === "string") {
+    return multilingualFromText(propertyValue.content, options);
+  }
+
+  return null;
+}
+
+function getPropertyMultilingualValueByLabelName<
+  T extends ReadonlyArray<string>,
+>(
+  properties: ReadonlyArray<SimplifiedProperty<T>>,
+  labelName: string,
+  options: ParserOptions<T>,
+): MultilingualString<T> | null {
+  return getPropertyValueMultilingualContent(
+    getPropertyValueByLabelName(properties, labelName),
+    options,
+  );
 }
 
 /**
@@ -212,7 +248,7 @@ function parseCssStylesFromProperties(
  * @returns Object containing responsive CSS styles
  */
 function parseResponsiveCssStyles(
-  properties: Array<Property<ReadonlyArray<string>>>,
+  properties: Array<SimplifiedProperty<ReadonlyArray<string>>>,
 ): { default: Array<Style>; tablet: Array<Style>; mobile: Array<Style> } {
   return {
     default: parseCssStylesFromProperties(properties),
@@ -339,7 +375,7 @@ function parseWebsiteOptions<T extends ReadonlyArray<string>>(
   };
 
   for (const note of parseNotes(rawOptions?.notes, options)) {
-    if (note.title === "Title label") {
+    if (note.title?.getText() === "Title label") {
       parsedOptions.labels.title = note.content;
       break;
     }
@@ -415,7 +451,7 @@ function parseStylesheets(
  * @returns Parsed WebElementComponent object
  */
 function parseWebElementProperties<T extends ReadonlyArray<string>>(
-  componentProperty: Property<T>,
+  componentProperty: SimplifiedProperty<T>,
   elementResource: XMLWebsiteResource,
   options: ParserOptions<T>,
 ): WebElementComponent<T> {
@@ -1499,15 +1535,11 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       for (const queryItem of componentProperty.properties) {
         const querySubProperties = queryItem.properties;
 
-        const label = getPropertyValueContentByLabelName(
+        const label = getPropertyMultilingualValueByLabelName(
           querySubProperties,
           "query-prompt",
-        ) as
-          | Extract<
-              WebElementComponent<T>,
-              { component: "query" }
-            >["items"][number]["label"]
-          | null;
+          options,
+        );
         if (label === null) {
           continue;
         }
@@ -1731,15 +1763,11 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      let placeholder = getPropertyValueContentByLabelName(
+      let placeholder = getPropertyMultilingualValueByLabelName(
         componentProperty.properties,
         "placeholder-text",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "search-bar" }
-          >["placeholder"]
-        | null;
+        options,
+      );
       placeholder ??= null;
 
       let baseFilterQueries = getPropertyValueContentByLabelName(
@@ -1905,7 +1933,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
 }
 
 function parseWebTitle<T extends ReadonlyArray<string>>(
-  properties: Array<Property<T>>,
+  properties: Array<SimplifiedProperty<T>>,
   identification: Identification<T>,
   overrides?: Partial<WebTitle<T>["properties"]>,
 ): WebTitle<T> {
@@ -1979,7 +2007,7 @@ function parseWebElement<T extends ReadonlyArray<string>>(
 
   const elementProperties =
     elementResource.properties?.property ?
-      parseProperties(elementResource.properties, options)
+      parseSimplifiedProperties(elementResource.properties, options)
     : [];
 
   const presentationProperty = getPropertyByLabelName(
@@ -2058,7 +2086,9 @@ const parseWebpageResources = <
 
   for (const resource of webpageResources) {
     const resourceProperties =
-      resource.properties ? parseProperties(resource.properties, options) : [];
+      resource.properties ?
+        parseSimplifiedProperties(resource.properties, options)
+      : [];
 
     const resourceProperty = getPropertyByLabelNameAndValueContent(
       resourceProperties,
@@ -2124,7 +2154,7 @@ function parseWebpage<T extends ReadonlyArray<string>>(
 ): Webpage<T> | null {
   const webpageProperties =
     webpageResource.properties ?
-      parseProperties(webpageResource.properties, options)
+      parseSimplifiedProperties(webpageResource.properties, options)
     : [];
 
   if (
@@ -2189,7 +2219,7 @@ function parseWebpage<T extends ReadonlyArray<string>>(
   for (const resource of webpageResources) {
     const resourceProperties =
       resource.properties != null ?
-        parseProperties(resource.properties, options)
+        parseSimplifiedProperties(resource.properties, options)
       : [];
 
     const resourceType = getPropertyValueContentByLabelName(
@@ -2331,7 +2361,7 @@ function parseWebSegment<T extends ReadonlyArray<string>>(
 ): WebSegment<T> | null {
   const webpageProperties =
     segmentResource.properties ?
-      parseProperties(segmentResource.properties, options)
+      parseSimplifiedProperties(segmentResource.properties, options)
     : [];
 
   if (
@@ -2420,7 +2450,7 @@ function parseWebSegmentItem<T extends ReadonlyArray<string>>(
 ): WebSegmentItem<T> | null {
   const webpageProperties =
     segmentItemResource.properties ?
-      parseProperties(segmentItemResource.properties, options)
+      parseSimplifiedProperties(segmentItemResource.properties, options)
     : [];
 
   if (
@@ -2534,7 +2564,9 @@ function parseSidebar<T extends ReadonlyArray<string>>(
 
   const sidebarResource = resources.find((resource) => {
     const resourceProperties =
-      resource.properties ? parseProperties(resource.properties, options) : [];
+      resource.properties ?
+        parseSimplifiedProperties(resource.properties, options)
+      : [];
 
     return (
       getPropertyValueContentByLabelName(resourceProperties, "presentation") ===
@@ -2548,7 +2580,7 @@ function parseSidebar<T extends ReadonlyArray<string>>(
   if (sidebarResource != null) {
     const sidebarBaseProperties =
       sidebarResource.properties ?
-        parseProperties(sidebarResource.properties, options)
+        parseSimplifiedProperties(sidebarResource.properties, options)
       : [];
 
     title = parseWebTitle(
@@ -2560,24 +2592,24 @@ function parseSidebar<T extends ReadonlyArray<string>>(
       sidebarBaseProperties
         .find(
           (property) =>
-            property.label.name === "presentation" &&
+            property.variable.label === "presentation" &&
             property.values[0]?.content === "element",
         )
         ?.properties.find(
           (property) =>
-            property.label.name === "component" &&
+            property.variable.label === "component" &&
             property.values[0]?.content === "sidebar",
         )?.properties ?? [];
 
     const sidebarLayoutProperty = sidebarProperties.find(
-      (property) => property.label.name === "layout",
+      (property) => property.variable.label === "layout",
     );
     if (sidebarLayoutProperty) {
       layout = sidebarLayoutProperty.values[0]!.content as "start" | "end";
     }
 
     const sidebarMobileLayoutProperty = sidebarProperties.find(
-      (property) => property.label.name === "layout-mobile",
+      (property) => property.variable.label === "layout-mobile",
     );
     if (sidebarMobileLayoutProperty) {
       mobileLayout = sidebarMobileLayoutProperty.values[0]!.content as
@@ -2598,7 +2630,7 @@ function parseSidebar<T extends ReadonlyArray<string>>(
     for (const resource of sidebarResources) {
       const resourceProperties =
         resource.properties ?
-          parseProperties(resource.properties, options)
+          parseSimplifiedProperties(resource.properties, options)
         : [];
 
       const resourceType = getPropertyValueContentByLabelName(
@@ -2665,7 +2697,9 @@ function parseWebElementForAccordion<T extends ReadonlyArray<string>>(
   const items: Array<WebElement<T> | WebBlock<T>> = [];
   for (const resource of childResources) {
     const resourceProperties =
-      resource.properties ? parseProperties(resource.properties, options) : [];
+      resource.properties ?
+        parseSimplifiedProperties(resource.properties, options)
+      : [];
 
     const resourceType = getPropertyValueContentByLabelName(
       resourceProperties,
@@ -2706,7 +2740,7 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
 ): WebBlock<T> | null {
   const blockProperties =
     blockResource.properties ?
-      parseProperties(blockResource.properties, options)
+      parseSimplifiedProperties(blockResource.properties, options)
     : [];
 
   const returnBlock: WebBlock<T> = {
@@ -2962,7 +2996,7 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
     for (const resource of blockResources) {
       const resourceProperties =
         resource.properties ?
-          parseProperties(resource.properties, options)
+          parseSimplifiedProperties(resource.properties, options)
         : [];
 
       const resourceType = getPropertyValueContentByLabelName(
@@ -3005,7 +3039,7 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
     for (const resource of blockResources) {
       const resourceProperties =
         resource.properties ?
-          parseProperties(resource.properties, options)
+          parseSimplifiedProperties(resource.properties, options)
         : [];
 
       const resourceType = getPropertyValueContentByLabelName(
@@ -3052,7 +3086,10 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
   sidebar: Website<T>["properties"]["sidebar"] | null,
   options: ParserOptions<T>,
 ): Website<T>["properties"] {
-  const mainProperties = parseProperties({ property: properties }, options);
+  const mainProperties = parseSimplifiedProperties(
+    { property: properties },
+    options,
+  );
   const websiteProperties =
     getPropertyByLabelName(mainProperties, "presentation")?.properties ?? [];
 

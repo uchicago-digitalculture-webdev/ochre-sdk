@@ -554,8 +554,11 @@ function expectPropertyFieldsMatchRaw(
   rawProperty: XMLProperty,
   parsedProperty: ParsedPropertyFields,
 ): void {
-  expect(parsedProperty.label.uuid).toBe(rawProperty.label.uuid);
-  expect(parsedProperty.label.name).toBe(
+  expect(parsedProperty.variable.uuid).toBe(rawProperty.label.uuid);
+  expect(
+    parsedProperty.variable.publicationDateTime?.toISOString() ?? null,
+  ).toBe(rawProperty.label.publicationDateTime?.toISOString() ?? null);
+  expect(parsedProperty.variable.label.getText()).toBe(
     parseContentLikeForTest(rawProperty.label),
   );
   expect(parsedProperty.values).toHaveLength(rawProperty.value?.length ?? 0);
