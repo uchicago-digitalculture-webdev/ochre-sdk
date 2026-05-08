@@ -213,26 +213,7 @@ function parseStringContent(
   });
 }
 
-function parseFakeString(value: unknown): string {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (typeof value === "number" || typeof value === "boolean") {
-    return value.toString();
-  }
-
-  return "";
-}
-
-function parseFakeStringOrContent(
-  value: XMLContent | XMLString | string | undefined,
-  options: ParserOptions<ReadonlyArray<string>> = FALLBACK_WEBSITE_OPTIONS,
-): string {
-  return parseStringContent(value, options);
-}
-
-function transformPermanentIdentificationUrl(url: string): string {
+function transformPermanentIdentificationUrlToItemLink(url: string): string {
   return url.replace("https://pi.lib.uchicago.edu/1001/org/ochre/", "/item/");
 }
 
@@ -287,7 +268,7 @@ function formatXMLWebsiteResourceMetadata(
 
   if (resource.identification.abbreviation != null) {
     metadata.push(
-      `abbreviation “${parseFakeStringOrContent(
+      `abbreviation “${parseStringContent(
         resource.identification.abbreviation,
       )}”`,
     );
@@ -452,7 +433,10 @@ function parseStylesheets(
         continue;
       }
 
-      defaultStyles.push({ label, value: parseFakeString(value) });
+      const valueString = value?.toString();
+      if (valueString != null) {
+        defaultStyles.push({ label, value: valueString });
+      }
     }
 
     const stylesByViewport: StylesheetItem["styles"] = {
@@ -568,7 +552,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       );
       const href =
         linkToProperty?.values[0]?.href != null ?
-          transformPermanentIdentificationUrl(linkToProperty.values[0].href)
+          transformPermanentIdentificationUrlToItemLink(
+            linkToProperty.values[0].href,
+          )
         : (linkToProperty?.values[0]?.slug ?? null);
 
       if (boundElementPropertyUuid == null && href == null) {
@@ -801,7 +787,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
 
       let href =
         navigateToProperty?.values[0]?.href != null ?
-          transformPermanentIdentificationUrl(navigateToProperty.values[0].href)
+          transformPermanentIdentificationUrlToItemLink(
+            navigateToProperty.values[0].href,
+          )
         : (navigateToProperty?.values[0]?.slug ?? null);
 
       if (href === null) {
@@ -811,7 +799,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
         href =
           linkToProperty?.values[0]?.href != null ?
-            transformPermanentIdentificationUrl(linkToProperty.values[0].href)
+            transformPermanentIdentificationUrlToItemLink(
+              linkToProperty.values[0].href,
+            )
           : (linkToProperty?.values[0]?.slug ?? null);
 
         if (href === null) {
@@ -1165,7 +1155,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
 
       properties = {
         component: "iframe",
-        href: transformPermanentIdentificationUrl(webpageLink.href),
+        href: transformPermanentIdentificationUrlToItemLink(webpageLink.href),
         height: height?.toString() ?? null,
         width: width?.toString() ?? null,
       };
@@ -1836,7 +1826,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       );
       const href =
         linkToProperty?.values[0]?.href != null ?
-          transformPermanentIdentificationUrl(linkToProperty.values[0].href)
+          transformPermanentIdentificationUrlToItemLink(
+            linkToProperty.values[0].href,
+          )
         : (linkToProperty?.values[0]?.slug ?? null);
 
       if (!boundElementUuid && !href) {
@@ -2465,10 +2457,7 @@ function parseWebSegment<T extends ReadonlyArray<string>>(
 
   const slug =
     segmentResource.identification.abbreviation != null ?
-      parseFakeStringOrContent(
-        segmentResource.identification.abbreviation,
-        options,
-      )
+      parseStringContent(segmentResource.identification.abbreviation, options)
     : null;
   if (slug == null) {
     throw new Error(
@@ -2557,7 +2546,7 @@ function parseWebSegmentItem<T extends ReadonlyArray<string>>(
 
   const slug =
     segmentItemResource.identification.abbreviation != null ?
-      parseFakeStringOrContent(
+      parseStringContent(
         segmentItemResource.identification.abbreviation,
         options,
       )
