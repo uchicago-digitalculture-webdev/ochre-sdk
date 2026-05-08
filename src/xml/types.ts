@@ -27,14 +27,10 @@ export type XMLString = {
   payload?: string;
   rend?: string;
   whitespace?: string;
-  string?: Array<{
-    links?: XMLLink;
-    properties?: { property: Array<XMLProperty> };
-    string?: Array<XMLString>;
-    annotation?: string;
-    rend?: string;
-    whitespace?: string;
-  }>;
+  links?: XMLLink;
+  properties?: { property: Array<XMLProperty> };
+  annotation?: string;
+  string?: Array<XMLString>;
 };
 
 export type XMLContent = {
@@ -225,24 +221,26 @@ export type XMLSimplifiedProperty = {
     uuid: string;
     publicationDateTime?: string;
   };
-  value?: Array<{
-    i?: XMLNumber;
-    inherited?: XMLBoolean;
-    uuid?: string;
-    publicationDateTime?: string;
-    dataType?: string;
-    category?: string;
-    type?: string;
-    slug?: string;
-    unit?: string;
-    height?: XMLNumber;
-    width?: XMLNumber;
-    fileSize?: XMLNumber;
-    href?: string;
-    rawValue?: string;
-    isUncertain?: "true";
-    payload: string;
-  }>;
+  value?: Array<
+    Partial<XMLContent> & {
+      i?: XMLNumber;
+      inherited?: XMLBoolean;
+      uuid?: string;
+      publicationDateTime?: string;
+      dataType?: string;
+      category?: string;
+      type?: string;
+      slug?: string;
+      unit?: string;
+      height?: XMLNumber;
+      width?: XMLNumber;
+      fileSize?: XMLNumber;
+      href?: string;
+      rawValue?: string;
+      isUncertain?: "true";
+      payload?: string;
+    }
+  >;
   comment?: XMLContent;
   property?: Array<XMLSimplifiedProperty>;
 };
@@ -564,6 +562,97 @@ export type XMLTree = XMLBaseItem & {
   }>;
 };
 
+export type XMLWebsiteContextLevel = XMLString & {
+  payload: string;
+  dataType?: string;
+};
+
+export type XMLWebsiteContextItem = {
+  identification: XMLIdentification;
+  levels?: { level: XMLWebsiteContextLevel | Array<XMLWebsiteContextLevel> };
+};
+
+export type XMLWebsiteFilterContextItem = XMLWebsiteContextItem & {
+  filterType?: "property" | "coordinates" | "bibliography" | "period";
+  filterOption?:
+    | "inline-displayed"
+    | "inline-sidebar-displayed-closed"
+    | "inline-sidebar-displayed-open"
+    | "sidebar-displayed-closed"
+    | "sidebar-displayed-open"
+    | "inline-sidebar-hidden";
+};
+
+export type XMLWebsiteContext = {
+  context: XMLWebsiteContextItem | Array<XMLWebsiteContextItem>;
+};
+
+export type XMLWebsiteFilterContext = {
+  context: XMLWebsiteFilterContextItem | Array<XMLWebsiteFilterContextItem>;
+};
+
+export type XMLWebsiteScope = {
+  uuid: XMLString & { payload: string; type: string };
+  identification: XMLIdentification;
+};
+
+export type XMLWebsiteOptions = {
+  notes?: { note: Array<XMLNote> };
+  scopes?: { scope: XMLWebsiteScope | Array<XMLWebsiteScope> };
+  flattenContexts?: XMLWebsiteContext | Array<XMLWebsiteContext>;
+  suppressContexts?: XMLWebsiteContext | Array<XMLWebsiteContext>;
+  filterContexts?: XMLWebsiteFilterContext | Array<XMLWebsiteFilterContext>;
+  sortContexts?: XMLWebsiteContext | Array<XMLWebsiteContext>;
+  detailContexts?: XMLWebsiteContext | Array<XMLWebsiteContext>;
+  downloadContexts?: XMLWebsiteContext | Array<XMLWebsiteContext>;
+  labelContexts?: XMLWebsiteContext | Array<XMLWebsiteContext>;
+  prominentContexts?: XMLWebsiteContext | Array<XMLWebsiteContext>;
+};
+
+export type XMLWebsiteStyle = XMLString & {
+  variableUuid: string;
+  valueUuid?: string;
+  category?: string;
+  lucideIcon?: string;
+  payload: string;
+} & Record<string, unknown>;
+
+export type XMLWebsiteProperties = {
+  property: Array<XMLSimplifiedProperty>;
+  simplify?: XMLBoolean;
+};
+
+export type XMLWebsiteResourceGroup = { resource: Array<XMLWebsiteResource> };
+
+export type XMLWebsiteSegment = {
+  segments: { tree: Array<XMLWebsiteTree> };
+  uuid: string;
+  publicationDateTime?: string;
+};
+
+export type XMLWebsiteResourceItem =
+  | XMLWebsiteResource
+  | XMLWebsiteResourceGroup
+  | XMLWebsiteSegment;
+
+export type XMLWebsiteResource = Omit<
+  XMLResource,
+  "properties" | "resource"
+> & {
+  format?: string;
+  slug?: string;
+  options?: XMLWebsiteOptions;
+  properties?: XMLWebsiteProperties;
+  resource?: Array<XMLWebsiteResourceItem>;
+};
+
+export type XMLWebsiteTree = Omit<XMLTree, "items" | "properties"> & {
+  options?: XMLWebsiteOptions;
+  styleOptions?: { style: XMLWebsiteStyle | Array<XMLWebsiteStyle> };
+  properties?: XMLWebsiteProperties;
+  items?: { resource?: Array<XMLWebsiteResourceItem> };
+};
+
 export type XMLSet = XMLBaseItem & {
   type?: string;
   suppressBlanks?: XMLBoolean;
@@ -630,5 +719,20 @@ export type XMLData = {
       persistentUrl?: string;
       languages?: string;
     } & XMLDataItem;
+  };
+};
+
+export type XMLWebsiteData = {
+  result: {
+    ochre: {
+      uuid: string;
+      belongsTo: string;
+      uuidBelongsTo: string;
+      publicationDateTime: string;
+      metadata: XMLMetadata;
+      persistentUrl?: string;
+      languages?: string;
+      tree: Array<XMLWebsiteTree>;
+    };
   };
 };

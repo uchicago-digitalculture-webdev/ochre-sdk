@@ -3,6 +3,7 @@ import type {
   XMLContent,
   XMLData,
   XMLIdentification,
+  XMLProperty,
   XMLResource,
   XMLString,
   XMLText,
@@ -36,6 +37,67 @@ function identification(
   label: Partial<Record<"eng" | "spa", string>>,
 ): XMLIdentification {
   return { label: content(label) };
+}
+
+function textAnnotationProperty(properties: Array<XMLProperty>): XMLProperty {
+  return {
+    label: { payload: "presentation", uuid: PRESENTATION_ITEM_UUID },
+    value: [
+      {
+        payload: "text-annotation",
+        uuid: TEXT_ANNOTATION_UUID,
+        dataType: "xs:string",
+      },
+    ],
+    property: properties,
+  };
+}
+
+function textStylingProperty(properties: Array<XMLProperty>): XMLProperty {
+  return {
+    label: {
+      payload: "variant",
+      uuid: TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
+    },
+    value: [
+      {
+        payload: "text-styling",
+        uuid: TEXT_ANNOTATION_TEXT_STYLING_UUID,
+        dataType: "xs:string",
+      },
+    ],
+    property: properties,
+  };
+}
+
+function paragraphAnnotation(text: string): XMLString {
+  return {
+    properties: {
+      property: [
+        textAnnotationProperty([
+          textStylingProperty([
+            {
+              label: {
+                payload: "variant",
+                uuid: TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
+              },
+              value: [{ payload: "paragraph", dataType: "xs:string" }],
+              property: [
+                {
+                  label: {
+                    payload: "size",
+                    uuid: "e0000000-0000-4000-8000-000000000000",
+                  },
+                  value: [{ payload: "md", dataType: "xs:string" }],
+                },
+              ],
+            },
+          ]),
+        ]),
+      ],
+    },
+    string: [{ payload: text }],
+  };
 }
 
 function metadata(
@@ -572,6 +634,157 @@ describe("string parser integration", () => {
 
     expect(parsedContent.getExactText("eng")).toBe(
       '<Annotation type="text-styling" variant="inline" size="lg" headingLevel="2">Styled</Annotation>',
+    );
+  });
+
+  it("uses text annotation marker links as metadata instead of tooltip text", () => {
+    const parsedContent = parseXMLContent(
+      {
+        content: [
+          {
+            lang: "eng",
+            string: [
+              {
+                string: [
+                  {
+                    links: {
+                      propertyValue: [
+                        {
+                          uuid: TEXT_ANNOTATION_UUID,
+                          identification: identification({
+                            eng: "Text Annotation",
+                          }),
+                        },
+                      ],
+                    },
+                    properties: {
+                      property: [
+                        textAnnotationProperty([
+                          textStylingProperty([
+                            {
+                              label: {
+                                payload: "heading-level",
+                                uuid: TEXT_ANNOTATION_TEXT_STYLING_HEADING_LEVEL_UUID,
+                              },
+                              value: [{ payload: "h2", dataType: "xs:string" }],
+                            },
+                            {
+                              label: {
+                                payload: "variant",
+                                uuid: TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
+                              },
+                              value: [
+                                { payload: "label", dataType: "xs:string" },
+                              ],
+                              property: [
+                                {
+                                  label: {
+                                    payload: "size",
+                                    uuid: "a0000000-0000-4000-8000-000000000000",
+                                  },
+                                  value: [
+                                    { payload: "lg", dataType: "xs:string" },
+                                  ],
+                                },
+                              ],
+                            },
+                            {
+                              label: {
+                                payload: "color",
+                                uuid: "a1000000-0000-4000-8000-000000000000",
+                              },
+                              value: [
+                                {
+                                  payload: "var(--color-brand-700)",
+                                  dataType: "xs:string",
+                                },
+                              ],
+                            },
+                          ]),
+                        ]),
+                      ],
+                    },
+                    string: [{ payload: "UChicagoNode" }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      { languages: ["eng"] as const, isRichText: true },
+    );
+
+    expect(parsedContent.getExactText("eng")).toBe(
+      '<Annotation type="text-styling" variant="label" size="lg" headingLevel="h2" cssStyles={{default: [{"label":"color","value":"var(--color-brand-700)"}], tablet: [], mobile: []}}>UChicagoNode</Annotation>',
+    );
+  });
+
+  it("recursively preserves nested website rich text links and annotations", () => {
+    const parsedContent = parseXMLContent(
+      {
+        content: [
+          {
+            lang: "eng",
+            string: [
+              {
+                string: [
+                  paragraphAnnotation("Featured image:"),
+                  { payload: " ", whitespace: "leading trailing" },
+                  {
+                    links: {
+                      resource: [
+                        {
+                          uuid: "4cbd30d0-18dc-4ef2-b872-b4dce7880c04",
+                          type: "webpage",
+                          href: "https://ark.lib.uchicago.edu/ark:61001/b23w8rj3328d",
+                          publicationDateTime: "2026-04-11T01:59:27Z",
+                          identification: identification({
+                            eng: "Snyder's 1885 map",
+                          }),
+                        },
+                      ],
+                    },
+                    string: [
+                      { payload: "Snyder's map of Hyde Park, Illinois, 1885" },
+                    ],
+                  },
+                  { payload: ". ", whitespace: "trailing" },
+                  paragraphAnnotation("From the"),
+                  { payload: " ", whitespace: "leading trailing" },
+                  {
+                    links: {
+                      resource: [
+                        {
+                          uuid: "fdb5bc51-a2d2-4378-aa25-df501a87f6b5",
+                          type: "webpage",
+                          href: "https://node.uchicago.edu/collection/mapping-chicagoland",
+                          publicationDateTime: "2026-04-11T02:10:27Z",
+                          identification: identification({
+                            eng: "Mapping Chicagoland",
+                          }),
+                        },
+                      ],
+                    },
+                    string: [{ payload: "Mapping Chicagoland" }],
+                  },
+                  {
+                    payload:
+                      " collection. Holding institution: Chicago History Museum. ",
+                    whitespace: "leading trailing",
+                  },
+                ],
+                whitespace: "newline",
+              },
+            ],
+          },
+        ],
+      },
+      { languages: ["eng"] as const, isRichText: true },
+    );
+
+    expect(parsedContent.getExactText("eng")).toBe(
+      '<br />\n<Annotation type="text-styling" variant="paragraph" size="md">Featured image:</Annotation>   <ExternalLink href="https://ark.lib.uchicago.edu/ark:61001/b23w8rj3328d" content="Snyder\'s 1885 map">Snyder\'s map of Hyde Park, Illinois, 1885</ExternalLink>.  <Annotation type="text-styling" variant="paragraph" size="md">From the</Annotation>   <ExternalLink href="https://node.uchicago.edu/collection/mapping-chicagoland" content="Mapping Chicagoland">Mapping Chicagoland</ExternalLink>  collection. Holding institution: Chicago History Museum.  ',
     );
   });
 

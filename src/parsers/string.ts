@@ -54,6 +54,13 @@ type PropertyMetadata = { labelUuid: string; valueUuid: string | null };
 const EMAIL_BRACKET_CLEANUP_REGEX = /(?<=\s|^)[([{]+|[)\]}]+(?=\s|$)/g;
 const EMAIL_PUNCTUATION_CLEANUP_REGEX = /[!),:;?\]]/g;
 const EMAIL_TRAILING_PERIOD_REGEX = /\.$/;
+const TEXT_ANNOTATION_TOKEN = "text-annotation";
+const TEXT_STYLING_TOKEN = "text-styling";
+const HOVER_CARD_TOKEN = "hover-card";
+const ITEM_PAGE_TOKEN = "item-page";
+const ENTRY_PAGE_TOKEN = "entry-page";
+const VARIANT_TOKEN = "variant";
+const HEADING_LEVEL_TOKEN = "heading-level";
 
 function isXMLRichTextLink(value: unknown): value is XMLRichTextLink {
   return typeof value === "object" && value != null;
@@ -413,6 +420,45 @@ function parsePropertyValueText(
   return "";
 }
 
+function normalizePropertyToken(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replaceAll(/[\s_]+/g, "-");
+}
+
+function propertyLabelMatches(
+  property: XMLProperty,
+  uuid: string,
+  tokens: ReadonlyArray<string>,
+  options: { language: string; isRichText: boolean },
+): boolean {
+  if (uuid !== "" && property.label.uuid === uuid) {
+    return true;
+  }
+
+  const label = normalizePropertyToken(
+    parseContentLikeForLanguage(property.label, options),
+  );
+  return tokens.includes(label);
+}
+
+function propertyValueMatches(
+  property: XMLProperty,
+  uuid: string,
+  tokens: ReadonlyArray<string>,
+  options: { language: string; isRichText: boolean },
+): boolean {
+  if (uuid !== "" && getPropertyValueUuid(property) === uuid) {
+    return true;
+  }
+
+  const value = normalizePropertyToken(
+    parsePropertyValueText(property, options),
+  );
+  return tokens.includes(value);
+}
+
 function extractAnnotationMetadata(
   item: XMLRichTextItem,
   options: { language: string; isRichText: boolean },
@@ -424,83 +470,183 @@ function extractAnnotationMetadata(
   }
 
   if (
-    itemProperty.label.uuid !== PRESENTATION_ITEM_UUID ||
-    getPropertyValueUuid(itemProperty) !== TEXT_ANNOTATION_UUID
+    !propertyLabelMatches(
+      itemProperty,
+      PRESENTATION_ITEM_UUID,
+      ["presentation"],
+      options,
+    ) ||
+    !propertyValueMatches(
+      itemProperty,
+      TEXT_ANNOTATION_UUID,
+      [TEXT_ANNOTATION_TOKEN],
+      options,
+    )
   ) {
     return result;
   }
 
   for (const textAnnotationProperty of itemProperty.property ?? []) {
-    const textAnnotationPropertyValueUuid = getPropertyValueUuid(
-      textAnnotationProperty,
-    );
-    if (textAnnotationPropertyValueUuid == null) {
+    if (
+      propertyValueMatches(
+        textAnnotationProperty,
+        TEXT_ANNOTATION_HOVER_CARD_UUID,
+        [HOVER_CARD_TOKEN],
+        options,
+      )
+    ) {
+      result.linkVariant = "hover-card";
       continue;
     }
 
-    switch (textAnnotationPropertyValueUuid) {
-      case TEXT_ANNOTATION_HOVER_CARD_UUID: {
-        result.linkVariant = "hover-card";
-        break;
-      }
-      case TEXT_ANNOTATION_ITEM_PAGE_VARIANT_UUID: {
-        result.linkVariant = "item-page";
-        break;
-      }
-      case TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID: {
-        result.linkVariant = "entry-page";
-        break;
-      }
-      case TEXT_ANNOTATION_TEXT_STYLING_UUID: {
-        let variant = "block";
-        let size = "md";
-        let headingLevel: string | null = null;
-        const cssStyles: Array<CssStyle> = [];
-        const textStylingProperties = textAnnotationProperty.property ?? [];
+    if (
+      propertyValueMatches(
+        textAnnotationProperty,
+        TEXT_ANNOTATION_ITEM_PAGE_VARIANT_UUID,
+        [ITEM_PAGE_TOKEN],
+        options,
+      )
+    ) {
+      result.linkVariant = "item-page";
+      continue;
+    }
 
-        for (const textStylingProperty of textStylingProperties) {
-          if (
-            textStylingProperty.label.uuid ===
-            TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID
-          ) {
-            variant = parsePropertyValueText(textStylingProperty, options);
+    if (
+      propertyValueMatches(
+        textAnnotationProperty,
+        TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID,
+        [ENTRY_PAGE_TOKEN],
+        options,
+      )
+    ) {
+      result.linkVariant = "entry-page";
+      continue;
+    }
 
-            for (const nestedProperty of textStylingProperty.property ?? []) {
-              const label = parseContentLikeForLanguage(
-                nestedProperty.label,
-                options,
-              );
-              if (label === "size") {
-                size = parsePropertyValueText(nestedProperty, options);
-              }
+    if (
+      propertyValueMatches(
+        textAnnotationProperty,
+        TEXT_ANNOTATION_TEXT_STYLING_UUID,
+        [TEXT_STYLING_TOKEN],
+        options,
+      )
+    ) {
+      let variant = "block";
+      let size = "md";
+      let headingLevel: string | null = null;
+      const cssStyles: Array<CssStyle> = [];
+      const textStylingProperties = textAnnotationProperty.property ?? [];
+
+      for (const textStylingProperty of textStylingProperties) {
+        if (
+          propertyLabelMatches(
+            textStylingProperty,
+            TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
+            [VARIANT_TOKEN],
+            options,
+          )
+        ) {
+          variant = parsePropertyValueText(textStylingProperty, options);
+
+          for (const nestedProperty of textStylingProperty.property ?? []) {
+            if (propertyLabelMatches(nestedProperty, "", ["size"], options)) {
+              size = parsePropertyValueText(nestedProperty, options);
             }
-            continue;
           }
-
-          if (
-            textStylingProperty.label.uuid ===
-            TEXT_ANNOTATION_TEXT_STYLING_HEADING_LEVEL_UUID
-          ) {
-            headingLevel = parsePropertyValueText(textStylingProperty, options);
-            continue;
-          }
-
-          cssStyles.push({
-            label: parseContentLikeForLanguage(
-              textStylingProperty.label,
-              options,
-            ),
-            value: parsePropertyValueText(textStylingProperty, options),
-          });
+          continue;
         }
 
-        result.textStyling = { variant, size, headingLevel, cssStyles };
-        break;
+        if (
+          propertyLabelMatches(
+            textStylingProperty,
+            TEXT_ANNOTATION_TEXT_STYLING_HEADING_LEVEL_UUID,
+            [HEADING_LEVEL_TOKEN],
+            options,
+          )
+        ) {
+          headingLevel = parsePropertyValueText(textStylingProperty, options);
+          continue;
+        }
+
+        cssStyles.push({
+          label: parseContentLikeForLanguage(
+            textStylingProperty.label,
+            options,
+          ),
+          value: parsePropertyValueText(textStylingProperty, options),
+        });
       }
+
+      result.textStyling = { variant, size, headingLevel, cssStyles };
+      continue;
     }
   }
 
   return result;
+}
+
+function hasRichTextEnvelope(item: XMLRichTextItem): boolean {
+  return (
+    item.properties?.property[0] != null || getXMLRichTextLinks(item).length > 0
+  );
+}
+
+function parseXMLStringItem<V extends ReadonlyArray<string>>(
+  item: XMLRichTextItem,
+  contentItem: XMLContent["content"][number],
+  options: { languages: V; isRichText: boolean; parseEmail: boolean },
+): string {
+  const { isRichText } = options;
+
+  if (item.payload != null) {
+    return parseXMLString(item, { isRichText, parseEmail: options.parseEmail });
+  }
+
+  if (item.string == null && item.whitespace != null) {
+    return parseWhitespace("", item.whitespace, { isRichText });
+  }
+
+  if (item.string == null) {
+    return "";
+  }
+
+  if (hasRichTextEnvelope(item)) {
+    let linkString = parseNestedStringItems(item.string, contentItem, {
+      ...options,
+      parseEmail: false,
+    });
+
+    if (item.rend != null) {
+      linkString = parseRenderOptions(linkString, item.rend, { isRichText });
+    }
+
+    return renderRichTextItem(item, linkString, contentItem, options);
+  }
+
+  let result = parseNestedStringItems(item.string, contentItem, options);
+
+  if (item.rend != null) {
+    result = parseRenderOptions(result, item.rend, { isRichText });
+  }
+
+  return applyWhitespaceToResult(result, item.whitespace, { isRichText });
+}
+
+function parseNestedStringItems<V extends ReadonlyArray<string>>(
+  items: ReadonlyArray<XMLRichTextItem>,
+  contentItem: XMLContent["content"][number],
+  options: { languages: V; isRichText: boolean; parseEmail: boolean },
+): string {
+  let result = "";
+  for (const item of items) {
+    result += parseXMLStringItem(item, contentItem, options);
+  }
+
+  return result;
+}
+
+function isTextAnnotationMarkerLink(link: XMLRichTextLink): boolean {
+  return getLinkStringProperty(link, "uuid") === TEXT_ANNOTATION_UUID;
 }
 
 function wrapWithTextStyling(
@@ -560,6 +706,171 @@ function createInternalLinkComponent(properties: {
       }>${innerContent}</InternalLink>`;
     }
   }
+}
+
+function getXMLRichTextLinks(item: XMLRichTextItem): Array<XMLRichTextLink> {
+  const links: Array<XMLRichTextLink> = [];
+  for (const rawLinks of Object.values(item.links ?? {})) {
+    if (!Array.isArray(rawLinks)) {
+      continue;
+    }
+
+    for (const rawLink of rawLinks) {
+      if (isXMLRichTextLink(rawLink) && !isTextAnnotationMarkerLink(rawLink)) {
+        links.push(rawLink);
+      }
+    }
+  }
+
+  return links;
+}
+
+function renderRichTextItem<V extends ReadonlyArray<string>>(
+  item: XMLRichTextItem,
+  linkString: string,
+  contentItem: XMLContent["content"][number],
+  options: { languages: V; isRichText: boolean },
+): string {
+  const { languages, isRichText } = options;
+  const annotationMetadata = extractAnnotationMetadata(item, {
+    language: contentItem.lang,
+    isRichText,
+  });
+
+  const links = getXMLRichTextLinks(item);
+  if (links.length === 0) {
+    return applyWhitespaceToResult(
+      wrapWithTextStyling(linkString, annotationMetadata.textStyling),
+      item.whitespace,
+      { isRichText },
+    );
+  }
+
+  let result = "";
+  for (const link of links) {
+    const linkContent =
+      link.identification != null ?
+        "content" in link.identification.label ?
+          parseXMLContent(link.identification.label, { languages, isRichText })
+        : MultilingualString.create(
+            contentItem.lang,
+            parseXMLString(link.identification.label, {
+              isRichText,
+              parseEmail: false,
+            }),
+            languages,
+            { isRichText },
+          )
+      : MultilingualString.create(contentItem.lang, "", languages, {
+          isRichText,
+        });
+    const content = linkContent.getExactText(contentItem.lang) ?? "";
+
+    if ("type" in link && link.type != null) {
+      switch (link.type) {
+        case "IIIF":
+        case "image": {
+          if ("rend" in link && link.rend === "inline") {
+            const component = createMDXComponent("inlineImage", {
+              uuid: getLinkStringProperty(link, "uuid"),
+              href: getLinkStringProperty(link, "href") ?? undefined,
+              height: getLinkStringProperty(link, "height") ?? undefined,
+              width: getLinkStringProperty(link, "width") ?? undefined,
+              content,
+              text: linkString,
+            });
+            result += applyWhitespaceToResult(component, item.whitespace, {
+              isRichText,
+            });
+          } else if (link.publicationDateTime != null) {
+            const component = createInternalLinkComponent({
+              uuid: getLinkStringProperty(link, "uuid"),
+              text: linkString,
+              content,
+              annotationMetadata,
+            });
+            result += applyWhitespaceToResult(component, item.whitespace, {
+              isRichText,
+            });
+          } else {
+            const component = createMDXComponent("tooltipSpan", {
+              uuid: getLinkStringProperty(link, "uuid"),
+              text: linkString,
+              content,
+            });
+            result += applyWhitespaceToResult(component, item.whitespace, {
+              isRichText,
+            });
+          }
+          break;
+        }
+        case "internalDocument": {
+          const component = createInternalLinkComponent({
+            uuid: getLinkStringProperty(link, "uuid"),
+            text: linkString,
+            content,
+            annotationMetadata,
+            propertyMetadata: getFirstPropertyMetadata(item),
+          });
+          result += applyWhitespaceToResult(component, item.whitespace, {
+            isRichText,
+          });
+          break;
+        }
+        case "externalDocument": {
+          const component =
+            link.publicationDateTime != null ?
+              createMDXComponent("documentLink", {
+                uuid: getLinkStringProperty(link, "uuid"),
+                text: linkString,
+                content,
+              })
+            : createMDXComponent("tooltipSpan", {
+                uuid: getLinkStringProperty(link, "uuid"),
+                text: linkString,
+                content,
+              });
+          result += applyWhitespaceToResult(component, item.whitespace, {
+            isRichText,
+          });
+          break;
+        }
+        case "webpage": {
+          const component = createMDXComponent("externalLink", {
+            uuid: getLinkStringProperty(link, "uuid"),
+            href: getLinkStringProperty(link, "href") ?? "#",
+            text: linkString,
+            content,
+          });
+          result += applyWhitespaceToResult(component, item.whitespace, {
+            isRichText,
+          });
+          break;
+        }
+      }
+    } else if (link.publicationDateTime != null) {
+      const component = createInternalLinkComponent({
+        uuid: getLinkStringProperty(link, "uuid"),
+        text: linkString,
+        content,
+        annotationMetadata,
+      });
+      result += applyWhitespaceToResult(component, item.whitespace, {
+        isRichText,
+      });
+    } else {
+      const component = createMDXComponent("tooltipSpan", {
+        uuid: getLinkStringProperty(link, "uuid"),
+        text: linkString,
+        content,
+      });
+      result += applyWhitespaceToResult(component, item.whitespace, {
+        isRichText,
+      });
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -627,208 +938,10 @@ function parseXMLContentItem<V extends ReadonlyArray<string>>(
   contentItem: XMLContent["content"][number],
   options: { languages: V; isRichText: boolean },
 ): string {
-  const { languages, isRichText } = options;
-  let result = "";
-
-  for (const stringItem of contentItem.string) {
-    if (stringItem.payload != null) {
-      result += parseXMLString(stringItem, { isRichText, parseEmail: true });
-    } else if ("whitespace" in stringItem && stringItem.whitespace != null) {
-      result += parseWhitespace("", stringItem.whitespace, { isRichText });
-    } else if ("string" in stringItem && stringItem.string != null) {
-      for (const innerStringItem of stringItem.string) {
-        if (innerStringItem.string != null) {
-          let linkString = "";
-          for (const innerInnerStringItem of innerStringItem.string) {
-            if (innerInnerStringItem.payload != null) {
-              linkString += parseXMLString(innerInnerStringItem, {
-                isRichText,
-                parseEmail: false,
-              });
-            }
-          }
-          if (innerStringItem.rend != null) {
-            linkString = parseRenderOptions(linkString, innerStringItem.rend, {
-              isRichText,
-            });
-          }
-
-          const annotationMetadata = extractAnnotationMetadata(
-            innerStringItem,
-            { language: contentItem.lang, isRichText },
-          );
-
-          const links: Array<XMLRichTextLink> = [];
-          for (const rawLinks of Object.values(innerStringItem.links ?? {})) {
-            if (!Array.isArray(rawLinks)) {
-              continue;
-            }
-
-            for (const rawLink of rawLinks) {
-              if (isXMLRichTextLink(rawLink)) {
-                links.push(rawLink);
-              }
-            }
-          }
-          if (links.length === 0) {
-            result += applyWhitespaceToResult(
-              wrapWithTextStyling(linkString, annotationMetadata.textStyling),
-              innerStringItem.whitespace,
-              { isRichText },
-            );
-            continue;
-          }
-
-          for (const link of links) {
-            const linkContent =
-              link.identification != null ?
-                "content" in link.identification.label ?
-                  parseXMLContent(link.identification.label, {
-                    languages,
-                    isRichText,
-                  })
-                : MultilingualString.create(
-                    contentItem.lang,
-                    parseXMLString(link.identification.label, {
-                      isRichText,
-                      parseEmail: false,
-                    }),
-                    languages,
-                    { isRichText },
-                  )
-              : MultilingualString.create(contentItem.lang, "", languages, {
-                  isRichText,
-                });
-            const content = linkContent.getExactText(contentItem.lang) ?? "";
-
-            if ("type" in link && link.type != null) {
-              switch (link.type) {
-                case "IIIF":
-                case "image": {
-                  if ("rend" in link && link.rend === "inline") {
-                    const component = createMDXComponent("inlineImage", {
-                      uuid: getLinkStringProperty(link, "uuid"),
-                      href: getLinkStringProperty(link, "href") ?? undefined,
-                      height:
-                        getLinkStringProperty(link, "height") ?? undefined,
-                      width: getLinkStringProperty(link, "width") ?? undefined,
-                      content,
-                      text: linkString,
-                    });
-                    result += applyWhitespaceToResult(
-                      component,
-                      innerStringItem.whitespace,
-                      { isRichText },
-                    );
-                  } else if (link.publicationDateTime != null) {
-                    const component = createInternalLinkComponent({
-                      uuid: getLinkStringProperty(link, "uuid"),
-                      text: linkString,
-                      content,
-                      annotationMetadata,
-                    });
-                    result += applyWhitespaceToResult(
-                      component,
-                      innerStringItem.whitespace,
-                      { isRichText },
-                    );
-                  } else {
-                    const component = createMDXComponent("tooltipSpan", {
-                      uuid: getLinkStringProperty(link, "uuid"),
-                      text: linkString,
-                      content,
-                    });
-                    result += applyWhitespaceToResult(
-                      component,
-                      innerStringItem.whitespace,
-                      { isRichText },
-                    );
-                  }
-                  break;
-                }
-                case "internalDocument": {
-                  const component = createInternalLinkComponent({
-                    uuid: getLinkStringProperty(link, "uuid"),
-                    text: linkString,
-                    content,
-                    annotationMetadata,
-                    propertyMetadata: getFirstPropertyMetadata(innerStringItem),
-                  });
-                  result += applyWhitespaceToResult(
-                    component,
-                    innerStringItem.whitespace,
-                    { isRichText },
-                  );
-                  break;
-                }
-                case "externalDocument": {
-                  const component =
-                    link.publicationDateTime != null ?
-                      createMDXComponent("documentLink", {
-                        uuid: getLinkStringProperty(link, "uuid"),
-                        text: linkString,
-                        content,
-                      })
-                    : createMDXComponent("tooltipSpan", {
-                        uuid: getLinkStringProperty(link, "uuid"),
-                        text: linkString,
-                        content,
-                      });
-                  result += applyWhitespaceToResult(
-                    component,
-                    innerStringItem.whitespace,
-                    { isRichText },
-                  );
-                  break;
-                }
-                case "webpage": {
-                  const component = createMDXComponent("externalLink", {
-                    uuid: getLinkStringProperty(link, "uuid"),
-                    href: getLinkStringProperty(link, "href") ?? "#",
-                    text: linkString,
-                    content,
-                  });
-                  result += applyWhitespaceToResult(
-                    component,
-                    innerStringItem.whitespace,
-                    { isRichText },
-                  );
-                  break;
-                }
-              }
-            } else {
-              if (link.publicationDateTime != null) {
-                const component = createInternalLinkComponent({
-                  uuid: getLinkStringProperty(link, "uuid"),
-                  text: linkString,
-                  content,
-                  annotationMetadata,
-                });
-                result += applyWhitespaceToResult(
-                  component,
-                  innerStringItem.whitespace,
-                  { isRichText },
-                );
-              } else {
-                const component = createMDXComponent("tooltipSpan", {
-                  uuid: getLinkStringProperty(link, "uuid"),
-                  text: linkString,
-                  content,
-                });
-                result += applyWhitespaceToResult(
-                  component,
-                  innerStringItem.whitespace,
-                  { isRichText },
-                );
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return result;
+  return parseNestedStringItems(contentItem.string, contentItem, {
+    ...options,
+    parseEmail: true,
+  });
 }
 
 /**

@@ -85,6 +85,7 @@ import type {
   XMLLinkedSpatialUnit,
   XMLLinkedText,
   XMLLinkedTree,
+  XMLMetadata,
   XMLNote,
   XMLObservation,
   XMLPeriod,
@@ -104,12 +105,12 @@ import { DEFAULT_LANGUAGES } from "#/constants.js";
 import { MultilingualString } from "#/multilingual.js";
 import { parseXMLContent, parseXMLString } from "#/parsers/string.js";
 
-type ParserOptions<T extends ReadonlyArray<string>> = {
+export type ParserOptions<T extends ReadonlyArray<string>> = {
   languages: T;
   isRichText: boolean;
 };
 
-function getParserOptions<T extends ReadonlyArray<string>>(
+export function getParserOptions<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
 ): ParserOptions<T> {
   return { languages: options.languages, isRichText: options.isRichText };
@@ -149,7 +150,7 @@ type XMLItemLinkHierarchy = Partial<{
   dictionaryUnit: Array<XMLDictionaryUnit>;
 }>;
 
-type RawOchre = XMLData["result"]["ochre"];
+export type RawOchre = XMLData["result"]["ochre"];
 
 type PropertyDataType =
   | "string"
@@ -226,7 +227,7 @@ const PROPERTY_DATA_TYPES = [
   "boolean",
 ] as const satisfies ReadonlyArray<PropertyDataType>;
 
-function parseOptionalDate(value: string | undefined): Date | null {
+export function parseOptionalDate(value: string | undefined): Date | null {
   if (value == null || value === "") {
     return null;
   }
@@ -244,7 +245,9 @@ function parseOptionalDateLike(
   return parseOptionalDate(value);
 }
 
-function parseNumber(value: string | XMLString | undefined): number | null {
+export function parseNumber(
+  value: string | XMLString | undefined,
+): number | null {
   if (value == null || value === "") {
     return null;
   }
@@ -253,15 +256,17 @@ function parseNumber(value: string | XMLString | undefined): number | null {
   return Number.isNaN(parsedValue) ? null : parsedValue;
 }
 
-function parseNumberOrZero(value: string | XMLString | undefined): number {
+export function parseNumberOrZero(
+  value: string | XMLString | undefined,
+): number {
   return parseNumber(value) ?? 0;
 }
 
-function parseBoolean(value: string | undefined): boolean {
+export function parseBoolean(value: string | undefined): boolean {
   return value === "true";
 }
 
-function parseStringLike(
+export function parseStringLike(
   value: XMLString | string | undefined,
   options: { isRichText: boolean; parseEmail?: boolean },
 ): string | null {
@@ -344,7 +349,7 @@ function parseContentLikeText<T extends ReadonlyArray<string>>(
   return parseContentLike(value, options)?.getText().trim() ?? "";
 }
 
-function parseIdentification<T extends ReadonlyArray<string>>(
+export function parseIdentification<T extends ReadonlyArray<string>>(
   rawIdentification: XMLIdentification,
   options: ParserOptions<T>,
 ): Identification<T> {
@@ -888,7 +893,7 @@ function parseNote<T extends ReadonlyArray<string>>(
   return { number: parseNumberOrZero(rawNote.noteNo), title, content, authors };
 }
 
-function parseNotes<T extends ReadonlyArray<string>>(
+export function parseNotes<T extends ReadonlyArray<string>>(
   rawNotes: { note: Array<XMLNote> } | undefined,
   options: ParserOptions<T>,
 ): Array<Note<T>> {
@@ -991,7 +996,7 @@ function parseProperty<T extends ReadonlyArray<string>>(
   };
 }
 
-function parseProperties<T extends ReadonlyArray<string>>(
+export function parseProperties<T extends ReadonlyArray<string>>(
   rawProperties: { property: Array<XMLProperty> } | undefined,
   options: ParserOptions<T>,
 ): Array<Property<T>> {
@@ -1699,7 +1704,7 @@ function parseDictionaryUnitItemLink<T extends ReadonlyArray<string>>(
   return parseBaseItemLink("dictionaryUnit", rawDictionaryUnit, options);
 }
 
-function parseLinks<T extends ReadonlyArray<string>>(
+export function parseLinks<T extends ReadonlyArray<string>>(
   rawLinks: XMLLink | XMLDataItem | undefined,
   options: ParserOptions<T>,
 ): ItemLinks<T> {
@@ -1791,7 +1796,7 @@ function parsePeriodList<T extends ReadonlyArray<string>>(
   return periods;
 }
 
-function parseBibliographyList<T extends ReadonlyArray<string>>(
+export function parseBibliographyList<T extends ReadonlyArray<string>>(
   rawBibliographies: { bibliography: Array<XMLBibliography> } | undefined,
   options: ParserOptions<T>,
 ): Array<Bibliography<T, "nested">> {
@@ -1803,7 +1808,7 @@ function parseBibliographyList<T extends ReadonlyArray<string>>(
   return bibliographies;
 }
 
-function parsePersonList<T extends ReadonlyArray<string>>(
+export function parsePersonList<T extends ReadonlyArray<string>>(
   rawPersons: Array<XMLPerson> | undefined,
   options: ParserOptions<T>,
 ): Array<Person<T, "nested">> {
@@ -2385,7 +2390,10 @@ function parseText<T extends ReadonlyArray<string>>(
   };
 }
 
-function parseMetadataLanguages(rawOchre: RawOchre): Array<string> {
+export function parseMetadataLanguages(rawOchre: {
+  metadata: XMLMetadata;
+  languages?: string;
+}): Array<string> {
   const languages: Array<string> = [];
 
   for (const language of rawOchre.metadata.language ?? []) {
@@ -2410,7 +2418,7 @@ function parseMetadataLanguages(rawOchre: RawOchre): Array<string> {
   return languages.length > 0 ? languages : [...DEFAULT_LANGUAGES];
 }
 
-function resolveLanguages<T extends ReadonlyArray<string>>(
+export function resolveLanguages<T extends ReadonlyArray<string>>(
   requestedLanguages: T,
   metadataLanguages: Array<string>,
 ): T {
@@ -2443,8 +2451,8 @@ function resolveLanguages<T extends ReadonlyArray<string>>(
   return requestedLanguages;
 }
 
-function resolveDefaultLanguage<T extends ReadonlyArray<string>>(
-  rawOchre: RawOchre,
+export function resolveDefaultLanguage<T extends ReadonlyArray<string>>(
+  rawOchre: { metadata: XMLMetadata },
   languages: T,
 ): T[number] {
   for (const language of rawOchre.metadata.language ?? []) {
@@ -2480,8 +2488,8 @@ function parseMetadataPublisher(
   return parseStringLike(publisher, { isRichText: false }) ?? "";
 }
 
-function parseMetadata<T extends ReadonlyArray<string>>(
-  rawOchre: RawOchre,
+export function parseMetadata<T extends ReadonlyArray<string>>(
+  rawOchre: { uuidBelongsTo: string; metadata: XMLMetadata },
   options: ParserOptions<T>,
   defaultLanguage: T[number],
 ): Metadata<T> {
