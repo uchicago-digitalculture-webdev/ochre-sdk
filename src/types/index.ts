@@ -123,8 +123,13 @@ export type BelongsTo = { uuid: string; abbreviation: string };
 export type ItemLocation = "topLevel" | "nested";
 
 type ItemOrigin<T extends ReadonlyArray<string>, U extends ItemLocation> =
-  U extends "topLevel" ? { belongsTo: BelongsTo; metadata: Metadata<T> }
-  : { belongsTo: null; metadata: null };
+  U extends "topLevel" ?
+    {
+      belongsTo: BelongsTo;
+      metadata: Metadata<T>;
+      persistentUrl: string | null;
+    }
+  : { belongsTo: null; metadata: null; persistentUrl: null };
 
 /**
  *  License in OCHRE

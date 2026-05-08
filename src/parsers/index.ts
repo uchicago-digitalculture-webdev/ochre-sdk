@@ -107,7 +107,11 @@ import type {
 } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES } from "#/constants.js";
 import { MultilingualString } from "#/parsers/multilingual.js";
-import { parseXMLContent, parseXMLString } from "#/parsers/string.js";
+import {
+  parseXMLContent,
+  parseXMLString,
+  transformPermanentIdentificationUrl,
+} from "#/parsers/string.js";
 
 export type ParserOptions<T extends ReadonlyArray<string>> = {
   languages: T;
@@ -523,6 +527,7 @@ function parseBaseItem<U extends DataCategory, T extends ReadonlyArray<string>>(
     category,
     belongsTo: null,
     metadata: null,
+    persistentUrl: null,
     publicationDateTime: parseOptionalDate(rawItem.publicationDateTime),
     context: rawItem.context == null ? null : parseContext(rawItem.context),
     date: parseOptionalDateLike(rawItem.date),
@@ -715,13 +720,17 @@ function parseImage<T extends ReadonlyArray<string>>(
       rawImage.identification == null ?
         null
       : parseIdentification(rawImage.identification, options),
-    href: rawImage.href ?? null,
+    href: parseHref(rawImage.href),
     htmlImgSrcPrefix: rawImage.htmlImgSrcPrefix ?? null,
     height: parseNumber(rawImage.height),
     width: parseNumber(rawImage.width),
     fileSize: parseNumber(rawImage.fileSize),
     base64: rawImage.payload ?? null,
   };
+}
+
+function parseHref(href: string | undefined): string | null {
+  return href == null ? null : transformPermanentIdentificationUrl(href);
 }
 
 function parseCoordinatesSource<T extends ReadonlyArray<string>>(
@@ -2937,5 +2946,6 @@ export function parseItem(
       abbreviation: rawOchre.belongsTo,
     },
     metadata: parseMetadata(rawOchre, parserOptions, defaultLanguage),
+    persistentUrl: rawOchre.persistentUrl ?? null,
   };
 }
