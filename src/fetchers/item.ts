@@ -23,7 +23,7 @@ type FetchFunction = (
 
 type FetchItemBaseOptions<
   TLanguages extends ReadonlyArray<string> | undefined = undefined,
-> = { languages?: TLanguages; isRichText?: boolean; fetch?: FetchFunction };
+> = { languages?: TLanguages; fetch?: FetchFunction };
 
 type FetchItemRuntimeOptions = FetchItemBaseOptions<ReadonlyArray<string>> & {
   category?: DataCategory;
@@ -163,7 +163,6 @@ export function withLanguages<const TLanguages extends ReadonlyArray<string>>(
  * @param options.category - The category of the OCHRE item to fetch
  * @param options.itemCategory - The category of items inside the OCHRE item to fetch. Only valid for Trees and Sets. Tree accepts one category; Set accepts one category or an array.
  * @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
- * @param options.isRichText - Whether to parse the text as rich text
  * @param options.fetch - Custom fetch function to use instead of the default fetch
  * @returns An object containing the parsed item
  */
@@ -274,7 +273,6 @@ export async function fetchItem(
       category,
       itemCategory: options?.itemCategory,
       languages,
-      isRichText: options?.isRichText ?? false,
     });
 
     return { item: parsedItem, error: null };

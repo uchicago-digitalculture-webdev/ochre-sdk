@@ -241,7 +241,7 @@ function isXMLContent(value: XMLContent | XMLString): value is XMLContent {
 
 function parseStringLikeForTest(
   value: XMLString | string | undefined,
-  options?: { isRichText: boolean; parseEmail?: boolean },
+  options?: { parseEmail?: boolean },
 ): string | null {
   if (value == null) {
     return null;
@@ -251,10 +251,8 @@ function parseStringLikeForTest(
     return value;
   }
 
-  return parseXMLString(value, {
-    isRichText: options?.isRichText ?? true,
-    parseEmail: options?.parseEmail ?? false,
-  });
+  return parseXMLString(value, { parseEmail: options?.parseEmail ?? false })
+    .text;
 }
 
 function transformPermanentIdentificationUrlForTest(
@@ -265,7 +263,7 @@ function transformPermanentIdentificationUrlForTest(
 
 function parseContentLikeForTest(
   value: XMLContent | XMLString | string | undefined,
-  options?: { isRichText: boolean; parseEmail?: boolean },
+  options?: { parseEmail?: boolean },
 ): string | null {
   if (value == null) {
     return null;
@@ -276,10 +274,7 @@ function parseContentLikeForTest(
   }
 
   if (isXMLContent(value)) {
-    return parseXMLContent(value, {
-      languages: TEST_LANGUAGES,
-      isRichText: options?.isRichText ?? true,
-    }).getText("eng");
+    return parseXMLContent(value, { languages: TEST_LANGUAGES }).getText("eng");
   }
 
   return parseStringLikeForTest(value, options);
@@ -321,7 +316,6 @@ function parseRawData(
   return parseItem(rawData, {
     category,
     languages: TEST_LANGUAGES,
-    isRichText: true,
   }) as TopLevelItemForTest;
 }
 
@@ -380,18 +374,14 @@ function expectMetadataMatchesRaw(
       rawMetadata.publisher[0]
     : rawMetadata.publisher;
 
-  expect(metadata.dataset).toBe(
-    parseStringLikeForTest(rawMetadata.dataset, { isRichText: false }),
-  );
+  expect(metadata.dataset).toBe(parseStringLikeForTest(rawMetadata.dataset));
   expect(metadata.description).toBe(
-    parseStringLikeForTest(rawMetadata.description, { isRichText: false }),
+    parseStringLikeForTest(rawMetadata.description),
   );
-  expect(metadata.publisher).toBe(
-    parseStringLikeForTest(rawPublisher, { isRichText: false }),
-  );
+  expect(metadata.publisher).toBe(parseStringLikeForTest(rawPublisher));
   expect(metadata.identifier).toBe(
     transformPermanentIdentificationUrlForTest(
-      parseStringLikeForTest(rawMetadata.identifier, { isRichText: false }),
+      parseStringLikeForTest(rawMetadata.identifier),
     ),
   );
 
@@ -423,25 +413,25 @@ function expectIdentificationMatchesRaw(
   }
 
   expect(parsedIdentification.code).toBe(
-    parseStringLikeForTest(rawIdentification.code, { isRichText: false }),
+    parseStringLikeForTest(rawIdentification.code),
   );
   expect(parsedIdentification.email).toBe(
-    parseStringLikeForTest(rawIdentification.email, { isRichText: false }),
+    parseStringLikeForTest(rawIdentification.email),
   );
   expect(parsedIdentification.website).toBe(
-    parseStringLikeForTest(rawIdentification.website, { isRichText: false }),
+    parseStringLikeForTest(rawIdentification.website),
   );
 
   const labelAliases =
     isXMLContent(rawIdentification.label) ?
-      extractAliases(rawIdentification.label, { isRichText: true })
+      extractAliases(rawIdentification.label)
     : null;
   const abbreviationAliases =
     (
       rawIdentification.abbreviation != null &&
       isXMLContent(rawIdentification.abbreviation)
     ) ?
-      extractAliases(rawIdentification.abbreviation, { isRichText: true })
+      extractAliases(rawIdentification.abbreviation)
     : null;
 
   expect(parsedIdentification.label.getAliases()).toStrictEqual(
@@ -555,9 +545,7 @@ function expectBaseItemMatchesRaw(
 
   if (rawItem.availability != null) {
     expect(parsedItem.license?.content).toBe(
-      parseStringLikeForTest(rawItem.availability.license, {
-        isRichText: false,
-      }),
+      parseStringLikeForTest(rawItem.availability.license),
     );
     expect(parsedItem.license?.target).toBe(
       rawItem.availability.license.target ?? null,
@@ -685,7 +673,7 @@ function expectNotesMatchRaw(
     const parsedNote = parsedNotes[index]!;
     const expectedContent =
       rawNote.content == null ?
-        parseXMLString(rawNote, { isRichText: true, parseEmail: true })
+        parseXMLString(rawNote, { parseEmail: true }).text
       : parseContentLikeForTest(rawNote as XMLContent);
 
     expect(parsedNote.number).toBe(parseNumberOrZero(rawNote.noteNo));
@@ -1022,22 +1010,16 @@ function expectCategorySpecificFields(
         expect(parsedItem.address).toBeNull();
       } else {
         expect(parsedItem.address?.country).toBe(
-          parseStringLikeForTest(rawPerson.address.country, {
-            isRichText: false,
-          }),
+          parseStringLikeForTest(rawPerson.address.country),
         );
         expect(parsedItem.address?.city).toBe(
-          parseStringLikeForTest(rawPerson.address.city, { isRichText: false }),
+          parseStringLikeForTest(rawPerson.address.city),
         );
         expect(parsedItem.address?.state).toBe(
-          parseStringLikeForTest(rawPerson.address.state, {
-            isRichText: false,
-          }),
+          parseStringLikeForTest(rawPerson.address.state),
         );
         expect(parsedItem.address?.postalCode).toBe(
-          parseStringLikeForTest(rawPerson.address.postalCode, {
-            isRichText: false,
-          }),
+          parseStringLikeForTest(rawPerson.address.postalCode),
         );
       }
       expect(parsedItem.coordinates).toHaveLength(
@@ -1288,7 +1270,6 @@ describe("fetchItem", () => {
       const result = await fetchItem(uuid, {
         category: "resource",
         languages: TEST_LANGUAGES,
-        isRichText: true,
       });
 
       expect(result.error).toBeNull();

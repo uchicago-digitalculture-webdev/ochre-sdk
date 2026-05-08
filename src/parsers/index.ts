@@ -113,15 +113,12 @@ import {
   transformPermanentIdentificationUrl,
 } from "#/parsers/string.js";
 
-export type ParserOptions<T extends ReadonlyArray<string>> = {
-  languages: T;
-  isRichText: boolean;
-};
+export type ParserOptions<T extends ReadonlyArray<string>> = { languages: T };
 
 export function getParserOptions<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
 ): ParserOptions<T> {
-  return { languages: options.languages, isRichText: options.isRichText };
+  return { languages: options.languages };
 }
 
 type XMLItemHierarchy = Partial<{
@@ -282,7 +279,7 @@ export function parseBoolean(value: string | undefined): boolean {
 
 export function parseStringLike(
   value: XMLString | string | undefined,
-  options: { isRichText: boolean; parseEmail?: boolean },
+  options: { parseEmail?: boolean } = {},
 ): string | null {
   if (value == null) {
     return null;
@@ -292,10 +289,8 @@ export function parseStringLike(
     return value;
   }
 
-  return parseXMLString(value, {
-    isRichText: options.isRichText,
-    parseEmail: options.parseEmail ?? false,
-  });
+  return parseXMLString(value, { parseEmail: options.parseEmail ?? false })
+    .text;
 }
 
 function isXMLContent(value: XMLContent | XMLString): value is XMLContent {
@@ -303,17 +298,17 @@ function isXMLContent(value: XMLContent | XMLString): value is XMLContent {
 }
 
 function multilingualFromText<T extends ReadonlyArray<string>>(
-  text: string,
+  text: string | { text: string; richText: string },
   options: ParserOptions<T>,
 ): MultilingualString<T> {
-  const content: Partial<Record<T[number], string>> = {};
+  const content: Partial<
+    Record<T[number], string | { text: string; richText: string }>
+  > = {};
   for (const language of options.languages) {
     content[language as T[number]] = text;
   }
 
-  return MultilingualString.fromObject(content, options.languages, {
-    isRichText: options.isRichText,
-  });
+  return MultilingualString.fromObject(content, options.languages);
 }
 
 function parseContentLike<T extends ReadonlyArray<string>>(
@@ -330,18 +325,12 @@ function parseContentLike<T extends ReadonlyArray<string>>(
 
   if (!isXMLContent(value)) {
     return multilingualFromText(
-      parseXMLString(value, {
-        isRichText: options.isRichText,
-        parseEmail: true,
-      }),
+      parseXMLString(value, { parseEmail: true }),
       options,
     );
   }
 
-  return parseXMLContent<T>(value, {
-    languages: options.languages,
-    isRichText: options.isRichText,
-  });
+  return parseXMLContent<T>(value, { languages: options.languages });
 }
 
 function parseRequiredContentLike<T extends ReadonlyArray<string>>(
@@ -350,9 +339,7 @@ function parseRequiredContentLike<T extends ReadonlyArray<string>>(
 ): MultilingualString<T> {
   return (
     parseContentLike(value, options) ??
-    MultilingualString.empty(options.languages, {
-      isRichText: options.isRichText,
-    })
+    MultilingualString.empty(options.languages)
   );
 }
 
@@ -376,9 +363,9 @@ export function parseIdentification<T extends ReadonlyArray<string>>(
   return {
     label,
     abbreviation,
-    code: parseStringLike(rawIdentification.code, { isRichText: false }),
-    email: parseStringLike(rawIdentification.email, { isRichText: false }),
-    website: parseStringLike(rawIdentification.website, { isRichText: false }),
+    code: parseStringLike(rawIdentification.code),
+    email: parseStringLike(rawIdentification.email),
+    website: parseStringLike(rawIdentification.website),
   };
 }
 
@@ -386,9 +373,7 @@ function emptyIdentification<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
 ): Identification<T> {
   return {
-    label: MultilingualString.empty(options.languages, {
-      isRichText: options.isRichText,
-    }),
+    label: MultilingualString.empty(options.languages),
     abbreviation: null,
     code: null,
     email: null,
@@ -535,10 +520,7 @@ function parseBaseItem<U extends DataCategory, T extends ReadonlyArray<string>>(
       rawItem.availability == null ?
         null
       : {
-          content:
-            parseStringLike(rawItem.availability.license, {
-              isRichText: false,
-            }) ?? "",
+          content: parseStringLike(rawItem.availability.license) ?? "",
           target: rawItem.availability.license.target ?? null,
         },
     copyright:
@@ -757,9 +739,7 @@ function parseCoordinatesSource<T extends ReadonlyArray<string>>(
         label: parseRequiredContentLike(source.label, options),
         value:
           value == null ?
-            MultilingualString.empty(options.languages, {
-              isRichText: options.isRichText,
-            })
+            MultilingualString.empty(options.languages)
           : parseRequiredContentLike(value, options),
       };
     }
@@ -901,10 +881,7 @@ function parseNote<T extends ReadonlyArray<string>>(
   const content =
     rawNote.content == null ?
       multilingualFromText(
-        parseXMLString(rawNote, {
-          isRichText: options.isRichText,
-          parseEmail: true,
-        }),
+        parseXMLString(rawNote, { parseEmail: true }),
         options,
       )
     : parseRequiredContentLike(rawNote as XMLContent, options);
@@ -1582,12 +1559,8 @@ function parseBibliographyItemLink<T extends ReadonlyArray<string>>(
     zoteroId: rawBibliography.zoteroId ?? null,
     citationDetails: rawBibliography.citationDetails ?? null,
     citationFormat: parseContentLike(rawBibliography.citationFormat, options),
-    citationFormatSpan: parseStringLike(rawBibliography.citationFormatSpan, {
-      isRichText: options.isRichText,
-    }),
-    referenceFormatDiv: parseStringLike(rawBibliography.referenceFormatDiv, {
-      isRichText: options.isRichText,
-    }),
+    citationFormatSpan: parseStringLike(rawBibliography.citationFormatSpan),
+    referenceFormatDiv: parseStringLike(rawBibliography.referenceFormatDiv),
     image: parseImage(rawBibliography.image, options),
     sourceDocument: parseBibliographySourceDocument(
       rawBibliography.sourceDocument,
@@ -2153,12 +2126,8 @@ function parseBibliography<T extends ReadonlyArray<string>>(
     ...parseBaseItem("bibliography", rawBibliography, options),
     citationDetails: rawBibliography.citationDetails ?? null,
     citationFormat: parseContentLike(rawBibliography.citationFormat, options),
-    citationFormatSpan: parseStringLike(rawBibliography.citationFormatSpan, {
-      isRichText: options.isRichText,
-    }),
-    referenceFormatDiv: parseStringLike(rawBibliography.referenceFormatDiv, {
-      isRichText: options.isRichText,
-    }),
+    citationFormatSpan: parseStringLike(rawBibliography.citationFormatSpan),
+    referenceFormatDiv: parseStringLike(rawBibliography.referenceFormatDiv),
     image: parseImage(rawBibliography.image, options),
     sourceDocument: parseBibliographySourceDocument(
       rawBibliography.sourceDocument,
@@ -2288,16 +2257,10 @@ function parsePerson<T extends ReadonlyArray<string>>(
       rawPerson.address == null ?
         null
       : {
-          country: parseStringLike(rawPerson.address.country, {
-            isRichText: false,
-          }),
-          city: parseStringLike(rawPerson.address.city, { isRichText: false }),
-          state: parseStringLike(rawPerson.address.state, {
-            isRichText: false,
-          }),
-          postalCode: parseStringLike(rawPerson.address.postalCode, {
-            isRichText: false,
-          }),
+          country: parseStringLike(rawPerson.address.country),
+          city: parseStringLike(rawPerson.address.city),
+          state: parseStringLike(rawPerson.address.state),
+          postalCode: parseStringLike(rawPerson.address.postalCode),
         },
     coordinates: parseCoordinates(rawPerson.coordinates, options),
     content:
@@ -2416,7 +2379,7 @@ export function parseMetadataLanguages(rawOchre: {
   const languages: Array<string> = [];
 
   for (const language of rawOchre.metadata.language ?? []) {
-    const parsedLanguage = parseStringLike(language, { isRichText: false });
+    const parsedLanguage = parseStringLike(language);
     if (parsedLanguage != null) {
       languages.push(parsedLanguage);
     }
@@ -2475,7 +2438,7 @@ export function resolveDefaultLanguage<T extends ReadonlyArray<string>>(
   languages: T,
 ): T[number] {
   for (const language of rawOchre.metadata.language ?? []) {
-    const parsedLanguage = parseStringLike(language, { isRichText: false });
+    const parsedLanguage = parseStringLike(language);
     if (
       parsedLanguage != null &&
       language.default === "true" &&
@@ -2504,7 +2467,7 @@ function parseMetadataPublisher(
 ): string {
   const publisher =
     Array.isArray(rawPublisher) ? rawPublisher[0] : rawPublisher;
-  return parseStringLike(publisher, { isRichText: false }) ?? "";
+  return parseStringLike(publisher) ?? "";
 }
 
 export function parseMetadata<T extends ReadonlyArray<string>>(
@@ -2512,16 +2475,15 @@ export function parseMetadata<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
   defaultLanguage: T[number],
 ): Metadata<T> {
-  const metadataOptions = { ...options, isRichText: false };
+  const metadataOptions = options;
   const rawMetadata = rawOchre.metadata;
 
   return {
-    dataset: parseStringLike(rawMetadata.dataset, { isRichText: false }) ?? "",
-    description:
-      parseStringLike(rawMetadata.description, { isRichText: false }) ?? "",
+    dataset: parseStringLike(rawMetadata.dataset) ?? "",
+    description: parseStringLike(rawMetadata.description) ?? "",
     publisher: parseMetadataPublisher(rawMetadata.publisher),
     identifier: transformPermanentIdentificationUrl(
-      parseStringLike(rawMetadata.identifier, { isRichText: false }) ?? "",
+      parseStringLike(rawMetadata.identifier) ?? "",
     ),
     project:
       rawMetadata.project == null ?
@@ -2532,9 +2494,7 @@ export function parseMetadata<T extends ReadonlyArray<string>>(
             rawMetadata.project.identification,
             metadataOptions,
           ),
-          website: parseStringLike(rawMetadata.project.identification.website, {
-            isRichText: false,
-          }),
+          website: parseStringLike(rawMetadata.project.identification.website),
           dateFormat: rawMetadata.project.dateFormat ?? null,
           page: rawMetadata.project.page ?? null,
         },
@@ -2736,7 +2696,7 @@ export function parseDataItems<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
   rawItems: XMLItemLinks | undefined,
-  options: { itemCategory?: TItemCategory; languages: T; isRichText?: boolean },
+  options: { itemCategory?: TItemCategory; languages: T },
 ): Array<
   Item<
     DataCategory,
@@ -2747,11 +2707,7 @@ export function parseDataItems<
 > {
   const parserOptions: ParserOptions<T> & {
     itemCategory?: HierarchyItemCategoryOption<DataCategory>;
-  } = {
-    languages: options.languages,
-    isRichText: options.isRichText ?? false,
-    itemCategory: options.itemCategory,
-  };
+  } = { languages: options.languages, itemCategory: options.itemCategory };
   const items: Array<Item<DataCategory, SetItemDataCategory, T, "nested">> = [];
 
   for (const tree of rawItems?.tree ?? []) {
@@ -2827,16 +2783,9 @@ export function parseSetDataItems<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
   rawItems: XMLSetItems | undefined,
-  options: {
-    itemCategories?: TItemCategories;
-    languages: T;
-    isRichText?: boolean;
-  },
+  options: { itemCategories?: TItemCategories; languages: T },
 ): Array<SetItem<SetItemCategoryFromCategories<TItemCategories>, T>> {
-  const parserOptions: ParserOptions<T> = {
-    languages: options.languages,
-    isRichText: options.isRichText ?? false,
-  };
+  const parserOptions: ParserOptions<T> = { languages: options.languages };
   const categories = normalizeSetItemCategories(options.itemCategories);
 
   return parseSetItemHierarchy(
@@ -2874,12 +2823,7 @@ export function parseItem<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
   rawData: XMLData,
-  options: {
-    category?: undefined;
-    itemCategory?: TItemCategory;
-    languages: T;
-    isRichText?: boolean;
-  },
+  options: { category?: undefined; itemCategory?: TItemCategory; languages: T },
 ): Item<
   DataCategory,
   HierarchyItemCategoryFromOption<DataCategory, TItemCategory>,
@@ -2893,12 +2837,7 @@ export function parseItem<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
   rawData: XMLData,
-  options: {
-    category: TCategory;
-    itemCategory?: TItemCategory;
-    languages: T;
-    isRichText?: boolean;
-  },
+  options: { category: TCategory; itemCategory?: TItemCategory; languages: T },
 ): Item<
   TCategory,
   HierarchyItemCategoryFromOption<TCategory, TItemCategory>,
@@ -2910,7 +2849,6 @@ export function parseItem(
     category?: DataCategory;
     itemCategory?: HierarchyItemCategoryOption<DataCategory>;
     languages: ReadonlyArray<string>;
-    isRichText?: boolean;
   },
 ): Item<DataCategory, SetItemDataCategory, ReadonlyArray<string>>;
 export function parseItem(
@@ -2919,7 +2857,6 @@ export function parseItem(
     category?: DataCategory;
     itemCategory?: HierarchyItemCategoryOption<DataCategory>;
     languages: ReadonlyArray<string>;
-    isRichText?: boolean;
   },
 ): Item<DataCategory, SetItemDataCategory, ReadonlyArray<string>> {
   const rawOchre = rawData.result.ochre;
@@ -2927,11 +2864,7 @@ export function parseItem(
   const languagesToUse = resolveLanguages(options.languages, metadataLanguages);
   const parserOptions: ParserOptions<ReadonlyArray<string>> & {
     itemCategory?: HierarchyItemCategoryOption<DataCategory>;
-  } = {
-    languages: languagesToUse,
-    isRichText: options.isRichText ?? false,
-    itemCategory: options.itemCategory,
-  };
+  } = { languages: languagesToUse, itemCategory: options.itemCategory };
   const category =
     options.category ??
     normalizeCategory(rawOchre.metadata.item?.category) ??

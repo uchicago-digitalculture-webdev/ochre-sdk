@@ -60,7 +60,6 @@ import { componentSchema } from "#/schemas.js";
 
 const FALLBACK_WEBSITE_OPTIONS: ParserOptions<ReadonlyArray<string>> = {
   languages: ["eng"],
-  isRichText: false,
 };
 
 function parseWebsiteLinks<T extends ReadonlyArray<string>>(
@@ -201,16 +200,10 @@ function parseStringContent(
   }
 
   if (isXMLContent(value)) {
-    return parseXMLContent(value, {
-      languages: options.languages,
-      isRichText: options.isRichText,
-    }).getText();
+    return parseXMLContent(value, { languages: options.languages }).getText();
   }
 
-  return parseXMLString(value, {
-    isRichText: options.isRichText,
-    parseEmail: true,
-  });
+  return parseXMLString(value, { parseEmail: true }).text;
 }
 
 function transformPermanentIdentificationUrlToItemLink(url: string): string {
@@ -225,10 +218,7 @@ function parseLicense(
   }
 
   return {
-    content: parseXMLString(availability.license, {
-      isRichText: false,
-      parseEmail: false,
-    }),
+    content: parseXMLString(availability.license, { parseEmail: false }).text,
     target: availability.license.target ?? null,
   };
 }
@@ -3565,20 +3555,14 @@ function parseFilterContexts<T extends ReadonlyArray<string>>(
 
 export function parseWebsite<
   const T extends ReadonlyArray<string> = ReadonlyArray<string>,
->(
-  data: XMLWebsiteData,
-  options?: { languages?: T; isRichText?: boolean },
-): Website<T> {
+>(data: XMLWebsiteData, options?: { languages?: T }): Website<T> {
   const rawOchre = data.result.ochre;
   const metadataLanguages = parseMetadataLanguages(rawOchre);
   const languages = resolveLanguages(
     options?.languages ?? ([] as unknown as T),
     metadataLanguages,
   );
-  const parserOptions: ParserOptions<T> = {
-    languages,
-    isRichText: options?.isRichText ?? false,
-  };
+  const parserOptions: ParserOptions<T> = { languages };
   const defaultLanguage = resolveDefaultLanguage(rawOchre, languages);
   const websiteTree = rawOchre.tree[0];
   if (websiteTree == null) {

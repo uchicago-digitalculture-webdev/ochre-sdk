@@ -21,7 +21,7 @@ type FetchFunction = (
 
 type FetchItemLinksBaseOptions<
   TLanguages extends ReadonlyArray<string> | undefined = undefined,
-> = { languages?: TLanguages; isRichText?: boolean; fetch?: FetchFunction };
+> = { languages?: TLanguages; fetch?: FetchFunction };
 
 type FetchItemLinksRuntimeOptions = FetchItemLinksBaseOptions<
   ReadonlyArray<string>
@@ -147,7 +147,6 @@ return
  * @param options - Fetch and parser options
  * @param options.itemCategory - The category of items inside linked Trees/Sets to parse. Tree accepts one category; Set accepts one category or an array.
  * @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
- * @param options.isRichText - Whether to parse the text as rich text
  * @param options.fetch - Custom fetch function to use instead of the default fetch
  * @returns An object containing parsed linked items
  */
@@ -222,7 +221,6 @@ export async function fetchItemLinks(
     const items = parseDataItems(output.result.ochre.items, {
       itemCategory: options?.itemCategory,
       languages,
-      isRichText: options?.isRichText ?? false,
     });
 
     return { items, error: null };

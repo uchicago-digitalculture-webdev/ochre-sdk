@@ -15,7 +15,7 @@ type FetchFunction = (
 
 type FetchGalleryBaseOptions<
   TLanguages extends ReadonlyArray<string> | undefined = undefined,
-> = { languages?: TLanguages; isRichText?: boolean; fetch?: FetchFunction };
+> = { languages?: TLanguages; fetch?: FetchFunction };
 
 type FetchGalleryRuntimeOptions = FetchGalleryBaseOptions<
   ReadonlyArray<string>
@@ -125,7 +125,6 @@ function buildXQuery(params: {
  * @param params.perPage - The number of items per page
  * @param options - The options for the fetch
  * @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
- * @param options.isRichText - Whether to parse rich text fields as HTML strings
  * @param options.fetch - The fetch function to use
  * @returns The parsed gallery or an error message if the fetch/parse fails
  */
@@ -173,10 +172,7 @@ export async function fetchGallery(
     }
 
     const languages = resolveGalleryLanguages(output, requestedLanguages);
-    const gallery = parseGallery(output, {
-      languages,
-      isRichText: options?.isRichText ?? false,
-    });
+    const gallery = parseGallery(output, { languages });
 
     return { gallery, error: null };
   } catch (error) {

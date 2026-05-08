@@ -21,7 +21,7 @@ export async function fetchWebsite<
   const T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
   abbreviation: string,
-  options?: { fetch?: FetchFunction; languages?: T; isRichText?: boolean },
+  options?: { fetch?: FetchFunction; languages?: T },
 ): Promise<
   { website: Website<T>; error: null } | { website: null; error: string }
 > {
@@ -46,10 +46,7 @@ export async function fetchWebsite<
       throw new Error("Failed to parse website XML");
     }
 
-    const website = parseWebsite(output, {
-      languages: options?.languages,
-      isRichText: options?.isRichText,
-    });
+    const website = parseWebsite(output, { languages: options?.languages });
 
     return { website, error: null };
   } catch (error) {

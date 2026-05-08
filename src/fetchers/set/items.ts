@@ -30,7 +30,7 @@ type FetchFunction = (
 
 type FetchSetItemsBaseOptions<
   TLanguages extends ReadonlyArray<string> | undefined = undefined,
-> = { languages?: TLanguages; isRichText?: boolean; fetch?: FetchFunction };
+> = { languages?: TLanguages; fetch?: FetchFunction };
 
 type FetchSetItemsRuntimeOptions = FetchSetItemsBaseOptions<
   ReadonlyArray<string>
@@ -609,7 +609,6 @@ export async function fetchSetItems(
     const items = parseSetDataItems(output.result.ochre.items, {
       itemCategories,
       languages,
-      isRichText: options?.isRichText ?? false,
     });
 
     const itemsByUuid = new Map<

@@ -279,7 +279,6 @@ describe("parseWebsite", () => {
 
     const website = parseWebsite(parsedSchema.output, {
       languages: ["eng"] as const,
-      isRichText: true,
     });
 
     expect(website.uuid).toBe(UUID.website);
@@ -322,7 +321,7 @@ describe("parseWebsite", () => {
     }
 
     expect(element.variant).toStrictEqual({ name: "banner" });
-    expect(element.content.getText()).toContain(
+    expect(element.content.getRichText()).toContain(
       '<ExternalLink href="https://example.com/resource" content="Linked resource">Linked callout</ExternalLink>',
     );
   });

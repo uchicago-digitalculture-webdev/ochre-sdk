@@ -194,7 +194,6 @@ describe("parseItem", () => {
       category: "tree",
       itemCategory: "resource",
       languages: ["eng", "spa"] as const,
-      isRichText: true,
     });
 
     expect(tree.belongsTo).toStrictEqual({
@@ -299,7 +298,6 @@ describe("parseItem", () => {
     const parsedResource = parseItem(rawData, {
       category: "resource",
       languages: ["eng"] as const,
-      isRichText: true,
     });
 
     expect(parsedResource.links).toHaveLength(3);
@@ -447,7 +445,6 @@ describe("parseItem", () => {
     const resource = parseItem(rawData, {
       category: "resource",
       languages: ["eng", "spa"] as const,
-      isRichText: true,
     });
 
     expect(resource.identification.label.getExactText("eng")).toBe(
@@ -458,8 +455,12 @@ describe("parseItem", () => {
       "Secondary label",
     ]);
     expect(resource.identification.label.getExactEntries("eng")).toStrictEqual([
-      { text: "Primary label", isPrimary: true },
-      { text: "Secondary label", isPrimary: false },
+      { text: "Primary label", richText: "Primary label", isPrimary: true },
+      {
+        text: "Secondary label",
+        richText: "Secondary label",
+        isPrimary: false,
+      },
     ]);
     expect(resource.identification.label.getAliases()).toStrictEqual([
       "Alias one",
@@ -473,8 +474,8 @@ describe("string parser integration", () => {
     expect(
       parseXMLString(
         { payload: "Contact me@example.com" },
-        { isRichText: true, parseEmail: true },
-      ),
+        { parseEmail: true },
+      ).richText,
     ).toBe(
       'Contact <ExternalLink href="mailto:me@example.com">me@example.com</ExternalLink>',
     );
@@ -490,7 +491,7 @@ describe("string parser integration", () => {
           },
         ],
       },
-      { languages: ["eng"] as const, isRichText: false },
+      { languages: ["eng"] as const },
     );
 
     expect(parsedContent.getExactText("eng")).toBe("Line one\n");
@@ -499,7 +500,7 @@ describe("string parser integration", () => {
   it("falls back to available XML content when a requested language is missing", () => {
     const parsedContent = parseXMLContent(
       { content: [{ lang: "spa", string: [{ payload: "Hola" }] }] },
-      { languages: ["eng"] as const, isRichText: false },
+      { languages: ["eng"] as const },
     );
 
     expect(parsedContent.getExactText("eng")).toBe("Hola");
@@ -509,8 +510,8 @@ describe("string parser integration", () => {
     expect(
       parseXMLString(
         { payload: "word", whitespace: "leading trailing" },
-        { isRichText: false, parseEmail: false },
-      ),
+        { parseEmail: false },
+      ).text,
     ).toBe(" word ");
 
     const parsedContent = parseXMLContent(
@@ -540,10 +541,10 @@ describe("string parser integration", () => {
           },
         ],
       },
-      { languages: ["eng"] as const, isRichText: true },
+      { languages: ["eng"] as const },
     );
 
-    expect(parsedContent.getExactText("eng")).toBe(
+    expect(parsedContent.getExactRichText("eng")).toBe(
       '<ExternalLink href="https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=c0000000-0000-4000-8000-000000000000" content="Website">site</ExternalLink>',
     );
   });
@@ -629,10 +630,11 @@ describe("string parser integration", () => {
           },
         ],
       },
-      { languages: ["eng"] as const, isRichText: true },
+      { languages: ["eng"] as const },
     );
 
-    expect(parsedContent.getExactText("eng")).toBe(
+    expect(parsedContent.getExactText("eng")).toBe("Styled");
+    expect(parsedContent.getExactRichText("eng")).toBe(
       '<Annotation type="text-styling" variant="inline" size="lg" headingLevel="2">Styled</Annotation>',
     );
   });
@@ -712,10 +714,11 @@ describe("string parser integration", () => {
           },
         ],
       },
-      { languages: ["eng"] as const, isRichText: true },
+      { languages: ["eng"] as const },
     );
 
-    expect(parsedContent.getExactText("eng")).toBe(
+    expect(parsedContent.getExactText("eng")).toBe("UChicagoNode");
+    expect(parsedContent.getExactRichText("eng")).toBe(
       '<Annotation type="text-styling" variant="label" size="lg" headingLevel="h2" cssStyles={{default: [{"label":"color","value":"var(--color-brand-700)"}], tablet: [], mobile: []}}>UChicagoNode</Annotation>',
     );
   });
@@ -780,10 +783,10 @@ describe("string parser integration", () => {
           },
         ],
       },
-      { languages: ["eng"] as const, isRichText: true },
+      { languages: ["eng"] as const },
     );
 
-    expect(parsedContent.getExactText("eng")).toBe(
+    expect(parsedContent.getExactRichText("eng")).toBe(
       '<br />\n<Annotation type="text-styling" variant="paragraph" size="md">Featured image:</Annotation>   <ExternalLink href="https://ark.lib.uchicago.edu/ark:61001/b23w8rj3328d" content="Snyder\'s 1885 map">Snyder\'s map of Hyde Park, Illinois, 1885</ExternalLink>.  <Annotation type="text-styling" variant="paragraph" size="md">From the</Annotation>   <ExternalLink href="https://node.uchicago.edu/collection/mapping-chicagoland" content="Mapping Chicagoland">Mapping Chicagoland</ExternalLink>  collection. Holding institution: Chicago History Museum.  ',
     );
   });
@@ -859,10 +862,10 @@ describe("string parser integration", () => {
           },
         ],
       },
-      { languages: ["eng"] as const, isRichText: true },
+      { languages: ["eng"] as const },
     );
 
-    expect(parsedContent.getExactText("eng")).toBe(
+    expect(parsedContent.getExactRichText("eng")).toBe(
       '<InternalLink uuid="f0000000-0000-4000-8000-000000000000" properties="f1000000-0000-4000-8000-000000000000" value="f2000000-0000-4000-8000-000000000000" content="Doc">doc</InternalLink><TooltipSpan content="Draft">draft</TooltipSpan><InlineImage uuid="f4000000-0000-4000-8000-000000000000" content="Image" height={120} width={90} />',
     );
   });

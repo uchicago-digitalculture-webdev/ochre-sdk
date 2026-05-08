@@ -1,4 +1,5 @@
 import * as v from "valibot";
+import type { MultilingualStringText } from "#/parsers/multilingual.js";
 import type {
   XMLContent,
   XMLLink,
@@ -50,6 +51,7 @@ type AnnotationMetadata = {
 };
 
 type PropertyMetadata = { labelUuid: string; valueUuid: string | null };
+type TextRendering = "plain" | "rich";
 
 const EMAIL_BRACKET_CLEANUP_REGEX = /(?<=\s|^)[([{]+|[)\]}]+(?=\s|$)/g;
 const EMAIL_PUNCTUATION_CLEANUP_REGEX = /[!),:;?\]]/g;
@@ -139,15 +141,14 @@ function parseEmail(string: string): string {
  *
  * @param contentString - The string content to render
  * @param renderString - Space-separated string of render options
- * @param options - Options for parsing
- * @param options.isRichText - Whether to parse as rich text
+ * @param rendering - Which text rendering to produce
  * @returns String with markdown formatting applied
  * @internal
  */
 function parseRenderOptions(
   contentString: string,
   renderString: string,
-  options: { isRichText: boolean },
+  rendering: TextRendering,
 ): string {
   let returnString = contentString;
 
@@ -160,15 +161,17 @@ function parseRenderOptions(
     switch (option) {
       case "bold": {
         returnString =
-          options.isRichText ? `**${returnString}**` : returnString;
+          rendering === "rich" ? `**${returnString}**` : returnString;
         break;
       }
       case "italic": {
-        returnString = options.isRichText ? `*${returnString}*` : returnString;
+        returnString =
+          rendering === "rich" ? `*${returnString}*` : returnString;
         break;
       }
       case "underline": {
-        returnString = options.isRichText ? `_${returnString}_` : returnString;
+        returnString =
+          rendering === "rich" ? `_${returnString}_` : returnString;
         break;
       }
     }
@@ -182,8 +185,7 @@ function parseRenderOptions(
  *
  * @param contentString - The string content to modify
  * @param whitespace - Space-separated string of whitespace options
- * @param options - Options for parsing
- * @param options.isRichText - Whether to parse as rich text
+ * @param rendering - Which text rendering to produce
  * @returns String with whitespace modifications applied
  *
  * @internal
@@ -191,7 +193,7 @@ function parseRenderOptions(
 function parseWhitespace(
   contentString: string,
   whitespace: string,
-  options: { isRichText: boolean },
+  rendering: TextRendering,
 ): string {
   let returnString = contentString;
 
@@ -203,7 +205,7 @@ function parseWhitespace(
   for (const option of output) {
     switch (option) {
       case "newline": {
-        if (options.isRichText) {
+        if (rendering === "rich") {
           returnString =
             returnString.trim() === "***" ?
               `${returnString}\n`
@@ -232,34 +234,54 @@ function parseWhitespace(
  *
  * @param string - XML string to parse
  * @param options - Options for parsing
- * @param options.isRichText - Whether to parse as rich text
+ * @param options.rendering - Which text rendering to produce
  * @param options.parseEmail - Whether to parse email addresses
  * @returns Formatted string with whitespace and rendering options
  *
  * @internal
  */
-export function parseXMLString(
+function parseXMLStringVariant(
   string: XMLString,
-  options: { isRichText: boolean; parseEmail: boolean },
+  options: { rendering: TextRendering; parseEmail: boolean },
 ): string {
   let returnString = (string.payload ?? "")
-    .replaceAll("<", options.isRichText ? String.raw`\<` : "<")
+    .replaceAll("<", options.rendering === "rich" ? String.raw`\<` : "<")
     .replaceAll("{", String.raw`\{`)
     .replaceAll("}", String.raw`\}`);
 
   if (string.whitespace != null) {
-    returnString = parseWhitespace(returnString, string.whitespace, {
-      isRichText: options.isRichText,
-    });
+    returnString = parseWhitespace(
+      returnString,
+      string.whitespace,
+      options.rendering,
+    );
   }
 
   if (string.rend != null) {
-    returnString = parseRenderOptions(returnString, string.rend, {
-      isRichText: options.isRichText,
-    });
+    returnString = parseRenderOptions(
+      returnString,
+      string.rend,
+      options.rendering,
+    );
   }
 
   return options.parseEmail ? parseEmail(returnString) : returnString;
+}
+
+export function parseXMLString(
+  string: XMLString,
+  options: { parseEmail: boolean },
+): MultilingualStringText {
+  return {
+    text: parseXMLStringVariant(string, {
+      rendering: "plain",
+      parseEmail: false,
+    }),
+    richText: parseXMLStringVariant(string, {
+      rendering: "rich",
+      parseEmail: options.parseEmail,
+    }),
+  };
 }
 
 /**
@@ -335,10 +357,10 @@ function createMDXComponent(
 function applyWhitespaceToResult(
   result: string,
   whitespace: string | undefined,
-  options: { isRichText: boolean },
+  rendering: TextRendering,
 ): string {
   return whitespace == null ? result : (
-      parseWhitespace(result, whitespace, options)
+      parseWhitespace(result, whitespace, rendering)
     );
 }
 
@@ -365,17 +387,14 @@ function getFirstPropertyMetadata(
 
 function parseContentLikeForLanguage(
   value: XMLContent | XMLString | undefined,
-  options: { language: string; isRichText: boolean },
+  options: { language: string },
 ): string {
   if (value == null) {
     return "";
   }
 
   if (!("content" in value)) {
-    return parseXMLString(value, {
-      isRichText: options.isRichText,
-      parseEmail: false,
-    });
+    return parseXMLString(value, { parseEmail: false }).text;
   }
 
   const contentItem =
@@ -386,15 +405,14 @@ function parseContentLikeForLanguage(
   }
 
   const languages = [contentItem.lang] as const;
-  return parseXMLContent(
-    { content: [contentItem] },
-    { languages, isRichText: options.isRichText },
-  ).getText(contentItem.lang);
+  return parseXMLContent({ content: [contentItem] }, { languages }).getText(
+    contentItem.lang,
+  );
 }
 
 function parsePropertyValueText(
   property: XMLProperty | undefined,
-  options: { language: string; isRichText: boolean },
+  options: { language: string },
 ): string {
   const value = property?.value?.[0];
   if (value == null) {
@@ -431,7 +449,7 @@ function propertyLabelMatches(
   property: XMLProperty,
   uuid: string,
   tokens: ReadonlyArray<string>,
-  options: { language: string; isRichText: boolean },
+  options: { language: string },
 ): boolean {
   if (uuid !== "" && property.label.uuid === uuid) {
     return true;
@@ -447,7 +465,7 @@ function propertyValueMatches(
   property: XMLProperty,
   uuid: string,
   tokens: ReadonlyArray<string>,
-  options: { language: string; isRichText: boolean },
+  options: { language: string },
 ): boolean {
   if (uuid !== "" && getPropertyValueUuid(property) === uuid) {
     return true;
@@ -461,7 +479,7 @@ function propertyValueMatches(
 
 function extractAnnotationMetadata(
   item: XMLRichTextItem,
-  options: { language: string; isRichText: boolean },
+  options: { language: string },
 ): AnnotationMetadata {
   const result: AnnotationMetadata = { linkVariant: null, textStyling: null };
   const itemProperty = item.properties?.property[0];
@@ -594,16 +612,17 @@ function hasRichTextEnvelope(item: XMLRichTextItem): boolean {
 function parseXMLStringItem<V extends ReadonlyArray<string>>(
   item: XMLRichTextItem,
   contentItem: XMLContent["content"][number],
-  options: { languages: V; isRichText: boolean; parseEmail: boolean },
+  options: { languages: V; rendering: TextRendering; parseEmail: boolean },
 ): string {
-  const { isRichText } = options;
-
   if (item.payload != null) {
-    return parseXMLString(item, { isRichText, parseEmail: options.parseEmail });
+    return parseXMLStringVariant(item, {
+      rendering: options.rendering,
+      parseEmail: options.parseEmail,
+    });
   }
 
   if (item.string == null && item.whitespace != null) {
-    return parseWhitespace("", item.whitespace, { isRichText });
+    return parseWhitespace("", item.whitespace, options.rendering);
   }
 
   if (item.string == null) {
@@ -617,7 +636,15 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
     });
 
     if (item.rend != null) {
-      linkString = parseRenderOptions(linkString, item.rend, { isRichText });
+      linkString = parseRenderOptions(linkString, item.rend, options.rendering);
+    }
+
+    if (options.rendering === "plain") {
+      return applyWhitespaceToResult(
+        linkString,
+        item.whitespace,
+        options.rendering,
+      );
     }
 
     return renderRichTextItem(item, linkString, contentItem, options);
@@ -626,16 +653,16 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
   let result = parseNestedStringItems(item.string, contentItem, options);
 
   if (item.rend != null) {
-    result = parseRenderOptions(result, item.rend, { isRichText });
+    result = parseRenderOptions(result, item.rend, options.rendering);
   }
 
-  return applyWhitespaceToResult(result, item.whitespace, { isRichText });
+  return applyWhitespaceToResult(result, item.whitespace, options.rendering);
 }
 
 function parseNestedStringItems<V extends ReadonlyArray<string>>(
   items: ReadonlyArray<XMLRichTextItem>,
   contentItem: XMLContent["content"][number],
-  options: { languages: V; isRichText: boolean; parseEmail: boolean },
+  options: { languages: V; rendering: TextRendering; parseEmail: boolean },
 ): string {
   let result = "";
   for (const item of items) {
@@ -729,12 +756,11 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
   item: XMLRichTextItem,
   linkString: string,
   contentItem: XMLContent["content"][number],
-  options: { languages: V; isRichText: boolean },
+  options: { languages: V; rendering: TextRendering },
 ): string {
-  const { languages, isRichText } = options;
+  const { languages, rendering } = options;
   const annotationMetadata = extractAnnotationMetadata(item, {
     language: contentItem.lang,
-    isRichText,
   });
 
   const links = getXMLRichTextLinks(item);
@@ -742,7 +768,7 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
     return applyWhitespaceToResult(
       wrapWithTextStyling(linkString, annotationMetadata.textStyling),
       item.whitespace,
-      { isRichText },
+      rendering,
     );
   }
 
@@ -751,20 +777,18 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
     const linkContent =
       link.identification != null ?
         "content" in link.identification.label ?
-          parseXMLContent(link.identification.label, { languages, isRichText })
+          parseXMLContent(link.identification.label, { languages })
         : MultilingualString.create(
             contentItem.lang,
-            parseXMLString(link.identification.label, {
-              isRichText,
-              parseEmail: false,
-            }),
+            parseXMLString(link.identification.label, { parseEmail: false }),
             languages,
-            { isRichText },
           )
-      : MultilingualString.create(contentItem.lang, "", languages, {
-          isRichText,
-        });
-    const content = linkContent.getExactText(contentItem.lang) ?? "";
+      : MultilingualString.create(contentItem.lang, "", languages);
+    const content =
+      rendering === "rich" ?
+        linkContent.getExactRichText(contentItem.lang)
+      : linkContent.getExactText(contentItem.lang);
+    const contentText = content ?? "";
 
     if ("type" in link && link.type != null) {
       switch (link.type) {
@@ -776,31 +800,37 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
               href: getLinkStringProperty(link, "href") ?? undefined,
               height: getLinkStringProperty(link, "height") ?? undefined,
               width: getLinkStringProperty(link, "width") ?? undefined,
-              content,
+              content: contentText,
               text: linkString,
             });
-            result += applyWhitespaceToResult(component, item.whitespace, {
-              isRichText,
-            });
+            result += applyWhitespaceToResult(
+              component,
+              item.whitespace,
+              rendering,
+            );
           } else if (link.publicationDateTime != null) {
             const component = createInternalLinkComponent({
               uuid: getLinkStringProperty(link, "uuid"),
               text: linkString,
-              content,
+              content: contentText,
               annotationMetadata,
             });
-            result += applyWhitespaceToResult(component, item.whitespace, {
-              isRichText,
-            });
+            result += applyWhitespaceToResult(
+              component,
+              item.whitespace,
+              rendering,
+            );
           } else {
             const component = createMDXComponent("tooltipSpan", {
               uuid: getLinkStringProperty(link, "uuid"),
               text: linkString,
-              content,
+              content: contentText,
             });
-            result += applyWhitespaceToResult(component, item.whitespace, {
-              isRichText,
-            });
+            result += applyWhitespaceToResult(
+              component,
+              item.whitespace,
+              rendering,
+            );
           }
           break;
         }
@@ -808,13 +838,15 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
           const component = createInternalLinkComponent({
             uuid: getLinkStringProperty(link, "uuid"),
             text: linkString,
-            content,
+            content: contentText,
             annotationMetadata,
             propertyMetadata: getFirstPropertyMetadata(item),
           });
-          result += applyWhitespaceToResult(component, item.whitespace, {
-            isRichText,
-          });
+          result += applyWhitespaceToResult(
+            component,
+            item.whitespace,
+            rendering,
+          );
           break;
         }
         case "externalDocument": {
@@ -823,16 +855,18 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
               createMDXComponent("documentLink", {
                 uuid: getLinkStringProperty(link, "uuid"),
                 text: linkString,
-                content,
+                content: contentText,
               })
             : createMDXComponent("tooltipSpan", {
                 uuid: getLinkStringProperty(link, "uuid"),
                 text: linkString,
-                content,
+                content: contentText,
               });
-          result += applyWhitespaceToResult(component, item.whitespace, {
-            isRichText,
-          });
+          result += applyWhitespaceToResult(
+            component,
+            item.whitespace,
+            rendering,
+          );
           break;
         }
         case "webpage": {
@@ -840,11 +874,13 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
             uuid: getLinkStringProperty(link, "uuid"),
             href: getLinkStringProperty(link, "href") ?? "#",
             text: linkString,
-            content,
+            content: contentText,
           });
-          result += applyWhitespaceToResult(component, item.whitespace, {
-            isRichText,
-          });
+          result += applyWhitespaceToResult(
+            component,
+            item.whitespace,
+            rendering,
+          );
           break;
         }
       }
@@ -852,21 +888,17 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
       const component = createInternalLinkComponent({
         uuid: getLinkStringProperty(link, "uuid"),
         text: linkString,
-        content,
+        content: contentText,
         annotationMetadata,
       });
-      result += applyWhitespaceToResult(component, item.whitespace, {
-        isRichText,
-      });
+      result += applyWhitespaceToResult(component, item.whitespace, rendering);
     } else {
       const component = createMDXComponent("tooltipSpan", {
         uuid: getLinkStringProperty(link, "uuid"),
         text: linkString,
-        content,
+        content: contentText,
       });
-      result += applyWhitespaceToResult(component, item.whitespace, {
-        isRichText,
-      });
+      result += applyWhitespaceToResult(component, item.whitespace, rendering);
     }
   }
 
@@ -879,18 +911,17 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
  * @param item - XML-based rich text item to parse
  * @param options - Options for parsing
  * @param options.languages - Languages of the content
- * @param options.isRichText - Whether to parse as rich text
- * @returns Formatted string with HTML/markdown elements
+ * @returns Plain and rich formatted strings
  *
  * @internal
  */
 export function parseXMLContent<V extends ReadonlyArray<string>>(
   item: XMLContent,
-  options: { languages: V; isRichText: boolean },
+  options: { languages: V },
 ): MultilingualString<V> {
-  const { languages, isRichText } = options;
-  const aliases = extractAliases(item, { isRichText }) ?? [];
-  const content: Partial<Record<V[number], Array<string>>> = {};
+  const { languages } = options;
+  const aliases = extractAliases(item) ?? [];
+  const content: Partial<Record<V[number], Array<MultilingualStringText>>> = {};
 
   for (const contentItem of item.content) {
     if (contentItem.lang === "zxx" || !languages.includes(contentItem.lang)) {
@@ -899,15 +930,12 @@ export function parseXMLContent<V extends ReadonlyArray<string>>(
 
     const language = contentItem.lang as V[number];
     const entries = content[language] ?? [];
-    entries.push(parseXMLContentItem(contentItem, { languages, isRichText }));
+    entries.push(parseXMLContentItem(contentItem, { languages }));
     content[language] = entries;
   }
 
   if (Object.keys(content).length > 0) {
-    return MultilingualString.fromEntries(content, languages, {
-      isRichText,
-      aliases,
-    });
+    return MultilingualString.fromEntries(content, languages, { aliases });
   }
 
   for (const contentItem of item.content) {
@@ -918,30 +946,38 @@ export function parseXMLContent<V extends ReadonlyArray<string>>(
     const fallbackLanguages = [contentItem.lang] as const;
     const fallbackText = parseXMLContentItem(contentItem, {
       languages: fallbackLanguages,
-      isRichText,
     });
-    const fallbackContent: Partial<Record<V[number], Array<string>>> = {};
+    const fallbackContent: Partial<
+      Record<V[number], Array<MultilingualStringText>>
+    > = {};
     for (const language of languages) {
       fallbackContent[language as V[number]] = [fallbackText];
     }
 
     return MultilingualString.fromEntries(fallbackContent, languages, {
-      isRichText,
       aliases,
     });
   }
 
-  return MultilingualString.empty(languages, { isRichText, aliases });
+  return MultilingualString.empty(languages, { aliases });
 }
 
 function parseXMLContentItem<V extends ReadonlyArray<string>>(
   contentItem: XMLContent["content"][number],
-  options: { languages: V; isRichText: boolean },
-): string {
-  return parseNestedStringItems(contentItem.string, contentItem, {
-    ...options,
-    parseEmail: true,
-  });
+  options: { languages: V },
+): MultilingualStringText {
+  return {
+    text: parseNestedStringItems(contentItem.string, contentItem, {
+      ...options,
+      rendering: "plain",
+      parseEmail: false,
+    }),
+    richText: parseNestedStringItems(contentItem.string, contentItem, {
+      ...options,
+      rendering: "rich",
+      parseEmail: true,
+    }),
+  };
 }
 
 /**
@@ -953,7 +989,6 @@ function parseXMLContentItem<V extends ReadonlyArray<string>>(
  */
 export function extractAliases(
   content: XMLContent | undefined,
-  options: { isRichText: boolean },
 ): Array<string> | null {
   if (content == null) {
     return null;
@@ -967,8 +1002,7 @@ export function extractAliases(
 
     const alias = parseXMLContentItem(contentItem, {
       languages: ["zxx"] as const,
-      isRichText: options.isRichText,
-    });
+    }).text;
     if (alias !== "") {
       aliases.push(alias);
     }
