@@ -43,6 +43,7 @@ import {
   extractAliases,
   parseXMLContent,
   parseXMLString,
+  transformPermanentIdentificationUrl,
 } from "#/parsers/string.js";
 import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
 
@@ -256,6 +257,12 @@ function parseStringLikeForTest(
   });
 }
 
+function transformPermanentIdentificationUrlForTest(
+  value: string | null | undefined,
+): string | null {
+  return value == null ? null : transformPermanentIdentificationUrl(value);
+}
+
 function parseContentLikeForTest(
   value: XMLContent | XMLString | string | undefined,
   options?: { isRichText: boolean; parseEmail?: boolean },
@@ -383,7 +390,9 @@ function expectMetadataMatchesRaw(
     parseStringLikeForTest(rawPublisher, { isRichText: false }),
   );
   expect(metadata.identifier).toBe(
-    parseStringLikeForTest(rawMetadata.identifier, { isRichText: false }),
+    transformPermanentIdentificationUrlForTest(
+      parseStringLikeForTest(rawMetadata.identifier, { isRichText: false }),
+    ),
   );
 
   if (rawMetadata.item != null) {
@@ -1067,7 +1076,9 @@ function expectCategorySpecificFields(
       if (!("href" in parsedItem)) {
         throw new Error("Parsed resource is missing resource fields");
       }
-      expect(parsedItem.href).toBe(rawResource.href ?? null);
+      expect(parsedItem.href).toBe(
+        transformPermanentIdentificationUrlForTest(rawResource.href),
+      );
       expect(parsedItem.fileFormat).toBe(rawResource.fileFormat ?? null);
       expect(parsedItem.fileSize).toBe(parseNumber(rawResource.fileSize));
       expect(parsedItem.image == null).toBe(rawResource.image == null);
@@ -1172,6 +1183,9 @@ function expectDataMatchesRaw(
     uuid: rawOchre.uuidBelongsTo,
     abbreviation: rawOchre.belongsTo,
   });
+  expect(data.persistentUrl).toBe(
+    transformPermanentIdentificationUrlForTest(rawOchre.persistentUrl),
+  );
   expectMetadataMatchesRaw(rawOchre.metadata, data);
   expectBaseItemMatchesRaw(rawItem, data, category);
   expectCategorySpecificFields(category, rawItem, data);

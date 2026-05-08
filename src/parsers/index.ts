@@ -961,7 +961,7 @@ function parsePropertyValueContent<T extends ReadonlyArray<string>>(
     uuid: value.uuid == null || value.uuid === "" ? null : value.uuid,
     publicationDateTime: parseOptionalDate(value.publicationDateTime),
     unit: value.unit ?? null,
-    href: value.href ?? null,
+    href: parseHref(value.href),
     height: parseNumber(value.height),
     width: parseNumber(value.width),
     fileSize: parseNumber(value.fileSize),
@@ -1470,7 +1470,7 @@ function parseBibliographySourceDocument(
   return {
     uuid: sourceDocument.uuid,
     content: sourceDocument.payload,
-    href: sourceDocument.href ?? null,
+    href: parseHref(sourceDocument.href),
     publicationDateTime: parseOptionalDate(sourceDocument.publicationDateTime),
   };
 }
@@ -1690,7 +1690,7 @@ function parseResourceItemLink<T extends ReadonlyArray<string>>(
   return {
     ...parseBaseItemLink("resource", rawResource, options),
     type: rawResource.type ?? null,
-    href: rawResource.href ?? null,
+    href: parseHref(rawResource.href),
     fileFormat: rawResource.fileFormat ?? null,
     fileSize: parseNumber(rawResource.fileSize),
     isInline: rawResource.rend === "inline",
@@ -2357,7 +2357,7 @@ function parseResource<T extends ReadonlyArray<string>>(
   return {
     ...parseBaseItem("resource", rawResource, options),
     type: rawResource.type ?? "",
-    href: rawResource.href ?? null,
+    href: parseHref(rawResource.href),
     fileFormat: rawResource.fileFormat ?? null,
     fileSize: parseNumber(rawResource.fileSize),
     isInline: rawResource.rend === "inline",
@@ -2520,8 +2520,9 @@ export function parseMetadata<T extends ReadonlyArray<string>>(
     description:
       parseStringLike(rawMetadata.description, { isRichText: false }) ?? "",
     publisher: parseMetadataPublisher(rawMetadata.publisher),
-    identifier:
+    identifier: transformPermanentIdentificationUrl(
       parseStringLike(rawMetadata.identifier, { isRichText: false }) ?? "",
+    ),
     project:
       rawMetadata.project == null ?
         null
@@ -2946,6 +2947,6 @@ export function parseItem(
       abbreviation: rawOchre.belongsTo,
     },
     metadata: parseMetadata(rawOchre, parserOptions, defaultLanguage),
-    persistentUrl: rawOchre.persistentUrl ?? null,
+    persistentUrl: parseHref(rawOchre.persistentUrl),
   };
 }
