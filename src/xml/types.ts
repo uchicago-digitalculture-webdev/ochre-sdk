@@ -725,7 +725,9 @@ export type XMLItemLinks = Partial<{
   set: Array<XMLSet>;
 }>;
 
-export type XMLItemLinksData = { result: { ochre: { items: XMLItemLinks } } };
+export type XMLItemLinksData = {
+  result: { ochre: { payload?: string; items?: XMLItemLinks } };
+};
 
 export type XMLGallery = {
   payload?: string;

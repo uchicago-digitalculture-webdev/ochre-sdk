@@ -2054,7 +2054,15 @@ const XMLItemLinks: v.GenericSchema<XMLItemLinksType> = v.object(
 export const XMLItemLinksData: v.GenericSchema<XMLItemLinksDataType> = v.object(
   {
     result: v.object({
-      ochre: v.object({ items: XMLItemLinks }, "XMLItemLinksData: ochre"),
+      ochre: v.object(
+        {
+          payload: v.optional(
+            v.string("XMLItemLinksData: payload is string and optional"),
+          ),
+          items: v.optional(XMLItemLinks),
+        },
+        "XMLItemLinksData: ochre",
+      ),
     }),
   },
   "XMLItemLinksData: Shape error",
