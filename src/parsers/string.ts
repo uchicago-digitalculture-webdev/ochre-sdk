@@ -15,7 +15,7 @@ import {
   TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
   TEXT_ANNOTATION_UUID,
 } from "#/constants.js";
-import { MultilingualString } from "#/multilingual.js";
+import { MultilingualString } from "#/parsers/multilingual.js";
 import {
   emailSchema,
   renderOptionsSchema,

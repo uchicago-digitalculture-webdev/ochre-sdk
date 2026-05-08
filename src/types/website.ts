@@ -1,4 +1,4 @@
-import type { MultilingualString } from "#/multilingual.js";
+import type { MultilingualString } from "#/parsers/multilingual.js";
 import type {
   Bibliography,
   DataCategory,

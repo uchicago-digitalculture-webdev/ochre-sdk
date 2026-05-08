@@ -1,4 +1,4 @@
-import type { MultilingualString } from "#/multilingual.js";
+import type { MultilingualString } from "#/parsers/multilingual.js";
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
 

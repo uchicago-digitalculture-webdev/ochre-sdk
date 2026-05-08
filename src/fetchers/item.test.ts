@@ -37,8 +37,8 @@ import type {
 } from "#/xml/types.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { defineLanguages, fetchItem } from "#/fetchers/item.js";
-import { MultilingualString } from "#/multilingual.js";
 import { parseItem } from "#/parsers/index.js";
+import { MultilingualString } from "#/parsers/multilingual.js";
 import {
   extractAliases,
   parseXMLContent,

@@ -102,7 +102,7 @@ import type {
   XMLTree,
 } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES } from "#/constants.js";
-import { MultilingualString } from "#/multilingual.js";
+import { MultilingualString } from "#/parsers/multilingual.js";
 import { parseXMLContent, parseXMLString } from "#/parsers/string.js";
 
 export type ParserOptions<T extends ReadonlyArray<string>> = {
