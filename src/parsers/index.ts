@@ -14,6 +14,7 @@ import type {
   CoordinatesSource,
   DataCategory,
   Event,
+  Gallery,
   Heading,
   HeadingDataCategory,
   HierarchyItemCategoryFromOption,
@@ -67,6 +68,7 @@ import type {
   XMLDataItem,
   XMLDictionaryUnit,
   XMLEvent,
+  XMLGalleryData,
   XMLHeading,
   XMLIdentification,
   XMLImage,
@@ -2832,6 +2834,27 @@ export function parseSetDataItems<
     parserOptions,
     categories ?? undefined,
   ) as Array<SetItem<SetItemCategoryFromCategories<TItemCategories>, T>>;
+}
+
+export function parseGallery<T extends ReadonlyArray<string>>(
+  rawData: XMLGalleryData,
+  options: ParserOptions<T>,
+): Gallery<T> {
+  const gallery = rawData.result.ochre.gallery;
+  const resources: Array<Resource<T, "nested">> = [];
+  for (const resource of gallery.resource ?? []) {
+    resources.push(parseResource(resource, options));
+  }
+
+  return {
+    identification: parseIdentification(gallery.item.identification, options),
+    projectIdentification: parseIdentification(
+      gallery.project.identification,
+      options,
+    ),
+    resources,
+    maxLength: parseNumberOrZero(gallery.maxLength),
+  };
 }
 
 export function parseItem<

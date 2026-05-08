@@ -13,6 +13,8 @@ import type {
   XMLData as XMLDataType,
   XMLDictionaryUnit as XMLDictionaryUnitType,
   XMLEvent as XMLEventType,
+  XMLGalleryData as XMLGalleryDataType,
+  XMLGallery as XMLGalleryType,
   XMLHeading as XMLHeadingType,
   XMLIdentification as XMLIdentificationType,
   XMLImageMapArea as XMLImageMapAreaType,
@@ -2056,6 +2058,47 @@ export const XMLItemLinksData: v.GenericSchema<XMLItemLinksDataType> = v.object(
     }),
   },
   "XMLItemLinksData: Shape error",
+);
+
+const XMLGallery: v.GenericSchema<XMLGalleryType> = v.object(
+  {
+    payload: v.optional(v.string("XMLGallery: payload is string and optional")),
+    project: v.object(
+      {
+        uuid: v.optional(v.string("XMLGallery: project uuid is optional")),
+        identification: XMLIdentification,
+        dateFormat: v.optional(
+          v.string("XMLGallery: project dateFormat is optional"),
+        ),
+        page: v.optional(v.picklist(["item", "entry"])),
+      },
+      "XMLGallery: project is object with identification",
+    ),
+    item: v.object(
+      {
+        uuid: v.optional(v.string("XMLGallery: item uuid is optional")),
+        identification: XMLIdentification,
+        category: v.optional(XMLDataCategory),
+        type: v.optional(v.string("XMLGallery: item type is optional")),
+        maxLength: v.optional(XMLNumber),
+      },
+      "XMLGallery: item is object with identification",
+    ),
+    resource: v.optional(
+      v.array(XMLResource, "XMLGallery: resource is array of XMLResource"),
+    ),
+    maxLength: XMLNumber,
+  },
+  "XMLGallery: Shape error",
+);
+
+export const XMLGalleryData: v.GenericSchema<XMLGalleryDataType> = v.object(
+  {
+    result: v.object({
+      ochre: v.object({ gallery: XMLGallery }, "XMLGalleryData: ochre"),
+    }),
+  },
+  "XMLGalleryData: Shape error",
 );
 
 const XMLSetItems: v.GenericSchema<XMLSetItemsType> = v.intersect([

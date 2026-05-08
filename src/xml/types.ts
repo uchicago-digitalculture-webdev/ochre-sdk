@@ -727,6 +727,27 @@ export type XMLItemLinks = Partial<{
 
 export type XMLItemLinksData = { result: { ochre: { items: XMLItemLinks } } };
 
+export type XMLGallery = {
+  payload?: string;
+  project: {
+    uuid?: string;
+    identification: XMLIdentification;
+    dateFormat?: string;
+    page?: "item" | "entry";
+  };
+  item: {
+    uuid?: string;
+    identification: XMLIdentification;
+    category?: XMLDataCategory;
+    type?: string;
+    maxLength?: XMLNumber;
+  };
+  resource?: Array<XMLResource>;
+  maxLength: XMLNumber;
+};
+
+export type XMLGalleryData = { result: { ochre: { gallery: XMLGallery } } };
+
 export type XMLSetItems = XMLItemLinks & {
   totalCount: XMLNumber;
   page: XMLNumber;

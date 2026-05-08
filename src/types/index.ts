@@ -875,6 +875,16 @@ export type Section<T extends ReadonlyArray<string>> = {
 };
 
 /**
+ * Represents a gallery with its identification, project identification, resources and max length
+ */
+export type Gallery<T extends ReadonlyArray<string> = ReadonlyArray<string>> = {
+  identification: Identification<T>;
+  projectIdentification: Identification<T>;
+  resources: Array<Resource<T, "nested">>;
+  maxLength: number;
+};
+
+/**
  * Represents a property query item with its UUID, raw value, count, and content
  */
 export type PropertyValueQueryItem = {

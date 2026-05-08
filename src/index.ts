@@ -1,3 +1,4 @@
+export * from "#/fetchers/gallery.js";
 export * from "#/fetchers/item-links.js";
 export * from "#/fetchers/item.js";
 export * from "#/fetchers/set/items.js";
