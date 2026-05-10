@@ -37,8 +37,8 @@ import type {
 } from "#/xml/types.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { defineLanguages, fetchItem } from "#/fetchers/item.js";
+import { MultilingualString } from "#/index.js";
 import { parseItem } from "#/parsers/index.js";
-import { MultilingualString } from "#/parsers/multilingual.js";
 import {
   extractAliases,
   parseXMLContent,
@@ -1164,11 +1164,20 @@ async function expectUuidParsesAndMatchesRaw(
 
 describe("fetchItem", () => {
   it("keeps language getters broad when languages are omitted", async () => {
+    const languages = defineLanguages("eng", "spa");
     const implicitString = MultilingualString.create("spa", "Etiqueta");
-    const explicitString = MultilingualString.create(
-      "eng",
-      "Label",
-      defineLanguages("eng", "spa"),
+    const explicitString = MultilingualString.create("eng", "Label", languages);
+    const constructedString = new MultilingualString(
+      {
+        eng: "Label",
+        spa: { text: "Etiqueta", richText: "<strong>Etiqueta</strong>" },
+      },
+      languages,
+      { aliases: ["Alias"] },
+    );
+    const roundTrippedString = MultilingualString.fromJSON(
+      constructedString.toJSON(),
+      languages,
     );
     const result = fetchItem(RESOURCE_UUIDS[0]!, {
       category: "resource",
@@ -1181,6 +1190,13 @@ describe("fetchItem", () => {
     expectTypeOf(explicitString.getExactText)
       .parameter(0)
       .toEqualTypeOf<"eng" | "spa">();
+    expectTypeOf(constructedString.getExactText)
+      .parameter(0)
+      .toEqualTypeOf<"eng" | "spa">();
+    expect(roundTrippedString.getRichText("spa")).toBe(
+      "<strong>Etiqueta</strong>",
+    );
+    expect(roundTrippedString.getAliases()).toStrictEqual(["Alias"]);
     expectTypeOf(result).toEqualTypeOf<
       Promise<
         | { item: Item<"resource", never, ReadonlyArray<string>>; error: null }

@@ -9,9 +9,11 @@ export * from "#/helpers.js";
 export { MultilingualString } from "#/parsers/multilingual.js";
 export type {
   MultilingualOptions,
+  MultilingualStringEntries,
   MultilingualStringEntry,
   MultilingualStringInput,
   MultilingualStringJSON,
+  MultilingualStringObject,
   MultilingualStringText,
 } from "#/parsers/multilingual.js";
 export * from "#/types/index.js";

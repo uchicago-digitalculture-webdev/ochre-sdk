@@ -23,6 +23,14 @@ export type MultilingualStringJSON<
   aliases: Array<string>;
 };
 
+export type MultilingualStringObject<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+> = Partial<Record<T[number], MultilingualStringInput>>;
+
+export type MultilingualStringEntries<
+  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+> = Partial<Record<T[number], ReadonlyArray<MultilingualStringInput>>>;
+
 /**
  * Options for creating and working with multilingual strings
  */
@@ -39,13 +47,16 @@ type MultilingualContent<T extends ReadonlyArray<string>> = Partial<
   Record<T[number], ReadonlyArray<MultilingualStringEntry>>
 >;
 
-type MultilingualInputContent<T extends ReadonlyArray<string>> = Partial<
-  Record<T[number], MultilingualStringInput>
->;
+const MULTILINGUAL_STRING_INTERNAL_INIT = Symbol(
+  "MultilingualString.internalInit",
+);
 
-type MultilingualEntriesInput<T extends ReadonlyArray<string>> = Partial<
-  Record<T[number], ReadonlyArray<MultilingualStringInput>>
->;
+type MultilingualStringInternalInit<T extends ReadonlyArray<string>> = {
+  readonly [MULTILINGUAL_STRING_INTERNAL_INIT]: true;
+  content: MultilingualContent<T>;
+  options: Required<MultilingualOptions>;
+  availableLanguages: ReadonlyArray<T[number]>;
+};
 
 function normalizeInputText(
   text: MultilingualStringInput,
@@ -156,6 +167,16 @@ function getImplicitLanguages(
   return languages.length > 0 ? languages : [...DEFAULT_LANGUAGES];
 }
 
+function isInternalInit<T extends ReadonlyArray<string>>(
+  value: unknown,
+): value is MultilingualStringInternalInit<T> {
+  return (
+    typeof value === "object" &&
+    value != null &&
+    MULTILINGUAL_STRING_INTERNAL_INIT in value
+  );
+}
+
 /**
  * Multilingual string
  */
@@ -167,22 +188,65 @@ export class MultilingualString<
   private readonly _availableLanguages: ReadonlyArray<T[number]>;
   private readonly _aliases: ReadonlyArray<string>;
 
-  private constructor(
-    content: MultilingualContent<T>,
-    options: Required<MultilingualOptions>,
-    availableLanguages: ReadonlyArray<T[number]>,
+  /**
+   * Create a new multilingual string from an object of language codes to text.
+   */
+  /** @internal */
+  constructor(init: MultilingualStringInternalInit<T>);
+  constructor(
+    content: MultilingualStringObject<T>,
+    languages: T,
+    options?: MultilingualOptions,
+  );
+  constructor(
+    content?: Partial<Record<string, MultilingualStringInput>>,
+    languages?: undefined,
+    options?: MultilingualOptions,
+  );
+  constructor(
+    content:
+      | Partial<Record<string, MultilingualStringInput>>
+      | MultilingualStringInternalInit<T> = {},
+    languages?: T,
+    options: MultilingualOptions = {},
   ) {
-    this._content = Object.freeze(cloneContent(content));
-    this._options = Object.freeze({ ...options });
-    this._availableLanguages = Object.freeze([...availableLanguages]);
-    this._aliases = Object.freeze([...options.aliases]);
+    if (isInternalInit<T>(content)) {
+      this._content = Object.freeze(cloneContent(content.content));
+      this._options = Object.freeze({ ...content.options });
+      this._availableLanguages = Object.freeze([...content.availableLanguages]);
+      this._aliases = Object.freeze([...content.options.aliases]);
+      return;
+    }
+
+    const parsed =
+      languages === undefined ?
+        MultilingualString.fromObject(content, undefined, options)
+      : MultilingualString.fromObject(content, languages, options);
+
+    this._content = parsed._content;
+    this._options = parsed._options;
+    this._availableLanguages = parsed._availableLanguages;
+    this._aliases = parsed._aliases;
+  }
+
+  private static fromNormalized<U extends ReadonlyArray<string>>(
+    content: MultilingualContent<U>,
+    options: Required<MultilingualOptions>,
+    availableLanguages: ReadonlyArray<U[number]>,
+  ): MultilingualString<U> {
+    return new MultilingualString<U>({
+      [MULTILINGUAL_STRING_INTERNAL_INIT]: true,
+      content,
+      options,
+      availableLanguages,
+    });
   }
 
   /**
    * Create a new multilingual string from an object of language codes to text
    */
   static fromObject<U extends ReadonlyArray<string>>(
-    content: MultilingualInputContent<U>,
+    content: MultilingualStringObject<U>,
     languages: U,
     options?: MultilingualOptions,
   ): MultilingualString<U>;
@@ -216,7 +280,7 @@ export class MultilingualString<
    * Create a new multilingual string from language entries.
    */
   static fromEntries<U extends ReadonlyArray<string>>(
-    content: MultilingualEntriesInput<U>,
+    content: MultilingualStringEntries<U>,
     languages: U,
     options?: MultilingualOptions,
   ): MultilingualString<U>;
@@ -252,7 +316,7 @@ export class MultilingualString<
         aliases: normalizeAliases(options.aliases),
       };
 
-      return new MultilingualString(
+      return MultilingualString.fromNormalized(
         normalizedContent,
         defaultOptions,
         availableLanguages,
@@ -280,7 +344,7 @@ export class MultilingualString<
       aliases: normalizeAliases(options.aliases),
     };
 
-    return new MultilingualString(
+    return MultilingualString.fromNormalized(
       normalizedContent,
       defaultOptions,
       availableLanguages,
@@ -344,6 +408,36 @@ export class MultilingualString<
     }
 
     return MultilingualString.fromObject({}, languages, options);
+  }
+
+  /**
+   * Recreate a multilingual string from its JSON representation.
+   */
+  static fromJSON<U extends ReadonlyArray<string>>(
+    json: MultilingualStringJSON<U>,
+    languages: U,
+    options?: Omit<MultilingualOptions, "aliases">,
+  ): MultilingualString<U>;
+  static fromJSON(
+    json: MultilingualStringJSON,
+    languages?: undefined,
+    options?: Omit<MultilingualOptions, "aliases">,
+  ): MultilingualString<ReadonlyArray<string>>;
+  static fromJSON<U extends ReadonlyArray<string>>(
+    json: MultilingualStringJSON | MultilingualStringJSON<U>,
+    languages?: U,
+    options: Omit<MultilingualOptions, "aliases"> = {},
+  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
+    const content = json.content as Partial<
+      Record<string, ReadonlyArray<MultilingualStringInput>>
+    >;
+    const mergedOptions = { ...options, aliases: json.aliases };
+
+    if (languages === undefined) {
+      return MultilingualString.fromEntries(content, undefined, mergedOptions);
+    }
+
+    return MultilingualString.fromEntries(content, languages, mergedOptions);
   }
 
   private getPrimaryEntry(language: T[number]): MultilingualStringEntry | null {
@@ -601,7 +695,7 @@ export class MultilingualString<
       this._options.availableLanguages as ReadonlyArray<T[number]>,
     );
 
-    return new MultilingualString(
+    return MultilingualString.fromNormalized(
       newContent,
       this._options,
       newAvailableLanguages,
@@ -626,7 +720,7 @@ export class MultilingualString<
       this._options.availableLanguages as ReadonlyArray<T[number]>,
     );
 
-    return new MultilingualString(
+    return MultilingualString.fromNormalized(
       newContent,
       this._options,
       newAvailableLanguages,
@@ -637,7 +731,7 @@ export class MultilingualString<
    * Replace aliases (returns new instance)
    */
   withAliases(aliases: ReadonlyArray<string>): MultilingualString<T> {
-    return new MultilingualString(
+    return MultilingualString.fromNormalized(
       this._content,
       { ...this._options, aliases: normalizeAliases(aliases) },
       this._availableLanguages,
@@ -670,7 +764,7 @@ export class MultilingualString<
         (newAvailableLanguages[0] ?? this._options.availableLanguages[0])
       : this._options.defaultLanguage;
 
-    return new MultilingualString(
+    return MultilingualString.fromNormalized(
       newContent,
       { ...this._options, defaultLanguage: newDefaultLanguage! },
       newAvailableLanguages,
@@ -698,7 +792,7 @@ export class MultilingualString<
       newContent[language] = normalizePrimary(mappedEntries);
     }
 
-    return new MultilingualString(
+    return MultilingualString.fromNormalized(
       newContent,
       this._options,
       this._availableLanguages,
@@ -735,7 +829,7 @@ export class MultilingualString<
         this._options.defaultLanguage
       : (newAvailableLanguages[0] ?? this._options.availableLanguages[0]);
 
-    return new MultilingualString(
+    return MultilingualString.fromNormalized(
       newContent,
       { ...this._options, defaultLanguage: newDefaultLanguage! },
       newAvailableLanguages,
