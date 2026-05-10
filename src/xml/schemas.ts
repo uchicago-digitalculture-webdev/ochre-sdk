@@ -603,8 +603,8 @@ const XMLImageMapArea: v.GenericSchema<unknown, XMLImageMapAreaType> = v.object(
     type: v.string("XMLImageMapArea: type is string and required"),
     title: v.string("XMLImageMapArea: title is string and required"),
     shape: v.picklist(
-      ["rectangle", "circle", "poly"],
-      "XMLImageMapArea: shape is rectangle, circle, or poly",
+      ["rect", "circle", "poly"],
+      "XMLImageMapArea: shape is rect, circle, or poly",
     ),
     coords: v.string("XMLImageMapArea: coords is string and required"),
   },

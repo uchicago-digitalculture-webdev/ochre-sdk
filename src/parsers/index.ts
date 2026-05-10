@@ -695,7 +695,7 @@ function parseImageMapArea(area: XMLImageMapArea): ImageMapArea {
   }
 
   const shape =
-    area.shape === "rectangle" || area.shape === "rect" ? "rectangle"
+    area.shape === "rect" ? "rectangle"
     : area.shape === "circle" ? "circle"
     : "polygon";
 
