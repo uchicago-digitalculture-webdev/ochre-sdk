@@ -51,11 +51,11 @@ type AnnotationMetadata = {
 };
 
 type PropertyMetadata = { labelUuid: string; valueUuid: string | null };
+
 type TextRendering = "plain" | "rich";
 
-const EMAIL_BRACKET_CLEANUP_REGEX = /(?<=\s|^)[([{]+|[)\]}]+(?=\s|$)/g;
-const EMAIL_PUNCTUATION_CLEANUP_REGEX = /[!),:;?\]]/g;
-const EMAIL_TRAILING_PERIOD_REGEX = /\.$/;
+type RenderOption = "bold" | "italic" | "underline";
+
 const TEXT_ANNOTATION_TOKEN = "text-annotation";
 const TEXT_STYLING_TOKEN = "text-styling";
 const HOVER_CARD_TOKEN = "hover-card";
@@ -63,7 +63,16 @@ const ITEM_PAGE_TOKEN = "item-page";
 const ENTRY_PAGE_TOKEN = "entry-page";
 const VARIANT_TOKEN = "variant";
 const HEADING_LEVEL_TOKEN = "heading-level";
+
+const EMAIL_BRACKET_CLEANUP_REGEX = /(?<=\s|^)[([{]+|[)\]}]+(?=\s|$)/g;
+const EMAIL_PUNCTUATION_CLEANUP_REGEX = /[!),:;?\]]/g;
+const EMAIL_TRAILING_PERIOD_REGEX = /\.$/;
 const MDX_QUOTED_ATTRIBUTE_ESCAPE_REGEX = /[\n\r"]/;
+const MDX_RENDER_ELEMENTS = {
+  bold: "strong",
+  italic: "em",
+  underline: "u",
+} as const satisfies Record<RenderOption, string>;
 
 function isXMLRichTextLink(value: unknown): value is XMLRichTextLink {
   return typeof value === "object" && value != null;
@@ -143,7 +152,7 @@ function parseEmail(string: string): string {
  * @param contentString - The string content to render
  * @param renderString - Space-separated string of render options
  * @param rendering - Which text rendering to produce
- * @returns String with markdown formatting applied
+ * @returns String with rich-text formatting applied
  * @internal
  */
 function parseRenderOptions(
@@ -151,34 +160,53 @@ function parseRenderOptions(
   renderString: string,
   rendering: TextRendering,
 ): string {
-  let returnString = contentString;
-
   const { success, output } = v.safeParse(renderOptionsSchema, renderString);
   if (!success) {
     return contentString;
   }
 
-  for (const option of output) {
-    switch (option) {
-      case "bold": {
-        returnString =
-          rendering === "rich" ? `**${returnString}**` : returnString;
-        break;
-      }
-      case "italic": {
-        returnString =
-          rendering === "rich" ? `*${returnString}*` : returnString;
-        break;
-      }
-      case "underline": {
-        returnString =
-          rendering === "rich" ? `_${returnString}_` : returnString;
-        break;
-      }
-    }
+  if (rendering !== "rich") {
+    return contentString.replaceAll("&#39;", "'");
   }
 
-  return returnString.replaceAll("&#39;", "'");
+  return applyRichRenderOptions(contentString, output).replaceAll("&#39;", "'");
+}
+
+function applyRichRenderOptions(
+  contentString: string,
+  options: ReadonlyArray<RenderOption>,
+): string {
+  const withoutLeadingWhitespace = contentString.trimStart();
+  const leadingWhitespace = contentString.slice(
+    0,
+    contentString.length - withoutLeadingWhitespace.length,
+  );
+  const renderableContent = withoutLeadingWhitespace.trimEnd();
+  const trailingWhitespace = withoutLeadingWhitespace.slice(
+    renderableContent.length,
+  );
+
+  if (renderableContent === "") {
+    return contentString;
+  }
+
+  return `${leadingWhitespace}${applyMDXRenderElements(
+    renderableContent,
+    options,
+  )}${trailingWhitespace}`;
+}
+
+function applyMDXRenderElements(
+  contentString: string,
+  options: ReadonlyArray<RenderOption>,
+): string {
+  let result = contentString;
+  for (const option of options) {
+    const element = MDX_RENDER_ELEMENTS[option];
+    result = `<${element}>${result}</${element}>`;
+  }
+
+  return result;
 }
 
 /**
@@ -247,18 +275,18 @@ function parseXMLStringVariant(
 ): string {
   let returnString = parseXMLStringPayload(string, options);
 
-  if (string.whitespace != null) {
-    returnString = parseWhitespace(
-      returnString,
-      string.whitespace,
-      options.rendering,
-    );
-  }
-
   if (string.rend != null) {
     returnString = parseRenderOptions(
       returnString,
       string.rend,
+      options.rendering,
+    );
+  }
+
+  if (string.whitespace != null) {
+    returnString = parseWhitespace(
+      returnString,
+      string.whitespace,
       options.rendering,
     );
   }
