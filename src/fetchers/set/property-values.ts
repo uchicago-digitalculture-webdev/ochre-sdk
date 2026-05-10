@@ -486,12 +486,19 @@ declare function local:put-property-detail(
   return
     if (
       empty($existing)
-      or (string-length(string($existing)) = 0 and string-length($display) gt 0)
+      or (not($existing/content) and exists($label-content))
+      or (
+        not($existing/content)
+        and string-length(string($existing)) = 0
+        and string-length($display) gt 0
+      )
     ) then
       map:put(
         $details,
         $key,
-        <propertyValue scope="{$scope}" variableUuid="{$variable-uuid}" uuid="{$value-uuid}" rawValue="{$raw-value}" dataType="{$data-type}">{$label-content}{$display}</propertyValue>
+        <propertyValue scope="{$scope}" variableUuid="{$variable-uuid}" uuid="{$value-uuid}" rawValue="{$raw-value}" dataType="{$data-type}">{
+          if (exists($label-content)) then $label-content else $display
+        }</propertyValue>
       )
     else ()
 };
@@ -575,7 +582,7 @@ let $property-values :=
     let $detail := map:get($variable-property-details, $key)
     let $global-key := map:get($variable-property-global-keys, $key)
     return <propertyValue scope="variable" variableUuid="{string($detail/@variableUuid)}" uuid="{string($detail/@uuid)}" rawValue="{string($detail/@rawValue)}" dataType="{string($detail/@dataType)}" count="{map:get($variable-property-counts, $key)}" globalCount="{map:get($global-property-counts, $global-key)}">{
-      string($detail)
+      $detail/node()
     }</propertyValue>
   )`);
     returnedSequences.push("$property-values");
