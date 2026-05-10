@@ -645,12 +645,11 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
   contentItem: XMLContent["content"][number],
   options: { languages: V; rendering: TextRendering; parseEmail: boolean },
 ): string {
-  if (item.payload == null && item.string == null && item.whitespace != null) {
-    return parseWhitespace("", item.whitespace, options.rendering);
-  }
-
-  if (item.payload == null && item.string == null) {
-    return "";
+  const hasTextContent = item.payload != null || item.string != null;
+  if (!hasTextContent && getXMLRichTextLinks(item).length === 0) {
+    return item.whitespace == null ?
+        ""
+      : parseWhitespace("", item.whitespace, options.rendering);
   }
 
   if (hasRichTextEnvelope(item)) {
