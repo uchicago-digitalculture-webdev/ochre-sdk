@@ -63,6 +63,7 @@ const ITEM_PAGE_TOKEN = "item-page";
 const ENTRY_PAGE_TOKEN = "entry-page";
 const VARIANT_TOKEN = "variant";
 const HEADING_LEVEL_TOKEN = "heading-level";
+const MDX_QUOTED_ATTRIBUTE_ESCAPE_REGEX = /[\n\r"]/;
 
 function isXMLRichTextLink(value: unknown): value is XMLRichTextLink {
   return typeof value === "object" && value != null;
@@ -329,38 +330,59 @@ function createMDXComponent(
 
   switch (variant) {
     case "inlineImage": {
-      returnString = `<InlineImage uuid="${uuid}" ${
-        content != null && content !== "" ? `content="${content}"` : ""
-      } height={${height ?? "null"}} width={${width ?? "null"}} />`;
+      returnString = `<InlineImage uuid="${uuid}"${createMDXStringAttribute(
+        "content",
+        content,
+      )} height={${height ?? "null"}} width={${width ?? "null"}} />`;
       break;
     }
     case "internalLink": {
-      returnString = `<InternalLink uuid="${uuid}"${
-        content != null && content !== "" ? ` content="${content}"` : ""
-      }>${text}</InternalLink>`;
+      returnString = `<InternalLink uuid="${uuid}"${createMDXStringAttribute(
+        "content",
+        content,
+      )}>${text}</InternalLink>`;
       break;
     }
     case "externalLink": {
-      returnString = `<ExternalLink href="${href == null ? "#" : transformPermanentIdentificationUrl(href)}"${
-        content != null && content !== "" ? ` content="${content}"` : ""
-      }>${text}</ExternalLink>`;
+      returnString = `<ExternalLink href="${href == null ? "#" : transformPermanentIdentificationUrl(href)}"${createMDXStringAttribute(
+        "content",
+        content,
+      )}>${text}</ExternalLink>`;
       break;
     }
     case "documentLink": {
-      returnString = String.raw`<ExternalLink href="https:\/\/ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${uuid}&load"${
-        content != null && content !== "" ? ` content="${content}"` : ""
-      }>${text}</ExternalLink>`;
+      returnString = String.raw`<ExternalLink href="https:\/\/ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${uuid}&load"${createMDXStringAttribute(
+        "content",
+        content,
+      )}>${text}</ExternalLink>`;
       break;
     }
     case "tooltipSpan": {
-      returnString = `<TooltipSpan${
-        content != null && content !== "" ? ` content="${content}"` : ""
-      }>${text}</TooltipSpan>`;
+      returnString = `<TooltipSpan${createMDXStringAttribute(
+        "content",
+        content,
+      )}>${text}</TooltipSpan>`;
       break;
     }
   }
 
   return returnString;
+}
+
+function createMDXStringAttribute(
+  name: string,
+  value: string | undefined,
+): string {
+  if (value == null || value === "") {
+    return "";
+  }
+
+  const serializedValue =
+    MDX_QUOTED_ATTRIBUTE_ESCAPE_REGEX.test(value) ?
+      `{${JSON.stringify(value)}}`
+    : `"${value}"`;
+
+  return ` ${name}=${serializedValue}`;
 }
 
 function applyWhitespaceToResult(
@@ -741,11 +763,10 @@ function createInternalLinkComponent(properties: {
             : ""
           }`
         : ""
-      }${
-        properties.content != null && properties.content !== "" ?
-          ` content="${properties.content}"`
-        : ""
-      }>${innerContent}</InternalLink>`;
+      }${createMDXStringAttribute(
+        "content",
+        properties.content,
+      )}>${innerContent}</InternalLink>`;
     }
   }
 }
