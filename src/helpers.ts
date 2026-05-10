@@ -3,29 +3,29 @@ import type {
   HierarchyItemDataCategory,
   Item,
   ItemLocation,
+  LanguageCodes,
   Property,
   SingleHierarchyProperty,
 } from "#/types/index.js";
 import { flattenProperties } from "#/utils.js";
 
-type FlattenedItem<U, T extends ReadonlyArray<string>> = Omit<
-  U,
-  "properties"
-> & { properties: Array<SingleHierarchyProperty<T>> };
+type FlattenedItem<U, T extends LanguageCodes> = Omit<U, "properties"> & {
+  properties: Array<SingleHierarchyProperty<T>>;
+};
 
-type PropertySource<T extends ReadonlyArray<string>> = {
+type PropertySource<T extends LanguageCodes> = {
   properties: ReadonlyArray<Property<T> | SingleHierarchyProperty<T>>;
 };
 
-type ObservationPropertySource<T extends ReadonlyArray<string>> = {
+type ObservationPropertySource<T extends LanguageCodes> = {
   observations: ReadonlyArray<PropertySource<T>>;
 };
 
-type InterpretationPropertySource<T extends ReadonlyArray<string>> = {
+type InterpretationPropertySource<T extends LanguageCodes> = {
   interpretations: ReadonlyArray<PropertySource<T>>;
 };
 
-type BibliographyPropertySource<T extends ReadonlyArray<string>> = {
+type BibliographyPropertySource<T extends LanguageCodes> = {
   bibliographies: ReadonlyArray<PropertySource<T>>;
 };
 
@@ -42,7 +42,7 @@ export const DEFAULT_PAGE_SIZE = 48;
 export function flattenItemProperties<
   U extends DataCategory = DataCategory,
   V extends HierarchyItemDataCategory<U> = HierarchyItemDataCategory<U>,
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
   W extends ItemLocation = "topLevel",
 >(item: Item<U, V, T, W>): FlattenedItem<Item<U, V, T, W>, T> {
   const allProperties: Array<Property<T> | SingleHierarchyProperty<T>> = [];

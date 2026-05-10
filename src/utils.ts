@@ -1,5 +1,9 @@
 import * as v from "valibot";
-import type { Property, SingleHierarchyProperty } from "./types/index.js";
+import type {
+  LanguageCodes,
+  Property,
+  SingleHierarchyProperty,
+} from "./types/index.js";
 
 const PSEUDO_UUID_REGEX = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
 
@@ -90,9 +94,7 @@ export function stringLiteral(value: string): string {
  * @returns The flattened properties
  * @internal
  */
-export function flattenProperties<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
->(
+export function flattenProperties<T extends LanguageCodes = LanguageCodes>(
   properties: ReadonlyArray<Property<T> | SingleHierarchyProperty<T>>,
 ): Array<SingleHierarchyProperty<T>> {
   const result: Array<SingleHierarchyProperty<T>> = [];

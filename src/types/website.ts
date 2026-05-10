@@ -3,16 +3,14 @@ import type {
   Bibliography,
   DataCategory,
   Identification,
+  LanguageCodes,
   License,
   Metadata,
   Person,
-  PropertyValueContent,
+  QueryablePropertyValueDataType,
 } from "#/types/index.js";
 
-type WebsitePropertyValueDataType = Exclude<
-  PropertyValueContent<ReadonlyArray<string>>["dataType"],
-  "coordinate"
->;
+type WebsitePropertyValueDataType = QueryablePropertyValueDataType;
 
 /**
  * Represents a context tree level item with a variable and value
@@ -24,9 +22,7 @@ export type ContextTreeLevelItem = {
 /**
  * Represents a context tree level with a context item
  */
-export type ContextTreeLevel<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
-> = {
+export type ContextTreeLevel<T extends LanguageCodes = LanguageCodes> = {
   context: Array<ContextTreeLevelItem>;
   identification: Identification<T>;
   type: string;
@@ -35,9 +31,7 @@ export type ContextTreeLevel<
 /**
  * Represents a filter context tree level with a context item
  */
-export type ContextTreeFilterLevel<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
-> = {
+export type ContextTreeFilterLevel<T extends LanguageCodes = LanguageCodes> = {
   context: Array<ContextTreeLevelItem>;
   identification: Identification<T>;
   type: string;
@@ -50,9 +44,7 @@ export type ContextTreeFilterLevel<
 /**
  * Represents a context tree with levels grouped by behavior
  */
-export type ContextTree<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
-> = {
+export type ContextTree<T extends LanguageCodes = LanguageCodes> = {
   flatten: Array<ContextTreeLevel<T>>;
   suppress: Array<ContextTreeLevel<T>>;
   filter: Array<ContextTreeFilterLevel<T>>;
@@ -66,7 +58,7 @@ export type ContextTree<
 /**
  * Represents a scope with its UUID, type and identification
  */
-export type Scope<T extends ReadonlyArray<string> = ReadonlyArray<string>> = {
+export type Scope<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   type: string;
   identification: Identification<T>;
@@ -103,20 +95,17 @@ export type StylesheetItem =
       };
     };
 
-export type WebsitePropertyQueryNode<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
-> = {
-  target: "property";
-  propertyVariable: string;
-  dataType: WebsitePropertyValueDataType;
-  matchMode: "includes" | "exact";
-  isCaseSensitive: boolean;
-  language: T[number];
-};
+export type WebsitePropertyQueryNode<T extends LanguageCodes = LanguageCodes> =
+  {
+    target: "property";
+    propertyVariable: string;
+    dataType: WebsitePropertyValueDataType;
+    matchMode: "includes" | "exact";
+    isCaseSensitive: boolean;
+    language: T[number];
+  };
 
-export type WebsitePropertyQuery<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
-> =
+export type WebsitePropertyQuery<T extends LanguageCodes = LanguageCodes> =
   | WebsitePropertyQueryNode<T>
   | { and: Array<WebsitePropertyQuery<T>> }
   | { or: Array<WebsitePropertyQuery<T>> };
@@ -137,7 +126,7 @@ export type WebsiteType =
 /**
  * Represents a website with its properties and elements
  */
-export type Website<T extends ReadonlyArray<string> = ReadonlyArray<string>> = {
+export type Website<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   belongsTo: { uuid: string; abbreviation: string } | null;
   metadata: Metadata<T>;
@@ -212,7 +201,7 @@ export type Website<T extends ReadonlyArray<string> = ReadonlyArray<string>> = {
 /**
  * Represents a webpage with its title, slug, properties, items and subpages
  */
-export type Webpage<T extends ReadonlyArray<string> = ReadonlyArray<string>> = {
+export type Webpage<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   type: "page";
   title: MultilingualString<T>;
@@ -239,9 +228,7 @@ export type Webpage<T extends ReadonlyArray<string> = ReadonlyArray<string>> = {
 /**
  * Represents a web segment
  */
-export type WebSegment<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
-> = {
+export type WebSegment<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   type: "segment";
   title: MultilingualString<T>;
@@ -253,9 +240,7 @@ export type WebSegment<
 /**
  * Represents a web segment item
  */
-export type WebSegmentItem<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
-> = {
+export type WebSegmentItem<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   type: "segment-item";
   title: MultilingualString<T>;
@@ -267,25 +252,22 @@ export type WebSegmentItem<
 /**
  * Represents a title with its label and variant
  */
-export type WebTitle<T extends ReadonlyArray<string> = ReadonlyArray<string>> =
-  {
-    label: MultilingualString<T>;
-    variant: "default" | "simple";
-    properties: {
-      isNameDisplayed: boolean;
-      isDescriptionDisplayed: boolean;
-      isDateDisplayed: boolean;
-      isCreatorsDisplayed: boolean;
-      isCountDisplayed: boolean;
-    };
+export type WebTitle<T extends LanguageCodes = LanguageCodes> = {
+  label: MultilingualString<T>;
+  variant: "default" | "simple";
+  properties: {
+    isNameDisplayed: boolean;
+    isDescriptionDisplayed: boolean;
+    isDateDisplayed: boolean;
+    isCreatorsDisplayed: boolean;
+    isCountDisplayed: boolean;
   };
+};
 
 /**
  * Base properties for web elements
  */
-export type WebElement<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
-> = {
+export type WebElement<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   type: "element";
   title: WebTitle<T>;
@@ -299,9 +281,7 @@ export type WebElement<
 /**
  * Union type of all possible web element components
  */
-export type WebElementComponent<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
-> =
+export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
   | {
       component: "3d-viewer";
       linkUuid: string;
@@ -489,18 +469,29 @@ export type WebElementComponent<
   | { component: "timeline"; linkUuid: string }
   | { component: "video"; linkUuid: string; isChaptersDisplayed: boolean };
 
+export type WebElementComponentName = WebElementComponent["component"];
+
+export type WebElementComponentOf<
+  U extends WebElementComponentName,
+  T extends LanguageCodes = LanguageCodes,
+> = Extract<WebElementComponent<T>, { component: U }>;
+
+export type WebElementOf<
+  U extends WebElementComponentName,
+  T extends LanguageCodes = LanguageCodes,
+> = Extract<WebElement<T>, { component: U }>;
+
 /**
  * Represents an image used in web elements
  */
-export type WebImage<T extends ReadonlyArray<string> = ReadonlyArray<string>> =
-  {
-    uuid: string | null;
-    label: MultilingualString<T> | null;
-    description: MultilingualString<T> | null;
-    width: number;
-    height: number;
-    quality: "low" | "high";
-  };
+export type WebImage<T extends LanguageCodes = LanguageCodes> = {
+  uuid: string | null;
+  label: MultilingualString<T> | null;
+  description: MultilingualString<T> | null;
+  width: number;
+  height: number;
+  quality: "low" | "high";
+};
 
 /**
  * Represents a CSS style with label and value
@@ -519,7 +510,7 @@ export type WebBlockLayout =
  * Represents a block of vertical or horizontal content alignment
  */
 export type WebBlock<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
   U extends WebBlockLayout = WebBlockLayout,
 > = {
   uuid: string;
@@ -557,3 +548,11 @@ export type WebBlock<
     mobile: Array<Style>;
   };
 };
+
+export type WebBlockByLayout<
+  U extends WebBlockLayout = WebBlockLayout,
+  T extends LanguageCodes = LanguageCodes,
+> = WebBlock<T, U>;
+
+export type AccordionWebBlock<T extends LanguageCodes = LanguageCodes> =
+  WebBlock<T, "accordion">;

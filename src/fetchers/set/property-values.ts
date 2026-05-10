@@ -1,9 +1,9 @@
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type {
-  PropertyValueContent,
   PropertyValueQueryItem,
   Query,
+  QueryablePropertyValueDataType,
   SetAttributeValueQueryItem,
 } from "#/types/index.js";
 import type { XMLContent } from "#/xml/types.js";
@@ -38,10 +38,7 @@ type ParsedAttributeValueItem = {
   content: string | null;
 };
 
-type PropertyValueQueryDataType = Exclude<
-  PropertyValueContent<ReadonlyArray<string>>["dataType"],
-  "coordinate"
->;
+type PropertyValueQueryDataType = QueryablePropertyValueDataType;
 
 type ParsedPropertyValueLabelContent = XMLContent["content"];
 

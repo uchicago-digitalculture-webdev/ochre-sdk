@@ -1,6 +1,8 @@
 import { deepEqual } from "fast-equals";
 import type {
+  LanguageCodes,
   Property,
+  PropertyLike,
   PropertyValueContent,
   SimplifiedProperty,
   SingleHierarchyProperty,
@@ -22,14 +24,10 @@ const DEFAULT_OPTIONS: PropertyOptions = {
   limitToLeafPropertyValues: true,
 };
 
-type PropertyContent<T extends ReadonlyArray<string>> =
+type PropertyContent<T extends LanguageCodes> =
   PropertyValueContent<T>["content"];
 
-type SearchableProperty<T extends ReadonlyArray<string>> =
-  | Property<T>
-  | SingleHierarchyProperty<T>
-  | SimplifiedProperty<T>
-  | SingleHierarchySimplifiedProperty<T>;
+type SearchableProperty<T extends LanguageCodes> = PropertyLike<T>;
 
 function withDefaultOptions(
   options: PropertyOptions,
@@ -40,7 +38,7 @@ function withDefaultOptions(
   };
 }
 
-function findPropertyByVariableUuid<T extends ReadonlyArray<string>>(
+function findPropertyByVariableUuid<T extends LanguageCodes>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableUuid: string,
 ): SearchableProperty<T> | null {
@@ -53,7 +51,7 @@ function findPropertyByVariableUuid<T extends ReadonlyArray<string>>(
   return null;
 }
 
-function findPropertyByVariableLabel<T extends ReadonlyArray<string>>(
+function findPropertyByVariableLabel<T extends LanguageCodes>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableLabel: string,
 ): SearchableProperty<T> | null {
@@ -66,7 +64,7 @@ function findPropertyByVariableLabel<T extends ReadonlyArray<string>>(
   return null;
 }
 
-function getPropertyVariableLabel<T extends ReadonlyArray<string>>(
+function getPropertyVariableLabel<T extends LanguageCodes>(
   property: SearchableProperty<T>,
 ): string {
   return typeof property.variable.label === "string" ?
@@ -74,7 +72,7 @@ function getPropertyVariableLabel<T extends ReadonlyArray<string>>(
     : property.variable.label.getText();
 }
 
-function propertyHasValue<T extends ReadonlyArray<string>>(
+function propertyHasValue<T extends LanguageCodes>(
   property: SearchableProperty<T>,
   value: PropertyValueContent<T>,
 ): boolean {
@@ -87,7 +85,7 @@ function propertyHasValue<T extends ReadonlyArray<string>>(
   return false;
 }
 
-function propertyHasValueContent<T extends ReadonlyArray<string>>(
+function propertyHasValueContent<T extends LanguageCodes>(
   property: SearchableProperty<T>,
   valueContent: PropertyContent<T>,
 ): boolean {
@@ -100,7 +98,7 @@ function propertyHasValueContent<T extends ReadonlyArray<string>>(
   return false;
 }
 
-function propertyValueContentsEqual<T extends ReadonlyArray<string>>(
+function propertyValueContentsEqual<T extends LanguageCodes>(
   property: SearchableProperty<T>,
   valueContents: ReadonlyArray<PropertyContent<T>>,
 ): boolean {
@@ -117,7 +115,7 @@ function propertyValueContentsEqual<T extends ReadonlyArray<string>>(
   return true;
 }
 
-function searchPropertyResult<T extends ReadonlyArray<string>, TResult>(
+function searchPropertyResult<T extends LanguageCodes, TResult>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   options: Pick<PropertyOptions, "includeNestedProperties">,
   findDirectResult: (
@@ -157,7 +155,7 @@ function searchPropertyResult<T extends ReadonlyArray<string>, TResult>(
   return null;
 }
 
-function getPropertyValuesResult<T extends ReadonlyArray<string>>(
+function getPropertyValuesResult<T extends LanguageCodes>(
   values: ReadonlyArray<PropertyValueContent<T>>,
   limitToLeafPropertyValues: boolean,
   copyValuesWhenUnfiltered: boolean,
@@ -173,7 +171,7 @@ function getPropertyValuesResult<T extends ReadonlyArray<string>>(
   return [...values];
 }
 
-function clonePropertyValues<T extends ReadonlyArray<string>>(
+function clonePropertyValues<T extends LanguageCodes>(
   values: ReadonlyArray<PropertyValueContent<T>>,
 ): Array<PropertyValueContent<T>> {
   const clonedValues: Array<PropertyValueContent<T>> = [];
@@ -204,7 +202,7 @@ function clonePropertyValues<T extends ReadonlyArray<string>>(
 }
 
 function getNormalizedProperty<
-  T extends ReadonlyArray<string>,
+  T extends LanguageCodes,
   TProperty extends SearchableProperty<T>,
 >(
   property: TProperty,
@@ -225,7 +223,7 @@ function getNormalizedProperty<
   } as TProperty;
 }
 
-function getFirstPropertyValueResult<T extends ReadonlyArray<string>>(
+function getFirstPropertyValueResult<T extends LanguageCodes>(
   values: ReadonlyArray<PropertyValueContent<T>>,
   limitToLeafPropertyValues: boolean,
 ): PropertyValueContent<T> | null {
@@ -236,7 +234,7 @@ function getFirstPropertyValueResult<T extends ReadonlyArray<string>>(
   return values[0] ?? null;
 }
 
-function getFirstPropertyValueContentResult<T extends ReadonlyArray<string>>(
+function getFirstPropertyValueContentResult<T extends LanguageCodes>(
   values: ReadonlyArray<PropertyValueContent<T>>,
   limitToLeafPropertyValues: boolean,
 ): PropertyContent<T> | null {
@@ -247,7 +245,7 @@ function getFirstPropertyValueContentResult<T extends ReadonlyArray<string>>(
   return values[0]?.content ?? null;
 }
 
-function visitProperties<T extends ReadonlyArray<string>>(
+function visitProperties<T extends LanguageCodes>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   includeNestedProperties: boolean,
   visit: (property: SearchableProperty<T>) => void,
@@ -270,35 +268,35 @@ function visitProperties<T extends ReadonlyArray<string>>(
  * @returns The matching Property object, or null if not found
  */
 export function getPropertyByVariableUuid<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<Property<T>>,
   variableUuid: string,
   options?: PropertyOptions,
 ): Property<T> | null;
 export function getPropertyByVariableUuid<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SingleHierarchyProperty<T>>,
   variableUuid: string,
   options?: PropertyOptions,
 ): SingleHierarchyProperty<T> | null;
 export function getPropertyByVariableUuid<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SimplifiedProperty<T>>,
   variableUuid: string,
   options?: PropertyOptions,
 ): SimplifiedProperty<T> | null;
 export function getPropertyByVariableUuid<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
   variableUuid: string,
   options?: PropertyOptions,
 ): SingleHierarchySimplifiedProperty<T> | null;
 export function getPropertyByVariableUuid<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableUuid: string,
@@ -323,7 +321,7 @@ export function getPropertyByVariableUuid<
  * @returns Array of property values, or null if property not found
  */
 export function getPropertyValuesByVariableUuid<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableUuid: string,
@@ -364,7 +362,7 @@ export function getPropertyValuesByVariableUuid<
  * @returns Array of property value contents, or null if property not found
  */
 export function getPropertyValueContentsByVariableUuid<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableUuid: string,
@@ -408,7 +406,7 @@ export function getPropertyValueContentsByVariableUuid<
  * @returns The first property value, or null if property not found
  */
 export function getPropertyValueByVariableUuid<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableUuid: string,
@@ -446,7 +444,7 @@ export function getPropertyValueByVariableUuid<
  * @returns The first property value content, or null if property not found
  */
 export function getPropertyValueContentByVariableUuid<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableUuid: string,
@@ -485,35 +483,35 @@ export function getPropertyValueContentByVariableUuid<
  * @returns The matching Property object, or null if not found
  */
 export function getPropertyByVariableLabel<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<Property<T>>,
   variableLabel: string,
   options?: PropertyOptions,
 ): Property<T> | null;
 export function getPropertyByVariableLabel<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SingleHierarchyProperty<T>>,
   variableLabel: string,
   options?: PropertyOptions,
 ): SingleHierarchyProperty<T> | null;
 export function getPropertyByVariableLabel<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SimplifiedProperty<T>>,
   variableLabel: string,
   options?: PropertyOptions,
 ): SimplifiedProperty<T> | null;
 export function getPropertyByVariableLabel<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
   variableLabel: string,
   options?: PropertyOptions,
 ): SingleHierarchySimplifiedProperty<T> | null;
 export function getPropertyByVariableLabel<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableLabel: string,
@@ -539,7 +537,7 @@ export function getPropertyByVariableLabel<
  * @returns The matching Property object, or null if not found or all values do not match
  */
 export function getPropertyByVariableLabelAndValues<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<Property<T>>,
   variableLabel: string,
@@ -547,7 +545,7 @@ export function getPropertyByVariableLabelAndValues<
   options?: PropertyOptions,
 ): Property<T> | null;
 export function getPropertyByVariableLabelAndValues<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SingleHierarchyProperty<T>>,
   variableLabel: string,
@@ -555,7 +553,7 @@ export function getPropertyByVariableLabelAndValues<
   options?: PropertyOptions,
 ): SingleHierarchyProperty<T> | null;
 export function getPropertyByVariableLabelAndValues<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SimplifiedProperty<T>>,
   variableLabel: string,
@@ -563,7 +561,7 @@ export function getPropertyByVariableLabelAndValues<
   options?: PropertyOptions,
 ): SimplifiedProperty<T> | null;
 export function getPropertyByVariableLabelAndValues<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
   variableLabel: string,
@@ -571,7 +569,7 @@ export function getPropertyByVariableLabelAndValues<
   options?: PropertyOptions,
 ): SingleHierarchySimplifiedProperty<T> | null;
 export function getPropertyByVariableLabelAndValues<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableLabel: string,
@@ -611,7 +609,7 @@ export function getPropertyByVariableLabelAndValues<
  * @returns The matching Property object, or null if not found or all value contents do not match
  */
 export function getPropertyByVariableLabelAndValueContents<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<Property<T>>,
   variableLabel: string,
@@ -619,7 +617,7 @@ export function getPropertyByVariableLabelAndValueContents<
   options?: PropertyOptions,
 ): Property<T> | null;
 export function getPropertyByVariableLabelAndValueContents<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SingleHierarchyProperty<T>>,
   variableLabel: string,
@@ -627,7 +625,7 @@ export function getPropertyByVariableLabelAndValueContents<
   options?: PropertyOptions,
 ): SingleHierarchyProperty<T> | null;
 export function getPropertyByVariableLabelAndValueContents<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SimplifiedProperty<T>>,
   variableLabel: string,
@@ -635,7 +633,7 @@ export function getPropertyByVariableLabelAndValueContents<
   options?: PropertyOptions,
 ): SimplifiedProperty<T> | null;
 export function getPropertyByVariableLabelAndValueContents<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
   variableLabel: string,
@@ -643,7 +641,7 @@ export function getPropertyByVariableLabelAndValueContents<
   options?: PropertyOptions,
 ): SingleHierarchySimplifiedProperty<T> | null;
 export function getPropertyByVariableLabelAndValueContents<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableLabel: string,
@@ -687,7 +685,7 @@ export function getPropertyByVariableLabelAndValueContents<
  * @returns The matching Property object, or null if not found or value does not match
  */
 export function getPropertyByVariableLabelAndValue<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<Property<T>>,
   variableLabel: string,
@@ -695,7 +693,7 @@ export function getPropertyByVariableLabelAndValue<
   options?: PropertyOptions,
 ): Property<T> | null;
 export function getPropertyByVariableLabelAndValue<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SingleHierarchyProperty<T>>,
   variableLabel: string,
@@ -703,7 +701,7 @@ export function getPropertyByVariableLabelAndValue<
   options?: PropertyOptions,
 ): SingleHierarchyProperty<T> | null;
 export function getPropertyByVariableLabelAndValue<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SimplifiedProperty<T>>,
   variableLabel: string,
@@ -711,7 +709,7 @@ export function getPropertyByVariableLabelAndValue<
   options?: PropertyOptions,
 ): SimplifiedProperty<T> | null;
 export function getPropertyByVariableLabelAndValue<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
   variableLabel: string,
@@ -719,7 +717,7 @@ export function getPropertyByVariableLabelAndValue<
   options?: PropertyOptions,
 ): SingleHierarchySimplifiedProperty<T> | null;
 export function getPropertyByVariableLabelAndValue<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableLabel: string,
@@ -759,7 +757,7 @@ export function getPropertyByVariableLabelAndValue<
  * @returns The matching Property object, or null if not found or value content does not match
  */
 export function getPropertyByVariableLabelAndValueContent<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<Property<T>>,
   variableLabel: string,
@@ -767,7 +765,7 @@ export function getPropertyByVariableLabelAndValueContent<
   options?: PropertyOptions,
 ): Property<T> | null;
 export function getPropertyByVariableLabelAndValueContent<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SingleHierarchyProperty<T>>,
   variableLabel: string,
@@ -775,7 +773,7 @@ export function getPropertyByVariableLabelAndValueContent<
   options?: PropertyOptions,
 ): SingleHierarchyProperty<T> | null;
 export function getPropertyByVariableLabelAndValueContent<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SimplifiedProperty<T>>,
   variableLabel: string,
@@ -783,7 +781,7 @@ export function getPropertyByVariableLabelAndValueContent<
   options?: PropertyOptions,
 ): SimplifiedProperty<T> | null;
 export function getPropertyByVariableLabelAndValueContent<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
   variableLabel: string,
@@ -791,7 +789,7 @@ export function getPropertyByVariableLabelAndValueContent<
   options?: PropertyOptions,
 ): SingleHierarchySimplifiedProperty<T> | null;
 export function getPropertyByVariableLabelAndValueContent<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableLabel: string,
@@ -830,7 +828,7 @@ export function getPropertyByVariableLabelAndValueContent<
  * @returns Array of property values, or null if property not found
  */
 export function getPropertyValuesByVariableLabel<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableLabel: string,
@@ -871,7 +869,7 @@ export function getPropertyValuesByVariableLabel<
  * @returns The first property value, or null if property not found
  */
 export function getPropertyValueByVariableLabel<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableLabel: string,
@@ -909,7 +907,7 @@ export function getPropertyValueByVariableLabel<
  * @returns The first property value content, or null if property not found
  */
 export function getPropertyValueContentByVariableLabel<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SearchableProperty<T>>,
   variableLabel: string,
@@ -946,33 +944,23 @@ export function getPropertyValueContentByVariableLabel<
  * @param options - Search options, including whether to include nested properties
  * @returns Array of unique properties
  */
-export function getUniqueProperties<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
->(
+export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
   properties: ReadonlyArray<Property<T>>,
   options?: PropertyOptions,
 ): Array<Property<T>>;
-export function getUniqueProperties<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
->(
+export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
   properties: ReadonlyArray<SingleHierarchyProperty<T>>,
   options?: PropertyOptions,
 ): Array<SingleHierarchyProperty<T>>;
-export function getUniqueProperties<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
->(
+export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
   properties: ReadonlyArray<SimplifiedProperty<T>>,
   options?: PropertyOptions,
 ): Array<SimplifiedProperty<T>>;
-export function getUniqueProperties<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
->(
+export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
   properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
   options?: PropertyOptions,
 ): Array<SingleHierarchySimplifiedProperty<T>>;
-export function getUniqueProperties<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
->(
+export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Array<SearchableProperty<T>> {
@@ -1012,7 +1000,7 @@ export function getUniqueProperties<
  * @returns Array of unique property variable labels
  */
 export function getUniquePropertyVariableLabels<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 >(
   properties: ReadonlyArray<SearchableProperty<T>>,
   options: PropertyOptions = DEFAULT_OPTIONS,
@@ -1038,9 +1026,7 @@ export function getUniquePropertyVariableLabels<
  * @param propertyValues - The array of property values to get the leaf property values from
  * @returns The array of leaf property values
  */
-export function getLeafPropertyValues<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
->(
+export function getLeafPropertyValues<T extends LanguageCodes = LanguageCodes>(
   propertyValues: ReadonlyArray<PropertyValueContent<T>>,
 ): Array<PropertyValueContent<T>> {
   const leafPropertyValues: Array<PropertyValueContent<T>> = [];
@@ -1053,7 +1039,7 @@ export function getLeafPropertyValues<
   return leafPropertyValues;
 }
 
-function contentMatchesFilter<T extends ReadonlyArray<string>>(
+function contentMatchesFilter<T extends LanguageCodes>(
   content: PropertyContent<T>,
   filterContent: PropertyContent<T>,
 ): boolean {
@@ -1083,9 +1069,7 @@ function contentMatchesFilter<T extends ReadonlyArray<string>>(
  * @param options - Search options, including whether to include nested properties
  * @returns True if the property matches the filter criteria, false otherwise
  */
-export function filterProperties<
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
->(
+export function filterProperties<T extends LanguageCodes = LanguageCodes>(
   property: SearchableProperty<T>,
   filter: { variableLabel: string; value: PropertyValueContent<T> },
   options: PropertyOptions = DEFAULT_OPTIONS,

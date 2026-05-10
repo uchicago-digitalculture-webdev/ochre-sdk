@@ -1,7 +1,7 @@
 import * as v from "valibot";
 import type {
-  PropertyValueContent,
   Query,
+  QueryablePropertyValueDataType,
   QueryLeaf,
   SetItemsSort,
 } from "#/types/index.js";
@@ -118,10 +118,7 @@ const dateDataTypeSchema = v.picklist([
   "date",
   "dateTime",
 ] as const satisfies ReadonlyArray<
-  Extract<
-    PropertyValueContent<ReadonlyArray<string>>["dataType"],
-    "date" | "dateTime"
-  >
+  Extract<QueryablePropertyValueDataType, "date" | "dateTime">
 >);
 const standardQueryFields = {
   matchMode: v.picklist(["includes", "exact"]),
@@ -147,10 +144,7 @@ const setQueryLeafSchema = v.union([
         "time",
         "IDREF",
       ] as const satisfies ReadonlyArray<
-        Exclude<
-          PropertyValueContent<ReadonlyArray<string>>["dataType"],
-          "coordinate" | "date" | "dateTime"
-        >
+        Exclude<QueryablePropertyValueDataType, "date" | "dateTime">
       >),
       value: v.optional(v.string()),
       ...standardQueryFields,
@@ -253,12 +247,7 @@ const setItemsSortSchema = v.optional(
         "dateTime",
         "time",
         "IDREF",
-      ] as const satisfies ReadonlyArray<
-        Exclude<
-          PropertyValueContent<ReadonlyArray<string>>["dataType"],
-          "coordinate"
-        >
-      >),
+      ] as const satisfies ReadonlyArray<QueryablePropertyValueDataType>),
       direction: sortDirectionSchema,
       language: defaultString("eng"),
     }),

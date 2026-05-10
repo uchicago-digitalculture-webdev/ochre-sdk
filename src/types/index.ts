@@ -3,6 +3,14 @@ import type { MultilingualString } from "#/parsers/multilingual.js";
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
 /**
+ * Language-code tuple or array used by OCHRE multilingual fields.
+ *
+ * Use the default when the consumer does not need to narrow a value to a
+ * specific language tuple.
+ */
+export type LanguageCodes = ReadonlyArray<string>;
+
+/**
  * The category of an item in OCHRE
  */
 export type DataCategory =
@@ -30,19 +38,19 @@ export type ItemsDataCategory = Exclude<DataCategory, "tree">;
  */
 export type SetItemDataCategory = DataCategory;
 
-export type HierarchyItemDataCategory<U extends DataCategory> =
+export type HierarchyItemDataCategory<U extends DataCategory = DataCategory> =
   U extends "tree" ? ItemsDataCategory
   : U extends "set" ? SetItemDataCategory
   : never;
 
-export type HierarchyItemCategoryOption<U extends DataCategory> =
+export type HierarchyItemCategoryOption<U extends DataCategory = DataCategory> =
   U extends "tree" ? ItemsDataCategory
   : U extends "set" ? SetItemDataCategory | ReadonlyArray<SetItemDataCategory>
   : never;
 
 export type HierarchyItemCategoryFromOption<
-  U extends DataCategory,
-  V extends HierarchyItemCategoryOption<U> | undefined,
+  U extends DataCategory = DataCategory,
+  V extends HierarchyItemCategoryOption<U> | undefined = undefined,
 > =
   V extends ReadonlyArray<infer W> ? Extract<W, HierarchyItemDataCategory<U>>
   : V extends HierarchyItemDataCategory<U> ? V
@@ -75,7 +83,7 @@ export type ContextDataCategory = Exclude<
 /**
  *  Basic identification information
  */
-export type Identification<T extends ReadonlyArray<string>> = {
+export type Identification<T extends LanguageCodes = LanguageCodes> = {
   label: MultilingualString<T>;
   abbreviation: MultilingualString<T> | null;
   code: string | null;
@@ -86,7 +94,7 @@ export type Identification<T extends ReadonlyArray<string>> = {
 /**
  *  Metadata in OCHRE
  */
-export type Metadata<T extends ReadonlyArray<string>> = {
+export type Metadata<T extends LanguageCodes = LanguageCodes> = {
   dataset: string;
   description: string;
   publisher: string;
@@ -122,7 +130,7 @@ export type BelongsTo = { uuid: string; abbreviation: string };
 
 export type ItemLocation = "topLevel" | "nested";
 
-type ItemOrigin<T extends ReadonlyArray<string>, U extends ItemLocation> =
+type ItemOrigin<T extends LanguageCodes, U extends ItemLocation> =
   U extends "topLevel" ?
     {
       belongsTo: BelongsTo;
@@ -149,7 +157,7 @@ export type ContextItem = {
 /**
  *  Context node in OCHRE
  */
-export type ContextNode<U extends ContextDataCategory> = {
+export type ContextNode<U extends ContextDataCategory = ContextDataCategory> = {
   tree: ContextItem;
   project: ContextItem;
   heading: Array<ContextItem>;
@@ -158,7 +166,7 @@ export type ContextNode<U extends ContextDataCategory> = {
 /**
  *  Context in OCHRE
  */
-export type Context<U extends ContextDataCategory> = {
+export type Context<U extends ContextDataCategory = ContextDataCategory> = {
   nodes: Array<ContextNode<U>>;
   displayPath: string;
 };
@@ -166,7 +174,7 @@ export type Context<U extends ContextDataCategory> = {
 /**
  *  Event in OCHRE
  */
-export type Event<T extends ReadonlyArray<string>> = {
+export type Event<T extends LanguageCodes = LanguageCodes> = {
   date: Date | { start: Date; end: Date } | null;
   label: MultilingualString<T>;
   comment: MultilingualString<T> | null;
@@ -190,7 +198,7 @@ export type Event<T extends ReadonlyArray<string>> = {
 /**
  *  Source of coordinates in OCHRE
  */
-export type CoordinatesSource<T extends ReadonlyArray<string>> =
+export type CoordinatesSource<T extends LanguageCodes = LanguageCodes> =
   | { context: "self"; uuid: string; label: MultilingualString<T> }
   | {
       context: "related";
@@ -208,7 +216,7 @@ export type CoordinatesSource<T extends ReadonlyArray<string>> =
 /**
  *  Coordinates in OCHRE
  */
-export type Coordinates<T extends ReadonlyArray<string>> =
+export type Coordinates<T extends LanguageCodes = LanguageCodes> =
   | {
       type: "point";
       latitude: number;
@@ -226,7 +234,7 @@ export type Coordinates<T extends ReadonlyArray<string>> =
 /**
  *  Image in OCHRE
  */
-export type Image<T extends ReadonlyArray<string>> = {
+export type Image<T extends LanguageCodes = LanguageCodes> = {
   publicationDateTime: Date | null;
   identification: Identification<T> | null;
   href: string | null;
@@ -264,7 +272,7 @@ export type ImageMap = {
 /**
  *  Note in OCHRE
  */
-export type Note<T extends ReadonlyArray<string>> = {
+export type Note<T extends LanguageCodes = LanguageCodes> = {
   number: number;
   title: MultilingualString<T> | null;
   content: MultilingualString<T>;
@@ -274,35 +282,36 @@ export type Note<T extends ReadonlyArray<string>> = {
 /**
  *  Property value content in OCHRE
  */
-export type PropertyValueContent<T extends ReadonlyArray<string>> = Prettify<
-  {
-    hierarchy: { isLeaf: boolean; level: number | null };
-    label: MultilingualString<T> | null;
-    isUncertain: boolean;
-    category: string | null;
-    type: string | null;
-    uuid: string | null;
-    publicationDateTime: Date | null;
-    unit: string | null;
-    href: string | null;
-    height: number | null;
-    width: number | null;
-    fileSize: number | null;
-    slug: string | null;
-  } & (
-    | {
-        dataType: "string" | "coordinate" | "IDREF" | "date" | "dateTime";
-        content: string;
-      }
-    | { dataType: "integer" | "decimal" | "time"; content: number }
-    | { dataType: "boolean"; content: boolean }
-  )
->;
+export type PropertyValueContent<T extends LanguageCodes = LanguageCodes> =
+  Prettify<
+    {
+      hierarchy: { isLeaf: boolean; level: number | null };
+      label: MultilingualString<T> | null;
+      isUncertain: boolean;
+      category: string | null;
+      type: string | null;
+      uuid: string | null;
+      publicationDateTime: Date | null;
+      unit: string | null;
+      href: string | null;
+      height: number | null;
+      width: number | null;
+      fileSize: number | null;
+      slug: string | null;
+    } & (
+      | {
+          dataType: "string" | "coordinate" | "IDREF" | "date" | "dateTime";
+          content: string;
+        }
+      | { dataType: "integer" | "decimal" | "time"; content: number }
+      | { dataType: "boolean"; content: boolean }
+    )
+  >;
 
 /**
  *  Property in OCHRE
  */
-export type Property<T extends ReadonlyArray<string>> = {
+export type Property<T extends LanguageCodes = LanguageCodes> = {
   variable: {
     uuid: string;
     label: MultilingualString<T>;
@@ -317,7 +326,7 @@ export type Property<T extends ReadonlyArray<string>> = {
  * Simplified property in OCHRE website payloads. Simplified property variables
  * expose scalar labels rather than multilingual labels.
  */
-export type SimplifiedProperty<T extends ReadonlyArray<string>> = {
+export type SimplifiedProperty<T extends LanguageCodes = LanguageCodes> = {
   variable: { uuid: string; label: string; publicationDateTime: Date | null };
   values: Array<PropertyValueContent<T>>;
   comment: MultilingualString<T> | null;
@@ -327,17 +336,33 @@ export type SimplifiedProperty<T extends ReadonlyArray<string>> = {
 /**
  *  Property in a Set item. OCHRE exposes Set item properties as a flat list.
  */
-export type SingleHierarchyProperty<T extends ReadonlyArray<string>> = Omit<
-  Property<T>,
-  "properties"
->;
+export type SingleHierarchyProperty<T extends LanguageCodes = LanguageCodes> =
+  Omit<Property<T>, "properties">;
 
-export type SingleHierarchySimplifiedProperty<T extends ReadonlyArray<string>> =
-  Omit<SimplifiedProperty<T>, "properties">;
+export type SingleHierarchySimplifiedProperty<
+  T extends LanguageCodes = LanguageCodes,
+> = Omit<SimplifiedProperty<T>, "properties">;
+
+export type PropertyLike<T extends LanguageCodes = LanguageCodes> =
+  | Property<T>
+  | SingleHierarchyProperty<T>
+  | SimplifiedProperty<T>
+  | SingleHierarchySimplifiedProperty<T>;
+
+export type ItemProperty<T extends LanguageCodes = LanguageCodes> =
+  | Property<T>
+  | SingleHierarchyProperty<T>;
+
+export type PropertyValueDataType = PropertyValueContent["dataType"];
+
+export type QueryablePropertyValueDataType = Exclude<
+  PropertyValueDataType,
+  "coordinate"
+>;
 
 type WithSingleHierarchyProperties<
   U extends { properties: Array<Property<T>> },
-  T extends ReadonlyArray<string>,
+  T extends LanguageCodes,
 > =
   U extends { properties: Array<Property<T>> } ?
     Prettify<
@@ -350,7 +375,7 @@ type WithSingleHierarchyProperties<
  */
 export type BaseItem<
   U extends DataCategory = DataCategory,
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
   V extends ItemLocation = "topLevel",
 > = ItemOrigin<T, V> & {
   uuid: string;
@@ -374,7 +399,7 @@ export type ItemLinkCategory = DataCategory | "dictionaryUnit";
  */
 export type BaseItemLink<
   U extends ItemLinkCategory = ItemLinkCategory,
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 > = {
   uuid: string;
   category: U;
@@ -400,74 +425,77 @@ export type BibliographyEntryInfo = {
   endPage: string;
 };
 
-export type ItemLinks<T extends ReadonlyArray<string> = ReadonlyArray<string>> =
-  Array<ItemLink<ItemLinkCategory, T>>;
+export type ItemLinks<T extends LanguageCodes = LanguageCodes> = Array<
+  ItemLink<ItemLinkCategory, T>
+>;
 
-export type TreeItemLink<T extends ReadonlyArray<string>> = Prettify<
+export type TreeItemLink<T extends LanguageCodes = LanguageCodes> = Prettify<
   BaseItemLink<"tree", T> & {
     type: string | null;
     itemsCategory: ItemsDataCategory | null;
   }
 >;
 
-export type SetItemLink<T extends ReadonlyArray<string>> = Prettify<
+export type SetItemLink<T extends LanguageCodes = LanguageCodes> = Prettify<
   BaseItemLink<"set", T> & {
     type: string | null;
     itemsCategory: Array<SetItemDataCategory> | null;
   }
 >;
 
-export type BibliographyItemLink<T extends ReadonlyArray<string>> = Prettify<
-  BaseItemLink<"bibliography", T> & {
-    type: string | null;
-    zoteroId: string | null;
-    citationDetails: string | null;
-    citationFormat: MultilingualString<T> | null;
-    citationFormatSpan: string | null;
-    referenceFormatDiv: string | null;
-    image: Image<T> | null;
-    sourceDocument: BibliographySourceDocument | null;
-    publicationInfo: {
-      publishers: Array<ItemLink<"person", T>>;
-      startDate: Date | null;
-    } | null;
-    entryInfo: BibliographyEntryInfo | null;
-    source: ItemLink<ItemsDataCategory, T> | null;
-    authors: Array<ItemLink<"person", T>>;
-    periods: Array<ItemLink<"period", T>>;
-    properties: Array<Property<T>>;
-  }
->;
+export type BibliographyItemLink<T extends LanguageCodes = LanguageCodes> =
+  Prettify<
+    BaseItemLink<"bibliography", T> & {
+      type: string | null;
+      zoteroId: string | null;
+      citationDetails: string | null;
+      citationFormat: MultilingualString<T> | null;
+      citationFormatSpan: string | null;
+      referenceFormatDiv: string | null;
+      image: Image<T> | null;
+      sourceDocument: BibliographySourceDocument | null;
+      publicationInfo: {
+        publishers: Array<ItemLink<"person", T>>;
+        startDate: Date | null;
+      } | null;
+      entryInfo: BibliographyEntryInfo | null;
+      source: ItemLink<ItemsDataCategory, T> | null;
+      authors: Array<ItemLink<"person", T>>;
+      periods: Array<ItemLink<"period", T>>;
+      properties: Array<Property<T>>;
+    }
+  >;
 
-export type ConceptItemLink<T extends ReadonlyArray<string>> = Prettify<
+export type ConceptItemLink<T extends LanguageCodes = LanguageCodes> = Prettify<
   BaseItemLink<"concept", T> & {
     image: Image<T> | null;
     coordinates: Array<Coordinates<T>>;
   }
 >;
 
-export type SpatialUnitItemLink<T extends ReadonlyArray<string>> = Prettify<
-  BaseItemLink<"spatialUnit", T> & {
-    image: Image<T> | null;
-    coordinates: Array<Coordinates<T>>;
-  }
->;
+export type SpatialUnitItemLink<T extends LanguageCodes = LanguageCodes> =
+  Prettify<
+    BaseItemLink<"spatialUnit", T> & {
+      image: Image<T> | null;
+      coordinates: Array<Coordinates<T>>;
+    }
+  >;
 
-export type PeriodItemLink<T extends ReadonlyArray<string>> = Prettify<
+export type PeriodItemLink<T extends LanguageCodes = LanguageCodes> = Prettify<
   BaseItemLink<"period", T> & {
     type: string | null;
     coordinates: Array<Coordinates<T>>;
   }
 >;
 
-export type PersonItemLink<T extends ReadonlyArray<string>> = Prettify<
+export type PersonItemLink<T extends LanguageCodes = LanguageCodes> = Prettify<
   BaseItemLink<"person", T> & {
     type: string | null;
     coordinates: Array<Coordinates<T>>;
   }
 >;
 
-export type PropertyVariableItemLink<T extends ReadonlyArray<string>> =
+export type PropertyVariableItemLink<T extends LanguageCodes = LanguageCodes> =
   Prettify<
     BaseItemLink<"propertyVariable", T> & {
       type: string | null;
@@ -475,26 +503,28 @@ export type PropertyVariableItemLink<T extends ReadonlyArray<string>> =
     }
   >;
 
-export type PropertyValueItemLink<T extends ReadonlyArray<string>> = Prettify<
-  BaseItemLink<"propertyValue", T> & { coordinates: Array<Coordinates<T>> }
->;
+export type PropertyValueItemLink<T extends LanguageCodes = LanguageCodes> =
+  Prettify<
+    BaseItemLink<"propertyValue", T> & { coordinates: Array<Coordinates<T>> }
+  >;
 
-export type ResourceItemLink<T extends ReadonlyArray<string>> = Prettify<
-  BaseItemLink<"resource", T> & {
-    type: string | null;
-    href: string | null;
-    fileFormat: string | null;
-    fileSize: number | null;
-    isInline: boolean;
-    isPrimary: boolean;
-    height: number | null;
-    width: number | null;
-    image: Image<T> | null;
-    coordinates: Array<Coordinates<T>>;
-  }
->;
+export type ResourceItemLink<T extends LanguageCodes = LanguageCodes> =
+  Prettify<
+    BaseItemLink<"resource", T> & {
+      type: string | null;
+      href: string | null;
+      fileFormat: string | null;
+      fileSize: number | null;
+      isInline: boolean;
+      isPrimary: boolean;
+      height: number | null;
+      width: number | null;
+      image: Image<T> | null;
+      coordinates: Array<Coordinates<T>>;
+    }
+  >;
 
-export type TextItemLink<T extends ReadonlyArray<string>> = Prettify<
+export type TextItemLink<T extends LanguageCodes = LanguageCodes> = Prettify<
   BaseItemLink<"text", T> & {
     type: string | null;
     text: string | null;
@@ -504,16 +534,15 @@ export type TextItemLink<T extends ReadonlyArray<string>> = Prettify<
   }
 >;
 
-export type DictionaryUnitItemLink<T extends ReadonlyArray<string>> = Prettify<
-  BaseItemLink<"dictionaryUnit", T>
->;
+export type DictionaryUnitItemLink<T extends LanguageCodes = LanguageCodes> =
+  Prettify<BaseItemLink<"dictionaryUnit", T>>;
 
 /**
  * An abridged item reference exposed inside OCHRE links and reverse links.
  */
 export type ItemLink<
   U extends ItemLinkCategory = ItemLinkCategory,
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
 > =
   U extends ItemLinkCategory ?
     U extends "tree" ? TreeItemLink<T>
@@ -537,7 +566,7 @@ export type ItemLink<
 export type Item<
   U extends DataCategory = DataCategory,
   V extends HierarchyItemDataCategory<U> = HierarchyItemDataCategory<U>,
-  T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
   W extends ItemLocation = "topLevel",
 > =
   U extends DataCategory ?
@@ -555,12 +584,30 @@ export type Item<
     : never
   : never;
 
+export type TopLevelItem<
+  U extends DataCategory = DataCategory,
+  V extends HierarchyItemDataCategory<U> = HierarchyItemDataCategory<U>,
+  T extends LanguageCodes = LanguageCodes,
+> = Item<U, V, T, "topLevel">;
+
+export type NestedItem<
+  U extends DataCategory = DataCategory,
+  V extends HierarchyItemDataCategory<U> = HierarchyItemDataCategory<U>,
+  T extends LanguageCodes = LanguageCodes,
+> = Item<U, V, T, "nested">;
+
+export type LocatedItem<
+  U extends DataCategory = DataCategory,
+  V extends HierarchyItemDataCategory<U> = HierarchyItemDataCategory<U>,
+  T extends LanguageCodes = LanguageCodes,
+> = Item<U, V, T, ItemLocation>;
+
 /**
  *  Heading in OCHRE
  */
 export type Heading<
-  U extends HeadingDataCategory,
-  T extends ReadonlyArray<string>,
+  U extends HeadingDataCategory = HeadingDataCategory,
+  T extends LanguageCodes = LanguageCodes,
 > = {
   name: string;
   headings: Array<Heading<U, T>>;
@@ -571,8 +618,8 @@ export type Heading<
  *  Tree in OCHRE
  */
 export type Tree<
-  U extends ItemsDataCategory,
-  T extends ReadonlyArray<string>,
+  U extends ItemsDataCategory = ItemsDataCategory,
+  T extends LanguageCodes = LanguageCodes,
   V extends ItemLocation = "topLevel",
 > = Prettify<
   BaseItem<"tree", T, V> & {
@@ -592,8 +639,8 @@ export type Tree<
  *  Set in OCHRE
  */
 export type Set<
-  U extends SetItemDataCategory,
-  T extends ReadonlyArray<string>,
+  U extends SetItemDataCategory = SetItemDataCategory,
+  T extends LanguageCodes = LanguageCodes,
   V extends ItemLocation = "topLevel",
 > = Prettify<
   BaseItem<"set", T, V> & {
@@ -607,7 +654,7 @@ export type Set<
   }
 >;
 
-export type SetBibliography<T extends ReadonlyArray<string>> =
+export type SetBibliography<T extends LanguageCodes = LanguageCodes> =
   Bibliography<T, "nested"> extends infer U ?
     U extends { properties: Array<Property<T>> } ?
       Prettify<
@@ -618,27 +665,27 @@ export type SetBibliography<T extends ReadonlyArray<string>> =
     : never
   : never;
 
-export type SetConcept<T extends ReadonlyArray<string>> = Prettify<
+export type SetConcept<T extends LanguageCodes = LanguageCodes> = Prettify<
   Omit<Concept<T, "nested">, "interpretations" | "items"> & {
     properties: Array<SingleHierarchyProperty<T>>;
   }
 >;
 
-export type SetSpatialUnit<T extends ReadonlyArray<string>> = Prettify<
+export type SetSpatialUnit<T extends LanguageCodes = LanguageCodes> = Prettify<
   Omit<SpatialUnit<T, "nested">, "observations" | "items"> & {
     properties: Array<SingleHierarchyProperty<T>>;
   }
 >;
 
-export type SetPeriod<T extends ReadonlyArray<string>> = Prettify<
+export type SetPeriod<T extends LanguageCodes = LanguageCodes> = Prettify<
   Omit<WithSingleHierarchyProperties<Period<T, "nested">, T>, "items">
 >;
 
-export type SetResource<T extends ReadonlyArray<string>> = Prettify<
+export type SetResource<T extends LanguageCodes = LanguageCodes> = Prettify<
   Omit<WithSingleHierarchyProperties<Resource<T, "nested">, T>, "items">
 >;
 
-export type SetTree<T extends ReadonlyArray<string>> = Prettify<
+export type SetTree<T extends LanguageCodes = LanguageCodes> = Prettify<
   Omit<
     WithSingleHierarchyProperties<Tree<ItemsDataCategory, T, "nested">, T>,
     "items"
@@ -646,8 +693,8 @@ export type SetTree<T extends ReadonlyArray<string>> = Prettify<
 >;
 
 export type SetItem<
-  U extends SetItemDataCategory,
-  T extends ReadonlyArray<string>,
+  U extends SetItemDataCategory = SetItemDataCategory,
+  T extends LanguageCodes = LanguageCodes,
 > =
   U extends "tree" ? SetTree<T>
   : U extends "bibliography" ? SetBibliography<T>
@@ -671,7 +718,7 @@ export type SetItem<
  *  Person in OCHRE
  */
 export type Person<
-  T extends ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
   U extends ItemLocation = "topLevel",
 > = Prettify<
   BaseItem<"person", T, U> & {
@@ -696,7 +743,7 @@ export type Person<
  *  Period in OCHRE
  */
 export type Period<
-  T extends ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
   U extends ItemLocation = "topLevel",
 > = Prettify<
   BaseItem<"period", T, U> & {
@@ -714,7 +761,7 @@ export type Period<
  *  Bibliography in OCHRE
  */
 export type Bibliography<
-  T extends ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
   U extends ItemLocation = "topLevel",
 > = Prettify<
   BaseItem<"bibliography", T, U> & {
@@ -747,7 +794,7 @@ export type Bibliography<
  *  Concept in OCHRE
  */
 export type Concept<
-  T extends ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
   U extends ItemLocation = "topLevel",
 > = Prettify<
   BaseItem<"concept", T, U> & {
@@ -761,7 +808,7 @@ export type Concept<
 /**
  *  Interpretation in OCHRE
  */
-export type Interpretation<T extends ReadonlyArray<string>> = {
+export type Interpretation<T extends LanguageCodes = LanguageCodes> = {
   number: number;
   date: Date | null;
   observers: Array<Person<T, "nested">>;
@@ -776,7 +823,7 @@ export type Interpretation<T extends ReadonlyArray<string>> = {
  *  Spatial unit in OCHRE
  */
 export type SpatialUnit<
-  T extends ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
   U extends ItemLocation = "topLevel",
 > = Prettify<
   BaseItem<"spatialUnit", T, U> & {
@@ -792,7 +839,7 @@ export type SpatialUnit<
 /**
  *  Observation in OCHRE
  */
-export type Observation<T extends ReadonlyArray<string>> = {
+export type Observation<T extends LanguageCodes = LanguageCodes> = {
   number: number;
   date: Date | null;
   observers: Array<string> | Array<Person<T, "nested">>;
@@ -807,7 +854,7 @@ export type Observation<T extends ReadonlyArray<string>> = {
  *  Property variable in OCHRE
  */
 export type PropertyVariable<
-  T extends ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
   U extends ItemLocation = "topLevel",
 > = Prettify<
   BaseItem<"propertyVariable", T, U> & {
@@ -823,7 +870,7 @@ export type PropertyVariable<
  *  Property value in OCHRE
  */
 export type PropertyValue<
-  T extends ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
   U extends ItemLocation = "topLevel",
 > = Prettify<
   BaseItem<"propertyValue", T, U> & {
@@ -839,7 +886,7 @@ export type PropertyValue<
  *  Resource in OCHRE
  */
 export type Resource<
-  T extends ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
   U extends ItemLocation = "topLevel",
 > = Prettify<
   BaseItem<"resource", T, U> & {
@@ -868,7 +915,7 @@ export type Resource<
  *  Text in OCHRE
  */
 export type Text<
-  T extends ReadonlyArray<string>,
+  T extends LanguageCodes = LanguageCodes,
   U extends ItemLocation = "topLevel",
 > = Prettify<
   BaseItem<"text", T, U> & {
@@ -890,17 +937,111 @@ export type Text<
 /**
  *  Section in OCHRE
  */
-export type Section<T extends ReadonlyArray<string>> = {
+export type Section<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   publicationDateTime: Date | null;
   identification: Identification<T>;
   project: { identification: Identification<T> } | null;
 };
 
+export type NestedTree<
+  U extends ItemsDataCategory = ItemsDataCategory,
+  T extends LanguageCodes = LanguageCodes,
+> = Tree<U, T, "nested">;
+
+export type LocatedTree<
+  U extends ItemsDataCategory = ItemsDataCategory,
+  T extends LanguageCodes = LanguageCodes,
+> = Tree<U, T, ItemLocation>;
+
+export type NestedSet<
+  U extends SetItemDataCategory = SetItemDataCategory,
+  T extends LanguageCodes = LanguageCodes,
+> = Set<U, T, "nested">;
+
+export type LocatedSet<
+  U extends SetItemDataCategory = SetItemDataCategory,
+  T extends LanguageCodes = LanguageCodes,
+> = Set<U, T, ItemLocation>;
+
+export type NestedBibliography<T extends LanguageCodes = LanguageCodes> =
+  Bibliography<T, "nested">;
+
+export type LocatedBibliography<T extends LanguageCodes = LanguageCodes> =
+  Bibliography<T, ItemLocation>;
+
+export type NestedConcept<T extends LanguageCodes = LanguageCodes> = Concept<
+  T,
+  "nested"
+>;
+
+export type LocatedConcept<T extends LanguageCodes = LanguageCodes> = Concept<
+  T,
+  ItemLocation
+>;
+
+export type NestedSpatialUnit<T extends LanguageCodes = LanguageCodes> =
+  SpatialUnit<T, "nested">;
+
+export type LocatedSpatialUnit<T extends LanguageCodes = LanguageCodes> =
+  SpatialUnit<T, ItemLocation>;
+
+export type NestedPeriod<T extends LanguageCodes = LanguageCodes> = Period<
+  T,
+  "nested"
+>;
+
+export type LocatedPeriod<T extends LanguageCodes = LanguageCodes> = Period<
+  T,
+  ItemLocation
+>;
+
+export type NestedPerson<T extends LanguageCodes = LanguageCodes> = Person<
+  T,
+  "nested"
+>;
+
+export type LocatedPerson<T extends LanguageCodes = LanguageCodes> = Person<
+  T,
+  ItemLocation
+>;
+
+export type NestedPropertyVariable<T extends LanguageCodes = LanguageCodes> =
+  PropertyVariable<T, "nested">;
+
+export type LocatedPropertyVariable<T extends LanguageCodes = LanguageCodes> =
+  PropertyVariable<T, ItemLocation>;
+
+export type NestedPropertyValue<T extends LanguageCodes = LanguageCodes> =
+  PropertyValue<T, "nested">;
+
+export type LocatedPropertyValue<T extends LanguageCodes = LanguageCodes> =
+  PropertyValue<T, ItemLocation>;
+
+export type NestedResource<T extends LanguageCodes = LanguageCodes> = Resource<
+  T,
+  "nested"
+>;
+
+export type LocatedResource<T extends LanguageCodes = LanguageCodes> = Resource<
+  T,
+  ItemLocation
+>;
+
+export type NestedText<T extends LanguageCodes = LanguageCodes> = Text<
+  T,
+  "nested"
+>;
+
+export type LocatedText<T extends LanguageCodes = LanguageCodes> = Text<
+  T,
+  ItemLocation
+>;
+
 /**
  * Represents a gallery with its identification, project identification, resources and max length
  */
-export type Gallery<T extends ReadonlyArray<string> = ReadonlyArray<string>> = {
+export type Gallery<T extends LanguageCodes = LanguageCodes> = {
   identification: Identification<T>;
   projectIdentification: Identification<T>;
   resources: Array<Resource<T, "nested">>;
@@ -912,10 +1053,7 @@ export type Gallery<T extends ReadonlyArray<string> = ReadonlyArray<string>> = {
  */
 export type PropertyValueQueryItem = {
   count: number;
-  dataType: Exclude<
-    PropertyValueContent<ReadonlyArray<string>>["dataType"],
-    "coordinate"
-  >;
+  dataType: QueryablePropertyValueDataType;
   content: string | number | boolean | null;
   label: MultilingualString | null;
 };
@@ -939,10 +1077,7 @@ export type SetItemsSort =
   | {
       target: "propertyValue";
       propertyVariableUuid: string;
-      dataType: Exclude<
-        PropertyValueContent<ReadonlyArray<string>>["dataType"],
-        "coordinate"
-      >;
+      dataType: QueryablePropertyValueDataType;
       direction?: SetItemsSortDirection;
       language?: string;
     };
@@ -954,10 +1089,7 @@ export type QueryLeaf =
   | {
       target: "property";
       propertyVariable?: string;
-      dataType: Exclude<
-        PropertyValueContent<ReadonlyArray<string>>["dataType"],
-        "coordinate" | "date" | "dateTime"
-      >;
+      dataType: Exclude<QueryablePropertyValueDataType, "date" | "dateTime">;
       value?: string;
       from?: never;
       to?: never;

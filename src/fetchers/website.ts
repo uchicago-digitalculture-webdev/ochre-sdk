@@ -1,5 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
+import type { LanguageCodes } from "#/types/index.js";
 import type { Website } from "#/types/website.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseWebsite } from "#/parsers/website.js";
@@ -18,7 +19,7 @@ type FetchFunction = (
  * @returns The parsed website configuration or null if the fetch/parse fails
  */
 export async function fetchWebsite<
-  const T extends ReadonlyArray<string> = ReadonlyArray<string>,
+  const T extends LanguageCodes = LanguageCodes,
 >(
   abbreviation: string,
   options?: { fetch?: FetchFunction; languages?: T },
