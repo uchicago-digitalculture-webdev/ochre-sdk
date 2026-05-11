@@ -29,10 +29,11 @@ type FetchItemLinksRuntimeOptions = FetchItemLinksBaseOptions<
 
 type FetchItemLinksLanguages<
   TLanguages extends ReadonlyArray<string> | undefined,
-> =
-  TLanguages extends readonly [] ? ReadonlyArray<string>
-  : TLanguages extends ReadonlyArray<string> ? TLanguages
-  : ReadonlyArray<string>;
+> = TLanguages extends readonly []
+  ? ReadonlyArray<string>
+  : TLanguages extends ReadonlyArray<string>
+    ? TLanguages
+    : ReadonlyArray<string>;
 
 function parseLanguages<const T extends ReadonlyArray<string>>(
   languages: T,

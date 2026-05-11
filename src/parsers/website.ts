@@ -421,8 +421,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
     componentSchema,
     unparsedComponentName,
   );
-  const componentName =
-    componentNameResult.success ? componentNameResult.output : undefined;
+  const componentName = componentNameResult.success
+    ? componentNameResult.output
+    : undefined;
 
   let properties: WebElementComponent<T> | null = null;
 
@@ -697,9 +698,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         href,
         isExternal,
         label:
-          elementResource.document && "content" in elementResource.document ?
-            parseXMLContent(elementResource.document, options)
-          : null,
+          elementResource.document && "content" in elementResource.document
+            ? parseXMLContent(elementResource.document, options)
+            : null,
         startIcon,
         endIcon,
         image,
@@ -1335,9 +1336,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       type TextVariantWithName<U extends TextComponent["variant"]["name"]> =
         Extract<TextComponent["variant"], { name: U }>;
       const content =
-        elementResource.document && "content" in elementResource.document ?
-          parseXMLContent(elementResource.document, options)
-        : null;
+        elementResource.document && "content" in elementResource.document
+          ? parseXMLContent(elementResource.document, options)
+          : null;
       if (content == null) {
         throw new Error(
           formatComponentError(
@@ -1546,9 +1547,8 @@ function parseWebElement<T extends ReadonlyArray<string>>(
     options,
   );
 
-  const elementProperties =
-    elementResource.properties?.property ?
-      parseSimplifiedProperties(elementResource.properties, options)
+  const elementProperties = elementResource.properties?.property
+    ? parseSimplifiedProperties(elementResource.properties, options)
     : [];
   const elementReader = websitePresentationReader(elementProperties);
 
@@ -1608,20 +1608,23 @@ const parseWebpageResources = <
   type: TResource,
   options: ParserOptions<T>,
 ): Array<
-  TResource extends "element" ? WebElement<T>
-  : TResource extends "page" ? Webpage<T>
-  : WebBlock<T>
+  TResource extends "element"
+    ? WebElement<T>
+    : TResource extends "page"
+      ? Webpage<T>
+      : WebBlock<T>
 > => {
   const returnElements: Array<
-    TResource extends "element" ? WebElement<T>
-    : TResource extends "page" ? Webpage<T>
-    : WebBlock<T>
+    TResource extends "element"
+      ? WebElement<T>
+      : TResource extends "page"
+        ? Webpage<T>
+        : WebBlock<T>
   > = [];
 
   for (const resource of webpageResources) {
-    const resourceProperties =
-      resource.properties ?
-        parseSimplifiedProperties(resource.properties, options)
+    const resourceProperties = resource.properties
+      ? parseSimplifiedProperties(resource.properties, options)
       : [];
 
     const resourceProperty = websitePresentationReader(
@@ -1636,9 +1639,11 @@ const parseWebpageResources = <
         const element = parseWebElement(resource, options);
 
         returnElements.push(
-          element as TResource extends "element" ? WebElement<T>
-          : TResource extends "page" ? Webpage<T>
-          : WebBlock<T>,
+          element as TResource extends "element"
+            ? WebElement<T>
+            : TResource extends "page"
+              ? Webpage<T>
+              : WebBlock<T>,
         );
 
         break;
@@ -1647,9 +1652,11 @@ const parseWebpageResources = <
         const webpage = parseWebpage(resource, options);
         if (webpage) {
           returnElements.push(
-            webpage as TResource extends "element" ? WebElement<T>
-            : TResource extends "page" ? Webpage<T>
-            : WebBlock<T>,
+            webpage as TResource extends "element"
+              ? WebElement<T>
+              : TResource extends "page"
+                ? Webpage<T>
+                : WebBlock<T>,
           );
         }
 
@@ -1659,9 +1666,11 @@ const parseWebpageResources = <
         const block = parseWebBlock(resource, options);
         if (block) {
           returnElements.push(
-            block as TResource extends "element" ? WebElement<T>
-            : TResource extends "page" ? Webpage<T>
-            : WebBlock<T>,
+            block as TResource extends "element"
+              ? WebElement<T>
+              : TResource extends "page"
+                ? Webpage<T>
+                : WebBlock<T>,
           );
         }
 
@@ -1684,9 +1693,8 @@ function parseWebpage<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
   slugPrefix?: string,
 ): Webpage<T> | null {
-  const webpageProperties =
-    webpageResource.properties ?
-      parseSimplifiedProperties(webpageResource.properties, options)
+  const webpageProperties = webpageResource.properties
+    ? parseSimplifiedProperties(webpageResource.properties, options)
     : [];
   const webpageReader = websitePresentationReader(webpageProperties);
 
@@ -1714,9 +1722,9 @@ function parseWebpage<T extends ReadonlyArray<string>>(
     type: "page",
     title: identification.label,
     slug:
-      slugPrefix != null ?
-        `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
-      : slug,
+      slugPrefix != null
+        ? `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
+        : slug,
     publicationDateTime: webpageResource.publicationDateTime ?? null,
     items: [],
     properties: {
@@ -1740,16 +1748,16 @@ function parseWebpage<T extends ReadonlyArray<string>>(
   );
 
   const webpageResources =
-    webpageResource.resource != null ?
-      normalizeWebsiteResources(webpageResource.resource)
-    : [];
+    webpageResource.resource != null
+      ? normalizeWebsiteResources(webpageResource.resource)
+      : [];
 
   const items: Array<WebSegment<T> | WebElement<T> | WebBlock<T>> = [];
   for (const resource of webpageResources) {
     const resourceProperties =
-      resource.properties != null ?
-        parseSimplifiedProperties(resource.properties, options)
-      : [];
+      resource.properties != null
+        ? parseSimplifiedProperties(resource.properties, options)
+        : [];
 
     const resourceType = websitePresentationReader(resourceProperties).value<
       "segment" | "element" | "block"
@@ -1784,13 +1792,13 @@ function parseWebpage<T extends ReadonlyArray<string>>(
   returnWebpage.items = items;
 
   returnWebpage.webpages =
-    webpageResource.resource != null ?
-      parseWebpageResources(
-        normalizeWebsiteResources(webpageResource.resource),
-        "page",
-        options,
-      )
-    : [];
+    webpageResource.resource != null
+      ? parseWebpageResources(
+          normalizeWebsiteResources(webpageResource.resource),
+          "page",
+          options,
+        )
+      : [];
 
   const pageReader = webpageReader.nestedByValue("presentation", "page");
   if (pageReader.size > 0) {
@@ -1870,9 +1878,8 @@ function parseWebSegment<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
   slugPrefix?: string,
 ): WebSegment<T> | null {
-  const webpageProperties =
-    segmentResource.properties ?
-      parseSimplifiedProperties(segmentResource.properties, options)
+  const webpageProperties = segmentResource.properties
+    ? parseSimplifiedProperties(segmentResource.properties, options)
     : [];
   const segmentReader = websitePresentationReader(webpageProperties);
 
@@ -1886,9 +1893,9 @@ function parseWebSegment<T extends ReadonlyArray<string>>(
   );
 
   const slug =
-    segmentResource.identification.abbreviation != null ?
-      parseStringContent(segmentResource.identification.abbreviation, options)
-    : null;
+    segmentResource.identification.abbreviation != null
+      ? parseStringContent(segmentResource.identification.abbreviation, options)
+      : null;
   if (slug == null) {
     throw new Error(
       `Slug not found for segment (${formatXMLWebsiteResourceMetadata(
@@ -1906,17 +1913,16 @@ function parseWebSegment<T extends ReadonlyArray<string>>(
     items: [],
   };
 
-  const childResources =
-    segmentResource.resource ?
-      normalizeWebsiteResources(segmentResource.resource)
+  const childResources = segmentResource.resource
+    ? normalizeWebsiteResources(segmentResource.resource)
     : [];
 
   returnSegment.items = parseWebSegmentItems(
     childResources,
     options,
-    slugPrefix != null ?
-      `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
-    : slug,
+    slugPrefix != null
+      ? `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
+      : slug,
   );
 
   return returnSegment;
@@ -1956,9 +1962,8 @@ function parseWebSegmentItem<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
   slugPrefix?: string,
 ): WebSegmentItem<T> | null {
-  const webpageProperties =
-    segmentItemResource.properties ?
-      parseSimplifiedProperties(segmentItemResource.properties, options)
+  const webpageProperties = segmentItemResource.properties
+    ? parseSimplifiedProperties(segmentItemResource.properties, options)
     : [];
   const segmentItemReader = websitePresentationReader(webpageProperties);
 
@@ -1972,12 +1977,12 @@ function parseWebSegmentItem<T extends ReadonlyArray<string>>(
   );
 
   const slug =
-    segmentItemResource.identification.abbreviation != null ?
-      parseStringContent(
-        segmentItemResource.identification.abbreviation,
-        options,
-      )
-    : null;
+    segmentItemResource.identification.abbreviation != null
+      ? parseStringContent(
+          segmentItemResource.identification.abbreviation,
+          options,
+        )
+      : null;
   if (slug == null) {
     throw new Error(
       `Slug not found for segment item (${formatXMLWebsiteResourceMetadata(
@@ -1995,25 +2000,24 @@ function parseWebSegmentItem<T extends ReadonlyArray<string>>(
     items: [],
   };
 
-  const resources =
-    segmentItemResource.resource ?
-      normalizeWebsiteResources(segmentItemResource.resource)
+  const resources = segmentItemResource.resource
+    ? normalizeWebsiteResources(segmentItemResource.resource)
     : [];
 
   returnSegmentItem.items.push(
     ...parseWebpages(
       resources,
       options,
-      slugPrefix != null ?
-        `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
-      : slug,
+      slugPrefix != null
+        ? `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
+        : slug,
     ),
     ...parseSegments(
       resources,
       options,
-      slugPrefix != null ?
-        `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
-      : slug,
+      slugPrefix != null
+        ? `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
+        : slug,
     ),
   );
 
@@ -2068,9 +2072,8 @@ function parseSidebar<T extends ReadonlyArray<string>>(
   >["cssStyles"] = { default: [], tablet: [], mobile: [] };
 
   const sidebarResource = resources.find((resource) => {
-    const resourceProperties =
-      resource.properties ?
-        parseSimplifiedProperties(resource.properties, options)
+    const resourceProperties = resource.properties
+      ? parseSimplifiedProperties(resource.properties, options)
       : [];
     const resourceReader = websitePresentationReader(resourceProperties);
 
@@ -2082,9 +2085,8 @@ function parseSidebar<T extends ReadonlyArray<string>>(
     );
   });
   if (sidebarResource != null) {
-    const sidebarBaseProperties =
-      sidebarResource.properties ?
-        parseSimplifiedProperties(sidebarResource.properties, options)
+    const sidebarBaseProperties = sidebarResource.properties
+      ? parseSimplifiedProperties(sidebarResource.properties, options)
       : [];
 
     title = parseWebTitle(
@@ -2107,15 +2109,13 @@ function parseSidebar<T extends ReadonlyArray<string>>(
     cssStyles.tablet = parsedCssStyles.tablet;
     cssStyles.mobile = parsedCssStyles.mobile;
 
-    const sidebarResources =
-      sidebarResource.resource ?
-        normalizeWebsiteResources(sidebarResource.resource)
+    const sidebarResources = sidebarResource.resource
+      ? normalizeWebsiteResources(sidebarResource.resource)
       : [];
 
     for (const resource of sidebarResources) {
-      const resourceProperties =
-        resource.properties ?
-          parseSimplifiedProperties(resource.properties, options)
+      const resourceProperties = resource.properties
+        ? parseSimplifiedProperties(resource.properties, options)
         : [];
 
       const resourceType = websitePresentationReader(resourceProperties).value<
@@ -2173,16 +2173,14 @@ function parseWebElementForAccordion<T extends ReadonlyArray<string>>(
     { component: "text" }
   >;
 
-  const childResources =
-    elementResource.resource ?
-      normalizeWebsiteResources(elementResource.resource)
+  const childResources = elementResource.resource
+    ? normalizeWebsiteResources(elementResource.resource)
     : [];
 
   const items: Array<WebElement<T> | WebBlock<T>> = [];
   for (const resource of childResources) {
-    const resourceProperties =
-      resource.properties ?
-        parseSimplifiedProperties(resource.properties, options)
+    const resourceProperties = resource.properties
+      ? parseSimplifiedProperties(resource.properties, options)
       : [];
 
     const resourceType = websitePresentationReader(resourceProperties).value<
@@ -2221,9 +2219,8 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
   blockResource: XMLWebsiteResource,
   options: ParserOptions<T>,
 ): WebBlock<T> | null {
-  const blockProperties =
-    blockResource.properties ?
-      parseSimplifiedProperties(blockResource.properties, options)
+  const blockProperties = blockResource.properties
+    ? parseSimplifiedProperties(blockResource.properties, options)
     : [];
 
   const returnBlock: WebBlock<T> = {
@@ -2396,9 +2393,8 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
     }
   }
 
-  const blockResources =
-    blockResource.resource ?
-      normalizeWebsiteResources(blockResource.resource)
+  const blockResources = blockResource.resource
+    ? normalizeWebsiteResources(blockResource.resource)
     : [];
 
   if (returnBlock.properties.default.layout === "accordion") {
@@ -2409,9 +2405,8 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
     > = [];
 
     for (const resource of blockResources) {
-      const resourceProperties =
-        resource.properties ?
-          parseSimplifiedProperties(resource.properties, options)
+      const resourceProperties = resource.properties
+        ? parseSimplifiedProperties(resource.properties, options)
         : [];
       const resourceReader = websitePresentationReader(resourceProperties);
 
@@ -2447,9 +2442,8 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
   } else {
     const blockItems: Array<WebElement<T> | WebBlock<T>> = [];
     for (const resource of blockResources) {
-      const resourceProperties =
-        resource.properties ?
-          parseSimplifiedProperties(resource.properties, options)
+      const resourceProperties = resource.properties
+        ? parseSimplifiedProperties(resource.properties, options)
         : [];
 
       const resourceType = websitePresentationReader(resourceProperties).value<
@@ -2695,9 +2689,9 @@ function parseContextItem<T extends ReadonlyArray<string>>(
   for (const level of contextItemToParse.levels?.level ?? []) {
     const [rawVariableUuid = "", rawValueUuid] = level.payload.split(",");
     const valueUuid =
-      rawValueUuid == null || rawValueUuid.trim() === "null" ?
-        null
-      : rawValueUuid.trim();
+      rawValueUuid == null || rawValueUuid.trim() === "null"
+        ? null
+        : rawValueUuid.trim();
     type = level.dataType ?? type;
 
     levels.push({ variableUuid: rawVariableUuid.trim(), valueUuid });
@@ -2862,9 +2856,8 @@ export function parseWebsite<
       websiteTree.identification,
       parserOptions,
     ),
-    creators:
-      websiteTree.creators ?
-        parsePersonList(websiteTree.creators.creator, parserOptions)
+    creators: websiteTree.creators
+      ? parsePersonList(websiteTree.creators.creator, parserOptions)
       : [],
     license: parseLicense(websiteTree.availability),
     items,

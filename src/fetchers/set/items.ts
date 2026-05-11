@@ -38,17 +38,18 @@ type FetchSetItemsRuntimeOptions = FetchSetItemsBaseOptions<
 
 type FetchSetItemsLanguages<
   TLanguages extends ReadonlyArray<string> | undefined,
-> =
-  TLanguages extends readonly [] ? ReadonlyArray<string>
-  : TLanguages extends ReadonlyArray<string> ? TLanguages
-  : ReadonlyArray<string>;
+> = TLanguages extends readonly []
+  ? ReadonlyArray<string>
+  : TLanguages extends ReadonlyArray<string>
+    ? TLanguages
+    : ReadonlyArray<string>;
 
 type FetchSetItemsCategory<
   TContainedItemCategories extends ReadonlyArray<SetItemCategory> | undefined,
 > =
-  TContainedItemCategories extends ReadonlyArray<infer U> ?
-    Extract<U, SetItemCategory>
-  : SetItemCategory;
+  TContainedItemCategories extends ReadonlyArray<infer U>
+    ? Extract<U, SetItemCategory>
+    : SetItemCategory;
 
 type SortWithDirection = Exclude<SetItemsSort, { target: "none" }>;
 type PropertyValueSort = Extract<SetItemsSort, { target: "propertyValue" }>;
@@ -248,8 +249,8 @@ function buildPropertyValueOrderByClause(params: {
 }): string {
   const { dataType, direction } = params;
 
-  return dataType === "string" || dataType === "IDREF" ?
-      buildStringOrderByClause(direction)
+  return dataType === "string" || dataType === "IDREF"
+    ? buildStringOrderByClause(direction)
     : buildTypedOrderByClause(direction);
 }
 
@@ -272,12 +273,12 @@ function buildOrderedItemsClause(sort: SetItemsSort): string {
   }
 
   const sortKeyExpression =
-    sort.dataType === "string" || sort.dataType === "IDREF" ?
-      buildPropertyValueStringSortKeyExpression(sort)
-    : buildPropertyValueTypedSortKeyExpression({
-        sort,
-        dataType: sort.dataType,
-      });
+    sort.dataType === "string" || sort.dataType === "IDREF"
+      ? buildPropertyValueStringSortKeyExpression(sort)
+      : buildPropertyValueTypedSortKeyExpression({
+          sort,
+          dataType: sort.dataType,
+        });
 
   return `let $orderedItems :=
     for $item at $position in $items
@@ -329,8 +330,8 @@ function getCtsQueriesWithoutExactStringPropertyQueries(
     return null;
   }
 
-  return filteredChildren.length === 1 ?
-      (filteredChildren[0] ?? null)
+  return filteredChildren.length === 1
+    ? (filteredChildren[0] ?? null)
     : { and: filteredChildren };
 }
 
@@ -366,8 +367,8 @@ function buildExactStringPropertyXPathFilterExpression(
   }
 
   if ("target" in queries) {
-    return isExactStringPropertyQuery(queries) ?
-        buildExactStringPropertyPredicate(queries)
+    return isExactStringPropertyQuery(queries)
+      ? buildExactStringPropertyPredicate(queries)
       : null;
   }
 
@@ -456,15 +457,15 @@ function buildXQuery(params: {
   }
 
   const searchedItemsClause =
-    itemsQueryExpression == null ?
-      `let $searchedItems := ${baseItemsExpression}`
-    : `let $query := ${itemsQueryExpression}
+    itemsQueryExpression == null
+      ? `let $searchedItems := ${baseItemsExpression}`
+      : `let $query := ${itemsQueryExpression}
   let $searchedItems := cts:search(${baseItemsExpression}, $query)`;
   const itemsClause =
-    exactStringPropertyXPathFilterExpression == null ?
-      `${searchedItemsClause}
+    exactStringPropertyXPathFilterExpression == null
+      ? `${searchedItemsClause}
   let $items := $searchedItems`
-    : `${searchedItemsClause}
+      : `${searchedItemsClause}
   let $items := $searchedItems[${exactStringPropertyXPathFilterExpression}]`;
 
   const xquery = `${xqueryDeclarations.join("\n\n")}

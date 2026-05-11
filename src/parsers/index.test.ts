@@ -214,9 +214,9 @@ describe("parseItem", () => {
     expect(tree.properties[0]?.values[0]?.content).toBe("website");
     const firstTreeItem = tree.items[0];
     expect(
-      firstTreeItem != null && "category" in firstTreeItem ?
-        firstTreeItem.category
-      : null,
+      firstTreeItem != null && "category" in firstTreeItem
+        ? firstTreeItem.category
+        : null,
     ).toBe("resource");
   });
 

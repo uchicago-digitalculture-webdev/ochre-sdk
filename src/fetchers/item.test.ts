@@ -348,9 +348,8 @@ function expectMetadataMatchesRaw(
   data: TopLevelItemForTest,
 ): void {
   const metadata = data.metadata;
-  const rawPublisher =
-    Array.isArray(rawMetadata.publisher) ?
-      rawMetadata.publisher[0]
+  const rawPublisher = Array.isArray(rawMetadata.publisher)
+    ? rawMetadata.publisher[0]
     : rawMetadata.publisher;
 
   expect(metadata.dataset).toBe(parseStringLikeForTest(rawMetadata.dataset));
@@ -399,17 +398,14 @@ function expectIdentificationMatchesRaw(
     parseStringLikeForTest(rawIdentification.website),
   );
 
-  const labelAliases =
-    isXMLContent(rawIdentification.label) ?
-      extractAliases(rawIdentification.label)
+  const labelAliases = isXMLContent(rawIdentification.label)
+    ? extractAliases(rawIdentification.label)
     : null;
   const abbreviationAliases =
-    (
-      rawIdentification.abbreviation != null &&
-      isXMLContent(rawIdentification.abbreviation)
-    ) ?
-      extractAliases(rawIdentification.abbreviation)
-    : null;
+    rawIdentification.abbreviation != null &&
+    isXMLContent(rawIdentification.abbreviation)
+      ? extractAliases(rawIdentification.abbreviation)
+      : null;
 
   expect(parsedIdentification.label.getAliases()).toStrictEqual(
     labelAliases ?? [],
@@ -571,9 +567,9 @@ function expectPropertyFieldsMatchRaw(
     const rawValue = rawProperty.value![valueIndex]!;
     const parsedValue = parsedProperty.values[valueIndex]!;
     const rawLabel =
-      rawValue.content == null ?
-        null
-      : parseContentLikeForTest(rawValue as XMLContent);
+      rawValue.content == null
+        ? null
+        : parseContentLikeForTest(rawValue as XMLContent);
     const expectedContent =
       rawValue.rawValue ?? rawValue.payload ?? rawLabel ?? rawValue.slug ?? "";
     const expectedNumericContent = Number(expectedContent);
@@ -584,16 +580,15 @@ function expectPropertyFieldsMatchRaw(
     expect(parsedValue.category).toBe(rawValue.category ?? null);
     expect(parsedValue.type).toBe(rawValue.type ?? null);
     expect(parsedValue.content).toBe(
-      parsedValue.dataType === "boolean" ? expectedContent === "true"
-      : (
-        parsedValue.dataType === "integer" ||
-        parsedValue.dataType === "decimal" ||
-        parsedValue.dataType === "time"
-      ) ?
-        Number.isNaN(expectedNumericContent) ?
-          0
-        : expectedNumericContent
-      : expectedContent,
+      parsedValue.dataType === "boolean"
+        ? expectedContent === "true"
+        : parsedValue.dataType === "integer" ||
+            parsedValue.dataType === "decimal" ||
+            parsedValue.dataType === "time"
+          ? Number.isNaN(expectedNumericContent)
+            ? 0
+            : expectedNumericContent
+          : expectedContent,
     );
 
     if (rawLabel != null) {
@@ -617,9 +612,9 @@ function expectPropertiesMatchRaw(
 
     expectPropertyFieldsMatchRaw(rawProperty, parsedProperty);
     expectPropertiesMatchRaw(
-      rawProperty.property == null ?
-        undefined
-      : { property: rawProperty.property },
+      rawProperty.property == null
+        ? undefined
+        : { property: rawProperty.property },
       parsedProperty.properties,
     );
   }
@@ -652,9 +647,9 @@ function expectNotesMatchRaw(
     const rawNote = rawNoteItem!;
     const parsedNote = parsedNotes[index]!;
     const expectedContent =
-      rawNote.content == null ?
-        parseXMLString(rawNote, { parseEmail: true }).text
-      : parseContentLikeForTest(rawNote as XMLContent);
+      rawNote.content == null
+        ? parseXMLString(rawNote, { parseEmail: true }).text
+        : parseContentLikeForTest(rawNote as XMLContent);
 
     expect(parsedNote.number).toBe(rawNote.noteNo ?? 0);
     expect(parsedNote.content.getText("eng")).toBe(expectedContent);

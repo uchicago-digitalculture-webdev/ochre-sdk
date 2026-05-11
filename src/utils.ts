@@ -27,9 +27,9 @@ export function logIssues(
 
     // Build the path string if available
     const pathStr =
-      issue.path != null && issue.path.length > 0 ?
-        ` at ${v.getDotPath(issue)}`
-      : "";
+      issue.path != null && issue.path.length > 0
+        ? ` at ${v.getDotPath(issue)}`
+        : "";
 
     // Format the issue type and kind
     const typeInfo = `[${issue.kind}:${issue.type}]`;

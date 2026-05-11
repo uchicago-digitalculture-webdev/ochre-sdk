@@ -465,15 +465,15 @@ function buildRichTextContentQueryExpression(params: {
 
   return buildAndCtsQueryExpressionInternal([
     buildContentLanguageQuery(language),
-    matchMode === "exact" ?
-      buildRichTextExactQueryExpression({ value, isCaseSensitive, language })
-    : buildCtsWordQueryExpression({
-        value,
-        matchMode,
-        isCaseSensitive,
-        queryFamily: "text",
-        language,
-      }),
+    matchMode === "exact"
+      ? buildRichTextExactQueryExpression({ value, isCaseSensitive, language })
+      : buildCtsWordQueryExpression({
+          value,
+          matchMode,
+          isCaseSensitive,
+          queryFamily: "text",
+          language,
+        }),
   ]);
 }
 
@@ -503,19 +503,19 @@ function buildValueDirectTextInnerQuery(params: {
 }): string {
   const { value, matchMode, isCaseSensitive } = params;
   const directTextQuery =
-    matchMode === "exact" ?
-      buildCtsElementValueQueryExpression({
-        elementName: "value",
-        value,
-        isCaseSensitive,
-      })
-    : buildCtsElementWordQueryExpression({
-        elementName: "value",
-        value,
-        matchMode,
-        isCaseSensitive,
-        queryFamily: "raw",
-      });
+    matchMode === "exact"
+      ? buildCtsElementValueQueryExpression({
+          elementName: "value",
+          value,
+          isCaseSensitive,
+        })
+      : buildCtsElementWordQueryExpression({
+          elementName: "value",
+          value,
+          matchMode,
+          isCaseSensitive,
+          queryFamily: "raw",
+        });
 
   return buildAndCtsQueryExpressionInternal([
     buildNotCtsQueryExpression(
@@ -1178,9 +1178,9 @@ function buildLeafQueryExpression(
 
   for (const term of terms) {
     const termHelper =
-      term === (terms[0] ?? "") ?
-        includesHelper
-      : registerIncludesLeafHelper({ context, query, sampleValue: term });
+      term === (terms[0] ?? "")
+        ? includesHelper
+        : registerIncludesLeafHelper({ context, query, sampleValue: term });
 
     tokenizedHelperCalls.push(termHelper.call(stringLiteral(term)));
   }
@@ -1377,8 +1377,8 @@ function buildQueryNode(context: QueryCompilerContext, query: Query): string {
   if (isQueryLeaf(query)) {
     const queryExpression = buildLeafQueryExpression(context, query);
 
-    return query.isNegated === true ?
-        buildNotCtsQueryExpression(queryExpression)
+    return query.isNegated === true
+      ? buildNotCtsQueryExpression(queryExpression)
       : queryExpression;
   }
 
@@ -1397,8 +1397,8 @@ function buildQueryNode(context: QueryCompilerContext, query: Query): string {
     childQueryExpressions.push(buildQueryNode(context, childQuery));
   }
 
-  return getQueryGroupOperator(query) === "and" ?
-      buildAndCtsQueryExpressionInternal(childQueryExpressions)
+  return getQueryGroupOperator(query) === "and"
+    ? buildAndCtsQueryExpressionInternal(childQueryExpressions)
     : buildOrCtsQueryExpressionInternal(childQueryExpressions);
 }
 

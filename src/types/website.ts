@@ -516,13 +516,13 @@ export type WebBlock<
   uuid: string;
   type: "block";
   title: WebTitle<T>;
-  items: U extends "accordion" ?
-    Array<
-      Extract<WebElement<T>, { component: "text" }> & {
-        items: Array<WebElement<T> | WebBlock<T>>;
-      }
-    >
-  : Array<WebElement<T> | WebBlock<T>>;
+  items: U extends "accordion"
+    ? Array<
+        Extract<WebElement<T>, { component: "text" }> & {
+          items: Array<WebElement<T> | WebBlock<T>>;
+        }
+      >
+    : Array<WebElement<T> | WebBlock<T>>;
   properties: {
     default: {
       layout: U;

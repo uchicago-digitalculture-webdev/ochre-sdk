@@ -109,8 +109,8 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
       return value.label;
     }
 
-    return typeof value.content === "string" ?
-        multilingualFromText(value.content, options)
+    return typeof value.content === "string"
+      ? multilingualFromText(value.content, options)
       : null;
   }
 

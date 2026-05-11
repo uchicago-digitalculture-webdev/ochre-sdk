@@ -67,8 +67,8 @@ function findPropertyByVariableLabel<T extends LanguageCodes>(
 function getPropertyVariableLabel<T extends LanguageCodes>(
   property: SearchableProperty<T>,
 ): string {
-  return typeof property.variable.label === "string" ?
-      property.variable.label
+  return typeof property.variable.label === "string"
+    ? property.variable.label
     : property.variable.label.getText();
 }
 
@@ -142,9 +142,9 @@ function searchPropertyResult<T extends LanguageCodes, TResult>(
       );
       if (nestedResult !== null) {
         const transformedResult =
-          transformNestedResult != null ?
-            transformNestedResult(nestedResult)
-          : nestedResult;
+          transformNestedResult != null
+            ? transformNestedResult(nestedResult)
+            : nestedResult;
         if (transformedResult !== null) {
           return transformedResult;
         }

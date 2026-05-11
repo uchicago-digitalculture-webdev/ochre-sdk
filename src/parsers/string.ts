@@ -90,13 +90,13 @@ function getLinkStringProperty(
       return "href" in link && typeof link.href === "string" ? link.href : null;
     }
     case "height": {
-      return "height" in link && link.height != null ?
-          link.height.toString()
+      return "height" in link && link.height != null
+        ? link.height.toString()
         : null;
     }
     case "width": {
-      return "width" in link && link.width != null ?
-          link.width.toString()
+      return "width" in link && link.width != null
+        ? link.width.toString()
         : null;
     }
   }
@@ -236,9 +236,9 @@ function parseWhitespace(
       case "newline": {
         if (rendering === "rich") {
           returnString =
-            returnString.trim() === "***" ?
-              `${returnString}\n`
-            : `<br />\n${returnString}`;
+            returnString.trim() === "***"
+              ? `${returnString}\n`
+              : `<br />\n${returnString}`;
         } else {
           returnString = `\n${returnString}`;
         }
@@ -405,9 +405,8 @@ function createMDXStringAttribute(
     return "";
   }
 
-  const serializedValue =
-    MDX_QUOTED_ATTRIBUTE_ESCAPE_REGEX.test(value) ?
-      `{${JSON.stringify(value)}}`
+  const serializedValue = MDX_QUOTED_ATTRIBUTE_ESCAPE_REGEX.test(value)
+    ? `{${JSON.stringify(value)}}`
     : `"${value}"`;
 
   return ` ${name}=${serializedValue}`;
@@ -418,9 +417,9 @@ function applyWhitespaceToResult(
   whitespace: string | undefined,
   rendering: TextRendering,
 ): string {
-  return whitespace == null ? result : (
-      parseWhitespace(result, whitespace, rendering)
-    );
+  return whitespace == null
+    ? result
+    : parseWhitespace(result, whitespace, rendering);
 }
 
 function getPropertyValueUuid(
@@ -675,22 +674,22 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
 ): string {
   const hasTextContent = item.payload != null || item.string != null;
   if (!hasTextContent && getXMLRichTextLinks(item).length === 0) {
-    return item.whitespace == null ?
-        ""
+    return item.whitespace == null
+      ? ""
       : parseWhitespace("", item.whitespace, options.rendering);
   }
 
   if (hasRichTextEnvelope(item)) {
     let linkString =
-      item.payload != null ?
-        parseXMLStringPayload(item, {
-          rendering: options.rendering,
-          parseEmail: false,
-        })
-      : parseNestedStringItems(item.string ?? [], contentItem, {
-          ...options,
-          parseEmail: false,
-        });
+      item.payload != null
+        ? parseXMLStringPayload(item, {
+            rendering: options.rendering,
+            parseEmail: false,
+          })
+        : parseNestedStringItems(item.string ?? [], contentItem, {
+            ...options,
+            parseEmail: false,
+          });
 
     if (item.rend != null) {
       linkString = parseRenderOptions(linkString, item.rend, options.rendering);
@@ -749,13 +748,13 @@ function wrapWithTextStyling(
   }
 
   return `<Annotation type="text-styling" variant="${textStyling.variant}" size="${textStyling.size}"${
-    textStyling.headingLevel != null ?
-      ` headingLevel="${textStyling.headingLevel}"`
-    : ""
+    textStyling.headingLevel != null
+      ? ` headingLevel="${textStyling.headingLevel}"`
+      : ""
   }${
-    textStyling.cssStyles.length > 0 ?
-      ` cssStyles={{default: ${JSON.stringify(textStyling.cssStyles)}, tablet: [], mobile: []}}`
-    : ""
+    textStyling.cssStyles.length > 0
+      ? ` cssStyles={{default: ${JSON.stringify(textStyling.cssStyles)}, tablet: [], mobile: []}}`
+      : ""
   }>${content}</Annotation>`;
 }
 
@@ -783,13 +782,13 @@ function createInternalLinkComponent(properties: {
     }
     default: {
       return `<InternalLink uuid="${properties.uuid}"${
-        properties.propertyMetadata != null ?
-          ` properties="${properties.propertyMetadata.labelUuid}"${
-            properties.propertyMetadata.valueUuid != null ?
-              ` value="${properties.propertyMetadata.valueUuid}"`
-            : ""
-          }`
-        : ""
+        properties.propertyMetadata != null
+          ? ` properties="${properties.propertyMetadata.labelUuid}"${
+              properties.propertyMetadata.valueUuid != null
+                ? ` value="${properties.propertyMetadata.valueUuid}"`
+                : ""
+            }`
+          : ""
       }${createMDXStringAttribute(
         "content",
         properties.content,
@@ -838,19 +837,19 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
   let result = "";
   for (const link of links) {
     const linkContent =
-      link.identification != null ?
-        "content" in link.identification.label ?
-          parseXMLContent(link.identification.label, { languages })
-        : MultilingualString.create(
-            contentItem.lang,
-            parseXMLString(link.identification.label, { parseEmail: false }),
-            languages,
-          )
-      : MultilingualString.create(contentItem.lang, "", languages);
+      link.identification != null
+        ? "content" in link.identification.label
+          ? parseXMLContent(link.identification.label, { languages })
+          : MultilingualString.create(
+              contentItem.lang,
+              parseXMLString(link.identification.label, { parseEmail: false }),
+              languages,
+            )
+        : MultilingualString.create(contentItem.lang, "", languages);
     const content =
-      rendering === "rich" ?
-        linkContent.getExactRichText(contentItem.lang)
-      : linkContent.getExactText(contentItem.lang);
+      rendering === "rich"
+        ? linkContent.getExactRichText(contentItem.lang)
+        : linkContent.getExactText(contentItem.lang);
     const contentText = content ?? "";
 
     if ("type" in link && link.type != null) {
@@ -914,17 +913,17 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
         }
         case "externalDocument": {
           const component =
-            link.publicationDateTime != null ?
-              createMDXComponent("documentLink", {
-                uuid: getLinkStringProperty(link, "uuid"),
-                text: linkString,
-                content: contentText,
-              })
-            : createMDXComponent("tooltipSpan", {
-                uuid: getLinkStringProperty(link, "uuid"),
-                text: linkString,
-                content: contentText,
-              });
+            link.publicationDateTime != null
+              ? createMDXComponent("documentLink", {
+                  uuid: getLinkStringProperty(link, "uuid"),
+                  text: linkString,
+                  content: contentText,
+                })
+              : createMDXComponent("tooltipSpan", {
+                  uuid: getLinkStringProperty(link, "uuid"),
+                  text: linkString,
+                  content: contentText,
+                });
           result += applyWhitespaceToResult(
             component,
             item.whitespace,

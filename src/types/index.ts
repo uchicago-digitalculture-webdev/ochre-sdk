@@ -42,22 +42,28 @@ export type TreeItemCategory = Exclude<ItemCategory, "tree">;
 export type SetItemCategory = ItemCategory;
 
 export type ContainedItemCategory<U extends ItemCategory = ItemCategory> =
-  U extends "tree" ? TreeItemCategory
-  : U extends "set" ? SetItemCategory
-  : never;
+  U extends "tree"
+    ? TreeItemCategory
+    : U extends "set"
+      ? SetItemCategory
+      : never;
 
 export type ContainedItemCategoryOption<U extends ItemCategory = ItemCategory> =
-  U extends "tree" ? TreeItemCategory
-  : U extends "set" ? SetItemCategory | ReadonlyArray<SetItemCategory>
-  : never;
+  U extends "tree"
+    ? TreeItemCategory
+    : U extends "set"
+      ? SetItemCategory | ReadonlyArray<SetItemCategory>
+      : never;
 
 export type ContainedItemCategoryFromOption<
   U extends ItemCategory = ItemCategory,
   V extends ContainedItemCategoryOption<U> | undefined = undefined,
 > =
-  V extends ReadonlyArray<infer W> ? Extract<W, ContainedItemCategory<U>>
-  : V extends ContainedItemCategory<U> ? V
-  : ContainedItemCategory<U>;
+  V extends ReadonlyArray<infer W>
+    ? Extract<W, ContainedItemCategory<U>>
+    : V extends ContainedItemCategory<U>
+      ? V
+      : ContainedItemCategory<U>;
 
 /**
  * The category of items in a heading
@@ -133,9 +139,11 @@ export type BelongsTo = { uuid: string; abbreviation: string };
 
 export type ItemPayloadKind = "topLevel" | "embedded";
 
-type ItemEnvelopeFields<T extends LanguageCodes, U extends ItemPayloadKind> =
-  U extends "topLevel" ?
-    {
+type ItemEnvelopeFields<
+  T extends LanguageCodes,
+  U extends ItemPayloadKind,
+> = U extends "topLevel"
+  ? {
       belongsTo: BelongsTo;
       metadata: Metadata<T>;
       persistentUrl: string | null;
@@ -367,9 +375,8 @@ export type QueryablePropertyValueDataType = Exclude<
 type WithSetItemProperties<
   U extends { properties: Array<Property<T>> },
   T extends LanguageCodes,
-> =
-  U extends { properties: Array<Property<T>> } ?
-    Prettify<Omit<U, "properties"> & { properties: Array<SetItemProperty<T>> }>
+> = U extends { properties: Array<Property<T>> }
+  ? Prettify<Omit<U, "properties"> & { properties: Array<SetItemProperty<T>> }>
   : never;
 
 /**
@@ -545,21 +552,32 @@ export type DictionaryUnitItemLink<T extends LanguageCodes = LanguageCodes> =
 export type ItemLink<
   U extends ItemLinkCategory = ItemLinkCategory,
   T extends LanguageCodes = LanguageCodes,
-> =
-  U extends ItemLinkCategory ?
-    U extends "tree" ? TreeItemLink<T>
-    : U extends "set" ? SetItemLink<T>
-    : U extends "bibliography" ? BibliographyItemLink<T>
-    : U extends "concept" ? ConceptItemLink<T>
-    : U extends "spatialUnit" ? SpatialUnitItemLink<T>
-    : U extends "period" ? PeriodItemLink<T>
-    : U extends "person" ? PersonItemLink<T>
-    : U extends "propertyVariable" ? PropertyVariableItemLink<T>
-    : U extends "propertyValue" ? PropertyValueItemLink<T>
-    : U extends "resource" ? ResourceItemLink<T>
-    : U extends "text" ? TextItemLink<T>
-    : U extends "dictionaryUnit" ? DictionaryUnitItemLink<T>
-    : never
+> = U extends ItemLinkCategory
+  ? U extends "tree"
+    ? TreeItemLink<T>
+    : U extends "set"
+      ? SetItemLink<T>
+      : U extends "bibliography"
+        ? BibliographyItemLink<T>
+        : U extends "concept"
+          ? ConceptItemLink<T>
+          : U extends "spatialUnit"
+            ? SpatialUnitItemLink<T>
+            : U extends "period"
+              ? PeriodItemLink<T>
+              : U extends "person"
+                ? PersonItemLink<T>
+                : U extends "propertyVariable"
+                  ? PropertyVariableItemLink<T>
+                  : U extends "propertyValue"
+                    ? PropertyValueItemLink<T>
+                    : U extends "resource"
+                      ? ResourceItemLink<T>
+                      : U extends "text"
+                        ? TextItemLink<T>
+                        : U extends "dictionaryUnit"
+                          ? DictionaryUnitItemLink<T>
+                          : never
   : never;
 
 /**
@@ -570,20 +588,30 @@ export type Item<
   V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
   T extends LanguageCodes = LanguageCodes,
   W extends ItemPayloadKind = "topLevel",
-> =
-  U extends ItemCategory ?
-    U extends "tree" ? Tree<Extract<V, TreeItemCategory>, T, W>
-    : U extends "set" ? Set<Extract<V, SetItemCategory>, T, W>
-    : U extends "bibliography" ? Bibliography<T, W>
-    : U extends "concept" ? Concept<T, W>
-    : U extends "spatialUnit" ? SpatialUnit<T, W>
-    : U extends "period" ? Period<T, W>
-    : U extends "person" ? Person<T, W>
-    : U extends "propertyVariable" ? PropertyVariable<T, W>
-    : U extends "propertyValue" ? PropertyValue<T, W>
-    : U extends "resource" ? Resource<T, W>
-    : U extends "text" ? Text<T, W>
-    : never
+> = U extends ItemCategory
+  ? U extends "tree"
+    ? Tree<Extract<V, TreeItemCategory>, T, W>
+    : U extends "set"
+      ? Set<Extract<V, SetItemCategory>, T, W>
+      : U extends "bibliography"
+        ? Bibliography<T, W>
+        : U extends "concept"
+          ? Concept<T, W>
+          : U extends "spatialUnit"
+            ? SpatialUnit<T, W>
+            : U extends "period"
+              ? Period<T, W>
+              : U extends "person"
+                ? Person<T, W>
+                : U extends "propertyVariable"
+                  ? PropertyVariable<T, W>
+                  : U extends "propertyValue"
+                    ? PropertyValue<T, W>
+                    : U extends "resource"
+                      ? Resource<T, W>
+                      : U extends "text"
+                        ? Text<T, W>
+                        : never
   : never;
 
 export type TopLevelItem<
@@ -631,9 +659,9 @@ export type Tree<
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "embedded">>;
-    items: U extends HeadingItemCategory ?
-      Array<Heading<U, T> | Item<U, never, T, "embedded">>
-    : Array<Item<U, never, T, "embedded">>;
+    items: U extends HeadingItemCategory
+      ? Array<Heading<U, T> | Item<U, never, T, "embedded">>
+      : Array<Item<U, never, T, "embedded">>;
   }
 >;
 
@@ -657,15 +685,15 @@ export type Set<
 >;
 
 export type SetBibliography<T extends LanguageCodes = LanguageCodes> =
-  Bibliography<T, "embedded"> extends infer U ?
-    U extends { properties: Array<Property<T>> } ?
-      Prettify<
-        Omit<U, "properties" | "items"> & {
-          properties: Array<SetItemProperty<T>>;
-        }
-      >
-    : never
-  : never;
+  Bibliography<T, "embedded"> extends infer U
+    ? U extends { properties: Array<Property<T>> }
+      ? Prettify<
+          Omit<U, "properties" | "items"> & {
+            properties: Array<SetItemProperty<T>>;
+          }
+        >
+      : never
+    : never;
 
 export type SetConcept<T extends LanguageCodes = LanguageCodes> = Prettify<
   Omit<Concept<T, "embedded">, "interpretations" | "items"> & {
@@ -694,21 +722,35 @@ export type SetTree<T extends LanguageCodes = LanguageCodes> = Prettify<
 export type SetItem<
   U extends SetItemCategory = SetItemCategory,
   T extends LanguageCodes = LanguageCodes,
-> =
-  U extends "tree" ? SetTree<T>
-  : U extends "bibliography" ? SetBibliography<T>
-  : U extends "concept" ? SetConcept<T>
-  : U extends "spatialUnit" ? SetSpatialUnit<T>
-  : U extends "period" ? SetPeriod<T>
-  : U extends "person" ? WithSetItemProperties<Person<T, "embedded">, T>
-  : U extends "propertyVariable" ? PropertyVariable<T, "embedded">
-  : U extends "propertyValue" ?
-    WithSetItemProperties<PropertyValue<T, "embedded">, T>
-  : U extends "resource" ? SetResource<T>
-  : U extends "text" ? Text<T, "embedded">
-  : U extends "set" ?
-    Omit<WithSetItemProperties<Set<SetItemCategory, T, "embedded">, T>, "items">
-  : never;
+> = U extends "tree"
+  ? SetTree<T>
+  : U extends "bibliography"
+    ? SetBibliography<T>
+    : U extends "concept"
+      ? SetConcept<T>
+      : U extends "spatialUnit"
+        ? SetSpatialUnit<T>
+        : U extends "period"
+          ? SetPeriod<T>
+          : U extends "person"
+            ? WithSetItemProperties<Person<T, "embedded">, T>
+            : U extends "propertyVariable"
+              ? PropertyVariable<T, "embedded">
+              : U extends "propertyValue"
+                ? WithSetItemProperties<PropertyValue<T, "embedded">, T>
+                : U extends "resource"
+                  ? SetResource<T>
+                  : U extends "text"
+                    ? Text<T, "embedded">
+                    : U extends "set"
+                      ? Omit<
+                          WithSetItemProperties<
+                            Set<SetItemCategory, T, "embedded">,
+                            T
+                          >,
+                          "items"
+                        >
+                      : never;
 
 /**
  *  Person in OCHRE

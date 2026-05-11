@@ -97,8 +97,9 @@ function parsePropertyValueBooleanContent(
 function normalizePropertyValueDataType(
   dataType: string,
 ): PropertyValueQueryDataType {
-  const normalizedDataType =
-    dataType.startsWith("xs:") ? dataType.slice(3) : dataType;
+  const normalizedDataType = dataType.startsWith("xs:")
+    ? dataType.slice(3)
+    : dataType;
 
   switch (normalizedDataType) {
     case "IDREF":
@@ -247,8 +248,8 @@ function getItemFilterQueriesFromPropertyValueQueries(
     return filteredChildren[0] ?? null;
   }
 
-  return "and" in queries ?
-      { and: filteredChildren }
+  return "and" in queries
+    ? { and: filteredChildren }
     : { or: filteredChildren };
 }
 
@@ -273,9 +274,9 @@ const propertyValueQueryItemSchema = v.pipe(
     const returnValue: ParsedPropertyValueItem = {
       scope: val.scope,
       variableUuid:
-        val.variableUuid != null && val.variableUuid !== "" ?
-          val.variableUuid
-        : null,
+        val.variableUuid != null && val.variableUuid !== ""
+          ? val.variableUuid
+          : null,
       count: val.count,
       globalCount: val.globalCount ?? null,
       dataType,
@@ -293,8 +294,9 @@ const propertyValueQueryItemSchema = v.pipe(
       case "time": {
         if (val.rawValue != null && val.rawValue !== "") {
           const numericContent = Number(val.rawValue);
-          returnValue.content =
-            Number.isNaN(numericContent) ? null : numericContent;
+          returnValue.content = Number.isNaN(numericContent)
+            ? null
+            : numericContent;
         }
         break;
       }
@@ -305,9 +307,9 @@ const propertyValueQueryItemSchema = v.pipe(
       default: {
         const labelText = label?.getText() ?? null;
         returnValue.content =
-          val.rawValue != null && val.rawValue !== "" ?
-            val.rawValue.toString()
-          : labelText;
+          val.rawValue != null && val.rawValue !== ""
+            ? val.rawValue.toString()
+            : labelText;
         break;
       }
     }
@@ -328,9 +330,11 @@ const attributeValueQueryItemSchema = v.pipe(
       attributeType: val.attributeType,
       count: val.count,
       content:
-        val.content != null && val.content !== "" ? val.content
-        : val.payload != null && val.payload !== "" ? val.payload
-        : null,
+        val.content != null && val.content !== ""
+          ? val.content
+          : val.payload != null && val.payload !== ""
+            ? val.payload
+            : null,
     }),
   ),
 );
@@ -628,9 +632,9 @@ let $period-values :=
   }
 
   const itemsClause =
-    itemsQueryExpression == null ?
-      `let $items := ${baseItemsExpression}`
-    : `let $query := ${itemsQueryExpression}
+    itemsQueryExpression == null
+      ? `let $items := ${baseItemsExpression}`
+      : `let $query := ${itemsQueryExpression}
   let $items := cts:search(${baseItemsExpression}, $query)`;
 
   const xquery = `${xqueryDeclarations.join("\n\n")}
@@ -752,17 +756,17 @@ export async function fetchSetPropertyValues(
 
     if (output.result.ochre.propertyValue != null) {
       parsedPropertyValues.push(
-        ...(Array.isArray(output.result.ochre.propertyValue) ?
-          output.result.ochre.propertyValue
-        : [output.result.ochre.propertyValue]),
+        ...(Array.isArray(output.result.ochre.propertyValue)
+          ? output.result.ochre.propertyValue
+          : [output.result.ochre.propertyValue]),
       );
     }
 
     if (output.result.ochre.attributeValue != null) {
       parsedAttributeValues.push(
-        ...(Array.isArray(output.result.ochre.attributeValue) ?
-          output.result.ochre.attributeValue
-        : [output.result.ochre.attributeValue]),
+        ...(Array.isArray(output.result.ochre.attributeValue)
+          ? output.result.ochre.attributeValue
+          : [output.result.ochre.attributeValue]),
       );
     }
 
@@ -854,13 +858,11 @@ export async function fetchSetPropertyValues(
       ]),
       propertyValuesByPropertyVariableUuid,
       attributeValues: {
-        bibliographies:
-          attributes.bibliographies ?
-            sortAttributeValues(attributeValuesByType.bibliographies)
+        bibliographies: attributes.bibliographies
+          ? sortAttributeValues(attributeValuesByType.bibliographies)
           : null,
-        periods:
-          attributes.periods ?
-            sortAttributeValues(attributeValuesByType.periods)
+        periods: attributes.periods
+          ? sortAttributeValues(attributeValuesByType.periods)
           : null,
       },
       error: null,
@@ -872,9 +874,9 @@ export async function fetchSetPropertyValues(
       propertyValuesByPropertyVariableUuid: null,
       attributeValues: null,
       error:
-        error instanceof Error ?
-          error.message
-        : "Failed to fetch property values",
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch property values",
     };
   }
 }

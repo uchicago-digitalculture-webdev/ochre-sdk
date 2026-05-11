@@ -31,9 +31,11 @@ type FetchItemRuntimeOptions = FetchItemBaseOptions<ReadonlyArray<string>> & {
 };
 
 type FetchItemLanguages<TLanguages extends ReadonlyArray<string> | undefined> =
-  TLanguages extends readonly [] ? ReadonlyArray<string>
-  : TLanguages extends ReadonlyArray<string> ? TLanguages
-  : ReadonlyArray<string>;
+  TLanguages extends readonly []
+    ? ReadonlyArray<string>
+    : TLanguages extends ReadonlyArray<string>
+      ? TLanguages
+      : ReadonlyArray<string>;
 
 function isItemContainerCategory(
   category: ItemCategory,

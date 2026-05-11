@@ -61,8 +61,8 @@ type MultilingualStringInternalInit<T extends ReadonlyArray<string>> = {
 function normalizeInputText(
   text: MultilingualStringInput,
 ): MultilingualStringText {
-  return typeof text === "string" ?
-      { text, richText: text }
+  return typeof text === "string"
+    ? { text, richText: text }
     : { text: text.text, richText: text.richText ?? text.text };
 }
 
@@ -219,9 +219,9 @@ export class MultilingualString<
     }
 
     const parsed =
-      languages === undefined ?
-        MultilingualString.fromObject(content, undefined, options)
-      : MultilingualString.fromObject(content, languages, options);
+      languages === undefined
+        ? MultilingualString.fromObject(content, undefined, options)
+        : MultilingualString.fromObject(content, languages, options);
 
     this._content = parsed._content;
     this._options = parsed._options;
@@ -760,9 +760,9 @@ export class MultilingualString<
       this._options.availableLanguages as ReadonlyArray<T[number]>,
     );
     const newDefaultLanguage =
-      this._options.defaultLanguage === language ?
-        (newAvailableLanguages[0] ?? this._options.availableLanguages[0])
-      : this._options.defaultLanguage;
+      this._options.defaultLanguage === language
+        ? (newAvailableLanguages[0] ?? this._options.availableLanguages[0])
+        : this._options.defaultLanguage;
 
     return MultilingualString.fromNormalized(
       newContent,
@@ -825,9 +825,9 @@ export class MultilingualString<
     );
     const defaultLanguage = this._options.defaultLanguage as T[number];
     const newDefaultLanguage =
-      (newContent[defaultLanguage]?.length ?? 0) > 0 ?
-        this._options.defaultLanguage
-      : (newAvailableLanguages[0] ?? this._options.availableLanguages[0]);
+      (newContent[defaultLanguage]?.length ?? 0) > 0
+        ? this._options.defaultLanguage
+        : (newAvailableLanguages[0] ?? this._options.availableLanguages[0]);
 
     return MultilingualString.fromNormalized(
       newContent,

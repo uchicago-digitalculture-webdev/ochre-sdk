@@ -165,8 +165,9 @@ export type RawOchre = XMLData["result"]["ochre"];
 type SetItemCategoryFromCategories<
   T extends ReadonlyArray<SetItemCategory> | undefined,
 > =
-  T extends ReadonlyArray<infer U> ? Extract<U, SetItemCategory>
-  : SetItemCategory;
+  T extends ReadonlyArray<infer U>
+    ? Extract<U, SetItemCategory>
+    : SetItemCategory;
 
 type PropertyDataType =
   | "string"
@@ -278,8 +279,8 @@ function parseOptionalIdentification<T extends ReadonlyArray<string>>(
   rawIdentification: XMLIdentification | undefined,
   options: ParserOptions<T>,
 ): Identification<T> {
-  return rawIdentification == null ?
-      emptyIdentification(options)
+  return rawIdentification == null
+    ? emptyIdentification(options)
     : parseIdentification(rawIdentification, options);
 }
 
@@ -303,9 +304,9 @@ function parseContext(rawContext: XMLContext): Context<ContextItemCategory> {
     for (const rawContextItem of rawContextOuterItem.context) {
       const node: ContextNode<ContextItemCategory> = {
         tree:
-          rawContextItem.tree[0] == null ?
-            emptyContextItem()
-          : parseContextItem(rawContextItem.tree[0]),
+          rawContextItem.tree[0] == null
+            ? emptyContextItem()
+            : parseContextItem(rawContextItem.tree[0]),
         project: parseContextItem(rawContextItem.project),
         heading: [],
       };
@@ -360,9 +361,11 @@ function parseEvent<T extends ReadonlyArray<string>>(
   const startDate = rawEvent.dateTime ?? null;
   const endDate = rawEvent.endDateTime ?? null;
   const date =
-    startDate == null ? null
-    : endDate == null ? startDate
-    : { start: startDate, end: endDate };
+    startDate == null
+      ? null
+      : endDate == null
+        ? startDate
+        : { start: startDate, end: endDate };
 
   return {
     date,
@@ -371,13 +374,13 @@ function parseEvent<T extends ReadonlyArray<string>>(
     agent: parseEventReference(rawEvent.agent, options),
     location: parseEventReference(rawEvent.location, options),
     other:
-      rawEvent.other == null ?
-        null
-      : {
-          uuid: rawEvent.other.uuid ?? null,
-          category: normalizeCategory(rawEvent.other.category),
-          label: parseRequiredContentLike(rawEvent.other, options),
-        },
+      rawEvent.other == null
+        ? null
+        : {
+            uuid: rawEvent.other.uuid ?? null,
+            category: normalizeCategory(rawEvent.other.category),
+            label: parseRequiredContentLike(rawEvent.other, options),
+          },
   };
 }
 
@@ -411,13 +414,13 @@ function parseBaseItem<U extends ItemCategory, T extends ReadonlyArray<string>>(
     date: rawItem.date instanceof Date ? rawItem.date : null,
     license: parseLicense(rawItem.availability),
     copyright:
-      rawItem.copyright == null ?
-        null
-      : parseContentLike(rawItem.copyright, options),
+      rawItem.copyright == null
+        ? null
+        : parseContentLike(rawItem.copyright, options),
     watermark:
-      rawItem.watermark == null ?
-        null
-      : parseContentLike(rawItem.watermark, options),
+      rawItem.watermark == null
+        ? null
+        : parseContentLike(rawItem.watermark, options),
     identification: parseOptionalIdentification(
       rawItem.identification,
       options,
@@ -518,9 +521,9 @@ function normalizeSetItemCategories<U extends SetItemCategory>(
   }
 
   const categories =
-    typeof containedItemCategory === "string" ?
-      [containedItemCategory]
-    : containedItemCategory;
+    typeof containedItemCategory === "string"
+      ? [containedItemCategory]
+      : containedItemCategory;
   const uniqueCategories: Array<U> = [];
   for (const category of categories) {
     if (!uniqueCategories.includes(category)) {
@@ -591,9 +594,9 @@ function parseImage<T extends ReadonlyArray<string>>(
   return {
     publicationDateTime: rawImage.publicationDateTime ?? null,
     identification:
-      rawImage.identification == null ?
-        null
-      : parseIdentification(rawImage.identification, options),
+      rawImage.identification == null
+        ? null
+        : parseIdentification(rawImage.identification, options),
     href: parseHref(rawImage.href),
     htmlImgSrcPrefix: rawImage.htmlImgSrcPrefix ?? null,
     height: rawImage.height ?? null,
@@ -630,9 +633,9 @@ function parseCoordinatesSource<T extends ReadonlyArray<string>>(
         uuid: source.label.uuid,
         label: parseRequiredContentLike(source.label, options),
         value:
-          value == null ?
-            MultilingualString.empty(options.languages)
-          : parseRequiredContentLike(value, options),
+          value == null
+            ? MultilingualString.empty(options.languages)
+            : parseRequiredContentLike(value, options),
       };
     }
     case "inherited": {
@@ -700,9 +703,11 @@ function parseImageMapArea(area: XMLImageMapArea): ImageMapArea {
   }
 
   const shape =
-    area.shape === "rect" ? "rectangle"
-    : area.shape === "circle" ? "circle"
-    : "polygon";
+    area.shape === "rect"
+      ? "rectangle"
+      : area.shape === "circle"
+        ? "circle"
+        : "polygon";
 
   return {
     uuid: area.uuid,
@@ -710,27 +715,27 @@ function parseImageMapArea(area: XMLImageMapArea): ImageMapArea {
     type: area.type,
     title: area.title,
     items:
-      shape === "rectangle" ?
-        [
-          {
-            shape,
-            coords: [
-              coords[0] ?? 0,
-              coords[1] ?? 0,
-              coords[2] ?? 0,
-              coords[3] ?? 0,
-            ],
-          },
-        ]
-      : shape === "circle" ?
-        [
-          {
-            shape,
-            center: { x: coords[0] ?? 0, y: coords[1] ?? 0 },
-            radius: coords[2] ?? 0,
-          },
-        ]
-      : [{ shape, coords }],
+      shape === "rectangle"
+        ? [
+            {
+              shape,
+              coords: [
+                coords[0] ?? 0,
+                coords[1] ?? 0,
+                coords[2] ?? 0,
+                coords[3] ?? 0,
+              ],
+            },
+          ]
+        : shape === "circle"
+          ? [
+              {
+                shape,
+                center: { x: coords[0] ?? 0, y: coords[1] ?? 0 },
+                radius: coords[2] ?? 0,
+              },
+            ]
+          : [{ shape, coords }],
   };
 }
 
@@ -757,12 +762,12 @@ function parseNote<T extends ReadonlyArray<string>>(
   }
 
   const content =
-    rawNote.content == null ?
-      multilingualFromText(
-        parseXMLString(rawNote, { parseEmail: true }),
-        options,
-      )
-    : parseRequiredContentLike(rawNote as XMLContent, options);
+    rawNote.content == null
+      ? multilingualFromText(
+          parseXMLString(rawNote, { parseEmail: true }),
+          options,
+        )
+      : parseRequiredContentLike(rawNote as XMLContent, options);
 
   return {
     number: rawNote.noteNo ?? 0,
@@ -834,9 +839,9 @@ function parsePropertyValueContent<T extends ReadonlyArray<string>>(
 ): PropertyValueContent<T> {
   const dataType = parsePropertyDataType(value.dataType);
   const rawLabel =
-    value.content == null ?
-      null
-    : parseRequiredContentLike(value as XMLContent, options);
+    value.content == null
+      ? null
+      : parseRequiredContentLike(value as XMLContent, options);
   const displayText = rawLabel?.getText() ?? value.payload ?? value.slug ?? "";
   const contentText = value.rawValue ?? value.payload ?? displayText;
   const common = {
@@ -1518,20 +1523,22 @@ function parseBibliographyItemLink<T extends ReadonlyArray<string>>(
       rawBibliography.sourceDocument,
     ),
     publicationInfo:
-      rawBibliography.publicationInfo == null ?
-        null
-      : {
-          publishers: parsePersonItemLinks(
-            rawBibliography.publicationInfo.publishers == null ? undefined
-            : "publisher" in rawBibliography.publicationInfo.publishers ?
-              rawBibliography.publicationInfo.publishers.publisher
-            : rawBibliography.publicationInfo.publishers.publishers.person,
-            options,
-          ),
-          startDate: parseBibliographyStartDate(
-            rawBibliography.publicationInfo.startDate,
-          ),
-        },
+      rawBibliography.publicationInfo == null
+        ? null
+        : {
+            publishers: parsePersonItemLinks(
+              rawBibliography.publicationInfo.publishers == null
+                ? undefined
+                : "publisher" in rawBibliography.publicationInfo.publishers
+                  ? rawBibliography.publicationInfo.publishers.publisher
+                  : rawBibliography.publicationInfo.publishers.publishers
+                      .person,
+              options,
+            ),
+            startDate: parseBibliographyStartDate(
+              rawBibliography.publicationInfo.startDate,
+            ),
+          },
     entryInfo: parseBibliographyEntryInfo(rawBibliography.entryInfo),
     source: firstItemLink<TreeItemCategory, T>(rawBibliography.source, options),
     authors: parsePersonItemLinks(rawBibliography.authors?.person, options),
@@ -1715,9 +1722,7 @@ function parseReverseLinks<T extends ReadonlyArray<string>>(
 ): ItemLinks<T> {
   const links: ItemLinks<T> = [];
   const rawLinksToParse =
-    rawLinks == null ? []
-    : Array.isArray(rawLinks) ? rawLinks
-    : [rawLinks];
+    rawLinks == null ? [] : Array.isArray(rawLinks) ? rawLinks : [rawLinks];
   for (const rawLink of rawLinksToParse) {
     links.push(...parseLinks(rawLink, options));
   }
@@ -1808,14 +1813,14 @@ function parseSection<T extends ReadonlyArray<string>>(
     publicationDateTime: rawSection.publicationDateTime ?? null,
     identification: parseIdentification(rawSection.identification, options),
     project:
-      rawSection.project == null ?
-        null
-      : {
-          identification: parseIdentification(
-            rawSection.project.identification,
-            options,
-          ),
-        },
+      rawSection.project == null
+        ? null
+        : {
+            identification: parseIdentification(
+              rawSection.project.identification,
+              options,
+            ),
+          },
   };
 }
 
@@ -2062,9 +2067,9 @@ function parseBibliography<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
 ): Bibliography<T, "embedded"> {
   const sourceItems =
-    rawBibliography.source == null ?
-      []
-    : parseLinks(rawBibliography.source, options);
+    rawBibliography.source == null
+      ? []
+      : parseLinks(rawBibliography.source, options);
   const bibliographies = parseBibliographyList(
     rawBibliography.bibliographies,
     options,
@@ -2085,25 +2090,27 @@ function parseBibliography<T extends ReadonlyArray<string>>(
       rawBibliography.sourceDocument,
     ),
     publicationInfo:
-      rawBibliography.publicationInfo == null ?
-        null
-      : {
-          publishers: parsePersonList(
-            rawBibliography.publicationInfo.publishers == null ? undefined
-            : "publisher" in rawBibliography.publicationInfo.publishers ?
-              rawBibliography.publicationInfo.publishers.publisher
-            : rawBibliography.publicationInfo.publishers.publishers.person,
-            options,
-          ),
-          startDate: parseBibliographyStartDate(
-            rawBibliography.publicationInfo.startDate,
-          ),
-        },
+      rawBibliography.publicationInfo == null
+        ? null
+        : {
+            publishers: parsePersonList(
+              rawBibliography.publicationInfo.publishers == null
+                ? undefined
+                : "publisher" in rawBibliography.publicationInfo.publishers
+                  ? rawBibliography.publicationInfo.publishers.publisher
+                  : rawBibliography.publicationInfo.publishers.publishers
+                      .person,
+              options,
+            ),
+            startDate: parseBibliographyStartDate(
+              rawBibliography.publicationInfo.startDate,
+            ),
+          },
     entryInfo: parseBibliographyEntryInfo(rawBibliography.entryInfo),
     source:
-      sourceItems[0] == null ?
-        null
-      : (sourceItems[0] as ItemLink<TreeItemCategory, T>),
+      sourceItems[0] == null
+        ? null
+        : (sourceItems[0] as ItemLink<TreeItemCategory, T>),
     authors: parsePersonList(rawBibliography.authors?.person, options),
     periods: parsePeriodList(rawBibliography.periods, options),
     links: parseLinks(rawBibliography.links, options),
@@ -2206,19 +2213,19 @@ function parsePerson<T extends ReadonlyArray<string>>(
     type: rawPerson.type ?? "",
     image: parseImage(rawPerson.image, options),
     address:
-      rawPerson.address == null ?
-        null
-      : {
-          country: parseStringLike(rawPerson.address.country),
-          city: parseStringLike(rawPerson.address.city),
-          state: parseStringLike(rawPerson.address.state),
-          postalCode: parseStringLike(rawPerson.address.postalCode),
-        },
+      rawPerson.address == null
+        ? null
+        : {
+            country: parseStringLike(rawPerson.address.country),
+            city: parseStringLike(rawPerson.address.city),
+            state: parseStringLike(rawPerson.address.state),
+            postalCode: parseStringLike(rawPerson.address.postalCode),
+          },
     coordinates: parseCoordinates(rawPerson.coordinates, options),
     content:
-      rawPerson.content == null ?
-        null
-      : parseRequiredContentLike(rawPerson as XMLContent, options),
+      rawPerson.content == null
+        ? null
+        : parseRequiredContentLike(rawPerson as XMLContent, options),
     periods: parsePeriodList(rawPerson.periods, options),
     links: parseLinks(rawPerson.links, options),
     notes: parseNotes(rawPerson.notes, options),
@@ -2417,8 +2424,9 @@ export function resolveDefaultLanguage<T extends ReadonlyArray<string>>(
 function parseMetadataPublisher(
   rawPublisher: RawOchre["metadata"]["publisher"],
 ): string {
-  const publisher =
-    Array.isArray(rawPublisher) ? rawPublisher[0] : rawPublisher;
+  const publisher = Array.isArray(rawPublisher)
+    ? rawPublisher[0]
+    : rawPublisher;
   return parseStringLike(publisher) ?? "";
 }
 
@@ -2438,54 +2446,56 @@ export function parseMetadata<T extends ReadonlyArray<string>>(
       parseStringLike(rawMetadata.identifier) ?? "",
     ),
     project:
-      rawMetadata.project == null ?
-        null
-      : {
-          uuid: rawMetadata.project.uuid ?? rawOchre.uuidBelongsTo,
-          identification: parseIdentification(
-            rawMetadata.project.identification,
-            metadataOptions,
-          ),
-          website: parseStringLike(rawMetadata.project.identification.website),
-          dateFormat: rawMetadata.project.dateFormat ?? null,
-          page: rawMetadata.project.page ?? null,
-        },
+      rawMetadata.project == null
+        ? null
+        : {
+            uuid: rawMetadata.project.uuid ?? rawOchre.uuidBelongsTo,
+            identification: parseIdentification(
+              rawMetadata.project.identification,
+              metadataOptions,
+            ),
+            website: parseStringLike(
+              rawMetadata.project.identification.website,
+            ),
+            dateFormat: rawMetadata.project.dateFormat ?? null,
+            page: rawMetadata.project.page ?? null,
+          },
     collection:
-      rawMetadata.collection == null ?
-        null
-      : {
-          uuid: rawMetadata.collection.uuid,
-          identification: parseIdentification(
-            rawMetadata.collection.identification,
-            metadataOptions,
-          ),
-          page: rawMetadata.collection.page,
-        },
+      rawMetadata.collection == null
+        ? null
+        : {
+            uuid: rawMetadata.collection.uuid,
+            identification: parseIdentification(
+              rawMetadata.collection.identification,
+              metadataOptions,
+            ),
+            page: rawMetadata.collection.page,
+          },
     publication:
-      rawMetadata.publication == null ?
-        null
-      : {
-          uuid: rawMetadata.publication.uuid,
-          identification: parseIdentification(
-            rawMetadata.publication.identification,
-            metadataOptions,
-          ),
-          page: rawMetadata.publication.page,
-        },
+      rawMetadata.publication == null
+        ? null
+        : {
+            uuid: rawMetadata.publication.uuid,
+            identification: parseIdentification(
+              rawMetadata.publication.identification,
+              metadataOptions,
+            ),
+            page: rawMetadata.publication.page,
+          },
     item:
-      rawMetadata.item == null ?
-        null
-      : {
-          identification: parseIdentification(
-            rawMetadata.item.identification,
-            metadataOptions,
-          ),
-          category:
-            normalizeCategory(rawMetadata.item.category) ??
-            rawMetadata.item.category,
-          type: rawMetadata.item.type,
-          maxLength: rawMetadata.item.maxLength ?? null,
-        },
+      rawMetadata.item == null
+        ? null
+        : {
+            identification: parseIdentification(
+              rawMetadata.item.identification,
+              metadataOptions,
+            ),
+            category:
+              normalizeCategory(rawMetadata.item.category) ??
+              rawMetadata.item.category,
+            type: rawMetadata.item.type,
+            maxLength: rawMetadata.item.maxLength ?? null,
+          },
     defaultLanguage,
     languages: options.languages,
   };
@@ -2595,9 +2605,11 @@ function parseTopLevelItem<
     }
     case "propertyVariable": {
       const propertyVariables =
-        "propertyVariable" in rawOchre ? rawOchre.propertyVariable
-        : "variable" in rawOchre ? rawOchre.variable
-        : null;
+        "propertyVariable" in rawOchre
+          ? rawOchre.propertyVariable
+          : "variable" in rawOchre
+            ? rawOchre.variable
+            : null;
       return parsePropertyVariable(
         getSingleTopLevelRawItem(propertyVariables, "property variable"),
         options,
@@ -2605,9 +2617,11 @@ function parseTopLevelItem<
     }
     case "propertyValue": {
       const propertyValues =
-        "propertyValue" in rawOchre ? rawOchre.propertyValue
-        : "value" in rawOchre ? rawOchre.value
-        : null;
+        "propertyValue" in rawOchre
+          ? rawOchre.propertyValue
+          : "value" in rawOchre
+            ? rawOchre.value
+            : null;
       return parsePropertyValue(
         getSingleTopLevelRawItem(propertyValues, "property value"),
         options,
