@@ -1,12 +1,10 @@
 import * as v from "valibot";
 import type { ParserOptions } from "#/parsers/helpers.js";
-import type { MultilingualString } from "#/parsers/multilingual.js";
 import type {
   Identification,
   ItemLink,
   ItemLinkCategory,
   ItemLinks,
-  PropertyValueContent,
   SimplifiedProperty,
 } from "#/types/index.js";
 import type {
@@ -39,14 +37,7 @@ import type {
   XMLWebsiteTree,
 } from "#/xml/types.js";
 import {
-  getPropertyByVariableLabel,
-  getPropertyByVariableLabelAndValueContent,
-  getPropertyValueByVariableLabel,
-  getPropertyValueContentByVariableLabel,
-} from "#/getters.js";
-import {
   cleanObject,
-  multilingualFromText,
   parseLicense,
   parseStringContent,
 } from "#/parsers/helpers.js";
@@ -63,6 +54,7 @@ import {
   resolveLanguages,
 } from "#/parsers/index.js";
 import { parseXMLContent } from "#/parsers/string.js";
+import { websitePresentationReader } from "#/parsers/website-presentation-reader.js";
 import { componentSchema } from "#/schemas.js";
 
 type WebsiteLinkCategory = Extract<
@@ -196,9 +188,10 @@ function parseCssStylesFromProperties(
   cssVariant?: string,
 ): Array<Style> {
   const label = cssVariant != null ? `css-${cssVariant}` : "css";
-  const cssProperties =
-    getPropertyByVariableLabelAndValueContent(properties, "presentation", label)
-      ?.properties ?? [];
+  const cssProperties = websitePresentationReader(properties).nestedByValue(
+    "presentation",
+    label,
+  ).properties;
   const styles: Array<Style> = [];
   for (const property of cssProperties) {
     const value = property.values[0]?.content.toString();
@@ -207,38 +200,6 @@ function parseCssStylesFromProperties(
     }
   }
   return styles;
-}
-
-function getPropertyValueMultilingualContent<T extends ReadonlyArray<string>>(
-  propertyValue: PropertyValueContent<T> | null,
-  options: ParserOptions<T>,
-): MultilingualString<T> | null {
-  if (propertyValue == null) {
-    return null;
-  }
-
-  if (propertyValue.label != null) {
-    return propertyValue.label;
-  }
-
-  if (typeof propertyValue.content === "string") {
-    return multilingualFromText(propertyValue.content, options);
-  }
-
-  return null;
-}
-
-function getPropertyMultilingualValueByLabelName<
-  T extends ReadonlyArray<string>,
->(
-  properties: ReadonlyArray<SimplifiedProperty<T>>,
-  labelName: string,
-  options: ParserOptions<T>,
-): MultilingualString<T> | null {
-  return getPropertyValueMultilingualContent(
-    getPropertyValueByVariableLabel(properties, labelName),
-    options,
-  );
 }
 
 /**
@@ -466,9 +427,16 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
   let properties: WebElementComponent<T> | null = null;
 
   const websiteLinks = parseLinks(elementResource.links, options);
+  const componentReader = websitePresentationReader(
+    componentProperty.properties,
+  );
 
   switch (componentName) {
     case "3d-viewer": {
+      type ThreeDViewerComponent = Extract<
+        WebElementComponent<T>,
+        { component: "3d-viewer" }
+      >;
       const resourceLink = findWebsiteLink(
         websiteLinks,
         "resource",
@@ -484,27 +452,12 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      let isInteractive = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "is-interactive",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "3d-viewer" }
-          >["isInteractive"]
-        | null;
-      isInteractive ??= true;
-
-      let isControlsDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "controls-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "3d-viewer" }
-          >["isControlsDisplayed"]
-        | null;
-      isControlsDisplayed ??= true;
+      const isInteractive = componentReader.valueOr<
+        ThreeDViewerComponent["isInteractive"]
+      >("is-interactive", true);
+      const isControlsDisplayed = componentReader.valueOr<
+        ThreeDViewerComponent["isControlsDisplayed"]
+      >("controls-displayed", true);
 
       properties = {
         component: "3d-viewer",
@@ -516,22 +469,11 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "advanced-search": {
-      const boundElementPropertyUuid =
-        getPropertyByVariableLabel(
-          componentProperty.properties,
-          "bound-element",
-        )?.values[0]?.uuid ?? null;
-
-      const linkToProperty = getPropertyByVariableLabel(
-        componentProperty.properties,
+      const boundElementPropertyUuid = componentReader.uuid("bound-element");
+      const href = componentReader.linkTarget(
         "link-to",
+        transformPermanentIdentificationUrlToItemLink,
       );
-      const href =
-        linkToProperty?.values[0]?.href != null ?
-          transformPermanentIdentificationUrlToItemLink(
-            linkToProperty.values[0].href,
-          )
-        : (linkToProperty?.values[0]?.slug ?? null);
 
       if (boundElementPropertyUuid == null && href == null) {
         throw new Error(
@@ -573,6 +515,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "annotated-image": {
+      type AnnotatedImageComponent = Extract<
+        WebElementComponent<T>,
+        { component: "annotated-image" }
+      >;
       const imageLinks = getWebsiteLinks(websiteLinks, "resource").filter(
         (link) => link.type === "image" || link.type === "IIIF",
       );
@@ -587,51 +533,18 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      let isFilterInputDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "filter-input-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "annotated-image" }
-          >["isFilterInputDisplayed"]
-        | null;
-      isFilterInputDisplayed ??= true;
-
-      let isOptionsDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "options-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "annotated-image" }
-          >["isOptionsDisplayed"]
-        | null;
-      isOptionsDisplayed ??= true;
-
-      let isAnnotationHighlightsDisplayed =
-        getPropertyValueContentByVariableLabel(
-          componentProperty.properties,
-          "annotation-highlights-displayed",
-        ) as
-          | Extract<
-              WebElementComponent<T>,
-              { component: "annotated-image" }
-            >["isAnnotationHighlightsDisplayed"]
-          | null;
-      isAnnotationHighlightsDisplayed ??= true;
-
-      let isAnnotationTooltipsDisplayed =
-        getPropertyValueContentByVariableLabel(
-          componentProperty.properties,
-          "annotation-tooltips-displayed",
-        ) as
-          | Extract<
-              WebElementComponent<T>,
-              { component: "annotated-image" }
-            >["isAnnotationTooltipsDisplayed"]
-          | null;
-      isAnnotationTooltipsDisplayed ??= true;
+      const isFilterInputDisplayed = componentReader.valueOr<
+        AnnotatedImageComponent["isFilterInputDisplayed"]
+      >("filter-input-displayed", true);
+      const isOptionsDisplayed = componentReader.valueOr<
+        AnnotatedImageComponent["isOptionsDisplayed"]
+      >("options-displayed", true);
+      const isAnnotationHighlightsDisplayed = componentReader.valueOr<
+        AnnotatedImageComponent["isAnnotationHighlightsDisplayed"]
+      >("annotation-highlights-displayed", true);
+      const isAnnotationTooltipsDisplayed = componentReader.valueOr<
+        AnnotatedImageComponent["isAnnotationTooltipsDisplayed"]
+      >("annotation-tooltips-displayed", true);
 
       properties = {
         component: "annotated-image",
@@ -644,6 +557,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "audio-player": {
+      type AudioPlayerComponent = Extract<
+        WebElementComponent<T>,
+        { component: "audio-player" }
+      >;
       const audioLink = findWebsiteLink(
         websiteLinks,
         "resource",
@@ -659,38 +576,15 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      let isSpeedControlsDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "speed-controls-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "audio-player" }
-          >["isSpeedControlsDisplayed"]
-        | null;
-      isSpeedControlsDisplayed ??= true;
-
-      let isVolumeControlsDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "volume-controls-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "audio-player" }
-          >["isVolumeControlsDisplayed"]
-        | null;
-      isVolumeControlsDisplayed ??= true;
-
-      let isSeekBarDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "seek-bar-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "audio-player" }
-          >["isSeekBarDisplayed"]
-        | null;
-      isSeekBarDisplayed ??= true;
+      const isSpeedControlsDisplayed = componentReader.valueOr<
+        AudioPlayerComponent["isSpeedControlsDisplayed"]
+      >("speed-controls-displayed", true);
+      const isVolumeControlsDisplayed = componentReader.valueOr<
+        AudioPlayerComponent["isVolumeControlsDisplayed"]
+      >("volume-controls-displayed", true);
+      const isSeekBarDisplayed = componentReader.valueOr<
+        AudioPlayerComponent["isSeekBarDisplayed"]
+      >("seek-bar-displayed", true);
 
       properties = {
         component: "audio-player",
@@ -702,6 +596,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "bibliography": {
+      type BibliographyComponent = Extract<
+        WebElementComponent<T>,
+        { component: "bibliography" }
+      >;
       const itemLinks = websiteLinks.filter(
         (link) => link.category !== "bibliography",
       );
@@ -719,27 +617,13 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      let layout = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
+      const layout = componentReader.valueOr<BibliographyComponent["layout"]>(
         "layout",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "bibliography" }
-          >["layout"]
-        | null;
-      layout ??= "long";
-
-      let isSourceDocumentDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "source-document-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "bibliography" }
-          >["isSourceDocumentDisplayed"]
-        | null;
-      isSourceDocumentDisplayed ??= true;
+        "long",
+      );
+      const isSourceDocumentDisplayed = componentReader.valueOr<
+        BibliographyComponent["isSourceDocumentDisplayed"]
+      >("source-document-displayed", true);
 
       properties = {
         component: "bibliography",
@@ -751,38 +635,26 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "button": {
-      let variant = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
+      type ButtonComponent = Extract<
+        WebElementComponent<T>,
+        { component: "button" }
+      >;
+      const variant = componentReader.valueOr<ButtonComponent["variant"]>(
         "variant",
-      ) as
-        | Extract<WebElementComponent<T>, { component: "button" }>["variant"]
-        | null;
-      variant ??= "default";
-
-      let isExternal = false;
-      const navigateToProperty = getPropertyByVariableLabel(
-        componentProperty.properties,
-        "navigate-to",
+        "default",
       );
 
-      let href =
-        navigateToProperty?.values[0]?.href != null ?
-          transformPermanentIdentificationUrlToItemLink(
-            navigateToProperty.values[0].href,
-          )
-        : (navigateToProperty?.values[0]?.slug ?? null);
+      let isExternal = false;
+      let href = componentReader.linkTarget(
+        "navigate-to",
+        transformPermanentIdentificationUrlToItemLink,
+      );
 
       if (href === null) {
-        const linkToProperty = getPropertyByVariableLabel(
-          componentProperty.properties,
+        href = componentReader.linkTarget(
           "link-to",
+          transformPermanentIdentificationUrlToItemLink,
         );
-        href =
-          linkToProperty?.values[0]?.href != null ?
-            transformPermanentIdentificationUrlToItemLink(
-              linkToProperty.values[0].href,
-            )
-          : (linkToProperty?.values[0]?.slug ?? null);
 
         if (href === null) {
           throw new Error(
@@ -797,21 +669,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         }
       }
 
-      let startIcon = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "start-icon",
-      ) as
-        | Extract<WebElementComponent<T>, { component: "button" }>["startIcon"]
-        | null;
-      startIcon ??= null;
-
-      let endIcon = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "end-icon",
-      ) as
-        | Extract<WebElementComponent<T>, { component: "button" }>["endIcon"]
-        | null;
-      endIcon ??= null;
+      const startIcon =
+        componentReader.value<ButtonComponent["startIcon"]>("start-icon");
+      const endIcon =
+        componentReader.value<ButtonComponent["endIcon"]>("end-icon");
 
       let image: WebImage<T> | null = null;
       const imageLink = findWebsiteLink(
@@ -847,6 +708,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "collection": {
+      type CollectionComponent = Extract<
+        WebElementComponent<T>,
+        { component: "collection" }
+      >;
       const setLinks = getWebsiteLinks(websiteLinks, "set");
       if (setLinks.length === 0) {
         throw new Error(
@@ -858,143 +723,44 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      const displayedProperties = getPropertyByVariableLabel(
-        componentProperty.properties,
-        "use-property",
-      );
-
-      let variant = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
+      const displayedProperties = componentReader.property("use-property");
+      const variant = componentReader.valueOr<CollectionComponent["variant"]>(
         "variant",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "collection" }
-          >["variant"]
-        | null;
-      variant ??= "slide";
-
-      let paginationVariant = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "pagination-variant",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "collection" }
-          >["paginationVariant"]
-        | null;
-      paginationVariant ??= "default";
-
-      let loadingVariant = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "loading-variant",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "collection" }
-          >["loadingVariant"]
-        | null;
-      loadingVariant ??= "skeleton";
-
-      let isUsingQueryParams = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "is-using-query-params",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "collection" }
-          >["isUsingQueryParams"]
-        | null;
-      isUsingQueryParams ??= false;
-
-      let isFilterResultsBarDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "filter-results-bar-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "collection" }
-          >["filter"]["isResultsBarDisplayed"]
-        | null;
-      isFilterResultsBarDisplayed ??= false;
-
-      let isFilterInputDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "filter-input-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "collection" }
-          >["filter"]["isInputDisplayed"]
-        | null;
-      isFilterInputDisplayed ??= false;
-
-      let isFilterLimitedToInputFilter = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "filter-limit-to-input-filter",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "collection" }
-          >["filter"]["isLimitedToInputFilter"]
-        | null;
-      isFilterLimitedToInputFilter ??= false;
-
-      let isFilterLimitedToLeafPropertyValues =
-        getPropertyValueContentByVariableLabel(
-          componentProperty.properties,
-          "filter-limit-to-leaf-property-values",
-        ) as
-          | Extract<
-              WebElementComponent<T>,
-              { component: "collection" }
-            >["filter"]["isLimitedToLeafPropertyValues"]
-          | null;
-      isFilterLimitedToLeafPropertyValues ??= false;
-
-      let isSortDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "sort-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "collection" }
-          >["isSortDisplayed"]
-        | null;
-      isSortDisplayed ??= false;
-
-      let isFilterSidebarDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "filter-sidebar-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "collection" }
-          >["filter"]["isSidebarDisplayed"]
-        | null;
-      isFilterSidebarDisplayed ??= false;
-
-      let filterSidebarSort = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "filter-sidebar-sort",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "collection" }
-          >["filter"]["sidebarSort"]
-        | null;
-      filterSidebarSort ??= "default";
-
-      let imageLayout = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "image-layout",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "collection" }
-          >["imageLayout"]
-        | null;
-      imageLayout ??= "start";
+        "slide",
+      );
+      const paginationVariant = componentReader.valueOr<
+        CollectionComponent["paginationVariant"]
+      >("pagination-variant", "default");
+      const loadingVariant = componentReader.valueOr<
+        CollectionComponent["loadingVariant"]
+      >("loading-variant", "skeleton");
+      const isUsingQueryParams = componentReader.valueOr<
+        CollectionComponent["isUsingQueryParams"]
+      >("is-using-query-params", false);
+      const isFilterResultsBarDisplayed = componentReader.valueOr<
+        CollectionComponent["filter"]["isResultsBarDisplayed"]
+      >("filter-results-bar-displayed", false);
+      const isFilterInputDisplayed = componentReader.valueOr<
+        CollectionComponent["filter"]["isInputDisplayed"]
+      >("filter-input-displayed", false);
+      const isFilterLimitedToInputFilter = componentReader.valueOr<
+        CollectionComponent["filter"]["isLimitedToInputFilter"]
+      >("filter-limit-to-input-filter", false);
+      const isFilterLimitedToLeafPropertyValues = componentReader.valueOr<
+        CollectionComponent["filter"]["isLimitedToLeafPropertyValues"]
+      >("filter-limit-to-leaf-property-values", false);
+      const isSortDisplayed = componentReader.valueOr<
+        CollectionComponent["isSortDisplayed"]
+      >("sort-displayed", false);
+      const isFilterSidebarDisplayed = componentReader.valueOr<
+        CollectionComponent["filter"]["isSidebarDisplayed"]
+      >("filter-sidebar-displayed", false);
+      const filterSidebarSort = componentReader.valueOr<
+        CollectionComponent["filter"]["sidebarSort"]
+      >("filter-sidebar-sort", "default");
+      const imageLayout = componentReader.valueOr<
+        CollectionComponent["imageLayout"]
+      >("image-layout", "start");
 
       const componentOptions = parseWebsiteOptions(
         elementResource.options,
@@ -1028,23 +794,18 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "empty-space": {
-      const height = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "height",
-      ) as string | number | null;
-      const width = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "width",
-      ) as string | number | null;
-
       properties = {
         component: "empty-space",
-        height: height?.toString() ?? null,
-        width: width?.toString() ?? null,
+        height: componentReader.stringValue("height"),
+        width: componentReader.stringValue("width"),
       };
       break;
     }
     case "entries": {
+      type EntriesComponent = Extract<
+        WebElementComponent<T>,
+        { component: "entries" }
+      >;
       const entriesLink = findWebsiteLinkByCategories(websiteLinks, [
         "set",
         "tree",
@@ -1059,24 +820,13 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      let variant = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
+      const variant = componentReader.valueOr<EntriesComponent["variant"]>(
         "variant",
-      ) as
-        | Extract<WebElementComponent<T>, { component: "entries" }>["variant"]
-        | null;
-      variant ??= "entry";
-
-      let isFilterInputDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "filter-input-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "entries" }
-          >["isFilterInputDisplayed"]
-        | null;
-      isFilterInputDisplayed ??= false;
+        "entry",
+      );
+      const isFilterInputDisplayed = componentReader.valueOr<
+        EntriesComponent["isFilterInputDisplayed"]
+      >("filter-input-displayed", false);
 
       properties = {
         component: "entries",
@@ -1098,24 +848,19 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      const height = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "height",
-      );
-      const width = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "width",
-      );
-
       properties = {
         component: "iframe",
         href: transformPermanentIdentificationUrlToItemLink(webpageLink.href),
-        height: height?.toString() ?? null,
-        width: width?.toString() ?? null,
+        height: componentReader.stringValue("height"),
+        width: componentReader.stringValue("width"),
       };
       break;
     }
     case "iiif-viewer": {
+      type IIIFViewerComponent = Extract<
+        WebElementComponent<T>,
+        { component: "iiif-viewer" }
+      >;
       const manifestLink = findWebsiteLink(
         websiteLinks,
         "resource",
@@ -1131,16 +876,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      let variant = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
+      const variant = componentReader.valueOr<IIIFViewerComponent["variant"]>(
         "variant",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "iiif-viewer" }
-          >["variant"]
-        | null;
-      variant ??= "universal-viewer";
+        "universal-viewer",
+      );
 
       properties = {
         component: "iiif-viewer",
@@ -1150,6 +889,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "image": {
+      type ImageComponent = Extract<
+        WebElementComponent<T>,
+        { component: "image" }
+      >;
       const imageLinks = getWebsiteLinks(websiteLinks, "resource").filter(
         (link) => link.type === "image" || link.type === "IIIF",
       );
@@ -1163,16 +906,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      let imageQuality = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "image-quality",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "image" }
-          >["imageQuality"]
-        | null;
-      imageQuality ??= "high";
+      const imageQuality = componentReader.valueOr<
+        ImageComponent["imageQuality"]
+      >("image-quality", "high");
 
       const images: Array<WebImage<T>> = [];
       for (const link of imageLinks) {
@@ -1186,30 +922,16 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         });
       }
 
-      let variant = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
+      const variant = componentReader.valueOr<ImageComponent["variant"]>(
         "variant",
-      ) as
-        | Extract<WebElementComponent<T>, { component: "image" }>["variant"]
-        | null;
-      variant ??= "default";
-
-      let captionLayout = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "layout-caption",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "image" }
-          >["captionLayout"]
-        | null;
-      captionLayout ??= "bottom";
+        "default",
+      );
+      const captionLayout = componentReader.valueOr<
+        ImageComponent["captionLayout"]
+      >("layout-caption", "bottom");
 
       let width: number | null = null;
-      const widthProperty = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "width",
-      ) as string | number | null;
+      const widthProperty = componentReader.value<string | number>("width");
       if (widthProperty !== null) {
         if (typeof widthProperty === "number") {
           width = widthProperty;
@@ -1219,10 +941,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       }
 
       let height: number | null = null;
-      const heightProperty = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "height",
-      ) as string | number | null;
+      const heightProperty = componentReader.value<string | number>("height");
       if (heightProperty !== null) {
         if (typeof heightProperty === "number") {
           height = heightProperty;
@@ -1231,86 +950,35 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         }
       }
 
-      let isFullWidth = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "is-full-width",
-      ) as
-        | Extract<WebElementComponent<T>, { component: "image" }>["isFullWidth"]
-        | null;
-      isFullWidth ??= true;
-
-      let isFullHeight = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "is-full-height",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "image" }
-          >["isFullHeight"]
-        | null;
-      isFullHeight ??= true;
-
-      let captionSource = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "source-caption",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "image" }
-          >["captionSource"]
-        | null;
-      captionSource ??= "name";
-
-      let altTextSource = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "alt-text-source",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "image" }
-          >["altTextSource"]
-        | null;
-      altTextSource ??= "name";
-
-      let isTransparentBackground = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "is-transparent",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "image" }
-          >["isTransparentBackground"]
-        | null;
-      isTransparentBackground ??= false;
-
-      let isCover = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
+      const isFullWidth = componentReader.valueOr<
+        ImageComponent["isFullWidth"]
+      >("is-full-width", true);
+      const isFullHeight = componentReader.valueOr<
+        ImageComponent["isFullHeight"]
+      >("is-full-height", true);
+      const captionSource = componentReader.valueOr<
+        ImageComponent["captionSource"]
+      >("source-caption", "name");
+      const altTextSource = componentReader.valueOr<
+        ImageComponent["altTextSource"]
+      >("alt-text-source", "name");
+      const isTransparentBackground = componentReader.valueOr<
+        ImageComponent["isTransparentBackground"]
+      >("is-transparent", false);
+      const isCover = componentReader.valueOr<ImageComponent["isCover"]>(
         "is-cover",
-      ) as
-        | Extract<WebElementComponent<T>, { component: "image" }>["isCover"]
-        | null;
-      isCover ??= false;
-
-      const variantProperty = getPropertyByVariableLabel(
-        componentProperty.properties,
-        "variant",
+        false,
       );
+      const variantReader = componentReader.nested("variant");
 
-      let carouselOptions:
-        | Extract<
-            WebElementComponent<T>,
-            { component: "image" }
-          >["carouselOptions"]
-        | null = null;
+      let carouselOptions: ImageComponent["carouselOptions"] | null = null;
       if (images.length > 1) {
         let secondsPerImage = 5;
 
-        if (variantProperty?.values[0]!.content === "carousel") {
-          const secondsPerImageProperty =
-            getPropertyValueContentByVariableLabel(
-              variantProperty.properties,
-              "seconds-per-image",
-            ) as string | number | null;
+        if (variant === "carousel") {
+          const secondsPerImageProperty = variantReader.value<string | number>(
+            "seconds-per-image",
+          );
           if (secondsPerImageProperty !== null) {
             if (typeof secondsPerImageProperty === "number") {
               secondsPerImage = secondsPerImageProperty;
@@ -1323,36 +991,16 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         carouselOptions = { secondsPerImage };
       }
 
-      let heroOptions: Extract<
-        WebElementComponent<T>,
-        { component: "image" }
-      >["heroOptions"] = null;
-      if (variantProperty?.values[0]!.content === "hero") {
-        let isBackgroundImageDisplayed = getPropertyValueContentByVariableLabel(
-          variantProperty.properties,
-          "background-image-displayed",
-        ) as
-          | NonNullable<
-              Extract<
-                WebElementComponent<T>,
-                { component: "image" }
-              >["heroOptions"]
-            >["isBackgroundImageDisplayed"]
-          | null;
-        isBackgroundImageDisplayed ??= true;
-
-        let isDocumentDisplayed = getPropertyValueContentByVariableLabel(
-          variantProperty.properties,
-          "document-displayed",
-        ) as
-          | NonNullable<
-              Extract<
-                WebElementComponent<T>,
-                { component: "image" }
-              >["heroOptions"]
-            >["isDocumentDisplayed"]
-          | null;
-        isDocumentDisplayed ??= true;
+      let heroOptions: ImageComponent["heroOptions"] = null;
+      if (variant === "hero") {
+        const isBackgroundImageDisplayed = variantReader.valueOr<
+          NonNullable<
+            ImageComponent["heroOptions"]
+          >["isBackgroundImageDisplayed"]
+        >("background-image-displayed", true);
+        const isDocumentDisplayed = variantReader.valueOr<
+          NonNullable<ImageComponent["heroOptions"]>["isDocumentDisplayed"]
+        >("document-displayed", true);
 
         heroOptions = { isBackgroundImageDisplayed, isDocumentDisplayed };
       }
@@ -1377,6 +1025,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "image-gallery": {
+      type ImageGalleryComponent = Extract<
+        WebElementComponent<T>,
+        { component: "image-gallery" }
+      >;
       const galleryLink = findWebsiteLinkByCategories(websiteLinks, [
         "set",
         "tree",
@@ -1391,16 +1043,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      let isFilterInputDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "filter-input-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "image-gallery" }
-          >["isFilterInputDisplayed"]
-        | null;
-      isFilterInputDisplayed ??= true;
+      const isFilterInputDisplayed = componentReader.valueOr<
+        ImageGalleryComponent["isFilterInputDisplayed"]
+      >("filter-input-displayed", true);
 
       properties = {
         component: "image-gallery",
@@ -1410,6 +1055,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "map": {
+      type MapComponent = Extract<WebElementComponent<T>, { component: "map" }>;
       const mapLink = findWebsiteLinkByCategories(websiteLinks, [
         "set",
         "tree",
@@ -1424,78 +1070,42 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      let isInteractive = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "is-interactive",
-      ) as
-        | Extract<WebElementComponent<T>, { component: "map" }>["isInteractive"]
-        | null;
-      isInteractive ??= true;
-
-      let isClustered = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
+      const isInteractive = componentReader.valueOr<
+        MapComponent["isInteractive"]
+      >("is-interactive", true);
+      const isClustered = componentReader.valueOr<MapComponent["isClustered"]>(
         "is-clustered",
-      ) as
-        | Extract<WebElementComponent<T>, { component: "map" }>["isClustered"]
-        | null;
-      isClustered ??= false;
-
-      let isUsingPins = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
+        false,
+      );
+      const isUsingPins = componentReader.valueOr<MapComponent["isUsingPins"]>(
         "is-using-pins",
-      ) as
-        | Extract<WebElementComponent<T>, { component: "map" }>["isUsingPins"]
-        | null;
-      isUsingPins ??= false;
+        false,
+      );
+      const customBasemap =
+        componentReader.value<MapComponent["customBasemap"]>("custom-basemap");
 
-      let customBasemap = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "custom-basemap",
-      ) as
-        | Extract<WebElementComponent<T>, { component: "map" }>["customBasemap"]
-        | null;
-      customBasemap ??= null;
-
-      let initialBounds:
-        | Extract<WebElementComponent<T>, { component: "map" }>["initialBounds"]
-        | null = null;
-      const initialBoundsProperty = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
+      let initialBounds: MapComponent["initialBounds"] | null = null;
+      const initialBoundsProperty = componentReader.value<string | number>(
         "initial-bounds",
-      ) as string | number | null;
+      );
       if (initialBoundsProperty !== null) {
         initialBounds = parseBounds(String(initialBoundsProperty));
       }
 
-      let maximumBounds:
-        | Extract<WebElementComponent<T>, { component: "map" }>["maximumBounds"]
-        | null = null;
-      const maximumBoundsProperty = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
+      let maximumBounds: MapComponent["maximumBounds"] | null = null;
+      const maximumBoundsProperty = componentReader.value<string | number>(
         "maximum-bounds",
-      ) as string | number | null;
+      );
       if (maximumBoundsProperty !== null) {
         maximumBounds = parseBounds(String(maximumBoundsProperty));
       }
 
-      let isControlsDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "controls-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "map" }
-          >["isControlsDisplayed"]
-        | null;
-      isControlsDisplayed ??= false;
-
-      let isFullHeight = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "is-full-height",
-      ) as
-        | Extract<WebElementComponent<T>, { component: "map" }>["isFullHeight"]
-        | null;
-      isFullHeight ??= false;
+      const isControlsDisplayed = componentReader.valueOr<
+        MapComponent["isControlsDisplayed"]
+      >("controls-displayed", false);
+      const isFullHeight = componentReader.valueOr<
+        MapComponent["isFullHeight"]
+      >("is-full-height", false);
 
       properties = {
         component: "map",
@@ -1512,6 +1122,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "query": {
+      type QueryComponent = Extract<
+        WebElementComponent<T>,
+        { component: "query" }
+      >;
       const setLinks = getWebsiteLinks(websiteLinks, "set");
       if (setLinks.length === 0) {
         throw new Error(
@@ -1523,9 +1137,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      const items: Array<
-        Extract<WebElementComponent<T>, { component: "query" }>["items"][number]
-      > = [];
+      const items: Array<QueryComponent["items"][number]> = [];
 
       if (componentProperty.properties.length === 0) {
         throw new Error(
@@ -1538,22 +1150,16 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       }
 
       for (const queryItem of componentProperty.properties) {
-        const querySubProperties = queryItem.properties;
+        const queryReader = websitePresentationReader(queryItem.properties);
 
-        const label = getPropertyMultilingualValueByLabelName(
-          querySubProperties,
-          "query-prompt",
-          options,
-        );
+        const label = queryReader.multilingualValue("query-prompt", options);
         if (label === null) {
           continue;
         }
 
-        const propertyVariables =
-          getPropertyByVariableLabel(
-            querySubProperties,
-            "use-property",
-          )?.values.filter((value) => value.uuid !== null) ?? [];
+        const propertyVariables = queryReader
+          .values("use-property")
+          .filter((value) => value.uuid !== null);
 
         const queryLanguage = options.languages[0];
         if (queryLanguage == null) {
@@ -1566,10 +1172,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
           );
         }
 
-        const queries: Extract<
-          WebElementComponent<T>,
-          { component: "query" }
-        >["items"][number]["queries"] = [];
+        const queries: QueryComponent["items"][number]["queries"] = [];
         for (const propertyVariable of propertyVariables) {
           if (propertyVariable.uuid === null) {
             throw new Error(
@@ -1602,27 +1205,14 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
           });
         }
 
-        let startIcon = getPropertyValueContentByVariableLabel(
-          querySubProperties,
-          "start-icon",
-        ) as
-          | Extract<
-              WebElementComponent<T>,
-              { component: "query" }
-            >["items"][number]["startIcon"]
-          | null;
-        startIcon ??= null;
-
-        let endIcon = getPropertyValueContentByVariableLabel(
-          querySubProperties,
-          "end-icon",
-        ) as
-          | Extract<
-              WebElementComponent<T>,
-              { component: "query" }
-            >["items"][number]["endIcon"]
-          | null;
-        endIcon ??= null;
+        const startIcon =
+          queryReader.value<QueryComponent["items"][number]["startIcon"]>(
+            "start-icon",
+          );
+        const endIcon =
+          queryReader.value<QueryComponent["items"][number]["endIcon"]>(
+            "end-icon",
+          );
 
         items.push({ label, queries, startIcon, endIcon });
       }
@@ -1642,54 +1232,20 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         options,
       );
 
-      const displayedProperties = getPropertyByVariableLabel(
-        componentProperty.properties,
-        "use-property",
-      );
+      const displayedProperties = componentReader.property("use-property");
 
-      let variant = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "variant",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "query" }
-          >["collectionProperties"]["variant"]
-        | null;
-      variant ??= "slide";
-
-      let paginationVariant = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "pagination-variant",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "query" }
-          >["collectionProperties"]["paginationVariant"]
-        | null;
-      paginationVariant ??= "default";
-
-      let loadingVariant = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "loading-variant",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "query" }
-          >["collectionProperties"]["loadingVariant"]
-        | null;
-      loadingVariant ??= "skeleton";
-
-      let imageLayout = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "image-layout",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "query" }
-          >["collectionProperties"]["imageLayout"]
-        | null;
-      imageLayout ??= "start";
+      const variant = componentReader.valueOr<
+        QueryComponent["collectionProperties"]["variant"]
+      >("variant", "slide");
+      const paginationVariant = componentReader.valueOr<
+        QueryComponent["collectionProperties"]["paginationVariant"]
+      >("pagination-variant", "default");
+      const loadingVariant = componentReader.valueOr<
+        QueryComponent["collectionProperties"]["loadingVariant"]
+      >("loading-variant", "skeleton");
+      const imageLayout = componentReader.valueOr<
+        QueryComponent["collectionProperties"]["imageLayout"]
+      >("image-layout", "start");
 
       properties = {
         component: "query",
@@ -1726,39 +1282,18 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "search-bar": {
-      let queryVariant:
-        | Extract<
-            WebElementComponent<T>,
-            { component: "search-bar" }
-          >["queryVariant"]
-        | null = null;
-      queryVariant = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "query-variant",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "search-bar" }
-          >["queryVariant"]
-        | null;
-      queryVariant ??= "submit";
-
-      const boundElementUuid =
-        getPropertyByVariableLabel(
-          componentProperty.properties,
-          "bound-element",
-        )?.values[0]?.uuid ?? null;
-
-      const linkToProperty = getPropertyByVariableLabel(
-        componentProperty.properties,
+      type SearchBarComponent = Extract<
+        WebElementComponent<T>,
+        { component: "search-bar" }
+      >;
+      const queryVariant = componentReader.valueOr<
+        SearchBarComponent["queryVariant"]
+      >("query-variant", "submit");
+      const boundElementUuid = componentReader.uuid("bound-element");
+      const href = componentReader.linkTarget(
         "link-to",
+        transformPermanentIdentificationUrlToItemLink,
       );
-      const href =
-        linkToProperty?.values[0]?.href != null ?
-          transformPermanentIdentificationUrlToItemLink(
-            linkToProperty.values[0].href,
-          )
-        : (linkToProperty?.values[0]?.slug ?? null);
 
       if (!boundElementUuid && !href) {
         throw new Error(
@@ -1770,23 +1305,14 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      let placeholder = getPropertyMultilingualValueByLabelName(
-        componentProperty.properties,
+      const placeholder = componentReader.multilingualValue(
         "placeholder-text",
         options,
       );
-      placeholder ??= null;
 
-      let baseFilterQueries = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "base-filter-queries",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "search-bar" }
-          >["baseFilterQueries"]
-        | null;
-      baseFilterQueries ??= null;
+      const baseFilterQueries = componentReader.value<
+        SearchBarComponent["baseFilterQueries"]
+      >("base-filter-queries");
 
       properties = {
         component: "search-bar",
@@ -1802,6 +1328,12 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "text": {
+      type TextComponent = Extract<
+        WebElementComponent<T>,
+        { component: "text" }
+      >;
+      type TextVariantWithName<U extends TextComponent["variant"]["name"]> =
+        Extract<TextComponent["variant"], { name: U }>;
       const content =
         elementResource.document && "content" in elementResource.document ?
           parseXMLContent(elementResource.document, options)
@@ -1816,52 +1348,65 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      let variantName: Extract<
-        WebElementComponent<T>,
-        { component: "text" }
-      >["variant"]["name"] = "block";
-      let variant: Extract<
-        WebElementComponent<T>,
-        { component: "text" }
-      >["variant"];
+      let variantName: TextComponent["variant"]["name"] = "block";
+      let variant: TextComponent["variant"];
 
-      const variantProperty = getPropertyByVariableLabel(
-        componentProperty.properties,
-        "variant",
-      );
+      const variantProperty = componentReader.property("variant");
       if (variantProperty !== null) {
-        variantName = variantProperty.values[0]!.content as Extract<
-          WebElementComponent<T>,
-          { component: "text" }
-        >["variant"]["name"];
+        const variantReader = websitePresentationReader(
+          variantProperty.properties,
+        );
+        variantName = variantProperty.values[0]!
+          .content as TextComponent["variant"]["name"];
 
-        if (
-          variantName === "paragraph" ||
-          variantName === "label" ||
-          variantName === "heading" ||
-          variantName === "display"
-        ) {
-          let size = getPropertyValueContentByVariableLabel(
-            variantProperty.properties,
-            "size",
-          ) as "xs" | "sm" | "md" | "lg" | null;
-          size ??= "md";
-
-          variant = { name: variantName, size };
-        } else {
-          variant = { name: variantName };
+        switch (variantName) {
+          case "paragraph": {
+            variant = {
+              name: variantName,
+              size: variantReader.valueOr<
+                TextVariantWithName<"paragraph">["size"]
+              >("size", "md"),
+            };
+            break;
+          }
+          case "label": {
+            variant = {
+              name: variantName,
+              size: variantReader.valueOr<TextVariantWithName<"label">["size"]>(
+                "size",
+                "md",
+              ),
+            };
+            break;
+          }
+          case "heading": {
+            variant = {
+              name: variantName,
+              size: variantReader.valueOr<
+                TextVariantWithName<"heading">["size"]
+              >("size", "md"),
+            };
+            break;
+          }
+          case "display": {
+            variant = {
+              name: variantName,
+              size: variantReader.valueOr<
+                TextVariantWithName<"display">["size"]
+              >("size", "md"),
+            };
+            break;
+          }
+          default: {
+            variant = { name: variantName };
+          }
         }
       } else {
         variant = { name: variantName };
       }
 
-      let headingLevel = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "heading-level",
-      ) as
-        | Extract<WebElementComponent<T>, { component: "text" }>["headingLevel"]
-        | null;
-      headingLevel ??= null;
+      const headingLevel =
+        componentReader.value<TextComponent["headingLevel"]>("heading-level");
 
       properties = { component: "text", variant, headingLevel, content };
       break;
@@ -1897,16 +1442,12 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      let isChaptersDisplayed = getPropertyValueContentByVariableLabel(
-        componentProperty.properties,
-        "chapters-displayed",
-      ) as
-        | Extract<
-            WebElementComponent<T>,
-            { component: "video" }
-          >["isChaptersDisplayed"]
-        | null;
-      isChaptersDisplayed ??= true;
+      const isChaptersDisplayed = componentReader.valueOr<
+        Extract<
+          WebElementComponent<T>,
+          { component: "video" }
+        >["isChaptersDisplayed"]
+      >("chapters-displayed", true);
 
       properties = {
         component: "video",
@@ -1956,47 +1497,35 @@ function parseWebTitle<T extends ReadonlyArray<string>>(
     },
   };
 
-  const titleProperties =
-    getPropertyByVariableLabelAndValueContent(
-      properties,
-      "presentation",
-      "title",
-    )?.properties ?? [];
-  if (titleProperties.length > 0) {
-    title.variant =
-      (getPropertyValueContentByVariableLabel(titleProperties, "variant") as
-        | WebTitle<T>["variant"]
-        | null) ?? "default";
+  const titleReader = websitePresentationReader(properties).nestedByValue(
+    "presentation",
+    "title",
+  );
+  if (titleReader.size > 0) {
+    title.variant = titleReader.valueOr<WebTitle<T>["variant"]>(
+      "variant",
+      "default",
+    );
 
-    title.properties.isNameDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        titleProperties,
-        "name-displayed",
-      ) as WebTitle<T>["properties"]["isNameDisplayed"] | null) ?? false;
+    title.properties.isNameDisplayed = titleReader.valueOr<
+      WebTitle<T>["properties"]["isNameDisplayed"]
+    >("name-displayed", false);
 
-    title.properties.isDescriptionDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        titleProperties,
-        "description-displayed",
-      ) as WebTitle<T>["properties"]["isDescriptionDisplayed"] | null) ?? false;
+    title.properties.isDescriptionDisplayed = titleReader.valueOr<
+      WebTitle<T>["properties"]["isDescriptionDisplayed"]
+    >("description-displayed", false);
 
-    title.properties.isDateDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        titleProperties,
-        "date-displayed",
-      ) as WebTitle<T>["properties"]["isDateDisplayed"] | null) ?? false;
+    title.properties.isDateDisplayed = titleReader.valueOr<
+      WebTitle<T>["properties"]["isDateDisplayed"]
+    >("date-displayed", false);
 
-    title.properties.isCreatorsDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        titleProperties,
-        "creators-displayed",
-      ) as WebTitle<T>["properties"]["isCreatorsDisplayed"] | null) ?? false;
+    title.properties.isCreatorsDisplayed = titleReader.valueOr<
+      WebTitle<T>["properties"]["isCreatorsDisplayed"]
+    >("creators-displayed", false);
 
-    title.properties.isCountDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        titleProperties,
-        "count-displayed",
-      ) as WebTitle<T>["properties"]["isCountDisplayed"] | null) ?? false;
+    title.properties.isCountDisplayed = titleReader.valueOr<
+      WebTitle<T>["properties"]["isCountDisplayed"]
+    >("count-displayed", false);
   }
 
   return title;
@@ -2021,30 +1550,23 @@ function parseWebElement<T extends ReadonlyArray<string>>(
     elementResource.properties?.property ?
       parseSimplifiedProperties(elementResource.properties, options)
     : [];
+  const elementReader = websitePresentationReader(elementProperties);
 
-  const presentationProperty = getPropertyByVariableLabel(
-    elementProperties,
+  const presentationProperty = elementReader.requiredProperty(
     "presentation",
+    `Presentation property not found for element (${formatXMLWebsiteResourceMetadata(
+      elementResource,
+    )})`,
   );
-  if (presentationProperty === null) {
-    throw new Error(
-      `Presentation property not found for element (${formatXMLWebsiteResourceMetadata(
-        elementResource,
-      )})`,
-    );
-  }
 
-  const componentProperty = getPropertyByVariableLabel(
+  const componentProperty = websitePresentationReader(
     presentationProperty.properties,
+  ).requiredProperty(
     "component",
+    `Component property not found for element (${formatXMLWebsiteResourceMetadata(
+      elementResource,
+    )})`,
   );
-  if (componentProperty === null) {
-    throw new Error(
-      `Component property not found for element (${formatXMLWebsiteResourceMetadata(
-        elementResource,
-      )})`,
-    );
-  }
 
   const properties = parseWebElementProperties(
     componentProperty,
@@ -2102,11 +1624,9 @@ const parseWebpageResources = <
         parseSimplifiedProperties(resource.properties, options)
       : [];
 
-    const resourceProperty = getPropertyByVariableLabelAndValueContent(
+    const resourceProperty = websitePresentationReader(
       resourceProperties,
-      "presentation",
-      type,
-    );
+    ).propertyByValue("presentation", type);
     if (resourceProperty === null) {
       continue;
     }
@@ -2168,14 +1688,9 @@ function parseWebpage<T extends ReadonlyArray<string>>(
     webpageResource.properties ?
       parseSimplifiedProperties(webpageResource.properties, options)
     : [];
+  const webpageReader = websitePresentationReader(webpageProperties);
 
-  if (
-    webpageProperties.length === 0 ||
-    getPropertyValueContentByVariableLabel(
-      webpageProperties,
-      "presentation",
-    ) !== "page"
-  ) {
+  if (webpageReader.value("presentation") !== "page") {
     return null;
   }
 
@@ -2236,10 +1751,9 @@ function parseWebpage<T extends ReadonlyArray<string>>(
         parseSimplifiedProperties(resource.properties, options)
       : [];
 
-    const resourceType = getPropertyValueContentByVariableLabel(
-      resourceProperties,
-      "presentation",
-    ) as "segment" | "element" | "block" | null;
+    const resourceType = websitePresentationReader(resourceProperties).value<
+      "segment" | "element" | "block"
+    >("presentation");
     if (resourceType === null) {
       continue;
     }
@@ -2278,49 +1792,31 @@ function parseWebpage<T extends ReadonlyArray<string>>(
       )
     : [];
 
-  const webpageSubProperties =
-    getPropertyByVariableLabelAndValueContent(
-      webpageProperties,
-      "presentation",
-      "page",
-    )?.properties ?? [];
+  const pageReader = webpageReader.nestedByValue("presentation", "page");
+  if (pageReader.size > 0) {
+    returnWebpage.properties.isDisplayedInNavbar = pageReader.valueOr<
+      Webpage<T>["properties"]["isDisplayedInNavbar"]
+    >("displayed-in-navbar", true);
 
-  if (webpageSubProperties.length > 0) {
-    returnWebpage.properties.isDisplayedInNavbar =
-      (getPropertyValueContentByVariableLabel(
-        webpageSubProperties,
-        "displayed-in-navbar",
-      ) as Webpage<T>["properties"]["isDisplayedInNavbar"] | null) ?? true;
+    returnWebpage.properties.width = pageReader.valueOr<
+      Webpage<T>["properties"]["width"]
+    >("width", "default");
 
-    returnWebpage.properties.width =
-      (getPropertyValueContentByVariableLabel(webpageSubProperties, "width") as
-        | Webpage<T>["properties"]["width"]
-        | null) ?? "default";
+    returnWebpage.properties.variant = pageReader.valueOr<
+      Webpage<T>["properties"]["variant"]
+    >("variant", "default");
 
-    returnWebpage.properties.variant =
-      (getPropertyValueContentByVariableLabel(
-        webpageSubProperties,
-        "variant",
-      ) as Webpage<T>["properties"]["variant"] | null) ?? "default";
+    returnWebpage.properties.isSidebarDisplayed = pageReader.valueOr<
+      Webpage<T>["properties"]["isSidebarDisplayed"]
+    >("sidebar-displayed", true);
 
-    returnWebpage.properties.isSidebarDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        webpageSubProperties,
-        "sidebar-displayed",
-      ) as Webpage<T>["properties"]["isSidebarDisplayed"] | null) ?? true;
+    returnWebpage.properties.isBreadcrumbsDisplayed = pageReader.valueOr<
+      Webpage<T>["properties"]["isBreadcrumbsDisplayed"]
+    >("breadcrumbs-displayed", false);
 
-    returnWebpage.properties.isBreadcrumbsDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        webpageSubProperties,
-        "breadcrumbs-displayed",
-      ) as Webpage<T>["properties"]["isBreadcrumbsDisplayed"] | null) ?? false;
-
-    returnWebpage.properties.isNavbarSearchBarDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        webpageSubProperties,
-        "navbar-search-bar-displayed",
-      ) as Webpage<T>["properties"]["isNavbarSearchBarDisplayed"] | null) ??
-      true;
+    returnWebpage.properties.isNavbarSearchBarDisplayed = pageReader.valueOr<
+      Webpage<T>["properties"]["isNavbarSearchBarDisplayed"]
+    >("navbar-search-bar-displayed", true);
   }
 
   if (imageLink != null) {
@@ -2378,14 +1874,9 @@ function parseWebSegment<T extends ReadonlyArray<string>>(
     segmentResource.properties ?
       parseSimplifiedProperties(segmentResource.properties, options)
     : [];
+  const segmentReader = websitePresentationReader(webpageProperties);
 
-  if (
-    webpageProperties.length === 0 ||
-    getPropertyValueContentByVariableLabel(
-      webpageProperties,
-      "presentation",
-    ) !== "segment"
-  ) {
+  if (segmentReader.value("presentation") !== "segment") {
     return null;
   }
 
@@ -2469,14 +1960,9 @@ function parseWebSegmentItem<T extends ReadonlyArray<string>>(
     segmentItemResource.properties ?
       parseSimplifiedProperties(segmentItemResource.properties, options)
     : [];
+  const segmentItemReader = websitePresentationReader(webpageProperties);
 
-  if (
-    webpageProperties.length === 0 ||
-    getPropertyValueContentByVariableLabel(
-      webpageProperties,
-      "presentation",
-    ) !== "segment-item"
-  ) {
+  if (segmentItemReader.value("presentation") !== "segment-item") {
     return null;
   }
 
@@ -2586,16 +2072,13 @@ function parseSidebar<T extends ReadonlyArray<string>>(
       resource.properties ?
         parseSimplifiedProperties(resource.properties, options)
       : [];
+    const resourceReader = websitePresentationReader(resourceProperties);
 
     return (
-      getPropertyValueContentByVariableLabel(
-        resourceProperties,
-        "presentation",
-      ) === "element" &&
-      getPropertyValueContentByVariableLabel(
-        resourceProperties[0]?.properties ?? [],
-        "component",
-      ) === "sidebar"
+      resourceReader.value("presentation") === "element" &&
+      resourceReader
+        .nestedByValue("presentation", "element")
+        .value("component") === "sidebar"
     );
   });
   if (sidebarResource != null) {
@@ -2609,34 +2092,15 @@ function parseSidebar<T extends ReadonlyArray<string>>(
       parseIdentification(sidebarResource.identification, options),
     );
 
-    const sidebarProperties =
-      sidebarBaseProperties
-        .find(
-          (property) =>
-            property.variable.label === "presentation" &&
-            property.values[0]?.content === "element",
-        )
-        ?.properties.find(
-          (property) =>
-            property.variable.label === "component" &&
-            property.values[0]?.content === "sidebar",
-        )?.properties ?? [];
+    const sidebarReader = websitePresentationReader(sidebarBaseProperties)
+      .nestedByValue("presentation", "element")
+      .nestedByValue("component", "sidebar");
 
-    const sidebarLayoutProperty = sidebarProperties.find(
-      (property) => property.variable.label === "layout",
+    layout = sidebarReader.valueOr<typeof layout>("layout", "start");
+    mobileLayout = sidebarReader.valueOr<typeof mobileLayout>(
+      "layout-mobile",
+      "default",
     );
-    if (sidebarLayoutProperty) {
-      layout = sidebarLayoutProperty.values[0]!.content as "start" | "end";
-    }
-
-    const sidebarMobileLayoutProperty = sidebarProperties.find(
-      (property) => property.variable.label === "layout-mobile",
-    );
-    if (sidebarMobileLayoutProperty) {
-      mobileLayout = sidebarMobileLayoutProperty.values[0]!.content as
-        | "default"
-        | "inline";
-    }
 
     const parsedCssStyles = parseResponsiveCssStyles(sidebarBaseProperties);
     cssStyles.default = parsedCssStyles.default;
@@ -2654,10 +2118,9 @@ function parseSidebar<T extends ReadonlyArray<string>>(
           parseSimplifiedProperties(resource.properties, options)
         : [];
 
-      const resourceType = getPropertyValueContentByVariableLabel(
-        resourceProperties,
-        "presentation",
-      ) as "element" | "block" | null;
+      const resourceType = websitePresentationReader(resourceProperties).value<
+        "element" | "block"
+      >("presentation");
       if (resourceType === null) {
         continue;
       }
@@ -2722,10 +2185,9 @@ function parseWebElementForAccordion<T extends ReadonlyArray<string>>(
         parseSimplifiedProperties(resource.properties, options)
       : [];
 
-    const resourceType = getPropertyValueContentByVariableLabel(
-      resourceProperties,
-      "presentation",
-    ) as "element" | "block" | null;
+    const resourceType = websitePresentationReader(resourceProperties).value<
+      "element" | "block"
+    >("presentation");
     if (resourceType === null) {
       continue;
     }
@@ -2780,97 +2242,63 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
     cssStyles: { default: [], tablet: [], mobile: [] },
   };
 
-  const blockMainProperties =
-    getPropertyByVariableLabelAndValueContent(
-      blockProperties,
-      "presentation",
-      "block",
-    )?.properties ?? [];
-  if (blockMainProperties.length > 0) {
-    returnBlock.properties.default.layout =
-      (getPropertyValueContentByVariableLabel(blockMainProperties, "layout") as
-        | WebBlock<T>["properties"]["default"]["layout"]
-        | null) ?? "vertical";
+  const blockReader = websitePresentationReader(blockProperties).nestedByValue(
+    "presentation",
+    "block",
+  );
+  if (blockReader.size > 0) {
+    returnBlock.properties.default.layout = blockReader.valueOr<
+      WebBlock<T>["properties"]["default"]["layout"]
+    >("layout", "vertical");
 
-    returnBlock.properties.default.wrap =
-      (getPropertyValueContentByVariableLabel(blockMainProperties, "wrap") as
-        | WebBlock<T>["properties"]["default"]["wrap"]
-        | null) ?? "nowrap";
+    returnBlock.properties.default.wrap = blockReader.valueOr<
+      WebBlock<T>["properties"]["default"]["wrap"]
+    >("wrap", "nowrap");
 
     if (returnBlock.properties.default.layout === "accordion") {
-      returnBlock.properties.default.isAccordionEnabled =
-        (getPropertyValueContentByVariableLabel(
-          blockMainProperties,
-          "accordion-enabled",
-        ) as
-          | WebBlock<T>["properties"]["default"]["isAccordionEnabled"]
-          | null) ?? true;
+      returnBlock.properties.default.isAccordionEnabled = blockReader.valueOr<
+        WebBlock<T>["properties"]["default"]["isAccordionEnabled"]
+      >("accordion-enabled", true);
 
       returnBlock.properties.default.isAccordionExpandedByDefault =
-        (getPropertyValueContentByVariableLabel(
-          blockMainProperties,
-          "accordion-expanded",
-        ) as
-          | WebBlock<T>["properties"]["default"]["isAccordionExpandedByDefault"]
-          | null) ?? true;
+        blockReader.valueOr<
+          WebBlock<T>["properties"]["default"]["isAccordionExpandedByDefault"]
+        >("accordion-expanded", true);
 
       returnBlock.properties.default.isAccordionSidebarDisplayed =
-        (getPropertyValueContentByVariableLabel(
-          blockMainProperties,
-          "accordion-sidebar-displayed",
-        ) as
-          | WebBlock<T>["properties"]["default"]["isAccordionSidebarDisplayed"]
-          | null) ?? false;
+        blockReader.valueOr<
+          WebBlock<T>["properties"]["default"]["isAccordionSidebarDisplayed"]
+        >("accordion-sidebar-displayed", false);
     }
 
-    returnBlock.properties.default.spacing =
-      (getPropertyValueContentByVariableLabel(
-        blockMainProperties,
-        "spacing",
-      ) as WebBlock<T>["properties"]["default"]["spacing"] | null) ?? null;
+    returnBlock.properties.default.spacing = blockReader.valueOr<
+      WebBlock<T>["properties"]["default"]["spacing"]
+    >("spacing", null);
 
-    returnBlock.properties.default.gap =
-      (getPropertyValueContentByVariableLabel(blockMainProperties, "gap") as
-        | WebBlock<T>["properties"]["default"]["gap"]
-        | null) ?? null;
+    returnBlock.properties.default.gap = blockReader.valueOr<
+      WebBlock<T>["properties"]["default"]["gap"]
+    >("gap", null);
 
-    const tabletOverwriteProperty = getPropertyByVariableLabel(
-      blockMainProperties,
-      "overwrite-tablet",
-    );
-    if (tabletOverwriteProperty !== null) {
-      const tabletOverwriteProperties = tabletOverwriteProperty.properties;
-
+    const tabletOverwriteReader = blockReader.nested("overwrite-tablet");
+    if (tabletOverwriteReader.size > 0) {
       const propertiesTablet: NonNullable<WebBlock<T>["properties"]["tablet"]> =
         {
           layout:
-            (getPropertyValueContentByVariableLabel(
-              tabletOverwriteProperties,
-              "layout",
-            ) as
-              | NonNullable<WebBlock<T>["properties"]["tablet"]>["layout"]
-              | null) ?? undefined,
+            tabletOverwriteReader.value<
+              NonNullable<WebBlock<T>["properties"]["tablet"]>["layout"]
+            >("layout") ?? undefined,
           wrap:
-            (getPropertyValueContentByVariableLabel(
-              tabletOverwriteProperties,
-              "wrap",
-            ) as
-              | NonNullable<WebBlock<T>["properties"]["tablet"]>["wrap"]
-              | null) ?? undefined,
+            tabletOverwriteReader.value<
+              NonNullable<WebBlock<T>["properties"]["tablet"]>["wrap"]
+            >("wrap") ?? undefined,
           spacing:
-            (getPropertyValueContentByVariableLabel(
-              tabletOverwriteProperties,
-              "spacing",
-            ) as
-              | NonNullable<WebBlock<T>["properties"]["tablet"]>["spacing"]
-              | null) ?? undefined,
+            tabletOverwriteReader.value<
+              NonNullable<WebBlock<T>["properties"]["tablet"]>["spacing"]
+            >("spacing") ?? undefined,
           gap:
-            (getPropertyValueContentByVariableLabel(
-              tabletOverwriteProperties,
-              "gap",
-            ) as
-              | NonNullable<WebBlock<T>["properties"]["tablet"]>["gap"]
-              | null) ?? undefined,
+            tabletOverwriteReader.value<
+              NonNullable<WebBlock<T>["properties"]["tablet"]>["gap"]
+            >("gap") ?? undefined,
           isAccordionEnabled: undefined,
           isAccordionExpandedByDefault: undefined,
           isAccordionSidebarDisplayed: undefined,
@@ -2881,34 +2309,25 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
         returnBlock.properties.default.layout === "accordion"
       ) {
         propertiesTablet.isAccordionEnabled =
-          (getPropertyValueContentByVariableLabel(
-            tabletOverwriteProperties,
-            "accordion-enabled",
-          ) as
-            | NonNullable<
-                WebBlock<T>["properties"]["tablet"]
-              >["isAccordionEnabled"]
-            | null) ?? undefined;
+          tabletOverwriteReader.value<
+            NonNullable<
+              WebBlock<T>["properties"]["tablet"]
+            >["isAccordionEnabled"]
+          >("accordion-enabled") ?? undefined;
 
         propertiesTablet.isAccordionExpandedByDefault =
-          (getPropertyValueContentByVariableLabel(
-            tabletOverwriteProperties,
-            "accordion-expanded",
-          ) as
-            | NonNullable<
-                WebBlock<T>["properties"]["tablet"]
-              >["isAccordionExpandedByDefault"]
-            | null) ?? undefined;
+          tabletOverwriteReader.value<
+            NonNullable<
+              WebBlock<T>["properties"]["tablet"]
+            >["isAccordionExpandedByDefault"]
+          >("accordion-expanded") ?? undefined;
 
         propertiesTablet.isAccordionSidebarDisplayed =
-          (getPropertyValueContentByVariableLabel(
-            tabletOverwriteProperties,
-            "accordion-sidebar-displayed",
-          ) as
-            | NonNullable<
-                WebBlock<T>["properties"]["tablet"]
-              >["isAccordionSidebarDisplayed"]
-            | null) ?? undefined;
+          tabletOverwriteReader.value<
+            NonNullable<
+              WebBlock<T>["properties"]["tablet"]
+            >["isAccordionSidebarDisplayed"]
+          >("accordion-sidebar-displayed") ?? undefined;
       }
 
       const cleanedPropertiesTablet = cleanObject(propertiesTablet);
@@ -2918,43 +2337,26 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
       }
     }
 
-    const mobileOverwriteProperty = getPropertyByVariableLabel(
-      blockMainProperties,
-      "overwrite-mobile",
-    );
-    if (mobileOverwriteProperty !== null) {
-      const mobileOverwriteProperties = mobileOverwriteProperty.properties;
-
+    const mobileOverwriteReader = blockReader.nested("overwrite-mobile");
+    if (mobileOverwriteReader.size > 0) {
       const propertiesMobile: NonNullable<WebBlock<T>["properties"]["mobile"]> =
         {
           layout:
-            (getPropertyValueContentByVariableLabel(
-              mobileOverwriteProperties,
-              "layout",
-            ) as
-              | NonNullable<WebBlock<T>["properties"]["default"]>["layout"]
-              | null) ?? undefined,
+            mobileOverwriteReader.value<
+              NonNullable<WebBlock<T>["properties"]["default"]>["layout"]
+            >("layout") ?? undefined,
           wrap:
-            (getPropertyValueContentByVariableLabel(
-              mobileOverwriteProperties,
-              "wrap",
-            ) as
-              | NonNullable<WebBlock<T>["properties"]["mobile"]>["wrap"]
-              | null) ?? undefined,
+            mobileOverwriteReader.value<
+              NonNullable<WebBlock<T>["properties"]["mobile"]>["wrap"]
+            >("wrap") ?? undefined,
           spacing:
-            (getPropertyValueContentByVariableLabel(
-              mobileOverwriteProperties,
-              "spacing",
-            ) as
-              | NonNullable<WebBlock<T>["properties"]["default"]>["spacing"]
-              | null) ?? undefined,
+            mobileOverwriteReader.value<
+              NonNullable<WebBlock<T>["properties"]["default"]>["spacing"]
+            >("spacing") ?? undefined,
           gap:
-            (getPropertyValueContentByVariableLabel(
-              mobileOverwriteProperties,
-              "gap",
-            ) as
-              | NonNullable<WebBlock<T>["properties"]["default"]>["gap"]
-              | null) ?? undefined,
+            mobileOverwriteReader.value<
+              NonNullable<WebBlock<T>["properties"]["default"]>["gap"]
+            >("gap") ?? undefined,
           isAccordionEnabled: undefined,
           isAccordionExpandedByDefault: undefined,
           isAccordionSidebarDisplayed: undefined,
@@ -2965,34 +2367,25 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
         returnBlock.properties.default.layout === "accordion"
       ) {
         propertiesMobile.isAccordionEnabled =
-          (getPropertyValueContentByVariableLabel(
-            mobileOverwriteProperties,
-            "accordion-enabled",
-          ) as
-            | NonNullable<
-                WebBlock<T>["properties"]["mobile"]
-              >["isAccordionEnabled"]
-            | null) ?? undefined;
+          mobileOverwriteReader.value<
+            NonNullable<
+              WebBlock<T>["properties"]["mobile"]
+            >["isAccordionEnabled"]
+          >("accordion-enabled") ?? undefined;
 
         propertiesMobile.isAccordionExpandedByDefault =
-          (getPropertyValueContentByVariableLabel(
-            mobileOverwriteProperties,
-            "accordion-expanded",
-          ) as
-            | NonNullable<
-                WebBlock<T>["properties"]["mobile"]
-              >["isAccordionExpandedByDefault"]
-            | null) ?? undefined;
+          mobileOverwriteReader.value<
+            NonNullable<
+              WebBlock<T>["properties"]["mobile"]
+            >["isAccordionExpandedByDefault"]
+          >("accordion-expanded") ?? undefined;
 
         propertiesMobile.isAccordionSidebarDisplayed =
-          (getPropertyValueContentByVariableLabel(
-            mobileOverwriteProperties,
-            "accordion-sidebar-displayed",
-          ) as
-            | NonNullable<
-                WebBlock<T>["properties"]["mobile"]
-              >["isAccordionSidebarDisplayed"]
-            | null) ?? undefined;
+          mobileOverwriteReader.value<
+            NonNullable<
+              WebBlock<T>["properties"]["mobile"]
+            >["isAccordionSidebarDisplayed"]
+          >("accordion-sidebar-displayed") ?? undefined;
       }
 
       const cleanedPropertiesMobile = cleanObject(propertiesMobile);
@@ -3020,11 +2413,11 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
         resource.properties ?
           parseSimplifiedProperties(resource.properties, options)
         : [];
+      const resourceReader = websitePresentationReader(resourceProperties);
 
-      const resourceType = getPropertyValueContentByVariableLabel(
-        resourceProperties,
+      const resourceType = resourceReader.value<"element" | "block">(
         "presentation",
-      ) as "element" | "block" | null;
+      );
 
       if (resourceType !== "element") {
         throw new Error(
@@ -3034,14 +2427,9 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
         );
       }
 
-      const presentationProperty = getPropertyByVariableLabel(
-        resourceProperties,
-        "presentation",
-      );
-      const componentType = getPropertyValueContentByVariableLabel(
-        presentationProperty?.properties ?? [],
-        "component",
-      ) as string | null;
+      const componentType = resourceReader
+        .nestedByValue("presentation", "element")
+        .value<string>("component");
 
       if (componentType !== "text") {
         throw new Error(
@@ -3064,10 +2452,9 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
           parseSimplifiedProperties(resource.properties, options)
         : [];
 
-      const resourceType = getPropertyValueContentByVariableLabel(
-        resourceProperties,
-        "presentation",
-      ) as "element" | "block" | null;
+      const resourceType = websitePresentationReader(resourceProperties).value<
+        "element" | "block"
+      >("presentation");
       if (resourceType === null) {
         continue;
       }
@@ -3112,27 +2499,23 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
     { property: properties },
     options,
   );
-  const websiteProperties =
-    getPropertyByVariableLabel(mainProperties, "presentation")?.properties ??
-    [];
+  const websiteReader =
+    websitePresentationReader(mainProperties).nested("presentation");
 
-  let type = getPropertyValueContentByVariableLabel(
-    websiteProperties,
+  const type = websiteReader.valueOr<Website<T>["properties"]["type"]>(
     "webUI",
-  ) as Website<T>["properties"]["type"] | null;
-  type ??= "traditional";
+    "traditional",
+  );
 
-  let status = getPropertyValueContentByVariableLabel(
-    websiteProperties,
+  const status = websiteReader.valueOr<Website<T>["properties"]["status"]>(
     "status",
-  ) as Website<T>["properties"]["status"] | null;
-  status ??= "development";
+    "development",
+  );
 
-  let privacy = getPropertyValueContentByVariableLabel(
-    websiteProperties,
+  const privacy = websiteReader.valueOr<Website<T>["properties"]["privacy"]>(
     "privacy",
-  ) as Website<T>["properties"]["privacy"] | null;
-  privacy ??= "public";
+    "public",
+  );
 
   const returnProperties: Website<T>["properties"] = {
     type,
@@ -3174,10 +2557,7 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
     },
   };
 
-  const contactProperty = getPropertyByVariableLabel(
-    websiteProperties,
-    "contact",
-  );
+  const contactProperty = websiteReader.property("contact");
   if (contactProperty !== null) {
     const contactContent =
       contactProperty.values[0]?.content.toString().split(";") ?? [];
@@ -3193,175 +2573,101 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
     }
   }
 
-  returnProperties.loadingVariant =
-    (getPropertyValueContentByVariableLabel(
-      websiteProperties,
-      "loading-variant",
-    ) as Website<T>["properties"]["loadingVariant"] | null) ?? "spinner";
+  returnProperties.loadingVariant = websiteReader.valueOr<
+    Website<T>["properties"]["loadingVariant"]
+  >("loading-variant", "spinner");
 
-  returnProperties.theme.isThemeToggleDisplayed =
-    (getPropertyValueContentByVariableLabel(
-      websiteProperties,
-      "supports-theme-toggle",
-    ) as Website<T>["properties"]["theme"]["isThemeToggleDisplayed"] | null) ??
-    true;
+  returnProperties.theme.isThemeToggleDisplayed = websiteReader.valueOr<
+    Website<T>["properties"]["theme"]["isThemeToggleDisplayed"]
+  >("supports-theme-toggle", true);
 
-  returnProperties.theme.defaultTheme =
-    (getPropertyValueContentByVariableLabel(
-      websiteProperties,
-      "default-theme",
-    ) as Website<T>["properties"]["theme"]["defaultTheme"] | null) ?? "system";
+  returnProperties.theme.defaultTheme = websiteReader.valueOr<
+    Website<T>["properties"]["theme"]["defaultTheme"]
+  >("default-theme", "system");
 
-  returnProperties.icon.logoUuid =
-    getPropertyByVariableLabel(websiteProperties, "navbar-logo")?.values[0]
-      ?.uuid ?? null;
+  returnProperties.icon.logoUuid = websiteReader.uuid("navbar-logo");
 
-  returnProperties.icon.faviconUuid =
-    getPropertyByVariableLabel(websiteProperties, "favicon-ico")?.values[0]
-      ?.uuid ?? null;
+  returnProperties.icon.faviconUuid = websiteReader.uuid("favicon-ico");
 
-  returnProperties.icon.appleTouchIconUuid =
-    getPropertyByVariableLabel(websiteProperties, "favicon-img")?.values[0]
-      ?.uuid ?? null;
+  returnProperties.icon.appleTouchIconUuid = websiteReader.uuid("favicon-img");
 
-  returnProperties.navbar.isDisplayed =
-    (getPropertyValueContentByVariableLabel(
-      websiteProperties,
-      "navbar-displayed",
-    ) as Website<T>["properties"]["navbar"]["isDisplayed"] | null) ?? true;
+  returnProperties.navbar.isDisplayed = websiteReader.valueOr<
+    Website<T>["properties"]["navbar"]["isDisplayed"]
+  >("navbar-displayed", true);
 
-  returnProperties.navbar.variant =
-    (getPropertyValueContentByVariableLabel(
-      websiteProperties,
-      "navbar-variant",
-    ) as Website<T>["properties"]["navbar"]["variant"] | null) ?? "default";
+  returnProperties.navbar.variant = websiteReader.valueOr<
+    Website<T>["properties"]["navbar"]["variant"]
+  >("navbar-variant", "default");
 
-  returnProperties.navbar.alignment =
-    (getPropertyValueContentByVariableLabel(
-      websiteProperties,
-      "navbar-alignment",
-    ) as Website<T>["properties"]["navbar"]["alignment"] | null) ?? "start";
+  returnProperties.navbar.alignment = websiteReader.valueOr<
+    Website<T>["properties"]["navbar"]["alignment"]
+  >("navbar-alignment", "start");
 
-  returnProperties.navbar.isProjectDisplayed =
-    (getPropertyValueContentByVariableLabel(
-      websiteProperties,
-      "navbar-project-displayed",
-    ) as Website<T>["properties"]["navbar"]["isProjectDisplayed"] | null) ??
-    true;
+  returnProperties.navbar.isProjectDisplayed = websiteReader.valueOr<
+    Website<T>["properties"]["navbar"]["isProjectDisplayed"]
+  >("navbar-project-displayed", true);
 
-  returnProperties.navbar.searchBarBoundElementUuid =
-    getPropertyByVariableLabel(
-      websiteProperties,
-      "bound-element-navbar-search-bar",
-    )?.values[0]?.uuid ?? null;
-
-  returnProperties.footer.isDisplayed =
-    (getPropertyValueContentByVariableLabel(
-      websiteProperties,
-      "footer-displayed",
-    ) as Website<T>["properties"]["footer"]["isDisplayed"] | null) ?? true;
-
-  returnProperties.footer.logoUuid =
-    getPropertyByVariableLabel(websiteProperties, "footer-logo")?.values[0]
-      ?.uuid ?? null;
-
-  const itemPageTypeProperty = getPropertyByVariableLabelAndValueContent(
-    websiteProperties,
-    "page-type",
-    "item-page",
+  returnProperties.navbar.searchBarBoundElementUuid = websiteReader.uuid(
+    "bound-element-navbar-search-bar",
   );
-  if (itemPageTypeProperty !== null) {
-    returnProperties.itemPage.isMainContentDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        itemPageTypeProperty.properties,
-        "item-page-main-content-displayed",
-      ) as
-        | Website<T>["properties"]["itemPage"]["isMainContentDisplayed"]
-        | null) ?? true;
 
-    returnProperties.itemPage.isDescriptionDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        itemPageTypeProperty.properties,
-        "item-page-description-displayed",
-      ) as
-        | Website<T>["properties"]["itemPage"]["isDescriptionDisplayed"]
-        | null) ?? true;
+  returnProperties.footer.isDisplayed = websiteReader.valueOr<
+    Website<T>["properties"]["footer"]["isDisplayed"]
+  >("footer-displayed", true);
 
-    returnProperties.itemPage.isDocumentDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        itemPageTypeProperty.properties,
-        "item-page-document-displayed",
-      ) as
-        | Website<T>["properties"]["itemPage"]["isDocumentDisplayed"]
-        | null) ?? true;
+  returnProperties.footer.logoUuid = websiteReader.uuid("footer-logo");
 
-    returnProperties.itemPage.isNotesDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        itemPageTypeProperty.properties,
-        "item-page-notes-displayed",
-      ) as Website<T>["properties"]["itemPage"]["isNotesDisplayed"] | null) ??
-      true;
+  const itemPageReader = websiteReader.nestedByValue("page-type", "item-page");
+  if (itemPageReader.size > 0) {
+    returnProperties.itemPage.isMainContentDisplayed = itemPageReader.valueOr<
+      Website<T>["properties"]["itemPage"]["isMainContentDisplayed"]
+    >("item-page-main-content-displayed", true);
 
-    returnProperties.itemPage.isEventsDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        itemPageTypeProperty.properties,
-        "item-page-events-displayed",
-      ) as Website<T>["properties"]["itemPage"]["isEventsDisplayed"] | null) ??
-      true;
+    returnProperties.itemPage.isDescriptionDisplayed = itemPageReader.valueOr<
+      Website<T>["properties"]["itemPage"]["isDescriptionDisplayed"]
+    >("item-page-description-displayed", true);
 
-    returnProperties.itemPage.isPeriodsDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        itemPageTypeProperty.properties,
-        "item-page-periods-displayed",
-      ) as Website<T>["properties"]["itemPage"]["isPeriodsDisplayed"] | null) ??
-      true;
+    returnProperties.itemPage.isDocumentDisplayed = itemPageReader.valueOr<
+      Website<T>["properties"]["itemPage"]["isDocumentDisplayed"]
+    >("item-page-document-displayed", true);
 
-    returnProperties.itemPage.isPropertiesDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        itemPageTypeProperty.properties,
-        "item-page-properties-displayed",
-      ) as
-        | Website<T>["properties"]["itemPage"]["isPropertiesDisplayed"]
-        | null) ?? true;
+    returnProperties.itemPage.isNotesDisplayed = itemPageReader.valueOr<
+      Website<T>["properties"]["itemPage"]["isNotesDisplayed"]
+    >("item-page-notes-displayed", true);
 
-    returnProperties.itemPage.isBibliographyDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        itemPageTypeProperty.properties,
-        "item-page-bibliography-displayed",
-      ) as
-        | Website<T>["properties"]["itemPage"]["isBibliographyDisplayed"]
-        | null) ?? true;
+    returnProperties.itemPage.isEventsDisplayed = itemPageReader.valueOr<
+      Website<T>["properties"]["itemPage"]["isEventsDisplayed"]
+    >("item-page-events-displayed", true);
 
-    returnProperties.itemPage.isPropertyValuesGrouped =
-      (getPropertyValueContentByVariableLabel(
-        itemPageTypeProperty.properties,
-        "item-page-property-values-grouped",
-      ) as
-        | Website<T>["properties"]["itemPage"]["isPropertyValuesGrouped"]
-        | null) ?? true;
+    returnProperties.itemPage.isPeriodsDisplayed = itemPageReader.valueOr<
+      Website<T>["properties"]["itemPage"]["isPeriodsDisplayed"]
+    >("item-page-periods-displayed", true);
+
+    returnProperties.itemPage.isPropertiesDisplayed = itemPageReader.valueOr<
+      Website<T>["properties"]["itemPage"]["isPropertiesDisplayed"]
+    >("item-page-properties-displayed", true);
+
+    returnProperties.itemPage.isBibliographyDisplayed = itemPageReader.valueOr<
+      Website<T>["properties"]["itemPage"]["isBibliographyDisplayed"]
+    >("item-page-bibliography-displayed", true);
+
+    returnProperties.itemPage.isPropertyValuesGrouped = itemPageReader.valueOr<
+      Website<T>["properties"]["itemPage"]["isPropertyValuesGrouped"]
+    >("item-page-property-values-grouped", true);
 
     returnProperties.itemPage.isPublicationDateTimeDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        itemPageTypeProperty.properties,
-        "item-page-publication-date-time-displayed",
-      ) as
-        | Website<T>["properties"]["itemPage"]["isPublicationDateTimeDisplayed"]
-        | null) ?? true;
+      itemPageReader.valueOr<
+        Website<T>["properties"]["itemPage"]["isPublicationDateTimeDisplayed"]
+      >("item-page-publication-date-time-displayed", true);
 
     returnProperties.itemPage.isPersistentIdentifierDisplayed =
-      (getPropertyValueContentByVariableLabel(
-        itemPageTypeProperty.properties,
-        "item-page-persistent-identifier-displayed",
-      ) as
-        | Website<T>["properties"]["itemPage"]["isPersistentIdentifierDisplayed"]
-        | null) ?? true;
+      itemPageReader.valueOr<
+        Website<T>["properties"]["itemPage"]["isPersistentIdentifierDisplayed"]
+      >("item-page-persistent-identifier-displayed", true);
 
-    returnProperties.itemPage.iiifViewer =
-      (getPropertyValueContentByVariableLabel(
-        itemPageTypeProperty.properties,
-        "item-page-iiif-viewer",
-      ) as Website<T>["properties"]["itemPage"]["iiifViewer"] | null) ??
-      "universal-viewer";
+    returnProperties.itemPage.iiifViewer = itemPageReader.valueOr<
+      Website<T>["properties"]["itemPage"]["iiifViewer"]
+    >("item-page-iiif-viewer", "universal-viewer");
   }
 
   if (websiteTree.options != null) {
