@@ -2886,6 +2886,12 @@ function parseWebsiteProperties(
     | null;
   status ??= "development";
 
+  let versionLabel = getPropertyValueContentByLabel(
+    websiteProperties,
+    "version-label",
+  ) as Website["properties"]["versionLabel"] | null;
+  versionLabel ??= "release";
+
   let privacy = getPropertyValueContentByLabel(websiteProperties, "privacy") as
     | Website["properties"]["privacy"]
     | null;
@@ -2894,6 +2900,7 @@ function parseWebsiteProperties(
   const returnProperties: Website["properties"] = {
     type,
     status,
+    versionLabel,
     privacy,
     contact: null,
     loadingVariant: "spinner",

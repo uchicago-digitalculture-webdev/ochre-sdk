@@ -135,6 +135,14 @@ export type Website = {
   properties: {
     type: WebsiteType;
     status: "development" | "preview" | "production";
+    versionLabel:
+      | "experimental"
+      | "alpha"
+      | "beta"
+      | "test"
+      | "staging"
+      | "pre-release"
+      | "release";
     privacy: "public" | "password" | "private";
     contact: { name: string; email: string | null } | null;
     loadingVariant: "spinner" | "skeleton" | "animation" | "none";
