@@ -7,7 +7,7 @@ import type {
   XMLString,
 } from "#/xml/types.js";
 import { fetchWebsite } from "#/fetchers/website.js";
-import { parseWebsite } from "#/parsers/website.js";
+import { parseWebsite } from "#/parsers/website/index.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
 
 const PUBLICATION_DATE = "2026-01-01T00:00:00Z";

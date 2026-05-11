@@ -54,7 +54,7 @@ import {
   resolveLanguages,
 } from "#/parsers/index.js";
 import { parseXMLContent } from "#/parsers/string.js";
-import { websitePresentationReader } from "#/parsers/website-presentation-reader.js";
+import { websitePresentationReader } from "#/parsers/website/reader.js";
 import { componentSchema } from "#/schemas.js";
 
 type WebsiteLinkCategory = Extract<
@@ -2506,6 +2506,10 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
     "development",
   );
 
+  const versionLabel = websiteReader.valueOr<
+    Website<T>["properties"]["versionLabel"]
+  >("version-label", "release");
+
   const privacy = websiteReader.valueOr<Website<T>["properties"]["privacy"]>(
     "privacy",
     "public",
@@ -2514,6 +2518,7 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
   const returnProperties: Website<T>["properties"] = {
     type,
     status,
+    versionLabel,
     privacy,
     contact: null,
     loadingVariant: "spinner",
