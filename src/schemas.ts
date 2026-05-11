@@ -37,6 +37,48 @@ export const iso639_3Schema = v.pipe(
 );
 
 /**
+ * Schema for validating identification
+ * @internal
+ */
+export const identificationSchema = v.object({
+  label: v.object({
+    content: v.union([richTextStringSchema, v.array(richTextStringSchema)]),
+  }),
+  abbreviation: v.object({
+    content: v.optional(
+      v.union([richTextStringSchema, v.array(richTextStringSchema)]),
+    ),
+  }),
+  code: v.optional(v.string()),
+});
+
+/**
+ * Schema for validating filters
+ * @internal
+ */
+export const filterSchema = v.optional(v.string());
+
+/**
+ * Schema for validating data options
+ * @internal
+ */
+export const dataOptionsSchema = v.optional(
+  v.object({
+    filter: defaultString(""),
+    start: v.optional(positiveNumber("Start must be positive"), 1),
+    limit: v.optional(positiveNumber("Limit must be positive"), 40),
+  }),
+  { filter: "", start: 1, limit: 40 },
+);
+
+export const apiVersionSuffixSchema = v.pipe(
+  v.picklist(["-v1", "-v2"]),
+  v.transform(
+    (suffix) => Number.parseInt(suffix.replace("-v", ""), 10) as ApiVersion,
+  ),
+);
+
+/**
  * Valid component types for web elements
  * @internal
  */
