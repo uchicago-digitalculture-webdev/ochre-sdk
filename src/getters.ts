@@ -4,9 +4,9 @@ import type {
   Property,
   PropertyLike,
   PropertyValueContent,
+  SetItemProperty,
+  SetItemSimplifiedProperty,
   SimplifiedProperty,
-  SingleHierarchyProperty,
-  SingleHierarchySimplifiedProperty,
 } from "#/types/index.js";
 
 /**
@@ -277,10 +277,10 @@ export function getPropertyByVariableUuid<
 export function getPropertyByVariableUuid<
   T extends LanguageCodes = LanguageCodes,
 >(
-  properties: ReadonlyArray<SingleHierarchyProperty<T>>,
+  properties: ReadonlyArray<SetItemProperty<T>>,
   variableUuid: string,
   options?: PropertyOptions,
-): SingleHierarchyProperty<T> | null;
+): SetItemProperty<T> | null;
 export function getPropertyByVariableUuid<
   T extends LanguageCodes = LanguageCodes,
 >(
@@ -291,10 +291,10 @@ export function getPropertyByVariableUuid<
 export function getPropertyByVariableUuid<
   T extends LanguageCodes = LanguageCodes,
 >(
-  properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
+  properties: ReadonlyArray<SetItemSimplifiedProperty<T>>,
   variableUuid: string,
   options?: PropertyOptions,
-): SingleHierarchySimplifiedProperty<T> | null;
+): SetItemSimplifiedProperty<T> | null;
 export function getPropertyByVariableUuid<
   T extends LanguageCodes = LanguageCodes,
 >(
@@ -492,10 +492,10 @@ export function getPropertyByVariableLabel<
 export function getPropertyByVariableLabel<
   T extends LanguageCodes = LanguageCodes,
 >(
-  properties: ReadonlyArray<SingleHierarchyProperty<T>>,
+  properties: ReadonlyArray<SetItemProperty<T>>,
   variableLabel: string,
   options?: PropertyOptions,
-): SingleHierarchyProperty<T> | null;
+): SetItemProperty<T> | null;
 export function getPropertyByVariableLabel<
   T extends LanguageCodes = LanguageCodes,
 >(
@@ -506,10 +506,10 @@ export function getPropertyByVariableLabel<
 export function getPropertyByVariableLabel<
   T extends LanguageCodes = LanguageCodes,
 >(
-  properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
+  properties: ReadonlyArray<SetItemSimplifiedProperty<T>>,
   variableLabel: string,
   options?: PropertyOptions,
-): SingleHierarchySimplifiedProperty<T> | null;
+): SetItemSimplifiedProperty<T> | null;
 export function getPropertyByVariableLabel<
   T extends LanguageCodes = LanguageCodes,
 >(
@@ -547,11 +547,11 @@ export function getPropertyByVariableLabelAndValues<
 export function getPropertyByVariableLabelAndValues<
   T extends LanguageCodes = LanguageCodes,
 >(
-  properties: ReadonlyArray<SingleHierarchyProperty<T>>,
+  properties: ReadonlyArray<SetItemProperty<T>>,
   variableLabel: string,
   values: ReadonlyArray<PropertyValueContent<T>>,
   options?: PropertyOptions,
-): SingleHierarchyProperty<T> | null;
+): SetItemProperty<T> | null;
 export function getPropertyByVariableLabelAndValues<
   T extends LanguageCodes = LanguageCodes,
 >(
@@ -563,11 +563,11 @@ export function getPropertyByVariableLabelAndValues<
 export function getPropertyByVariableLabelAndValues<
   T extends LanguageCodes = LanguageCodes,
 >(
-  properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
+  properties: ReadonlyArray<SetItemSimplifiedProperty<T>>,
   variableLabel: string,
   values: ReadonlyArray<PropertyValueContent<T>>,
   options?: PropertyOptions,
-): SingleHierarchySimplifiedProperty<T> | null;
+): SetItemSimplifiedProperty<T> | null;
 export function getPropertyByVariableLabelAndValues<
   T extends LanguageCodes = LanguageCodes,
 >(
@@ -619,11 +619,11 @@ export function getPropertyByVariableLabelAndValueContents<
 export function getPropertyByVariableLabelAndValueContents<
   T extends LanguageCodes = LanguageCodes,
 >(
-  properties: ReadonlyArray<SingleHierarchyProperty<T>>,
+  properties: ReadonlyArray<SetItemProperty<T>>,
   variableLabel: string,
   valueContents: ReadonlyArray<PropertyContent<T>>,
   options?: PropertyOptions,
-): SingleHierarchyProperty<T> | null;
+): SetItemProperty<T> | null;
 export function getPropertyByVariableLabelAndValueContents<
   T extends LanguageCodes = LanguageCodes,
 >(
@@ -635,11 +635,11 @@ export function getPropertyByVariableLabelAndValueContents<
 export function getPropertyByVariableLabelAndValueContents<
   T extends LanguageCodes = LanguageCodes,
 >(
-  properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
+  properties: ReadonlyArray<SetItemSimplifiedProperty<T>>,
   variableLabel: string,
   valueContents: ReadonlyArray<PropertyContent<T>>,
   options?: PropertyOptions,
-): SingleHierarchySimplifiedProperty<T> | null;
+): SetItemSimplifiedProperty<T> | null;
 export function getPropertyByVariableLabelAndValueContents<
   T extends LanguageCodes = LanguageCodes,
 >(
@@ -695,11 +695,11 @@ export function getPropertyByVariableLabelAndValue<
 export function getPropertyByVariableLabelAndValue<
   T extends LanguageCodes = LanguageCodes,
 >(
-  properties: ReadonlyArray<SingleHierarchyProperty<T>>,
+  properties: ReadonlyArray<SetItemProperty<T>>,
   variableLabel: string,
   value: PropertyValueContent<T>,
   options?: PropertyOptions,
-): SingleHierarchyProperty<T> | null;
+): SetItemProperty<T> | null;
 export function getPropertyByVariableLabelAndValue<
   T extends LanguageCodes = LanguageCodes,
 >(
@@ -711,11 +711,11 @@ export function getPropertyByVariableLabelAndValue<
 export function getPropertyByVariableLabelAndValue<
   T extends LanguageCodes = LanguageCodes,
 >(
-  properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
+  properties: ReadonlyArray<SetItemSimplifiedProperty<T>>,
   variableLabel: string,
   value: PropertyValueContent<T>,
   options?: PropertyOptions,
-): SingleHierarchySimplifiedProperty<T> | null;
+): SetItemSimplifiedProperty<T> | null;
 export function getPropertyByVariableLabelAndValue<
   T extends LanguageCodes = LanguageCodes,
 >(
@@ -767,11 +767,11 @@ export function getPropertyByVariableLabelAndValueContent<
 export function getPropertyByVariableLabelAndValueContent<
   T extends LanguageCodes = LanguageCodes,
 >(
-  properties: ReadonlyArray<SingleHierarchyProperty<T>>,
+  properties: ReadonlyArray<SetItemProperty<T>>,
   variableLabel: string,
   valueContent: PropertyContent<T>,
   options?: PropertyOptions,
-): SingleHierarchyProperty<T> | null;
+): SetItemProperty<T> | null;
 export function getPropertyByVariableLabelAndValueContent<
   T extends LanguageCodes = LanguageCodes,
 >(
@@ -783,11 +783,11 @@ export function getPropertyByVariableLabelAndValueContent<
 export function getPropertyByVariableLabelAndValueContent<
   T extends LanguageCodes = LanguageCodes,
 >(
-  properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
+  properties: ReadonlyArray<SetItemSimplifiedProperty<T>>,
   variableLabel: string,
   valueContent: PropertyContent<T>,
   options?: PropertyOptions,
-): SingleHierarchySimplifiedProperty<T> | null;
+): SetItemSimplifiedProperty<T> | null;
 export function getPropertyByVariableLabelAndValueContent<
   T extends LanguageCodes = LanguageCodes,
 >(
@@ -949,17 +949,17 @@ export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
   options?: PropertyOptions,
 ): Array<Property<T>>;
 export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
-  properties: ReadonlyArray<SingleHierarchyProperty<T>>,
+  properties: ReadonlyArray<SetItemProperty<T>>,
   options?: PropertyOptions,
-): Array<SingleHierarchyProperty<T>>;
+): Array<SetItemProperty<T>>;
 export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
   properties: ReadonlyArray<SimplifiedProperty<T>>,
   options?: PropertyOptions,
 ): Array<SimplifiedProperty<T>>;
 export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
-  properties: ReadonlyArray<SingleHierarchySimplifiedProperty<T>>,
+  properties: ReadonlyArray<SetItemSimplifiedProperty<T>>,
   options?: PropertyOptions,
-): Array<SingleHierarchySimplifiedProperty<T>>;
+): Array<SetItemSimplifiedProperty<T>>;
 export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   options: PropertyOptions = DEFAULT_OPTIONS,

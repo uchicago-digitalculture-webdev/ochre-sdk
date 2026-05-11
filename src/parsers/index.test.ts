@@ -193,7 +193,7 @@ describe("parseItem", () => {
 
     const tree = parseItem(rawData, {
       category: "tree",
-      itemCategory: "resource",
+      containedItemCategory: "resource",
       languages: ["eng", "spa"] as const,
     });
 
@@ -203,7 +203,7 @@ describe("parseItem", () => {
     });
     expect(tree.metadata.dataset).toBe("Dataset");
     expect(tree.identification.label.getExactText("spa")).toBe("Arbol");
-    expect(tree.itemsCategory).toBe("resource");
+    expect(tree.containedItemCategory).toBe("resource");
     expect(tree.properties[0]?.variable.uuid).toBe(
       "50000000-0000-4000-8000-000000000000",
     );
@@ -251,7 +251,7 @@ describe("parseItem", () => {
     ).toThrow("Expected Tree items to contain one category");
   });
 
-  it("parses links as abridged item links instead of full nested items", () => {
+  it("parses links as abridged item links instead of full embedded items", () => {
     const rawData: XMLData = {
       result: {
         ochre: {
@@ -375,17 +375,21 @@ describe("parseItem", () => {
 
     const set = parseItem(rawData, {
       category: "set",
-      itemCategory: ["tree", "resource", "text"] as const,
+      containedItemCategory: ["tree", "resource", "text"] as const,
       languages: ["eng"] as const,
     });
 
-    expect(set.itemsCategory).toStrictEqual(["tree", "resource", "text"]);
+    expect(set.containedItemCategories).toStrictEqual([
+      "tree",
+      "resource",
+      "text",
+    ]);
     expect(set.items).toHaveLength(3);
-    const itemCategories: Array<string> = [];
+    const containedItemCategories: Array<string> = [];
     for (const item of set.items) {
-      itemCategories.push(item.category);
+      containedItemCategories.push(item.category);
     }
-    expect(itemCategories).toStrictEqual(["tree", "resource", "text"]);
+    expect(containedItemCategories).toStrictEqual(["tree", "resource", "text"]);
   });
 
   it("normalizes top-level variable XML into propertyVariable output", () => {

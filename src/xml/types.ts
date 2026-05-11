@@ -1,4 +1,4 @@
-export type XMLDataCategory =
+export type XMLItemCategory =
   | "tree"
   | "bibliography"
   | "spatialUnit"
@@ -13,13 +13,13 @@ export type XMLDataCategory =
   | "resource"
   | "set";
 
-export type XMLHeadingDataCategory = Exclude<
-  XMLDataCategory,
+export type XMLHeadingItemCategory = Exclude<
+  XMLItemCategory,
   "tree" | "bibliography" | "spatialUnit" | "concept" | "period"
 >;
 
-export type XMLRecursiveDataCategory = Exclude<
-  XMLDataCategory,
+export type XMLRecursiveItemCategory = Exclude<
+  XMLItemCategory,
   "tree" | "person" | "propertyVariable" | "propertyValue" | "set"
 >;
 
@@ -74,7 +74,7 @@ export type XMLMetadata = {
   item?: {
     uuid?: string;
     identification: XMLIdentification;
-    category: XMLDataCategory;
+    category: XMLItemCategory;
     type: string;
     maxLength?: XMLNumber;
   };
@@ -95,7 +95,7 @@ export type XMLContextItem = {
   displayPath: string;
 } & Partial<
   Record<
-    | XMLRecursiveDataCategory
+    | XMLRecursiveItemCategory
     | "heading"
     | "propertyVariable"
     | "variable"
@@ -117,7 +117,7 @@ export type XMLEvent = {
   location?: XMLContent & { uuid: string; publicationDateTime?: Date };
   comment?: XMLContent;
   label: XMLContent;
-  other?: XMLContent & { uuid?: string; category?: XMLDataCategory };
+  other?: XMLContent & { uuid?: string; category?: XMLItemCategory };
 };
 
 export type XMLCoordinatesSource =
@@ -730,7 +730,7 @@ export type XMLGallery = {
   item: {
     uuid?: string;
     identification: XMLIdentification;
-    category?: XMLDataCategory;
+    category?: XMLItemCategory;
     type?: string;
     maxLength?: XMLNumber;
   };

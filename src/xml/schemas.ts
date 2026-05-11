@@ -105,7 +105,7 @@ function parseOptionalXMLNumber(
   return payload == null || payload === "" ? undefined : Number(payload);
 }
 
-const DATA_CATEGORIES = [
+const ITEM_CATEGORIES = [
   "tree",
   "bibliography",
   "spatialUnit",
@@ -121,7 +121,7 @@ const DATA_CATEGORIES = [
   "set",
 ] as const;
 
-const XMLDataCategory = v.picklist(DATA_CATEGORIES);
+const XMLItemCategory = v.picklist(ITEM_CATEGORIES);
 
 const XMLString: v.GenericSchema<unknown, XMLStringType> = v.lazy(() =>
   v.object(
@@ -324,7 +324,7 @@ const XMLMetadata: v.GenericSchema<unknown, XMLMetadataType> = v.object({
           ),
         ),
         identification: XMLIdentification,
-        category: XMLDataCategory,
+        category: XMLItemCategory,
         type: v.string("XMLMetadata: type is string and required"),
         maxLength: XMLOptionalNumber,
       },
@@ -451,7 +451,7 @@ const XMLEvent: v.GenericSchema<unknown, XMLEventType> = v.object(
               ),
             ),
           ),
-          category: v.optional(XMLDataCategory),
+          category: v.optional(XMLItemCategory),
         },
         "XMLEvent: other is object",
       ),
@@ -1670,8 +1670,8 @@ export const XMLLink: v.GenericSchema<unknown, XMLLinkType> = v.pipe(
       return true;
     }
 
-    for (const dataCategory of DATA_CATEGORIES) {
-      if (val[dataCategory] != null) {
+    for (const knownCategory of ITEM_CATEGORIES) {
+      if (val[knownCategory] != null) {
         return true;
       }
     }
@@ -2124,7 +2124,7 @@ const XMLGallery: v.GenericSchema<unknown, XMLGalleryType> = v.object(
       {
         uuid: v.optional(v.string("XMLGallery: item uuid is optional")),
         identification: XMLIdentification,
-        category: v.optional(XMLDataCategory),
+        category: v.optional(XMLItemCategory),
         type: v.optional(v.string("XMLGallery: item type is optional")),
         maxLength: XMLOptionalNumber,
       },

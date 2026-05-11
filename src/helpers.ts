@@ -1,20 +1,20 @@
 import type {
-  DataCategory,
-  HierarchyItemDataCategory,
+  ContainedItemCategory,
   Item,
-  ItemLocation,
+  ItemCategory,
+  ItemPayloadKind,
   LanguageCodes,
   Property,
-  SingleHierarchyProperty,
+  SetItemProperty,
 } from "#/types/index.js";
 import { flattenProperties } from "#/utils.js";
 
 type FlattenedItem<U, T extends LanguageCodes> = Omit<U, "properties"> & {
-  properties: Array<SingleHierarchyProperty<T>>;
+  properties: Array<SetItemProperty<T>>;
 };
 
 type PropertySource<T extends LanguageCodes> = {
-  properties: ReadonlyArray<Property<T> | SingleHierarchyProperty<T>>;
+  properties: ReadonlyArray<Property<T> | SetItemProperty<T>>;
 };
 
 type ObservationPropertySource<T extends LanguageCodes> = {
@@ -40,12 +40,12 @@ export const DEFAULT_PAGE_SIZE = 48;
  * @returns The item with the properties flattened
  */
 export function flattenItemProperties<
-  U extends DataCategory = DataCategory,
-  V extends HierarchyItemDataCategory<U> = HierarchyItemDataCategory<U>,
+  U extends ItemCategory = ItemCategory,
+  V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
   T extends LanguageCodes = LanguageCodes,
-  W extends ItemLocation = "topLevel",
+  W extends ItemPayloadKind = "topLevel",
 >(item: Item<U, V, T, W>): FlattenedItem<Item<U, V, T, W>, T> {
-  const allProperties: Array<Property<T> | SingleHierarchyProperty<T>> = [];
+  const allProperties: Array<Property<T> | SetItemProperty<T>> = [];
 
   if ("properties" in item) {
     allProperties.push(...item.properties);

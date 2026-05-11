@@ -1,8 +1,8 @@
 import type { MultilingualString } from "#/parsers/multilingual.js";
 import type {
   Bibliography,
-  DataCategory,
   Identification,
+  ItemCategory,
   LanguageCodes,
   License,
   Metadata,
@@ -68,7 +68,7 @@ export type Scope<T extends LanguageCodes = LanguageCodes> = {
  * Represents a stylesheet item with its UUID and category
  */
 export type StylesheetCategory = Extract<
-  DataCategory,
+  ItemCategory,
   "propertyVariable" | "propertyValue"
 >;
 
@@ -132,7 +132,7 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
   metadata: Metadata<T>;
   publicationDateTime: Date | null;
   identification: Identification<T>;
-  creators: Array<Person<T, "nested">>;
+  creators: Array<Person<T, "embedded">>;
   license: License | null;
   items: Array<Webpage<T> | WebSegment<T>>;
   properties: {
@@ -313,7 +313,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
   | {
       component: "bibliography";
       linkUuids: Array<string>;
-      bibliographies: Array<Bibliography<T, "nested">>;
+      bibliographies: Array<Bibliography<T, "embedded">>;
       layout: "long" | "short";
       isSourceDocumentDisplayed: boolean;
     }

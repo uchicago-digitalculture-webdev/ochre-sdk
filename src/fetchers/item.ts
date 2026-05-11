@@ -1,13 +1,13 @@
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type {
-  DataCategory,
-  HierarchyDataCategory,
-  HierarchyItemCategoryFromOption,
-  HierarchyItemCategoryOption,
-  HierarchyItemDataCategory,
+  ContainedItemCategory,
+  ContainedItemCategoryFromOption,
+  ContainedItemCategoryOption,
   Item,
-  SetItemDataCategory,
+  ItemCategory,
+  ItemContainerCategory,
+  SetItemCategory,
 } from "#/types/index.js";
 import type { XMLData } from "#/xml/types.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
@@ -26,8 +26,8 @@ type FetchItemBaseOptions<
 > = { languages?: TLanguages; fetch?: FetchFunction };
 
 type FetchItemRuntimeOptions = FetchItemBaseOptions<ReadonlyArray<string>> & {
-  category?: DataCategory;
-  itemCategory?: HierarchyItemCategoryOption<DataCategory>;
+  category?: ItemCategory;
+  containedItemCategory?: ContainedItemCategoryOption<ItemCategory>;
 };
 
 type FetchItemLanguages<TLanguages extends ReadonlyArray<string> | undefined> =
@@ -35,32 +35,32 @@ type FetchItemLanguages<TLanguages extends ReadonlyArray<string> | undefined> =
   : TLanguages extends ReadonlyArray<string> ? TLanguages
   : ReadonlyArray<string>;
 
-function isHierarchyCategory(
-  category: DataCategory,
-): category is HierarchyDataCategory {
+function isItemContainerCategory(
+  category: ItemCategory,
+): category is ItemContainerCategory {
   return category === "tree" || category === "set";
 }
 
 function assertItemCategoryAllowed(
-  category: DataCategory | undefined,
-  itemCategory: HierarchyItemCategoryOption<DataCategory> | undefined,
+  category: ItemCategory | undefined,
+  containedItemCategory: ContainedItemCategoryOption<ItemCategory> | undefined,
 ): void {
   if (
     category == null ||
-    itemCategory == null ||
-    isHierarchyCategory(category)
+    containedItemCategory == null ||
+    isItemContainerCategory(category)
   ) {
     return;
   }
 
   throw new Error(
-    `itemCategory can only be used when category is "tree" or "set"; received category "${category}"`,
+    `containedItemCategory can only be used when category is "tree" or "set"; received category "${category}"`,
   );
 }
 
 function normalizeFetchedCategory(
   category: string | undefined,
-): DataCategory | null {
+): ItemCategory | null {
   switch (category) {
     case "tree":
     case "bibliography":
@@ -89,7 +89,7 @@ function normalizeFetchedCategory(
 
 function inferFetchItemCategory(
   rawOchre: XMLData["result"]["ochre"],
-): DataCategory {
+): ItemCategory {
   const metadataCategory = normalizeFetchedCategory(
     rawOchre.metadata.item?.category,
   );
@@ -161,27 +161,27 @@ export function withLanguages<const TLanguages extends ReadonlyArray<string>>(
  * @param uuid - The UUID of the OCHRE item to fetch
  * @param options - Required options object
  * @param options.category - The category of the OCHRE item to fetch
- * @param options.itemCategory - The category of items inside the OCHRE item to fetch. Only valid for Trees and Sets. Tree accepts one category; Set accepts one category or an array.
+ * @param options.containedItemCategory - The category of items inside the OCHRE item to fetch. Only valid for Trees and Sets. Tree accepts one category; Set accepts one category or an array.
  * @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
  * @param options.fetch - Custom fetch function to use instead of the default fetch
  * @returns An object containing the parsed item
  */
 export async function fetchItem<
-  const TItemCategory extends
-    | HierarchyItemCategoryOption<HierarchyDataCategory>
+  const TContainedItemCategory extends
+    | ContainedItemCategoryOption<ItemContainerCategory>
     | undefined = undefined,
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
   options?: FetchItemBaseOptions<TLanguages> & {
     category?: undefined;
-    itemCategory?: TItemCategory;
+    containedItemCategory?: TContainedItemCategory;
   },
 ): Promise<
   | {
       item: Item<
-        DataCategory,
-        HierarchyItemCategoryFromOption<DataCategory, TItemCategory>,
+        ItemCategory,
+        ContainedItemCategoryFromOption<ItemCategory, TContainedItemCategory>,
         FetchItemLanguages<TLanguages>
       >;
       error: null;
@@ -189,22 +189,22 @@ export async function fetchItem<
   | { item: null; error: string }
 >;
 export async function fetchItem<
-  const TCategory extends HierarchyDataCategory,
-  const TItemCategory extends
-    | HierarchyItemCategoryOption<TCategory>
+  const TCategory extends ItemContainerCategory,
+  const TContainedItemCategory extends
+    | ContainedItemCategoryOption<TCategory>
     | undefined = undefined,
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
   options: FetchItemBaseOptions<TLanguages> & {
     category: TCategory;
-    itemCategory?: TItemCategory;
+    containedItemCategory?: TContainedItemCategory;
   },
 ): Promise<
   | {
       item: Item<
         TCategory,
-        HierarchyItemCategoryFromOption<TCategory, TItemCategory>,
+        ContainedItemCategoryFromOption<TCategory, TContainedItemCategory>,
         FetchItemLanguages<TLanguages>
       >;
       error: null;
@@ -212,19 +212,19 @@ export async function fetchItem<
   | { item: null; error: string }
 >;
 export async function fetchItem<
-  const TCategory extends DataCategory,
+  const TCategory extends ItemCategory,
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
   options: FetchItemBaseOptions<TLanguages> & {
     category: TCategory;
-    itemCategory?: never;
+    containedItemCategory?: never;
   },
 ): Promise<
   | {
       item: Item<
         TCategory,
-        HierarchyItemDataCategory<TCategory>,
+        ContainedItemCategory<TCategory>,
         FetchItemLanguages<TLanguages>
       >;
       error: null;
@@ -236,14 +236,17 @@ export async function fetchItem(
   options?: FetchItemRuntimeOptions,
 ): Promise<
   | {
-      item: Item<DataCategory, SetItemDataCategory, ReadonlyArray<string>>;
+      item: Item<ItemCategory, SetItemCategory, ReadonlyArray<string>>;
       error: null;
     }
   | { item: null; error: string }
 > {
   try {
     const parsedUuid = v.parse(uuidSchema, uuid);
-    assertItemCategoryAllowed(options?.category, options?.itemCategory);
+    assertItemCategoryAllowed(
+      options?.category,
+      options?.containedItemCategory,
+    );
     const languages: ReadonlyArray<string> =
       options?.languages == null ? [] : parseLanguages(options.languages);
 
@@ -267,11 +270,11 @@ export async function fetchItem(
 
     const category =
       options?.category ?? inferFetchItemCategory(output.result.ochre);
-    assertItemCategoryAllowed(category, options?.itemCategory);
+    assertItemCategoryAllowed(category, options?.containedItemCategory);
 
     const parsedItem = parseItem(output, {
       category,
-      itemCategory: options?.itemCategory,
+      containedItemCategory: options?.containedItemCategory,
       languages,
     });
 

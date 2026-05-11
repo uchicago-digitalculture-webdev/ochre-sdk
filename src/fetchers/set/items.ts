@@ -4,7 +4,7 @@ import type {
   Query,
   QueryLeaf,
   SetItem,
-  SetItemDataCategory,
+  SetItemCategory,
   SetItemsSort,
 } from "#/types/index.js";
 import type { XMLSetItems, XMLSetItemsData } from "#/xml/types.js";
@@ -13,7 +13,7 @@ import {
   DEFAULT_LANGUAGES,
   XML_PARSER_OPTIONS,
 } from "#/constants.js";
-import { parseSetDataItems } from "#/parsers/index.js";
+import { parseSetItems } from "#/parsers/index.js";
 import {
   buildAndCtsQueryExpression,
   buildBelongsToCollectionQueryExpression,
@@ -44,11 +44,11 @@ type FetchSetItemsLanguages<
   : ReadonlyArray<string>;
 
 type FetchSetItemsCategory<
-  TItemCategories extends ReadonlyArray<SetItemDataCategory> | undefined,
+  TContainedItemCategories extends ReadonlyArray<SetItemCategory> | undefined,
 > =
-  TItemCategories extends ReadonlyArray<infer U> ?
-    Extract<U, SetItemDataCategory>
-  : SetItemDataCategory;
+  TContainedItemCategories extends ReadonlyArray<infer U> ?
+    Extract<U, SetItemCategory>
+  : SetItemCategory;
 
 type SortWithDirection = Exclude<SetItemsSort, { target: "none" }>;
 type PropertyValueSort = Extract<SetItemsSort, { target: "propertyValue" }>;
@@ -125,7 +125,7 @@ function hasArray<T>(items: Array<T> | undefined): boolean {
 
 function hasSetItemsCategory(
   items: XMLSetItems,
-  category: SetItemDataCategory,
+  category: SetItemCategory,
 ): boolean {
   switch (category) {
     case "tree": {
@@ -493,14 +493,15 @@ ${itemsClause}
  * For propertyValue sorting, dataType is required and the sort key uses the first valid leaf value (value[not(@i)]).
  * @param params.page - The page number (1-indexed)
  * @param params.pageSize - The number of items per page
- * @param itemCategories - The categories of the items to fetch
+ * @param containedItemCategories - The categories of the items to fetch
  * @param options - Options for the fetch
  * @param options.fetch - The fetch function to use
  * @returns The parsed Set items or null if the fetch/parse fails
  */
 export async function fetchSetItems<
-  const TItemCategories extends ReadonlyArray<SetItemDataCategory> | undefined =
-    undefined,
+  const TContainedItemCategories extends
+    | ReadonlyArray<SetItemCategory>
+    | undefined = undefined,
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   params: {
@@ -510,7 +511,7 @@ export async function fetchSetItems<
     page: number;
     pageSize?: number;
   },
-  itemCategories?: TItemCategories,
+  containedItemCategories?: TContainedItemCategories,
   options?: FetchSetItemsBaseOptions<TLanguages>,
 ): Promise<
   | {
@@ -519,7 +520,7 @@ export async function fetchSetItems<
       pageSize: number;
       items: Array<
         SetItem<
-          FetchSetItemsCategory<TItemCategories>,
+          FetchSetItemsCategory<TContainedItemCategories>,
           FetchSetItemsLanguages<TLanguages>
         >
       >;
@@ -535,14 +536,14 @@ export async function fetchSetItems(
     page: number;
     pageSize?: number;
   },
-  itemCategories?: ReadonlyArray<SetItemDataCategory>,
+  containedItemCategories?: ReadonlyArray<SetItemCategory>,
   options?: FetchSetItemsRuntimeOptions,
 ): Promise<
   | {
       totalCount: number;
       page: number;
       pageSize: number;
-      items: Array<SetItem<SetItemDataCategory, ReadonlyArray<string>>>;
+      items: Array<SetItem<SetItemCategory, ReadonlyArray<string>>>;
       error: null;
     }
   | { totalCount: null; page: null; pageSize: null; items: null; error: string }
@@ -593,8 +594,8 @@ export async function fetchSetItems(
       throw new Error("Failed to parse OCHRE Set items");
     }
 
-    if (itemCategories != null) {
-      const missingCategories = itemCategories.filter(
+    if (containedItemCategories != null) {
+      const missingCategories = containedItemCategories.filter(
         (category) => !hasSetItemsCategory(output.result.ochre.items, category),
       );
 
@@ -606,14 +607,14 @@ export async function fetchSetItems(
     }
 
     const languages = resolveSetItemsLanguages(output, requestedLanguages);
-    const items = parseSetDataItems(output.result.ochre.items, {
-      itemCategories,
+    const items = parseSetItems(output.result.ochre.items, {
+      containedItemCategories,
       languages,
     });
 
     const itemsByUuid = new Map<
       string,
-      SetItem<SetItemDataCategory, ReadonlyArray<string>>
+      SetItem<SetItemCategory, ReadonlyArray<string>>
     >();
     for (const item of items) {
       if (!itemsByUuid.has(item.uuid)) {

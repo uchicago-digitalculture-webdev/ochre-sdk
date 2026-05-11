@@ -13,7 +13,7 @@ export type LanguageCodes = ReadonlyArray<string>;
 /**
  * The category of an item in OCHRE
  */
-export type DataCategory =
+export type ItemCategory =
   | "tree"
   | "bibliography"
   | "concept"
@@ -26,57 +26,60 @@ export type DataCategory =
   | "text"
   | "set";
 
-export type HierarchyDataCategory = Extract<DataCategory, "tree" | "set">;
+/**
+ * OCHRE item categories that can contain other items in API payloads.
+ */
+export type ItemContainerCategory = Extract<ItemCategory, "tree" | "set">;
 
 /**
  * The category of items in a Tree
  */
-export type ItemsDataCategory = Exclude<DataCategory, "tree">;
+export type TreeItemCategory = Exclude<ItemCategory, "tree">;
 
 /**
  * The category of items in a Set
  */
-export type SetItemDataCategory = DataCategory;
+export type SetItemCategory = ItemCategory;
 
-export type HierarchyItemDataCategory<U extends DataCategory = DataCategory> =
-  U extends "tree" ? ItemsDataCategory
-  : U extends "set" ? SetItemDataCategory
+export type ContainedItemCategory<U extends ItemCategory = ItemCategory> =
+  U extends "tree" ? TreeItemCategory
+  : U extends "set" ? SetItemCategory
   : never;
 
-export type HierarchyItemCategoryOption<U extends DataCategory = DataCategory> =
-  U extends "tree" ? ItemsDataCategory
-  : U extends "set" ? SetItemDataCategory | ReadonlyArray<SetItemDataCategory>
+export type ContainedItemCategoryOption<U extends ItemCategory = ItemCategory> =
+  U extends "tree" ? TreeItemCategory
+  : U extends "set" ? SetItemCategory | ReadonlyArray<SetItemCategory>
   : never;
 
-export type HierarchyItemCategoryFromOption<
-  U extends DataCategory = DataCategory,
-  V extends HierarchyItemCategoryOption<U> | undefined = undefined,
+export type ContainedItemCategoryFromOption<
+  U extends ItemCategory = ItemCategory,
+  V extends ContainedItemCategoryOption<U> | undefined = undefined,
 > =
-  V extends ReadonlyArray<infer W> ? Extract<W, HierarchyItemDataCategory<U>>
-  : V extends HierarchyItemDataCategory<U> ? V
-  : HierarchyItemDataCategory<U>;
+  V extends ReadonlyArray<infer W> ? Extract<W, ContainedItemCategory<U>>
+  : V extends ContainedItemCategory<U> ? V
+  : ContainedItemCategory<U>;
 
 /**
  * The category of items in a heading
  */
-export type HeadingDataCategory = Exclude<
-  DataCategory,
+export type HeadingItemCategory = Exclude<
+  ItemCategory,
   "tree" | "bibliography" | "spatialUnit" | "concept" | "period"
 >;
 
 /**
- * The category of items that are in hierarchies (tree or set)
+ * The category of items that expose recursive subitem structures.
  */
-export type RecursiveDataCategory = Exclude<
-  DataCategory,
+export type RecursiveItemCategory = Exclude<
+  ItemCategory,
   "tree" | "person" | "propertyVariable" | "propertyValue" | "set"
 >;
 
 /**
  *  The category names that can appear in OCHRE context paths
  */
-export type ContextDataCategory = Exclude<
-  DataCategory,
+export type ContextItemCategory = Exclude<
+  ItemCategory,
   "tree" | "person" | "set"
 >;
 
@@ -128,9 +131,9 @@ export type Metadata<T extends LanguageCodes = LanguageCodes> = {
 
 export type BelongsTo = { uuid: string; abbreviation: string };
 
-export type ItemLocation = "topLevel" | "nested";
+export type ItemPayloadKind = "topLevel" | "embedded";
 
-type ItemOrigin<T extends LanguageCodes, U extends ItemLocation> =
+type ItemEnvelopeFields<T extends LanguageCodes, U extends ItemPayloadKind> =
   U extends "topLevel" ?
     {
       belongsTo: BelongsTo;
@@ -157,7 +160,7 @@ export type ContextItem = {
 /**
  *  Context node in OCHRE
  */
-export type ContextNode<U extends ContextDataCategory = ContextDataCategory> = {
+export type ContextNode<U extends ContextItemCategory = ContextItemCategory> = {
   tree: ContextItem;
   project: ContextItem;
   heading: Array<ContextItem>;
@@ -166,7 +169,7 @@ export type ContextNode<U extends ContextDataCategory = ContextDataCategory> = {
 /**
  *  Context in OCHRE
  */
-export type Context<U extends ContextDataCategory = ContextDataCategory> = {
+export type Context<U extends ContextItemCategory = ContextItemCategory> = {
   nodes: Array<ContextNode<U>>;
   displayPath: string;
 };
@@ -276,7 +279,7 @@ export type Note<T extends LanguageCodes = LanguageCodes> = {
   number: number;
   title: MultilingualString<T> | null;
   content: MultilingualString<T>;
-  authors: Array<Person<T, "nested">>;
+  authors: Array<Person<T, "embedded">>;
 };
 
 /**
@@ -336,22 +339,23 @@ export type SimplifiedProperty<T extends LanguageCodes = LanguageCodes> = {
 /**
  *  Property in a Set item. OCHRE exposes Set item properties as a flat list.
  */
-export type SingleHierarchyProperty<T extends LanguageCodes = LanguageCodes> =
-  Omit<Property<T>, "properties">;
+export type SetItemProperty<T extends LanguageCodes = LanguageCodes> = Omit<
+  Property<T>,
+  "properties"
+>;
 
-export type SingleHierarchySimplifiedProperty<
-  T extends LanguageCodes = LanguageCodes,
-> = Omit<SimplifiedProperty<T>, "properties">;
+export type SetItemSimplifiedProperty<T extends LanguageCodes = LanguageCodes> =
+  Omit<SimplifiedProperty<T>, "properties">;
 
 export type PropertyLike<T extends LanguageCodes = LanguageCodes> =
   | Property<T>
-  | SingleHierarchyProperty<T>
+  | SetItemProperty<T>
   | SimplifiedProperty<T>
-  | SingleHierarchySimplifiedProperty<T>;
+  | SetItemSimplifiedProperty<T>;
 
 export type ItemProperty<T extends LanguageCodes = LanguageCodes> =
   | Property<T>
-  | SingleHierarchyProperty<T>;
+  | SetItemProperty<T>;
 
 export type PropertyValueDataType = PropertyValueContent["dataType"];
 
@@ -360,39 +364,37 @@ export type QueryablePropertyValueDataType = Exclude<
   "coordinate"
 >;
 
-type WithSingleHierarchyProperties<
+type WithSetItemProperties<
   U extends { properties: Array<Property<T>> },
   T extends LanguageCodes,
 > =
   U extends { properties: Array<Property<T>> } ?
-    Prettify<
-      Omit<U, "properties"> & { properties: Array<SingleHierarchyProperty<T>> }
-    >
+    Prettify<Omit<U, "properties"> & { properties: Array<SetItemProperty<T>> }>
   : never;
 
 /**
  *  Base item in OCHRE
  */
 export type BaseItem<
-  U extends DataCategory = DataCategory,
+  U extends ItemCategory = ItemCategory,
   T extends LanguageCodes = LanguageCodes,
-  V extends ItemLocation = "topLevel",
-> = ItemOrigin<T, V> & {
+  V extends ItemPayloadKind = "topLevel",
+> = ItemEnvelopeFields<T, V> & {
   uuid: string;
   category: U;
   publicationDateTime: Date | null;
-  context: Context<ContextDataCategory> | null;
+  context: Context<ContextItemCategory> | null;
   date: Date | null;
   license: License | null;
   copyright: MultilingualString<T> | null;
   watermark: MultilingualString<T> | null;
   identification: Identification<T>;
-  creators: Array<Person<T, "nested">>;
+  creators: Array<Person<T, "embedded">>;
   description: MultilingualString<T> | null;
   events: Array<Event<T>>;
 };
 
-export type ItemLinkCategory = DataCategory | "dictionaryUnit";
+export type ItemLinkCategory = ItemCategory | "dictionaryUnit";
 
 /**
  *  Base item data exposed by OCHRE link and reverse-link payloads.
@@ -404,7 +406,7 @@ export type BaseItemLink<
   uuid: string;
   category: U;
   publicationDateTime: Date | null;
-  context: Context<ContextDataCategory> | null;
+  context: Context<ContextItemCategory> | null;
   date: Date | null;
   identification: Identification<T>;
   description: MultilingualString<T> | null;
@@ -432,14 +434,14 @@ export type ItemLinks<T extends LanguageCodes = LanguageCodes> = Array<
 export type TreeItemLink<T extends LanguageCodes = LanguageCodes> = Prettify<
   BaseItemLink<"tree", T> & {
     type: string | null;
-    itemsCategory: ItemsDataCategory | null;
+    containedItemCategory: TreeItemCategory | null;
   }
 >;
 
 export type SetItemLink<T extends LanguageCodes = LanguageCodes> = Prettify<
   BaseItemLink<"set", T> & {
     type: string | null;
-    itemsCategory: Array<SetItemDataCategory> | null;
+    containedItemCategories: Array<SetItemCategory> | null;
   }
 >;
 
@@ -459,7 +461,7 @@ export type BibliographyItemLink<T extends LanguageCodes = LanguageCodes> =
         startDate: Date | null;
       } | null;
       entryInfo: BibliographyEntryInfo | null;
-      source: ItemLink<ItemsDataCategory, T> | null;
+      source: ItemLink<TreeItemCategory, T> | null;
       authors: Array<ItemLink<"person", T>>;
       periods: Array<ItemLink<"period", T>>;
       properties: Array<Property<T>>;
@@ -564,14 +566,14 @@ export type ItemLink<
  * An Item in OCHRE (can be a tree, set, bibliography, concept, spatial unit, period, person, property value, property variable, or resource)
  */
 export type Item<
-  U extends DataCategory = DataCategory,
-  V extends HierarchyItemDataCategory<U> = HierarchyItemDataCategory<U>,
+  U extends ItemCategory = ItemCategory,
+  V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
   T extends LanguageCodes = LanguageCodes,
-  W extends ItemLocation = "topLevel",
+  W extends ItemPayloadKind = "topLevel",
 > =
-  U extends DataCategory ?
-    U extends "tree" ? Tree<Extract<V, ItemsDataCategory>, T, W>
-    : U extends "set" ? Set<Extract<V, SetItemDataCategory>, T, W>
+  U extends ItemCategory ?
+    U extends "tree" ? Tree<Extract<V, TreeItemCategory>, T, W>
+    : U extends "set" ? Set<Extract<V, SetItemCategory>, T, W>
     : U extends "bibliography" ? Bibliography<T, W>
     : U extends "concept" ? Concept<T, W>
     : U extends "spatialUnit" ? SpatialUnit<T, W>
@@ -585,53 +587,53 @@ export type Item<
   : never;
 
 export type TopLevelItem<
-  U extends DataCategory = DataCategory,
-  V extends HierarchyItemDataCategory<U> = HierarchyItemDataCategory<U>,
+  U extends ItemCategory = ItemCategory,
+  V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
   T extends LanguageCodes = LanguageCodes,
 > = Item<U, V, T, "topLevel">;
 
-export type NestedItem<
-  U extends DataCategory = DataCategory,
-  V extends HierarchyItemDataCategory<U> = HierarchyItemDataCategory<U>,
+export type EmbeddedItem<
+  U extends ItemCategory = ItemCategory,
+  V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
   T extends LanguageCodes = LanguageCodes,
-> = Item<U, V, T, "nested">;
+> = Item<U, V, T, "embedded">;
 
-export type LocatedItem<
-  U extends DataCategory = DataCategory,
-  V extends HierarchyItemDataCategory<U> = HierarchyItemDataCategory<U>,
+export type AnyItem<
+  U extends ItemCategory = ItemCategory,
+  V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
   T extends LanguageCodes = LanguageCodes,
-> = Item<U, V, T, ItemLocation>;
+> = Item<U, V, T, ItemPayloadKind>;
 
 /**
  *  Heading in OCHRE
  */
 export type Heading<
-  U extends HeadingDataCategory = HeadingDataCategory,
+  U extends HeadingItemCategory = HeadingItemCategory,
   T extends LanguageCodes = LanguageCodes,
 > = {
   name: string;
   headings: Array<Heading<U, T>>;
-  items: Array<Item<U, never, T, "nested">>;
+  items: Array<Item<U, never, T, "embedded">>;
 };
 
 /**
  *  Tree in OCHRE
  */
 export type Tree<
-  U extends ItemsDataCategory = ItemsDataCategory,
+  U extends TreeItemCategory = TreeItemCategory,
   T extends LanguageCodes = LanguageCodes,
-  V extends ItemLocation = "topLevel",
+  V extends ItemPayloadKind = "topLevel",
 > = Prettify<
   BaseItem<"tree", T, V> & {
     type: string | null;
-    itemsCategory: U | null;
+    containedItemCategory: U | null;
     links: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
-    bibliographies: Array<Bibliography<T, "nested">>;
-    items: U extends HeadingDataCategory ?
-      Array<Heading<U, T> | Item<U, never, T, "nested">>
-    : Array<Item<U, never, T, "nested">>;
+    bibliographies: Array<Bibliography<T, "embedded">>;
+    items: U extends HeadingItemCategory ?
+      Array<Heading<U, T> | Item<U, never, T, "embedded">>
+    : Array<Item<U, never, T, "embedded">>;
   }
 >;
 
@@ -639,12 +641,12 @@ export type Tree<
  *  Set in OCHRE
  */
 export type Set<
-  U extends SetItemDataCategory = SetItemDataCategory,
+  U extends SetItemCategory = SetItemCategory,
   T extends LanguageCodes = LanguageCodes,
-  V extends ItemLocation = "topLevel",
+  V extends ItemPayloadKind = "topLevel",
 > = Prettify<
   BaseItem<"set", T, V> & {
-    itemsCategory: Array<U>;
+    containedItemCategories: Array<U>;
     isTabularStructure: boolean;
     isSuppressingBlanks: boolean;
     links: ItemLinks<T>;
@@ -655,45 +657,42 @@ export type Set<
 >;
 
 export type SetBibliography<T extends LanguageCodes = LanguageCodes> =
-  Bibliography<T, "nested"> extends infer U ?
+  Bibliography<T, "embedded"> extends infer U ?
     U extends { properties: Array<Property<T>> } ?
       Prettify<
         Omit<U, "properties" | "items"> & {
-          properties: Array<SingleHierarchyProperty<T>>;
+          properties: Array<SetItemProperty<T>>;
         }
       >
     : never
   : never;
 
 export type SetConcept<T extends LanguageCodes = LanguageCodes> = Prettify<
-  Omit<Concept<T, "nested">, "interpretations" | "items"> & {
-    properties: Array<SingleHierarchyProperty<T>>;
+  Omit<Concept<T, "embedded">, "interpretations" | "items"> & {
+    properties: Array<SetItemProperty<T>>;
   }
 >;
 
 export type SetSpatialUnit<T extends LanguageCodes = LanguageCodes> = Prettify<
-  Omit<SpatialUnit<T, "nested">, "observations" | "items"> & {
-    properties: Array<SingleHierarchyProperty<T>>;
+  Omit<SpatialUnit<T, "embedded">, "observations" | "items"> & {
+    properties: Array<SetItemProperty<T>>;
   }
 >;
 
 export type SetPeriod<T extends LanguageCodes = LanguageCodes> = Prettify<
-  Omit<WithSingleHierarchyProperties<Period<T, "nested">, T>, "items">
+  Omit<WithSetItemProperties<Period<T, "embedded">, T>, "items">
 >;
 
 export type SetResource<T extends LanguageCodes = LanguageCodes> = Prettify<
-  Omit<WithSingleHierarchyProperties<Resource<T, "nested">, T>, "items">
+  Omit<WithSetItemProperties<Resource<T, "embedded">, T>, "items">
 >;
 
 export type SetTree<T extends LanguageCodes = LanguageCodes> = Prettify<
-  Omit<
-    WithSingleHierarchyProperties<Tree<ItemsDataCategory, T, "nested">, T>,
-    "items"
-  >
+  Omit<WithSetItemProperties<Tree<TreeItemCategory, T, "embedded">, T>, "items">
 >;
 
 export type SetItem<
-  U extends SetItemDataCategory = SetItemDataCategory,
+  U extends SetItemCategory = SetItemCategory,
   T extends LanguageCodes = LanguageCodes,
 > =
   U extends "tree" ? SetTree<T>
@@ -701,17 +700,14 @@ export type SetItem<
   : U extends "concept" ? SetConcept<T>
   : U extends "spatialUnit" ? SetSpatialUnit<T>
   : U extends "period" ? SetPeriod<T>
-  : U extends "person" ? WithSingleHierarchyProperties<Person<T, "nested">, T>
-  : U extends "propertyVariable" ? PropertyVariable<T, "nested">
+  : U extends "person" ? WithSetItemProperties<Person<T, "embedded">, T>
+  : U extends "propertyVariable" ? PropertyVariable<T, "embedded">
   : U extends "propertyValue" ?
-    WithSingleHierarchyProperties<PropertyValue<T, "nested">, T>
+    WithSetItemProperties<PropertyValue<T, "embedded">, T>
   : U extends "resource" ? SetResource<T>
-  : U extends "text" ? Text<T, "nested">
+  : U extends "text" ? Text<T, "embedded">
   : U extends "set" ?
-    Omit<
-      WithSingleHierarchyProperties<Set<SetItemDataCategory, T, "nested">, T>,
-      "items"
-    >
+    Omit<WithSetItemProperties<Set<SetItemCategory, T, "embedded">, T>, "items">
   : never;
 
 /**
@@ -719,7 +715,7 @@ export type SetItem<
  */
 export type Person<
   T extends LanguageCodes = LanguageCodes,
-  U extends ItemLocation = "topLevel",
+  U extends ItemPayloadKind = "topLevel",
 > = Prettify<
   BaseItem<"person", T, U> & {
     type: string;
@@ -732,7 +728,7 @@ export type Person<
     } | null;
     coordinates: Array<Coordinates<T>>;
     content: MultilingualString<T> | null;
-    periods: Array<Period<T, "nested">>;
+    periods: Array<Period<T, "embedded">>;
     links: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
@@ -744,7 +740,7 @@ export type Person<
  */
 export type Period<
   T extends LanguageCodes = LanguageCodes,
-  U extends ItemLocation = "topLevel",
+  U extends ItemPayloadKind = "topLevel",
 > = Prettify<
   BaseItem<"period", T, U> & {
     type: string | null;
@@ -752,8 +748,8 @@ export type Period<
     links: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
-    bibliographies: Array<Bibliography<T, "nested">>;
-    items: Array<Period<T, "nested">>;
+    bibliographies: Array<Bibliography<T, "embedded">>;
+    items: Array<Period<T, "embedded">>;
   }
 >;
 
@@ -762,7 +758,7 @@ export type Period<
  */
 export type Bibliography<
   T extends LanguageCodes = LanguageCodes,
-  U extends ItemLocation = "topLevel",
+  U extends ItemPayloadKind = "topLevel",
 > = Prettify<
   BaseItem<"bibliography", T, U> & {
     citationDetails: string | null;
@@ -772,18 +768,18 @@ export type Bibliography<
     image: Image<T> | null;
     sourceDocument: BibliographySourceDocument | null;
     publicationInfo: {
-      publishers: Array<Person<T, "nested">>;
+      publishers: Array<Person<T, "embedded">>;
       startDate: Date | null;
     } | null;
     entryInfo: BibliographyEntryInfo | null;
-    source: ItemLink<ItemsDataCategory, T> | null;
-    authors: Array<Person<T, "nested">>;
-    periods: Array<Period<T, "nested">>;
+    source: ItemLink<TreeItemCategory, T> | null;
+    authors: Array<Person<T, "embedded">>;
+    periods: Array<Period<T, "embedded">>;
     links: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
-    bibliographies: Array<Bibliography<T, "nested">>;
-    items: Array<Bibliography<T, "nested">>;
+    bibliographies: Array<Bibliography<T, "embedded">>;
+    items: Array<Bibliography<T, "embedded">>;
   } & (
       | { type: "zotero"; zoteroId: string; uuid: string | null }
       | { type: string | null }
@@ -795,13 +791,13 @@ export type Bibliography<
  */
 export type Concept<
   T extends LanguageCodes = LanguageCodes,
-  U extends ItemLocation = "topLevel",
+  U extends ItemPayloadKind = "topLevel",
 > = Prettify<
   BaseItem<"concept", T, U> & {
     image: Image<T> | null;
     interpretations: Array<Interpretation<T>>;
     coordinates: Array<Coordinates<T>>;
-    items: Array<Concept<T, "nested">>;
+    items: Array<Concept<T, "embedded">>;
   }
 >;
 
@@ -811,12 +807,12 @@ export type Concept<
 export type Interpretation<T extends LanguageCodes = LanguageCodes> = {
   number: number;
   date: Date | null;
-  observers: Array<Person<T, "nested">>;
-  periods: Array<Period<T, "nested">>;
+  observers: Array<Person<T, "embedded">>;
+  periods: Array<Period<T, "embedded">>;
   links: ItemLinks<T>;
   notes: Array<Note<T>>;
   properties: Array<Property<T>>;
-  bibliographies: Array<Bibliography<T, "nested">>;
+  bibliographies: Array<Bibliography<T, "embedded">>;
 };
 
 /**
@@ -824,15 +820,15 @@ export type Interpretation<T extends LanguageCodes = LanguageCodes> = {
  */
 export type SpatialUnit<
   T extends LanguageCodes = LanguageCodes,
-  U extends ItemLocation = "topLevel",
+  U extends ItemPayloadKind = "topLevel",
 > = Prettify<
   BaseItem<"spatialUnit", T, U> & {
     image: Image<T> | null;
     coordinates: Array<Coordinates<T>>;
     mapData: { geoJSON: { multiPolygon: string; EPSG: number } } | null;
     observations: Array<Observation<T>>;
-    bibliographies: Array<Bibliography<T, "nested">>;
-    items: Array<SpatialUnit<T, "nested">>;
+    bibliographies: Array<Bibliography<T, "embedded">>;
+    items: Array<SpatialUnit<T, "embedded">>;
   }
 >;
 
@@ -842,12 +838,12 @@ export type SpatialUnit<
 export type Observation<T extends LanguageCodes = LanguageCodes> = {
   number: number;
   date: Date | null;
-  observers: Array<string> | Array<Person<T, "nested">>;
-  periods: Array<Period<T, "nested">>;
+  observers: Array<string> | Array<Person<T, "embedded">>;
+  periods: Array<Period<T, "embedded">>;
   links: ItemLinks<T>;
   notes: Array<Note<T>>;
   properties: Array<Property<T>>;
-  bibliographies: Array<Bibliography<T, "nested">>;
+  bibliographies: Array<Bibliography<T, "embedded">>;
 };
 
 /**
@@ -855,14 +851,14 @@ export type Observation<T extends LanguageCodes = LanguageCodes> = {
  */
 export type PropertyVariable<
   T extends LanguageCodes = LanguageCodes,
-  U extends ItemLocation = "topLevel",
+  U extends ItemPayloadKind = "topLevel",
 > = Prettify<
   BaseItem<"propertyVariable", T, U> & {
     type: string | null;
     coordinates: Array<Coordinates<T>>;
     links: ItemLinks<T>;
     notes: Array<Note<T>>;
-    bibliographies: Array<Bibliography<T, "nested">>;
+    bibliographies: Array<Bibliography<T, "embedded">>;
   }
 >;
 
@@ -871,14 +867,14 @@ export type PropertyVariable<
  */
 export type PropertyValue<
   T extends LanguageCodes = LanguageCodes,
-  U extends ItemLocation = "topLevel",
+  U extends ItemPayloadKind = "topLevel",
 > = Prettify<
   BaseItem<"propertyValue", T, U> & {
     coordinates: Array<Coordinates<T>>;
     links: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
-    bibliographies: Array<Bibliography<T, "nested">>;
+    bibliographies: Array<Bibliography<T, "embedded">>;
   }
 >;
 
@@ -887,7 +883,7 @@ export type PropertyValue<
  */
 export type Resource<
   T extends LanguageCodes = LanguageCodes,
-  U extends ItemLocation = "topLevel",
+  U extends ItemPayloadKind = "topLevel",
 > = Prettify<
   BaseItem<"resource", T, U> & {
     type: string;
@@ -901,13 +897,13 @@ export type Resource<
     document: MultilingualString<T> | null;
     imageMap: ImageMap | null;
     coordinates: Array<Coordinates<T>>;
-    periods: Array<Period<T, "nested">>;
+    periods: Array<Period<T, "embedded">>;
     links: ItemLinks<T>;
     reverseLinks: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
-    bibliographies: Array<Bibliography<T, "nested">>;
-    items: Array<Resource<T, "nested">>;
+    bibliographies: Array<Bibliography<T, "embedded">>;
+    items: Array<Resource<T, "embedded">>;
   }
 >;
 
@@ -916,7 +912,7 @@ export type Resource<
  */
 export type Text<
   T extends LanguageCodes = LanguageCodes,
-  U extends ItemLocation = "topLevel",
+  U extends ItemPayloadKind = "topLevel",
 > = Prettify<
   BaseItem<"text", T, U> & {
     type: string;
@@ -928,9 +924,9 @@ export type Text<
     reverseLinks: ItemLinks<T>;
     notes: Array<Note<T>>;
     sections: Array<Section<T>>;
-    periods: Array<Period<T, "nested">>;
-    creators: Array<Person<T, "nested">>;
-    editions: Array<Person<T, "nested">>;
+    periods: Array<Period<T, "embedded">>;
+    creators: Array<Person<T, "embedded">>;
+    editions: Array<Person<T, "embedded">>;
   }
 >;
 
@@ -944,98 +940,96 @@ export type Section<T extends LanguageCodes = LanguageCodes> = {
   project: { identification: Identification<T> } | null;
 };
 
-export type NestedTree<
-  U extends ItemsDataCategory = ItemsDataCategory,
+export type EmbeddedTree<
+  U extends TreeItemCategory = TreeItemCategory,
   T extends LanguageCodes = LanguageCodes,
-> = Tree<U, T, "nested">;
+> = Tree<U, T, "embedded">;
 
-export type LocatedTree<
-  U extends ItemsDataCategory = ItemsDataCategory,
+export type AnyTree<
+  U extends TreeItemCategory = TreeItemCategory,
   T extends LanguageCodes = LanguageCodes,
-> = Tree<U, T, ItemLocation>;
+> = Tree<U, T, ItemPayloadKind>;
 
-export type NestedSet<
-  U extends SetItemDataCategory = SetItemDataCategory,
+export type EmbeddedSet<
+  U extends SetItemCategory = SetItemCategory,
   T extends LanguageCodes = LanguageCodes,
-> = Set<U, T, "nested">;
+> = Set<U, T, "embedded">;
 
-export type LocatedSet<
-  U extends SetItemDataCategory = SetItemDataCategory,
+export type AnySet<
+  U extends SetItemCategory = SetItemCategory,
   T extends LanguageCodes = LanguageCodes,
-> = Set<U, T, ItemLocation>;
+> = Set<U, T, ItemPayloadKind>;
 
-export type NestedBibliography<T extends LanguageCodes = LanguageCodes> =
-  Bibliography<T, "nested">;
+export type EmbeddedBibliography<T extends LanguageCodes = LanguageCodes> =
+  Bibliography<T, "embedded">;
 
-export type LocatedBibliography<T extends LanguageCodes = LanguageCodes> =
-  Bibliography<T, ItemLocation>;
+export type AnyBibliography<T extends LanguageCodes = LanguageCodes> =
+  Bibliography<T, ItemPayloadKind>;
 
-export type NestedConcept<T extends LanguageCodes = LanguageCodes> = Concept<
+export type EmbeddedConcept<T extends LanguageCodes = LanguageCodes> = Concept<
   T,
-  "nested"
+  "embedded"
 >;
 
-export type LocatedConcept<T extends LanguageCodes = LanguageCodes> = Concept<
+export type AnyConcept<T extends LanguageCodes = LanguageCodes> = Concept<
   T,
-  ItemLocation
+  ItemPayloadKind
 >;
 
-export type NestedSpatialUnit<T extends LanguageCodes = LanguageCodes> =
-  SpatialUnit<T, "nested">;
+export type EmbeddedSpatialUnit<T extends LanguageCodes = LanguageCodes> =
+  SpatialUnit<T, "embedded">;
 
-export type LocatedSpatialUnit<T extends LanguageCodes = LanguageCodes> =
-  SpatialUnit<T, ItemLocation>;
+export type AnySpatialUnit<T extends LanguageCodes = LanguageCodes> =
+  SpatialUnit<T, ItemPayloadKind>;
 
-export type NestedPeriod<T extends LanguageCodes = LanguageCodes> = Period<
+export type EmbeddedPeriod<T extends LanguageCodes = LanguageCodes> = Period<
   T,
-  "nested"
+  "embedded"
 >;
 
-export type LocatedPeriod<T extends LanguageCodes = LanguageCodes> = Period<
+export type AnyPeriod<T extends LanguageCodes = LanguageCodes> = Period<
   T,
-  ItemLocation
+  ItemPayloadKind
 >;
 
-export type NestedPerson<T extends LanguageCodes = LanguageCodes> = Person<
+export type EmbeddedPerson<T extends LanguageCodes = LanguageCodes> = Person<
   T,
-  "nested"
+  "embedded"
 >;
 
-export type LocatedPerson<T extends LanguageCodes = LanguageCodes> = Person<
+export type AnyPerson<T extends LanguageCodes = LanguageCodes> = Person<
   T,
-  ItemLocation
+  ItemPayloadKind
 >;
 
-export type NestedPropertyVariable<T extends LanguageCodes = LanguageCodes> =
-  PropertyVariable<T, "nested">;
+export type EmbeddedPropertyVariable<T extends LanguageCodes = LanguageCodes> =
+  PropertyVariable<T, "embedded">;
 
-export type LocatedPropertyVariable<T extends LanguageCodes = LanguageCodes> =
-  PropertyVariable<T, ItemLocation>;
+export type AnyPropertyVariable<T extends LanguageCodes = LanguageCodes> =
+  PropertyVariable<T, ItemPayloadKind>;
 
-export type NestedPropertyValue<T extends LanguageCodes = LanguageCodes> =
-  PropertyValue<T, "nested">;
+export type EmbeddedPropertyValue<T extends LanguageCodes = LanguageCodes> =
+  PropertyValue<T, "embedded">;
 
-export type LocatedPropertyValue<T extends LanguageCodes = LanguageCodes> =
-  PropertyValue<T, ItemLocation>;
+export type AnyPropertyValue<T extends LanguageCodes = LanguageCodes> =
+  PropertyValue<T, ItemPayloadKind>;
 
-export type NestedResource<T extends LanguageCodes = LanguageCodes> = Resource<
+export type EmbeddedResource<T extends LanguageCodes = LanguageCodes> =
+  Resource<T, "embedded">;
+
+export type AnyResource<T extends LanguageCodes = LanguageCodes> = Resource<
   T,
-  "nested"
+  ItemPayloadKind
 >;
 
-export type LocatedResource<T extends LanguageCodes = LanguageCodes> = Resource<
+export type EmbeddedText<T extends LanguageCodes = LanguageCodes> = Text<
   T,
-  ItemLocation
+  "embedded"
 >;
 
-export type NestedText<T extends LanguageCodes = LanguageCodes> = Text<
+export type AnyText<T extends LanguageCodes = LanguageCodes> = Text<
   T,
-  "nested"
->;
-
-export type LocatedText<T extends LanguageCodes = LanguageCodes> = Text<
-  T,
-  ItemLocation
+  ItemPayloadKind
 >;
 
 /**
@@ -1044,7 +1038,7 @@ export type LocatedText<T extends LanguageCodes = LanguageCodes> = Text<
 export type Gallery<T extends LanguageCodes = LanguageCodes> = {
   identification: Identification<T>;
   projectIdentification: Identification<T>;
-  resources: Array<Resource<T, "nested">>;
+  resources: Array<Resource<T, "embedded">>;
   maxLength: number;
 };
 

@@ -2,7 +2,7 @@ import * as v from "valibot";
 import type {
   LanguageCodes,
   Property,
-  SingleHierarchyProperty,
+  SetItemProperty,
 } from "./types/index.js";
 
 const PSEUDO_UUID_REGEX = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
@@ -95,9 +95,9 @@ export function stringLiteral(value: string): string {
  * @internal
  */
 export function flattenProperties<T extends LanguageCodes = LanguageCodes>(
-  properties: ReadonlyArray<Property<T> | SingleHierarchyProperty<T>>,
-): Array<SingleHierarchyProperty<T>> {
-  const result: Array<SingleHierarchyProperty<T>> = [];
+  properties: ReadonlyArray<Property<T> | SetItemProperty<T>>,
+): Array<SetItemProperty<T>> {
+  const result: Array<SetItemProperty<T>> = [];
 
   for (const property of properties) {
     result.push({

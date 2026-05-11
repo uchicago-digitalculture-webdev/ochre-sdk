@@ -1,15 +1,15 @@
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type {
-  DataCategory,
-  HierarchyDataCategory,
-  HierarchyItemCategoryFromOption,
-  HierarchyItemCategoryOption,
+  ContainedItemCategoryFromOption,
+  ContainedItemCategoryOption,
   Item,
+  ItemCategory,
+  ItemContainerCategory,
 } from "#/types/index.js";
 import type { XMLItemLinksData } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
-import { parseDataItems } from "#/parsers/index.js";
+import { parseLinkedItems } from "#/parsers/index.js";
 import { iso639_3Schema, uuidSchema } from "#/schemas.js";
 import { logIssues } from "#/utils.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
@@ -25,7 +25,7 @@ type FetchItemLinksBaseOptions<
 
 type FetchItemLinksRuntimeOptions = FetchItemLinksBaseOptions<
   ReadonlyArray<string>
-> & { itemCategory?: HierarchyItemCategoryOption<DataCategory> };
+> & { containedItemCategory?: ContainedItemCategoryOption<ItemCategory> };
 
 type FetchItemLinksLanguages<
   TLanguages extends ReadonlyArray<string> | undefined,
@@ -145,29 +145,29 @@ return
  *
  * @param uuid - The UUID of the OCHRE item whose linked items should be fetched
  * @param options - Fetch and parser options
- * @param options.itemCategory - The category of items inside linked Trees/Sets to parse. Tree accepts one category; Set accepts one category or an array.
+ * @param options.containedItemCategory - The category of items inside linked Trees/Sets to parse. Tree accepts one category; Set accepts one category or an array.
  * @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
  * @param options.fetch - Custom fetch function to use instead of the default fetch
  * @returns An object containing parsed linked items
  */
 export async function fetchItemLinks<
-  const TItemCategory extends
-    | HierarchyItemCategoryOption<HierarchyDataCategory>
+  const TContainedItemCategory extends
+    | ContainedItemCategoryOption<ItemContainerCategory>
     | undefined = undefined,
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
   options?: FetchItemLinksBaseOptions<TLanguages> & {
-    itemCategory?: TItemCategory;
+    containedItemCategory?: TContainedItemCategory;
   },
 ): Promise<
   | {
       items: Array<
         Item<
-          DataCategory,
-          HierarchyItemCategoryFromOption<DataCategory, TItemCategory>,
+          ItemCategory,
+          ContainedItemCategoryFromOption<ItemCategory, TContainedItemCategory>,
           FetchItemLinksLanguages<TLanguages>,
-          "nested"
+          "embedded"
         >
       >;
       error: null;
@@ -180,7 +180,7 @@ export async function fetchItemLinks(
 ): Promise<
   | {
       items: Array<
-        Item<DataCategory, DataCategory, ReadonlyArray<string>, "nested">
+        Item<ItemCategory, ItemCategory, ReadonlyArray<string>, "embedded">
       >;
       error: null;
     }
@@ -218,8 +218,8 @@ export async function fetchItemLinks(
     }
 
     const languages = resolveItemLinksLanguages(output, requestedLanguages);
-    const items = parseDataItems(output.result.ochre.items, {
-      itemCategory: options?.itemCategory,
+    const items = parseLinkedItems(output.result.ochre.items, {
+      containedItemCategory: options?.containedItemCategory,
       languages,
     });
 

@@ -3,13 +3,13 @@ import * as v from "valibot";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type {
   BaseItem,
-  DataCategory,
   Item,
+  ItemCategory,
   Note,
   Property,
   SetItem,
-  SetItemDataCategory,
-  SingleHierarchyProperty,
+  SetItemCategory,
+  SetItemProperty,
 } from "#/types/index.js";
 import type {
   XMLBaseItem,
@@ -128,7 +128,7 @@ const SET_UUIDS: ReadonlyArray<string> = [
   "7ccec23f-d351-4f01-b1bf-ac23695fc691",
 ];
 
-type CategoryFixture = { category: DataCategory; uuids: ReadonlyArray<string> };
+type CategoryFixture = { category: ItemCategory; uuids: ReadonlyArray<string> };
 
 type XMLTopLevelItem =
   | XMLTree
@@ -144,16 +144,16 @@ type XMLTopLevelItem =
   | XMLSet;
 
 type TopLevelItemForTest = Item<
-  DataCategory,
-  SetItemDataCategory,
+  ItemCategory,
+  SetItemCategory,
   typeof TEST_LANGUAGES
 >;
 
-type ParsedSetItem = SetItem<SetItemDataCategory, typeof TEST_LANGUAGES>;
+type ParsedSetItem = SetItem<SetItemCategory, typeof TEST_LANGUAGES>;
 
 type ParsedPropertyFields =
   | Property<typeof TEST_LANGUAGES>
-  | SingleHierarchyProperty<typeof TEST_LANGUAGES>;
+  | SetItemProperty<typeof TEST_LANGUAGES>;
 
 type XMLSetItem =
   | XMLTree
@@ -168,7 +168,7 @@ type XMLSetItem =
   | XMLText
   | XMLSet;
 
-type RawSetItemEntry = { category: SetItemDataCategory; item: XMLSetItem };
+type RawSetItemEntry = { category: SetItemCategory; item: XMLSetItem };
 
 type XMLItemHierarchy = Partial<{
   tree: Array<XMLTree>;
@@ -290,7 +290,7 @@ async function fetchXMLData(uuid: string): Promise<XMLData> {
 
 function parseRawData(
   rawData: XMLData,
-  category: DataCategory,
+  category: ItemCategory,
 ): TopLevelItemForTest {
   return parseItem(rawData, {
     category,
@@ -300,7 +300,7 @@ function parseRawData(
 
 function getTopLevelRawItems(
   rawData: XMLData,
-  category: DataCategory,
+  category: ItemCategory,
 ): Array<XMLTopLevelItem> {
   const rawOchre = rawData.result.ochre;
   switch (category) {
@@ -489,11 +489,11 @@ function expectContextMatchesRaw(
 function expectBaseItemMatchesRaw(
   rawItem: Partial<XMLBaseItem> & { uuid?: string; publicationDateTime?: Date },
   parsedItem: BaseItem<
-    DataCategory,
+    ItemCategory,
     typeof TEST_LANGUAGES,
-    "topLevel" | "nested"
+    "topLevel" | "embedded"
   >,
-  category: DataCategory,
+  category: ItemCategory,
 ): void {
   expect(parsedItem.uuid).toBe(rawItem.uuid ?? "");
   expect(parsedItem.category).toBe(category);
@@ -625,9 +625,9 @@ function expectPropertiesMatchRaw(
   }
 }
 
-function expectSingleHierarchyPropertiesMatchRaw(
+function expectSetItemPropertiesMatchRaw(
   rawProperties: { property: Array<XMLProperty> } | undefined,
-  parsedProperties: Array<SingleHierarchyProperty<typeof TEST_LANGUAGES>>,
+  parsedProperties: Array<SetItemProperty<typeof TEST_LANGUAGES>>,
 ): void {
   const rawPropertyItems = rawProperties?.property ?? [];
   expect(parsedProperties).toHaveLength(rawPropertyItems.length);
@@ -680,15 +680,15 @@ function countResourceItems(
 }
 
 function hasCategory(
-  categories: ReadonlyArray<DataCategory> | undefined,
-  category: DataCategory,
+  categories: ReadonlyArray<ItemCategory> | undefined,
+  category: ItemCategory,
 ): boolean {
   return categories == null || categories.includes(category);
 }
 
 function countItemsInHierarchy(
   hierarchy: XMLItemHierarchy | undefined,
-  categories?: ReadonlyArray<DataCategory>,
+  categories?: ReadonlyArray<ItemCategory>,
 ): number {
   if (hierarchy == null) {
     return 0;
@@ -759,8 +759,8 @@ function getRawSetItemEntries(
   }
   for (const resource of hierarchy.resource ?? []) {
     if (!("uuid" in resource)) {
-      for (const nestedResource of resource.resource) {
-        entries.push({ category: "resource", item: nestedResource });
+      for (const embeddedResource of resource.resource) {
+        entries.push({ category: "resource", item: embeddedResource });
       }
       continue;
     }
@@ -791,7 +791,7 @@ function expectSetItemMatchesRaw(
   expect(Object.hasOwn(parsedItem, "items")).toBe(false);
 
   if ("properties" in parsedItem) {
-    expectSingleHierarchyPropertiesMatchRaw(
+    expectSetItemPropertiesMatchRaw(
       getRawSetItemProperties(rawEntry.item),
       parsedItem.properties,
     );
@@ -895,7 +895,7 @@ function expectCommonLinkedStructures(
 }
 
 function expectCategorySpecificFields(
-  category: DataCategory,
+  category: ItemCategory,
   rawItem: XMLTopLevelItem,
   parsedItem: TopLevelItemForTest,
 ): void {
@@ -903,10 +903,13 @@ function expectCategorySpecificFields(
     case "tree": {
       const rawTree = rawItem as XMLTree;
       expectCommonLinkedStructures(rawTree, parsedItem);
-      if (!("items" in parsedItem) || !("itemsCategory" in parsedItem)) {
+      if (
+        !("items" in parsedItem) ||
+        !("containedItemCategory" in parsedItem)
+      ) {
         throw new Error("Parsed tree is missing tree fields");
       }
-      if (parsedItem.itemsCategory != null) {
+      if (parsedItem.containedItemCategory != null) {
         expect(parsedItem.items.length).toBeGreaterThanOrEqual(0);
       }
       break;
@@ -1087,12 +1090,15 @@ function expectCategorySpecificFields(
     case "set": {
       const rawSet = rawItem as XMLSet;
       expectCommonLinkedStructures(rawSet, parsedItem);
-      if (!("itemsCategory" in parsedItem) || !("items" in parsedItem)) {
+      if (
+        !("containedItemCategories" in parsedItem) ||
+        !("items" in parsedItem)
+      ) {
         throw new Error("Parsed set is missing set fields");
       }
       const parsedSet = parsedItem as Item<
         "set",
-        SetItemDataCategory,
+        SetItemCategory,
         typeof TEST_LANGUAGES
       >;
       expect(parsedSet.items).toHaveLength(
@@ -1134,7 +1140,7 @@ function countRawTextEditions(rawText: XMLText): number {
 function expectDataMatchesRaw(
   rawData: XMLData,
   data: TopLevelItemForTest,
-  category: DataCategory,
+  category: ItemCategory,
 ): void {
   const rawOchre = rawData.result.ochre;
   const rawItems = getTopLevelRawItems(rawData, category);
@@ -1155,7 +1161,7 @@ function expectDataMatchesRaw(
 
 async function expectUuidParsesAndMatchesRaw(
   uuid: string,
-  category: DataCategory,
+  category: ItemCategory,
 ): Promise<void> {
   const rawData = await fetchXMLData(uuid);
   const data = parseRawData(rawData, category);
@@ -1241,11 +1247,11 @@ describe("fetchItem", () => {
     });
   });
 
-  it("rejects itemCategory for non-hierarchy categories before fetching", async () => {
+  it("rejects containedItemCategory for non-hierarchy categories before fetching", async () => {
     let didFetch = false;
     const result = await fetchItem(RESOURCE_UUIDS[0]!, {
       category: "resource",
-      itemCategory: "text" as never,
+      containedItemCategory: "text" as never,
       fetch: async () => {
         didFetch = true;
         throw new Error("fetch should not be called");
@@ -1255,7 +1261,7 @@ describe("fetchItem", () => {
     expect(didFetch).toBe(false);
     expect(result.item).toBeNull();
     expect(result.error).toBe(
-      'itemCategory can only be used when category is "tree" or "set"; received category "resource"',
+      'containedItemCategory can only be used when category is "tree" or "set"; received category "resource"',
     );
   });
 
