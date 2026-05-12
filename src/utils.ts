@@ -16,7 +16,7 @@ const PSEUDO_UUID_REGEX = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
 export function logIssues(
   issues: ReturnType<typeof v.safeParse>["issues"],
   depth = 0,
-) {
+): void {
   if (issues == null) {
     return;
   }
