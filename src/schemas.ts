@@ -23,7 +23,7 @@ const sortDirectionSchema = v.optional(v.picklist(["asc", "desc"]), "asc");
  */
 export const uuidSchema = v.pipe(
   v.string(),
-  v.check(isPseudoUuid, "Invalid pseudo-UUID provided"),
+  v.check(isPseudoUuid, "Invalid pseudo-UUID"),
 );
 
 /**
