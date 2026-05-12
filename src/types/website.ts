@@ -1,13 +1,16 @@
+import type { MultilingualString } from "#/parsers/multilingual.js";
 import type {
-  ApiVersion,
   Bibliography,
-  DataCategory,
   Identification,
+  ItemCategory,
+  LanguageCodes,
   License,
   Metadata,
   Person,
-  PropertyValueContentType,
+  QueryablePropertyValueDataType,
 } from "#/types/index.js";
+
+type WebsitePropertyValueDataType = QueryablePropertyValueDataType;
 
 /**
  * Represents a context tree level item with a variable and value
@@ -19,18 +22,18 @@ export type ContextTreeLevelItem = {
 /**
  * Represents a context tree level with a context item
  */
-export type ContextTreeLevel = {
+export type ContextTreeLevel<T extends LanguageCodes = LanguageCodes> = {
   context: Array<ContextTreeLevelItem>;
-  identification: Identification;
+  identification: Identification<T>;
   type: string;
 };
 
 /**
  * Represents a filter context tree level with a context item
  */
-export type ContextTreeFilterLevel = {
+export type ContextTreeFilterLevel<T extends LanguageCodes = LanguageCodes> = {
   context: Array<ContextTreeLevelItem>;
-  identification: Identification;
+  identification: Identification<T>;
   type: string;
   filterType: "property" | "coordinates" | "bibliography" | "period";
   isInlineDisplayed: boolean;
@@ -41,31 +44,31 @@ export type ContextTreeFilterLevel = {
 /**
  * Represents a context tree with levels grouped by behavior
  */
-export type ContextTree = {
-  flatten: Array<ContextTreeLevel>;
-  suppress: Array<ContextTreeLevel>;
-  filter: Array<ContextTreeFilterLevel>;
-  sort: Array<ContextTreeLevel>;
-  detail: Array<ContextTreeLevel>;
-  download: Array<ContextTreeLevel>;
-  label: Array<ContextTreeLevel>;
-  prominent: Array<ContextTreeLevel>;
+export type ContextTree<T extends LanguageCodes = LanguageCodes> = {
+  flatten: Array<ContextTreeLevel<T>>;
+  suppress: Array<ContextTreeLevel<T>>;
+  filter: Array<ContextTreeFilterLevel<T>>;
+  sort: Array<ContextTreeLevel<T>>;
+  detail: Array<ContextTreeLevel<T>>;
+  download: Array<ContextTreeLevel<T>>;
+  label: Array<ContextTreeLevel<T>>;
+  prominent: Array<ContextTreeLevel<T>>;
 };
 
 /**
  * Represents a scope with its UUID, type and identification
  */
-export type Scope = {
+export type Scope<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   type: string;
-  identification: Identification;
+  identification: Identification<T>;
 };
 
 /**
  * Represents a stylesheet item with its UUID and category
  */
 export type StylesheetCategory = Extract<
-  DataCategory,
+  ItemCategory,
   "propertyVariable" | "propertyValue"
 >;
 
@@ -92,19 +95,20 @@ export type StylesheetItem =
       };
     };
 
-export type WebsitePropertyQueryNode = {
-  target: "property";
-  propertyVariable: string;
-  dataType: Exclude<PropertyValueContentType, "coordinate">;
-  matchMode: "includes" | "exact";
-  isCaseSensitive: boolean;
-  language: string;
-};
+export type WebsitePropertyQueryNode<T extends LanguageCodes = LanguageCodes> =
+  {
+    target: "property";
+    propertyVariable: string;
+    dataType: WebsitePropertyValueDataType;
+    matchMode: "includes" | "exact";
+    isCaseSensitive: boolean;
+    language: T[number];
+  };
 
-export type WebsitePropertyQuery =
-  | WebsitePropertyQueryNode
-  | { and: Array<WebsitePropertyQuery> }
-  | { or: Array<WebsitePropertyQuery> };
+export type WebsitePropertyQuery<T extends LanguageCodes = LanguageCodes> =
+  | WebsitePropertyQueryNode<T>
+  | { and: Array<WebsitePropertyQuery<T>> }
+  | { or: Array<WebsitePropertyQuery<T>> };
 
 /**
  * Represents the OCHRE website type
@@ -122,16 +126,15 @@ export type WebsiteType =
 /**
  * Represents a website with its properties and elements
  */
-export type Website = {
+export type Website<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
-  version: ApiVersion;
   belongsTo: { uuid: string; abbreviation: string } | null;
-  metadata: Metadata;
+  metadata: Metadata<T>;
   publicationDateTime: Date | null;
-  identification: Identification;
-  creators: Array<Person>;
+  identification: Identification<T>;
+  creators: Array<Person<T, "embedded">>;
   license: License | null;
-  items: Array<Webpage | WebSegment>;
+  items: Array<Webpage<T> | WebSegment<T>>;
   properties: {
     type: WebsiteType;
     status: "development" | "preview" | "production";
@@ -161,17 +164,17 @@ export type Website = {
       alignment: "start" | "center" | "end";
       isProjectDisplayed: boolean;
       searchBarBoundElementUuid: string | null;
-      items: Array<WebElement | WebBlock> | null;
+      items: Array<WebElement<T> | WebBlock<T>> | null;
     };
     footer: {
       isDisplayed: boolean;
       logoUuid: string | null;
-      items: Array<WebElement | WebBlock> | null;
+      items: Array<WebElement<T> | WebBlock<T>> | null;
     };
     sidebar: {
       isDisplayed: boolean;
-      items: Array<WebElement | WebBlock>;
-      title: WebElement["title"];
+      items: Array<WebElement<T> | WebBlock<T>>;
+      title: WebTitle<T>;
       layout: "start" | "end";
       mobileLayout: "default" | "inline";
       cssStyles: {
@@ -195,9 +198,9 @@ export type Website = {
       iiifViewer: "universal-viewer" | "clover";
     };
     options: {
-      contextTree: ContextTree | null;
-      scopes: Array<Scope> | null;
-      labels: { title: string | null };
+      contextTree: ContextTree<T> | null;
+      scopes: Array<Scope<T>> | null;
+      labels: { title: MultilingualString<T> | null };
       stylesheets: { properties: Array<StylesheetItem> };
     };
   };
@@ -206,13 +209,13 @@ export type Website = {
 /**
  * Represents a webpage with its title, slug, properties, items and subpages
  */
-export type Webpage = {
+export type Webpage<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   type: "page";
-  title: string;
+  title: MultilingualString<T>;
   slug: string;
   publicationDateTime: Date | null;
-  items: Array<WebSegment | WebElement | WebBlock>;
+  items: Array<WebSegment<T> | WebElement<T> | WebBlock<T>>;
   properties: {
     width: "full" | "large" | "narrow" | "default";
     variant: "default" | "no-background";
@@ -220,45 +223,45 @@ export type Webpage = {
     isSidebarDisplayed: boolean;
     isDisplayedInNavbar: boolean;
     isNavbarSearchBarDisplayed: boolean;
-    backgroundImage: WebImage | null;
+    backgroundImage: WebImage<T> | null;
     cssStyles: {
       default: Array<Style>;
       tablet: Array<Style>;
       mobile: Array<Style>;
     };
   };
-  webpages: Array<Webpage>;
+  webpages: Array<Webpage<T>>;
 };
 
 /**
  * Represents a web segment
  */
-export type WebSegment = {
+export type WebSegment<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   type: "segment";
-  title: string;
+  title: MultilingualString<T>;
   slug: string;
   publicationDateTime: Date | null;
-  items: Array<WebSegmentItem>;
+  items: Array<WebSegmentItem<T>>;
 };
 
 /**
  * Represents a web segment item
  */
-export type WebSegmentItem = {
+export type WebSegmentItem<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   type: "segment-item";
-  title: string;
+  title: MultilingualString<T>;
   slug: string;
   publicationDateTime: Date | null;
-  items: Array<Webpage | WebSegment>;
+  items: Array<Webpage<T> | WebSegment<T>>;
 };
 
 /**
  * Represents a title with its label and variant
  */
-export type WebTitle = {
-  label: string;
+export type WebTitle<T extends LanguageCodes = LanguageCodes> = {
+  label: MultilingualString<T>;
   variant: "default" | "simple";
   properties: {
     isNameDisplayed: boolean;
@@ -272,21 +275,21 @@ export type WebTitle = {
 /**
  * Base properties for web elements
  */
-export type WebElement = {
+export type WebElement<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   type: "element";
-  title: WebTitle;
+  title: WebTitle<T>;
   cssStyles: {
     default: Array<Style>;
     tablet: Array<Style>;
     mobile: Array<Style>;
   };
-} & WebElementComponent;
+} & WebElementComponent<T>;
 
 /**
  * Union type of all possible web element components
  */
-export type WebElementComponent =
+export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
   | {
       component: "3d-viewer";
       linkUuid: string;
@@ -318,7 +321,7 @@ export type WebElementComponent =
   | {
       component: "bibliography";
       linkUuids: Array<string>;
-      bibliographies: Array<Bibliography>;
+      bibliographies: Array<Bibliography<T, "embedded">>;
       layout: "long" | "short";
       isSourceDocumentDisplayed: boolean;
     }
@@ -333,15 +336,18 @@ export type WebElementComponent =
       variant: "default" | "transparent" | "link";
       href: string;
       isExternal: boolean;
-      label: string | null;
+      label: MultilingualString<T> | null;
       startIcon: string | null;
       endIcon: string | null;
-      image: WebImage | null;
+      image: WebImage<T> | null;
     }
   | {
       component: "collection";
       linkUuids: Array<string>;
-      displayedProperties: Array<{ uuid: string; label: string }> | null;
+      displayedProperties: Array<{
+        uuid: string;
+        label: MultilingualString<T> | null;
+      }> | null;
       variant: "slide" | "table" | "card" | "tile" | "showcase";
       paginationVariant: "default" | "numeric";
       loadingVariant: "spinner" | "skeleton" | "animation" | "none";
@@ -357,9 +363,9 @@ export type WebElementComponent =
         sidebarSort: "default" | "alphabetical";
       };
       options: {
-        scopes: Array<Scope> | null;
-        contextTree: ContextTree | null;
-        labels: { title: string | null };
+        scopes: Array<Scope<T>> | null;
+        contextTree: ContextTree<T> | null;
+        labels: { title: MultilingualString<T> | null };
       };
     }
   | { component: "empty-space"; height: string | null; width: string | null }
@@ -376,7 +382,7 @@ export type WebElementComponent =
     }
   | {
       component: "image";
-      images: Array<WebImage>;
+      images: Array<WebImage<T>>;
       variant: "default" | "carousel" | "grid" | "hero";
       width: number | null;
       height: number | null;
@@ -415,35 +421,35 @@ export type WebElementComponent =
       component: "query";
       linkUuids: Array<string>;
       items: Array<{
-        label: string;
-        queries: Array<WebsitePropertyQuery>;
+        label: MultilingualString<T>;
+        queries: Array<WebsitePropertyQuery<T>>;
         startIcon: string | null;
         endIcon: string | null;
       }>;
       options: {
-        scopes: Array<Scope> | null;
-        contextTree: ContextTree | null;
-        labels: { title: string | null };
+        scopes: Array<Scope<T>> | null;
+        contextTree: ContextTree<T> | null;
+        labels: { title: MultilingualString<T> | null };
       };
       collectionProperties: {
         displayedProperties: Extract<
-          WebElementComponent,
+          WebElementComponent<T>,
           { component: "collection" }
         >["displayedProperties"];
         variant: Extract<
-          WebElementComponent,
+          WebElementComponent<T>,
           { component: "collection" }
         >["variant"];
         paginationVariant: Extract<
-          WebElementComponent,
+          WebElementComponent<T>,
           { component: "collection" }
         >["paginationVariant"];
         loadingVariant: Extract<
-          WebElementComponent,
+          WebElementComponent<T>,
           { component: "collection" }
         >["loadingVariant"];
         imageLayout: Extract<
-          WebElementComponent,
+          WebElementComponent<T>,
           { component: "collection" }
         >["imageLayout"];
       };
@@ -451,7 +457,7 @@ export type WebElementComponent =
   | {
       component: "search-bar";
       queryVariant: "submit" | "change";
-      placeholder: string | null;
+      placeholder: MultilingualString<T> | null;
       baseFilterQueries: string | null;
       boundElementUuid: string | null;
       href: string | null;
@@ -466,18 +472,30 @@ export type WebElementComponent =
         | { name: "heading"; size: "xs" | "sm" | "md" | "lg" | "xl" | "2xl" }
         | { name: "display"; size: "xs" | "sm" | "md" | "lg" };
       headingLevel: "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | null;
-      content: string;
+      content: MultilingualString<T>;
     }
   | { component: "timeline"; linkUuid: string }
   | { component: "video"; linkUuid: string; isChaptersDisplayed: boolean };
 
+export type WebElementComponentName = WebElementComponent["component"];
+
+export type WebElementComponentOf<
+  U extends WebElementComponentName,
+  T extends LanguageCodes = LanguageCodes,
+> = Extract<WebElementComponent<T>, { component: U }>;
+
+export type WebElementOf<
+  U extends WebElementComponentName,
+  T extends LanguageCodes = LanguageCodes,
+> = Extract<WebElement<T>, { component: U }>;
+
 /**
  * Represents an image used in web elements
  */
-export type WebImage = {
+export type WebImage<T extends LanguageCodes = LanguageCodes> = {
   uuid: string | null;
-  label: string | null;
-  description: string | null;
+  label: MultilingualString<T> | null;
+  description: MultilingualString<T> | null;
   width: number;
   height: number;
   quality: "low" | "high";
@@ -499,20 +517,23 @@ export type WebBlockLayout =
 /**
  * Represents a block of vertical or horizontal content alignment
  */
-export type WebBlock<T extends WebBlockLayout = WebBlockLayout> = {
+export type WebBlock<
+  T extends LanguageCodes = LanguageCodes,
+  U extends WebBlockLayout = WebBlockLayout,
+> = {
   uuid: string;
   type: "block";
-  title: WebTitle;
-  items: T extends "accordion" ?
-    Array<
-      Extract<WebElement, { component: "text" }> & {
-        items: Array<WebElement | WebBlock>;
-      }
-    >
-  : Array<WebElement | WebBlock>;
+  title: WebTitle<T>;
+  items: U extends "accordion"
+    ? Array<
+        Extract<WebElement<T>, { component: "text" }> & {
+          items: Array<WebElement<T> | WebBlock<T>>;
+        }
+      >
+    : Array<WebElement<T> | WebBlock<T>>;
   properties: {
     default: {
-      layout: T;
+      layout: U;
       wrap: "nowrap" | "wrap" | "wrap-reverse";
       /**
        * valid `gridTemplateColumns` or `gridTemplateRows` CSS property value
@@ -522,12 +543,12 @@ export type WebBlock<T extends WebBlockLayout = WebBlockLayout> = {
        * `gap` CSS property value
        */
       gap: string | null;
-      isAccordionEnabled: T extends "accordion" ? boolean : never;
-      isAccordionExpandedByDefault: T extends "accordion" ? boolean : never;
-      isAccordionSidebarDisplayed: T extends "accordion" ? boolean : never;
+      isAccordionEnabled: U extends "accordion" ? boolean : never;
+      isAccordionExpandedByDefault: U extends "accordion" ? boolean : never;
+      isAccordionSidebarDisplayed: U extends "accordion" ? boolean : never;
     };
-    tablet: Partial<WebBlock["properties"]["default"]> | null;
-    mobile: Partial<WebBlock["properties"]["default"]> | null;
+    tablet: Partial<WebBlock<T>["properties"]["default"]> | null;
+    mobile: Partial<WebBlock<T>["properties"]["default"]> | null;
   };
   cssStyles: {
     default: Array<Style>;
@@ -535,3 +556,11 @@ export type WebBlock<T extends WebBlockLayout = WebBlockLayout> = {
     mobile: Array<Style>;
   };
 };
+
+export type WebBlockByLayout<
+  U extends WebBlockLayout = WebBlockLayout,
+  T extends LanguageCodes = LanguageCodes,
+> = WebBlock<T, U>;
+
+export type AccordionWebBlock<T extends LanguageCodes = LanguageCodes> =
+  WebBlock<T, "accordion">;

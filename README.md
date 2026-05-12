@@ -1,50 +1,135 @@
 # OCHRE SDK
 
-This is the OCHRE JavaScript/TypeScript SDK for interacting with OCHRE (Online Cultural and Historical Research Environment) data.
+`ochre-sdk` is a TypeScript package for reading data from
+[OCHRE](https://ochre.uchicago.edu/) (Online Cultural and Historical Research
+Environment). It fetches OCHRE XML/XQuery responses, validates the payloads, and
+parses them into typed objects that are easier to use in web applications,
+digital collections, and research tools.
+
+The package focuses on the public OCHRE v2 API and exposes higher-level helpers
+for items, linked items, galleries, Set search results, Set facets, website
+presentation records, multilingual text, and property access.
 
 ## Installation
 
-```bash
-pnpm add ochre-sdk
-```
-
-or
-
-```bash
+```sh
 npm install ochre-sdk
 ```
 
-or
+Use the equivalent command for your package manager if you do not use npm.
 
-```bash
-bun add ochre-sdk
+`ochre-sdk` is published as an ESM package. The runtime must provide `fetch`, or
+you can pass a custom fetch implementation through each fetcher's `options.fetch`
+field.
+
+## Quick Start
+
+```ts
+import { fetchItem } from "ochre-sdk";
+
+const result = await fetchItem("<item-uuid>", {
+  category: "resource",
+  languages: ["eng"],
+});
+
+if (result.error != null) {
+  throw new Error(result.error);
+}
+
+console.log(result.item.identification.label.getText("eng"));
 ```
 
-## Start development server
+Every fetcher returns a success/error object. On success, the parsed value is
+present and `error` is `null`; on failure, the parsed value is `null` and
+`error` contains the message.
 
-From the root directory of the project, run the following command:
+## Core API
 
-```bash
-pnpm run dev
+- `fetchItem(uuid, options)` fetches and parses a single OCHRE item. Passing
+  `category` narrows the returned TypeScript type, and `containedItemCategory`
+  controls how nested Tree or Set contents are parsed.
+- `fetchItemLinks(uuid, options)` fetches items linked from a source item and
+  parses them as embedded OCHRE items.
+- `fetchGallery(params, options)` fetches paginated resource galleries with an
+  optional label filter.
+- `fetchWebsite(abbreviation, options)` fetches an OCHRE website presentation
+  record, including pages, segments, components, navigation, footer, sidebar,
+  style, collection, and item-page configuration.
+- `fetchSetItems(params, containedItemCategories, options)` fetches paginated
+  Set search results with typed query and sort support.
+- `fetchSetPropertyValues(params, options)` fetches Set property-value facets
+  and optional bibliography/period attribute facets for the same query model.
+
+## Multilingual Text
+
+OCHRE text fields are represented with `MultilingualString`. It preserves plain
+text and rich text renderings, supports language fallback, and exposes helpers
+for exact-language access when consumers need stricter behavior.
+
+```ts
+const title = result.item.identification.label;
+
+title.getText("eng");
+title.getRichText("eng");
+title.getExactText("tur");
+title.getAvailableLanguages();
 ```
 
-## Build production server
+For reusable language tuples, use `defineLanguages` to keep runtime validation
+and literal TypeScript inference together.
 
-From the root directory of the project, run the following command:
+```ts
+import { defineLanguages, fetchWebsite } from "ochre-sdk";
 
-```bash
-pnpm run ci
+const languages = defineLanguages("eng", "tur");
+const result = await fetchWebsite("uchicago-node", { languages });
 ```
 
-## Release new version to NPM
+## Set Queries
 
-```bash
-pnpm run release
+Set fetchers accept a recursive `Query` tree. Leaf queries can target full text,
+specific fields, property values, bibliographies, periods, notes, images, and
+other supported OCHRE search surfaces.
+
+```ts
+import { fetchSetItems, type Query } from "ochre-sdk";
+
+const queries: Query = {
+  target: "string",
+  value: "Chicago",
+  matchMode: "includes",
+  isCaseSensitive: false,
+  language: "eng",
+};
+
+const result = await fetchSetItems(
+  { setScopeUuids: ["<set-uuid>"], queries, page: 1, pageSize: 48 },
+  ["resource", "bibliography"],
+  { languages: ["eng"] },
+);
 ```
 
-## Contributing
+Use `fetchSetPropertyValues` with the same query shape when you need facet data
+for a filtered result set.
 
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+## Helpers And Types
+
+The root export includes the SDK's public TypeScript model, website component
+types, query types, property getters, and small data helpers:
+
+- `Item`, `SetItem`, `ItemLink`, `Website`, `WebElementOf`,
+  `WebElementComponentOf`, `WebBlockByLayout`, `Query`, and related types.
+- `getPropertyByVariableUuid`, `getPropertyValueContentByVariableUuid`,
+  `getPropertyByVariableLabel`, `getUniqueProperties`, `filterProperties`, and
+  related property helpers.
+- `flattenItemProperties` and `DEFAULT_PAGE_SIZE` for common collection UI
+  workflows.
+
+## Development
+
+The package source lives in `src/`, and `src/index.ts` is the public entrypoint.
+Published files are generated into `dist/`. See `package.json` for the
+available repository scripts.
 
 ## License
 

@@ -1,3 +1,89 @@
+import type { X2jOptions } from "fast-xml-parser";
+
+export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
+  "string",
+  "content",
+  "tree",
+  "bibliography",
+  "spatialUnit",
+  "concept",
+  "person",
+  "period",
+  "propertyValue",
+  "propertyVariable",
+  "resource",
+  "text",
+  "set",
+  "dictionaryUnit",
+  "variable",
+  "property",
+  "value",
+  "context",
+  "creator",
+  "author",
+  "event",
+  "interpretation",
+  "observation",
+  "observer",
+  "heading",
+  "note",
+  "reference",
+  "coord",
+  "area",
+  "footnote",
+  "language",
+  "section",
+  "translation",
+  "phonemic",
+  "editor",
+  "publisher",
+  "scope",
+  "level",
+  "style",
+  "flattenContexts",
+  "suppressContexts",
+  "filterContexts",
+  "sortContexts",
+  "detailContexts",
+  "downloadContexts",
+  "labelContexts",
+  "prominentContexts",
+];
+
+export const XML_PARSER_OPTIONS: X2jOptions = {
+  alwaysCreateTextNode: true,
+  ignoreAttributes: false,
+  removeNSPrefix: true,
+  ignorePiTags: true,
+  trimValues: false,
+  parseTagValue: false,
+  parseAttributeValue: false,
+  attributeNamePrefix: "",
+  textNodeName: "payload",
+  stopNodes: ["*.referenceFormatDiv", "*.citationFormatSpan"],
+  htmlEntities: true,
+  isArray(tagName, jPath, isLeafNode, isAttribute) {
+    if (isAttribute) {
+      return false;
+    }
+
+    if (XML_ARRAY_TAGS.includes(tagName)) {
+      return true;
+    }
+
+    return false;
+  },
+  attributeValueProcessor: (attrName, attrValue) => {
+    if (attrValue.startsWith("xs:")) {
+      return attrValue.replace("xs:", "");
+    }
+
+    return null;
+  },
+};
+
+export const DEFAULT_LANGUAGES = ["eng"] as const;
+
 export const BELONGS_TO_COLLECTION_UUID =
   "30054cb2-909a-4f34-8db9-8fe7369d691d";
 

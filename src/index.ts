@@ -1,10 +1,20 @@
+export * from "#/fetchers/gallery.js";
+export * from "#/fetchers/item-links.js";
+export * from "#/fetchers/item.js";
+export * from "#/fetchers/set/items.js";
+export * from "#/fetchers/set/property-values.js";
+export * from "#/fetchers/website.js";
+export * from "#/getters.js";
+export * from "#/helpers.js";
+export { MultilingualString } from "#/parsers/multilingual.js";
+export type {
+  MultilingualOptions,
+  MultilingualStringEntries,
+  MultilingualStringEntry,
+  MultilingualStringInput,
+  MultilingualStringJSON,
+  MultilingualStringObject,
+  MultilingualStringText,
+} from "#/parsers/multilingual.js";
 export * from "#/types/index.js";
 export * from "#/types/website.js";
-export * from "#/utils/fetchers/gallery.js";
-export * from "#/utils/fetchers/item-links.js";
-export * from "#/utils/fetchers/item.js";
-export * from "#/utils/fetchers/set/items.js";
-export * from "#/utils/fetchers/set/property-values.js";
-export * from "#/utils/fetchers/website.js";
-export * from "#/utils/getters.js";
-export * from "#/utils/helpers.js";

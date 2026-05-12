@@ -1,6 +1,6 @@
 {
   "name": "ochre-sdk",
-  "version": "0.22.24",
+  "version": "1.0.0-beta.14",
   "type": "module",
   "license": "MIT",
   "description": "Node.js library for working with OCHRE (Online Cultural and Historical Research Environment) data",
@@ -54,14 +54,14 @@
     "release": "bumpp"
   },
   "dependencies": {
-    "@date-fns/utc": "^2.1.1",
     "date-fns": "^4.1.0",
     "fast-equals": "^6.0.0",
+    "fast-xml-parser": "^5.7.3",
     "valibot": "^1.4.0"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.0.0",
-    "@types/node": "^24.12.3",
+    "@types/node": "^24.12.4",
     "bumpp": "^11.1.0",
     "eslint": "^10.3.0",
     "prettier": "^3.8.3",
@@ -69,5 +69,5 @@
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"
   },
-  "packageManager": "pnpm@11.0.9"
+  "packageManager": "pnpm@11.1.0"
 }

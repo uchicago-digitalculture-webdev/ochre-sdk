@@ -3,6 +3,3 @@ pnpm-lock.yaml
 
 # Node Modules
 node_modules
-
-# Markdown
-*.md

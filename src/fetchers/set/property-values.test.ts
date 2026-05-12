@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { fetchSetPropertyValues } from "./property-values.js";
+import { fetchSetPropertyValues } from "#/fetchers/set/property-values.js";
 
 const UCHICAGO_NODE_SET_SCOPE_UUIDS = [
   "10268bd8-5e97-4f8c-b3f7-89d85d93a776",

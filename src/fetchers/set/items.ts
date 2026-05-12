@@ -1,46 +1,55 @@
+import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type {
-  ApiVersion,
-  DataCategory,
-  Item,
   Query,
   QueryLeaf,
+  SetItem,
+  SetItemCategory,
   SetItemsSort,
 } from "#/types/index.js";
-import type {
-  RawBibliography,
-  RawConcept,
-  RawPeriod,
-  RawPerson,
-  RawPropertyValue,
-  RawPropertyVariable,
-  RawResource,
-  RawSet,
-  RawSpatialUnit,
-  RawText,
-  RawTree,
-} from "#/types/raw.js";
-import { BELONGS_TO_COLLECTION_UUID } from "#/constants.js";
-import { setItemsParamsSchema } from "#/schemas.js";
-import { stringLiteral } from "#/utils/internal.js";
+import type { XMLSetItems, XMLSetItemsData } from "#/xml/types.js";
 import {
-  parseBibliographies,
-  parseConcepts,
-  parsePeriods,
-  parsePersons,
-  parsePropertyValues,
-  parsePropertyVariables,
-  parseResources,
-  parseSets,
-  parseSpatialUnits,
-  parseTexts,
-  parseTrees,
-} from "#/utils/parse/index.js";
+  BELONGS_TO_COLLECTION_UUID,
+  DEFAULT_LANGUAGES,
+  XML_PARSER_OPTIONS,
+} from "#/constants.js";
+import { parseSetItems } from "#/parsers/index.js";
 import {
   buildAndCtsQueryExpression,
   buildBelongsToCollectionQueryExpression,
   buildQueryPlan,
-} from "#/utils/query.js";
+} from "#/query.js";
+import { iso639_3Schema, setItemsParamsSchema } from "#/schemas.js";
+import { logIssues, stringLiteral } from "#/utils.js";
+import { XMLSetItemsData as XMLSetItemsDataSchema } from "#/xml/schemas.js";
+
+type FetchFunction = (
+  input: string | URL | globalThis.Request,
+  init?: RequestInit,
+) => Promise<Response>;
+
+type FetchSetItemsBaseOptions<
+  TLanguages extends ReadonlyArray<string> | undefined = undefined,
+> = { languages?: TLanguages; fetch?: FetchFunction };
+
+type FetchSetItemsRuntimeOptions = FetchSetItemsBaseOptions<
+  ReadonlyArray<string>
+>;
+
+type FetchSetItemsLanguages<
+  TLanguages extends ReadonlyArray<string> | undefined,
+> = TLanguages extends readonly []
+  ? ReadonlyArray<string>
+  : TLanguages extends ReadonlyArray<string>
+    ? TLanguages
+    : ReadonlyArray<string>;
+
+type FetchSetItemsCategory<
+  TContainedItemCategories extends ReadonlyArray<SetItemCategory> | undefined,
+> =
+  TContainedItemCategories extends ReadonlyArray<infer U>
+    ? Extract<U, SetItemCategory>
+    : SetItemCategory;
 
 type SortWithDirection = Exclude<SetItemsSort, { target: "none" }>;
 type PropertyValueSort = Extract<SetItemsSort, { target: "propertyValue" }>;
@@ -50,6 +59,111 @@ type ExactStringPropertyQuery = Extract<QueryLeaf, { target: "property" }> & {
   value: string;
   matchMode: "exact";
 };
+
+function parseLanguages<const T extends ReadonlyArray<string>>(
+  languages: T,
+): T {
+  const parsedLanguages: Array<string> = [];
+  for (const language of languages) {
+    parsedLanguages.push(v.parse(iso639_3Schema, language));
+  }
+
+  return parsedLanguages as unknown as T;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function collectContentLanguages(value: unknown, languages: Set<string>): void {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectContentLanguages(item, languages);
+    }
+    return;
+  }
+
+  if (!isRecord(value)) {
+    return;
+  }
+
+  const content = value.content;
+  if (Array.isArray(content)) {
+    for (const contentItem of content) {
+      if (!isRecord(contentItem)) {
+        continue;
+      }
+
+      const language = contentItem.lang;
+      if (typeof language === "string" && language !== "zxx") {
+        languages.add(language);
+      }
+    }
+  }
+
+  for (const child of Object.values(value)) {
+    collectContentLanguages(child, languages);
+  }
+}
+
+function resolveSetItemsLanguages(
+  data: XMLSetItemsData,
+  requestedLanguages: ReadonlyArray<string>,
+): ReadonlyArray<string> {
+  if (requestedLanguages.length > 0) {
+    return requestedLanguages;
+  }
+
+  const languages = new Set<string>();
+  collectContentLanguages(data.result.ochre.items, languages);
+
+  return languages.size > 0 ? [...languages] : [...DEFAULT_LANGUAGES];
+}
+
+function hasArray<T>(items: Array<T> | undefined): boolean {
+  return items != null && items.length > 0;
+}
+
+function hasSetItemsCategory(
+  items: XMLSetItems,
+  category: SetItemCategory,
+): boolean {
+  switch (category) {
+    case "tree": {
+      return hasArray(items.tree);
+    }
+    case "bibliography": {
+      return hasArray(items.bibliography);
+    }
+    case "concept": {
+      return hasArray(items.concept);
+    }
+    case "spatialUnit": {
+      return hasArray(items.spatialUnit);
+    }
+    case "period": {
+      return hasArray(items.period);
+    }
+    case "person": {
+      return hasArray(items.person);
+    }
+    case "propertyVariable": {
+      return hasArray(items.propertyVariable) || hasArray(items.variable);
+    }
+    case "propertyValue": {
+      return hasArray(items.propertyValue) || hasArray(items.value);
+    }
+    case "resource": {
+      return hasArray(items.resource);
+    }
+    case "text": {
+      return hasArray(items.text);
+    }
+    case "set": {
+      return hasArray(items.set);
+    }
+  }
+}
 
 function mapSortDirectionToXQuery(
   direction: SortWithDirection["direction"],
@@ -135,8 +249,8 @@ function buildPropertyValueOrderByClause(params: {
 }): string {
   const { dataType, direction } = params;
 
-  return dataType === "string" || dataType === "IDREF" ?
-      buildStringOrderByClause(direction)
+  return dataType === "string" || dataType === "IDREF"
+    ? buildStringOrderByClause(direction)
     : buildTypedOrderByClause(direction);
 }
 
@@ -159,12 +273,12 @@ function buildOrderedItemsClause(sort: SetItemsSort): string {
   }
 
   const sortKeyExpression =
-    sort.dataType === "string" || sort.dataType === "IDREF" ?
-      buildPropertyValueStringSortKeyExpression(sort)
-    : buildPropertyValueTypedSortKeyExpression({
-        sort,
-        dataType: sort.dataType,
-      });
+    sort.dataType === "string" || sort.dataType === "IDREF"
+      ? buildPropertyValueStringSortKeyExpression(sort)
+      : buildPropertyValueTypedSortKeyExpression({
+          sort,
+          dataType: sort.dataType,
+        });
 
   return `let $orderedItems :=
     for $item at $position in $items
@@ -216,8 +330,8 @@ function getCtsQueriesWithoutExactStringPropertyQueries(
     return null;
   }
 
-  return filteredChildren.length === 1 ?
-      (filteredChildren[0] ?? null)
+  return filteredChildren.length === 1
+    ? (filteredChildren[0] ?? null)
     : { and: filteredChildren };
 }
 
@@ -253,8 +367,8 @@ function buildExactStringPropertyXPathFilterExpression(
   }
 
   if ("target" in queries) {
-    return isExactStringPropertyQuery(queries) ?
-        buildExactStringPropertyPredicate(queries)
+    return isExactStringPropertyQuery(queries)
+      ? buildExactStringPropertyPredicate(queries)
       : null;
   }
 
@@ -343,15 +457,15 @@ function buildXQuery(params: {
   }
 
   const searchedItemsClause =
-    itemsQueryExpression == null ?
-      `let $searchedItems := ${baseItemsExpression}`
-    : `let $query := ${itemsQueryExpression}
+    itemsQueryExpression == null
+      ? `let $searchedItems := ${baseItemsExpression}`
+      : `let $query := ${itemsQueryExpression}
   let $searchedItems := cts:search(${baseItemsExpression}, $query)`;
   const itemsClause =
-    exactStringPropertyXPathFilterExpression == null ?
-      `${searchedItemsClause}
+    exactStringPropertyXPathFilterExpression == null
+      ? `${searchedItemsClause}
   let $items := $searchedItems`
-    : `${searchedItemsClause}
+      : `${searchedItemsClause}
   let $items := $searchedItems[${exactStringPropertyXPathFilterExpression}]`;
 
   const xquery = `${xqueryDeclarations.join("\n\n")}
@@ -380,14 +494,16 @@ ${itemsClause}
  * For propertyValue sorting, dataType is required and the sort key uses the first valid leaf value (value[not(@i)]).
  * @param params.page - The page number (1-indexed)
  * @param params.pageSize - The number of items per page
- * @param itemCategories - The categories of the items to fetch
+ * @param containedItemCategories - The categories of the items to fetch
  * @param options - Options for the fetch
  * @param options.fetch - The fetch function to use
- * @param options.version - The version of the OCHRE API to use
  * @returns The parsed Set items or null if the fetch/parse fails
  */
 export async function fetchSetItems<
-  U extends Array<DataCategory> = Array<DataCategory>,
+  const TContainedItemCategories extends
+    | ReadonlyArray<SetItemCategory>
+    | undefined = undefined,
+  const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   params: {
     setScopeUuids: Array<string>;
@@ -396,29 +512,44 @@ export async function fetchSetItems<
     page: number;
     pageSize?: number;
   },
-  itemCategories?: U,
-  options?: {
-    fetch?: (
-      input: string | URL | globalThis.Request,
-      init?: RequestInit,
-    ) => Promise<Response>;
-    version?: ApiVersion;
-  },
+  containedItemCategories?: TContainedItemCategories,
+  options?: FetchSetItemsBaseOptions<TLanguages>,
 ): Promise<
   | {
       totalCount: number;
       page: number;
       pageSize: number;
-      items: Array<Item<"set", U>>;
+      items: Array<
+        SetItem<
+          FetchSetItemsCategory<TContainedItemCategories>,
+          FetchSetItemsLanguages<TLanguages>
+        >
+      >;
+      error: null;
+    }
+  | { totalCount: null; page: null; pageSize: null; items: null; error: string }
+>;
+export async function fetchSetItems(
+  params: {
+    setScopeUuids: Array<string>;
+    queries?: Query | null;
+    sort?: SetItemsSort;
+    page: number;
+    pageSize?: number;
+  },
+  containedItemCategories?: ReadonlyArray<SetItemCategory>,
+  options?: FetchSetItemsRuntimeOptions,
+): Promise<
+  | {
+      totalCount: number;
+      page: number;
+      pageSize: number;
+      items: Array<SetItem<SetItemCategory, ReadonlyArray<string>>>;
       error: null;
     }
   | { totalCount: null; page: null; pageSize: null; items: null; error: string }
 > {
   try {
-    if (options?.version != null && options.version !== 2) {
-      throw new Error("Set item queries only support API version 2");
-    }
-
     const {
       setScopeUuids,
       belongsToCollectionScopeUuids,
@@ -427,6 +558,8 @@ export async function fetchSetItems<
       page,
       pageSize,
     } = v.parse(setItemsParamsSchema, params);
+    const requestedLanguages: ReadonlyArray<string> =
+      options?.languages == null ? [] : parseLanguages(options.languages);
 
     const xquery = buildXQuery({
       setScopeUuids,
@@ -438,7 +571,7 @@ export async function fetchSetItems<
     });
 
     const response = await (options?.fetch ?? fetch)(
-      "https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&format=json",
+      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
       {
         method: "POST",
         body: xquery,
@@ -449,41 +582,22 @@ export async function fetchSetItems<
       throw new Error(`OCHRE API responded with status: ${response.status}`);
     }
 
-    const data = (await response.json()) as {
-      result:
-        | {
-            ochre: {
-              items: {
-                totalCount: number;
-                page: number;
-                pageSize: number;
-                resource?: RawResource | Array<RawResource>;
-                spatialUnit?: RawSpatialUnit | Array<RawSpatialUnit>;
-                concept?: RawConcept | Array<RawConcept>;
-                period?: RawPeriod | Array<RawPeriod>;
-                bibliography?: RawBibliography | Array<RawBibliography>;
-                person?: RawPerson | Array<RawPerson>;
-                propertyVariable?:
-                  | RawPropertyVariable
-                  | Array<RawPropertyVariable>;
-                propertyValue?: RawPropertyValue | Array<RawPropertyValue>;
-                text?: RawText | Array<RawText>;
-                set?: RawSet | Array<RawSet>;
-                tree?: RawTree | Array<RawTree>;
-              };
-            };
-          }
-        | [];
-    };
+    const dataRaw = await response.text();
+    const parser = new XMLParser(XML_PARSER_OPTIONS);
+    const data = parser.parse(dataRaw) as unknown;
 
-    if (Array.isArray(data.result) || Object.keys(data.result).length === 0) {
-      throw new Error("Invalid OCHRE API response");
+    const { success, issues, output } = v.safeParse(
+      XMLSetItemsDataSchema,
+      data,
+    );
+    if (!success) {
+      logIssues(issues);
+      throw new Error("Failed to parse OCHRE Set items");
     }
 
-    if (itemCategories != null) {
-      const itemCategoriesSet = new Set(Object.keys(data.result.ochre.items));
-      const missingCategories = itemCategories.filter(
-        (category) => !itemCategoriesSet.has(category),
+    if (containedItemCategories != null) {
+      const missingCategories = containedItemCategories.filter(
+        (category) => !hasSetItemsCategory(output.result.ochre.items, category),
       );
 
       if (missingCategories.length > 0) {
@@ -493,180 +607,16 @@ export async function fetchSetItems<
       }
     }
 
-    const items: Array<Item<"set", U>> = [];
+    const languages = resolveSetItemsLanguages(output, requestedLanguages);
+    const items = parseSetItems(output.result.ochre.items, {
+      containedItemCategories,
+      languages,
+    });
 
-    if (
-      (itemCategories == null || itemCategories.includes("resource")) &&
-      "resource" in data.result.ochre.items &&
-      data.result.ochre.items.resource != null
-    ) {
-      const rawResources =
-        Array.isArray(data.result.ochre.items.resource) ?
-          data.result.ochre.items.resource
-        : [data.result.ochre.items.resource];
-
-      const resources = parseResources(rawResources) as unknown as Array<
-        Item<"set", U>
-      >;
-
-      items.push(...resources);
-    }
-    if (
-      (itemCategories == null || itemCategories.includes("spatialUnit")) &&
-      "spatialUnit" in data.result.ochre.items &&
-      data.result.ochre.items.spatialUnit != null
-    ) {
-      const rawSpatialUnits =
-        Array.isArray(data.result.ochre.items.spatialUnit) ?
-          data.result.ochre.items.spatialUnit
-        : [data.result.ochre.items.spatialUnit];
-
-      const spatialUnits = parseSpatialUnits(
-        rawSpatialUnits,
-      ) as unknown as Array<Item<"set", U>>;
-
-      items.push(...spatialUnits);
-    }
-    if (
-      (itemCategories == null || itemCategories.includes("concept")) &&
-      "concept" in data.result.ochre.items &&
-      data.result.ochre.items.concept != null
-    ) {
-      const rawConcepts =
-        Array.isArray(data.result.ochre.items.concept) ?
-          data.result.ochre.items.concept
-        : [data.result.ochre.items.concept];
-
-      const concepts = parseConcepts(rawConcepts) as unknown as Array<
-        Item<"set", U>
-      >;
-
-      items.push(...concepts);
-    }
-    if (
-      (itemCategories == null || itemCategories.includes("period")) &&
-      "period" in data.result.ochre.items &&
-      data.result.ochre.items.period != null
-    ) {
-      const rawPeriods =
-        Array.isArray(data.result.ochre.items.period) ?
-          data.result.ochre.items.period
-        : [data.result.ochre.items.period];
-
-      const periods = parsePeriods(rawPeriods) as unknown as Array<
-        Item<"set", U>
-      >;
-
-      items.push(...periods);
-    }
-    if (
-      (itemCategories == null || itemCategories.includes("bibliography")) &&
-      "bibliography" in data.result.ochre.items &&
-      data.result.ochre.items.bibliography != null
-    ) {
-      const rawBibliographies =
-        Array.isArray(data.result.ochre.items.bibliography) ?
-          data.result.ochre.items.bibliography
-        : [data.result.ochre.items.bibliography];
-
-      const bibliographies = parseBibliographies(
-        rawBibliographies,
-      ) as unknown as Array<Item<"set", U>>;
-
-      items.push(...bibliographies);
-    }
-    if (
-      (itemCategories == null || itemCategories.includes("person")) &&
-      "person" in data.result.ochre.items &&
-      data.result.ochre.items.person != null
-    ) {
-      const rawPersons =
-        Array.isArray(data.result.ochre.items.person) ?
-          data.result.ochre.items.person
-        : [data.result.ochre.items.person];
-
-      const persons = parsePersons(rawPersons) as unknown as Array<
-        Item<"set", U>
-      >;
-
-      items.push(...persons);
-    }
-    if (
-      (itemCategories == null || itemCategories.includes("propertyVariable")) &&
-      "propertyVariable" in data.result.ochre.items &&
-      data.result.ochre.items.propertyVariable != null
-    ) {
-      const rawPropertyVariables =
-        Array.isArray(data.result.ochre.items.propertyVariable) ?
-          data.result.ochre.items.propertyVariable
-        : [data.result.ochre.items.propertyVariable];
-
-      const propertyVariables = parsePropertyVariables(
-        rawPropertyVariables,
-      ) as unknown as Array<Item<"set", U>>;
-
-      items.push(...propertyVariables);
-    }
-    if (
-      (itemCategories == null || itemCategories.includes("propertyValue")) &&
-      "propertyValue" in data.result.ochre.items &&
-      data.result.ochre.items.propertyValue != null
-    ) {
-      const rawPropertyValues =
-        Array.isArray(data.result.ochre.items.propertyValue) ?
-          data.result.ochre.items.propertyValue
-        : [data.result.ochre.items.propertyValue];
-
-      const propertyValues = parsePropertyValues(
-        rawPropertyValues,
-      ) as unknown as Array<Item<"set", U>>;
-
-      items.push(...propertyValues);
-    }
-    if (
-      (itemCategories == null || itemCategories.includes("text")) &&
-      "text" in data.result.ochre.items &&
-      data.result.ochre.items.text != null
-    ) {
-      const rawTexts =
-        Array.isArray(data.result.ochre.items.text) ?
-          data.result.ochre.items.text
-        : [data.result.ochre.items.text];
-
-      const texts = parseTexts(rawTexts) as unknown as Array<Item<"set", U>>;
-
-      items.push(...texts);
-    }
-    if (
-      (itemCategories == null || itemCategories.includes("set")) &&
-      "set" in data.result.ochre.items &&
-      data.result.ochre.items.set != null
-    ) {
-      const rawSets =
-        Array.isArray(data.result.ochre.items.set) ?
-          data.result.ochre.items.set
-        : [data.result.ochre.items.set];
-
-      const sets = parseSets(rawSets) as unknown as Array<Item<"set", U>>;
-
-      items.push(...sets);
-    }
-    if (
-      (itemCategories == null || itemCategories.includes("tree")) &&
-      "tree" in data.result.ochre.items &&
-      data.result.ochre.items.tree != null
-    ) {
-      const rawTrees =
-        Array.isArray(data.result.ochre.items.tree) ?
-          data.result.ochre.items.tree
-        : [data.result.ochre.items.tree];
-
-      const trees = parseTrees(rawTrees) as unknown as Array<Item<"set", U>>;
-
-      items.push(...trees);
-    }
-
-    const itemsByUuid = new Map<string, Item<"set", U>>();
+    const itemsByUuid = new Map<
+      string,
+      SetItem<SetItemCategory, ReadonlyArray<string>>
+    >();
     for (const item of items) {
       if (!itemsByUuid.has(item.uuid)) {
         itemsByUuid.set(item.uuid, item);
@@ -675,9 +625,9 @@ export async function fetchSetItems<
     const uniqueItems = [...itemsByUuid.values()];
 
     return {
-      totalCount: data.result.ochre.items.totalCount,
-      page: data.result.ochre.items.page,
-      pageSize: data.result.ochre.items.pageSize,
+      totalCount: output.result.ochre.items.totalCount,
+      page: output.result.ochre.items.page,
+      pageSize: output.result.ochre.items.pageSize,
       items: uniqueItems,
       error: null,
     };

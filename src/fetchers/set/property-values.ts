@@ -1,34 +1,35 @@
+import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type {
-  ApiVersion,
-  PropertyValueContentType,
   PropertyValueQueryItem,
   Query,
+  QueryablePropertyValueDataType,
   SetAttributeValueQueryItem,
 } from "#/types/index.js";
-import type { RawFakeString, RawStringItem } from "#/types/raw.js";
-import { BELONGS_TO_COLLECTION_UUID } from "#/constants.js";
+import type { XMLContent } from "#/xml/types.js";
 import {
-  fakeStringSchema,
-  richTextStringSchema,
-  setPropertyValuesParamsSchema,
-} from "#/schemas.js";
-import { stringLiteral } from "#/utils/internal.js";
+  BELONGS_TO_COLLECTION_UUID,
+  DEFAULT_LANGUAGES,
+  XML_PARSER_OPTIONS,
+} from "#/constants.js";
+import { MultilingualString } from "#/parsers/multilingual.js";
+import { parseXMLContent } from "#/parsers/string.js";
 import {
   buildAndCtsQueryExpression,
   buildBelongsToCollectionQueryExpression,
   buildQueryPlan,
-} from "#/utils/query.js";
-import { parseFakeString, parseStringContent } from "#/utils/string.js";
+} from "#/query.js";
+import { setPropertyValuesParamsSchema } from "#/schemas.js";
+import { logIssues, stringLiteral } from "#/utils.js";
 
 type ParsedPropertyValueItem = {
   scope: "global" | "variable";
   variableUuid: string | null;
   count: number;
   globalCount: number | null;
-  dataType: Exclude<PropertyValueContentType, "coordinate">;
+  dataType: PropertyValueQueryDataType;
   content: string | number | boolean | null;
-  label: string | null;
+  label: MultilingualString | null;
 };
 
 type ParsedAttributeValueItem = {
@@ -37,32 +38,84 @@ type ParsedAttributeValueItem = {
   content: string | null;
 };
 
-function parsePropertyValueLabel(
-  content: RawFakeString | RawStringItem | Array<RawStringItem> | undefined,
+type PropertyValueQueryDataType = QueryablePropertyValueDataType;
+
+type ParsedPropertyValueLabelContent = XMLContent["content"];
+
+function getLabelContentLanguages(
+  content: ParsedPropertyValueLabelContent,
+): Array<string> {
+  const languages: Array<string> = [];
+  for (const contentItem of content) {
+    if (contentItem.lang !== "zxx" && !languages.includes(contentItem.lang)) {
+      languages.push(contentItem.lang);
+    }
+  }
+
+  return languages.length > 0 ? languages : [...DEFAULT_LANGUAGES];
+}
+
+function parsePropertyValueLabelText(
+  text: string | null | undefined,
 ): string | null {
-  if (content == null || content === "") {
+  if (text == null || text === "") {
     return null;
   }
 
-  if (typeof content === "object") {
-    return parseStringContent({ content });
+  return text === "<unassigned>" ? null : text;
+}
+
+function parsePropertyValueLabel(
+  content: ParsedPropertyValueLabelContent | undefined,
+  text: string | null | undefined,
+): MultilingualString | null {
+  if (content != null && content.length > 0) {
+    return parseXMLContent(
+      { content },
+      { languages: getLabelContentLanguages(content) },
+    );
   }
 
-  return parseFakeString(content);
+  const parsedText = parsePropertyValueLabelText(text);
+  if (parsedText == null) {
+    return null;
+  }
+
+  return MultilingualString.fromObject({ [DEFAULT_LANGUAGES[0]]: parsedText });
 }
 
 function parsePropertyValueBooleanContent(
-  rawValue: RawFakeString | undefined,
+  rawValue: string | null | undefined,
 ): boolean | null {
   if (rawValue == null || rawValue === "") {
     return null;
   }
 
-  if (typeof rawValue === "boolean") {
-    return rawValue;
-  }
+  return rawValue.toLocaleLowerCase("en-US") === "true";
+}
 
-  return rawValue.toString().toLocaleLowerCase("en-US") === "true";
+function normalizePropertyValueDataType(
+  dataType: string,
+): PropertyValueQueryDataType {
+  const normalizedDataType = dataType.startsWith("xs:")
+    ? dataType.slice(3)
+    : dataType;
+
+  switch (normalizedDataType) {
+    case "IDREF":
+    case "boolean":
+    case "date":
+    case "dateTime":
+    case "decimal":
+    case "integer":
+    case "string":
+    case "time": {
+      return normalizedDataType;
+    }
+    default: {
+      return "string";
+    }
+  }
 }
 
 function sortPropertyValues(
@@ -73,8 +126,10 @@ function sortPropertyValues(
       return b.count - a.count;
     }
 
-    if (a.label !== b.label) {
-      return a.label?.localeCompare(b.label ?? "") ?? 0;
+    const label = a.label?.getText() ?? null;
+    const otherLabel = b.label?.getText() ?? null;
+    if (label !== otherLabel) {
+      return label?.localeCompare(otherLabel ?? "") ?? 0;
     }
 
     return (
@@ -84,7 +139,7 @@ function sortPropertyValues(
 }
 
 function getPropertyValueKey(value: {
-  dataType: Exclude<PropertyValueContentType, "coordinate">;
+  dataType: PropertyValueQueryDataType;
   content: string | number | boolean;
 }): string {
   return `${value.dataType}|${typeof value.content}:${value.content.toLocaleString("en-US")}`;
@@ -114,6 +169,15 @@ const countSchema = v.pipe(
     return Number.isFinite(count) ? count : 1;
   }),
 );
+
+const propertyValueLabelStringSchema = v.object({
+  payload: v.optional(v.string(), ""),
+});
+
+const propertyValueLabelContentSchema = v.object({
+  lang: v.string(),
+  string: v.array(propertyValueLabelStringSchema),
+});
 
 function getPropertyVariableUuidsFromQueries(
   queries: Query | null,
@@ -184,8 +248,8 @@ function getItemFilterQueriesFromPropertyValueQueries(
     return filteredChildren[0] ?? null;
   }
 
-  return "and" in queries ?
-      { and: filteredChildren }
+  return "and" in queries
+    ? { and: filteredChildren }
     : { or: filteredChildren };
 }
 
@@ -194,39 +258,35 @@ function getItemFilterQueriesFromPropertyValueQueries(
  */
 const propertyValueQueryItemSchema = v.pipe(
   v.object({
-    uuid: v.string(),
+    uuid: v.optional(v.string(), ""),
     scope: v.optional(v.picklist(["global", "variable"]), "global"),
     variableUuid: v.optional(v.string()),
     count: countSchema,
     globalCount: v.nullish(countSchema),
-    dataType: v.string(),
-    rawValue: v.optional(fakeStringSchema),
-    content: v.optional(
-      v.union([
-        fakeStringSchema,
-        richTextStringSchema,
-        v.array(richTextStringSchema),
-      ]),
-    ),
+    dataType: v.optional(v.string(), "string"),
+    rawValue: v.optional(v.string()),
+    payload: v.optional(v.string()),
+    content: v.optional(v.array(propertyValueLabelContentSchema)),
   }),
   v.transform((val): ParsedPropertyValueItem => {
+    const dataType = normalizePropertyValueDataType(val.dataType);
+    const label = parsePropertyValueLabel(val.content, val.payload);
     const returnValue: ParsedPropertyValueItem = {
       scope: val.scope,
       variableUuid:
-        val.variableUuid != null && val.variableUuid !== "" ?
-          val.variableUuid
-        : null,
+        val.variableUuid != null && val.variableUuid !== ""
+          ? val.variableUuid
+          : null,
       count: val.count,
       globalCount: val.globalCount ?? null,
-      dataType: val.dataType as Exclude<PropertyValueContentType, "coordinate">,
+      dataType,
       content: null,
-      label: null,
+      label,
     };
 
-    switch (val.dataType) {
+    switch (dataType) {
       case "IDREF": {
         returnValue.content = val.uuid !== "" ? val.uuid : null;
-        returnValue.label = parsePropertyValueLabel(val.content);
         break;
       }
       case "integer":
@@ -234,25 +294,22 @@ const propertyValueQueryItemSchema = v.pipe(
       case "time": {
         if (val.rawValue != null && val.rawValue !== "") {
           const numericContent = Number(val.rawValue);
-          returnValue.content =
-            Number.isNaN(numericContent) ? null : numericContent;
+          returnValue.content = Number.isNaN(numericContent)
+            ? null
+            : numericContent;
         }
-
-        returnValue.label = parsePropertyValueLabel(val.content);
         break;
       }
       case "boolean": {
         returnValue.content = parsePropertyValueBooleanContent(val.rawValue);
-        returnValue.label = parsePropertyValueLabel(val.content);
         break;
       }
       default: {
+        const labelText = label?.getText() ?? null;
         returnValue.content =
-          val.rawValue != null && val.rawValue !== "" ? val.rawValue.toString()
-          : val.content != null && val.content !== "<unassigned>" ?
-            parseStringContent({ content: val.content })
-          : null;
-        returnValue.label = parsePropertyValueLabel(val.content);
+          val.rawValue != null && val.rawValue !== ""
+            ? val.rawValue.toString()
+            : labelText;
         break;
       }
     }
@@ -266,12 +323,18 @@ const attributeValueQueryItemSchema = v.pipe(
     attributeType: v.picklist(["bibliographies", "periods"]),
     count: countSchema,
     content: v.optional(v.string()),
+    payload: v.optional(v.string()),
   }),
   v.transform(
     (val): ParsedAttributeValueItem => ({
       attributeType: val.attributeType,
       count: val.count,
-      content: val.content != null && val.content !== "" ? val.content : null,
+      content:
+        val.content != null && val.content !== ""
+          ? val.content
+          : val.payload != null && val.payload !== ""
+            ? val.payload
+            : null,
     }),
   ),
 );
@@ -280,25 +343,23 @@ const attributeValueQueryItemSchema = v.pipe(
  * Schema for the property values OCHRE API response
  */
 const responseSchema = v.object({
-  result: v.union([
-    v.object({
-      ochre: v.object({
-        propertyValue: v.optional(
-          v.union([
-            propertyValueQueryItemSchema,
-            v.array(propertyValueQueryItemSchema),
-          ]),
-        ),
-        attributeValue: v.optional(
-          v.union([
-            attributeValueQueryItemSchema,
-            v.array(attributeValueQueryItemSchema),
-          ]),
-        ),
-      }),
+  result: v.object({
+    ochre: v.object({
+      payload: v.optional(v.string()),
+      propertyValue: v.optional(
+        v.union([
+          v.array(propertyValueQueryItemSchema),
+          propertyValueQueryItemSchema,
+        ]),
+      ),
+      attributeValue: v.optional(
+        v.union([
+          v.array(attributeValueQueryItemSchema),
+          attributeValueQueryItemSchema,
+        ]),
+      ),
     }),
-    v.pipe(v.array(v.unknown()), v.length(0)),
-  ]),
+  }),
 });
 
 /**
@@ -371,10 +432,18 @@ function buildXQuery(params: {
   )
 };
 
-declare function local:value-display($v) {
+declare function local:value-display-text($v) {
   if ($v/content)
   then string-join($v/content[@xml:lang="eng"]//text(), "")
   else string($v)
+};
+
+declare function local:value-label-content($v) {
+  if ($v/content) then
+    for $content in $v/content
+    let $lang := string($content/@xml:lang)
+    return <content lang="{$lang}"><string>{string-join($content//text(), "")}</string></content>
+  else ()
 };
 
 declare function local:value-content($data-type, $raw-value, $value-uuid, $display) {
@@ -411,18 +480,26 @@ declare function local:put-property-detail(
   $value-uuid,
   $raw-value,
   $data-type,
-  $display
+  $display,
+  $label-content
 ) {
   let $existing := map:get($details, $key)
   return
     if (
       empty($existing)
-      or (string-length(string($existing)) = 0 and string-length($display) gt 0)
+      or (not($existing/content) and exists($label-content))
+      or (
+        not($existing/content)
+        and string-length(string($existing)) = 0
+        and string-length($display) gt 0
+      )
     ) then
       map:put(
         $details,
         $key,
-        <propertyValue scope="{$scope}" variableUuid="{$variable-uuid}" uuid="{$value-uuid}" rawValue="{$raw-value}" dataType="{$data-type}">{$display}</propertyValue>
+        <propertyValue scope="{$scope}" variableUuid="{$variable-uuid}" uuid="{$value-uuid}" rawValue="{$raw-value}" dataType="{$data-type}">{
+          if (exists($label-content)) then $label-content else $display
+        }</propertyValue>
       )
     else ()
 };
@@ -437,13 +514,14 @@ declare function local:add-property-facet(
   $value-uuid,
   $raw-value,
   $data-type,
-  $display
+  $display,
+  $label-content
 ) {
   if (exists(map:get($seen, $key))) then ()
   else (
     map:put($seen, $key, true()),
     local:increment-count($counts, $key),
-    local:put-property-detail($details, $key, $scope, $variable-uuid, $value-uuid, $raw-value, $data-type, $display)
+    local:put-property-detail($details, $key, $scope, $variable-uuid, $value-uuid, $raw-value, $data-type, $display, $label-content)
   )
 };
 
@@ -483,7 +561,8 @@ let $_property-aggregation := xdmp:eager(
     let $value-uuid := string($v/@uuid)
     let $raw-value := string($v/@rawValue)
     let $data-type := string($v/@dataType)
-    let $display := local:value-display($v)
+    let $display := local:value-display-text($v)
+    let $label-content := local:value-label-content($v)
     let $content := local:value-content($data-type, $raw-value, $value-uuid, $display)
     let $value-kind := local:value-kind($data-type)
     let $output-raw-value := local:property-output-raw-value($data-type, $raw-value, $content)
@@ -492,7 +571,7 @@ let $_property-aggregation := xdmp:eager(
     where $content != ""
     return (
       local:add-attribute-facet($global-property-counts, $global-seen, $global-key),
-      local:add-property-facet($variable-property-counts, $variable-property-details, $variable-seen, $variable-key, "variable", $variable-uuid, $value-uuid, $output-raw-value, $data-type, $display),
+      local:add-property-facet($variable-property-counts, $variable-property-details, $variable-seen, $variable-key, "variable", $variable-uuid, $value-uuid, $output-raw-value, $data-type, $display, $label-content),
       map:put($variable-property-global-keys, $variable-key, $global-key)
     )
 )
@@ -504,7 +583,7 @@ let $property-values :=
     let $detail := map:get($variable-property-details, $key)
     let $global-key := map:get($variable-property-global-keys, $key)
     return <propertyValue scope="variable" variableUuid="{string($detail/@variableUuid)}" uuid="{string($detail/@uuid)}" rawValue="{string($detail/@rawValue)}" dataType="{string($detail/@dataType)}" count="{map:get($variable-property-counts, $key)}" globalCount="{map:get($global-property-counts, $global-key)}">{
-      string($detail)
+      $detail/node()
     }</propertyValue>
   )`);
     returnedSequences.push("$property-values");
@@ -553,9 +632,9 @@ let $period-values :=
   }
 
   const itemsClause =
-    itemsQueryExpression == null ?
-      `let $items := ${baseItemsExpression}`
-    : `let $query := ${itemsQueryExpression}
+    itemsQueryExpression == null
+      ? `let $items := ${baseItemsExpression}`
+      : `let $query := ${itemsQueryExpression}
   let $items := cts:search(${baseItemsExpression}, $query)`;
 
   const xquery = `${xqueryDeclarations.join("\n\n")}
@@ -582,7 +661,6 @@ return (${returnedSequences.join(", ")})
  * @param params.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
  * @param options - Options for the fetch
  * @param options.fetch - The fetch function to use
- * @param options.version - The version of the OCHRE API to use
  * @returns Parsed Set property values and requested attribute values.
  * Returns empty arrays/objects when no matches are found, and null outputs on fetch/parse errors.
  */
@@ -598,7 +676,6 @@ export async function fetchSetPropertyValues(
       input: string | URL | globalThis.Request,
       init?: RequestInit,
     ) => Promise<Response>;
-    version?: ApiVersion;
   },
 ): Promise<
   | {
@@ -621,10 +698,6 @@ export async function fetchSetPropertyValues(
     }
 > {
   try {
-    if (options?.version != null && options.version !== 2) {
-      throw new Error("Set property value queries only support API version 2");
-    }
-
     const {
       setScopeUuids,
       belongsToCollectionScopeUuids,
@@ -657,7 +730,7 @@ export async function fetchSetPropertyValues(
     });
 
     const response = await (options?.fetch ?? fetch)(
-      "https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&format=json",
+      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
       {
         method: "POST",
         body: xquery,
@@ -668,28 +741,33 @@ export async function fetchSetPropertyValues(
       throw new Error(`OCHRE API responded with status: ${response.status}`);
     }
 
-    const data = await response.json();
+    const dataRaw = await response.text();
+    const parser = new XMLParser(XML_PARSER_OPTIONS);
+    const data = parser.parse(dataRaw) as unknown;
 
-    const parsedResultRaw = v.parse(responseSchema, data);
+    const { success, issues, output } = v.safeParse(responseSchema, data);
+    if (!success) {
+      logIssues(issues);
+      throw new Error("Failed to parse OCHRE Set property values");
+    }
+
     const parsedPropertyValues: Array<ParsedPropertyValueItem> = [];
     const parsedAttributeValues: Array<ParsedAttributeValueItem> = [];
 
-    if (!Array.isArray(parsedResultRaw.result)) {
-      if (parsedResultRaw.result.ochre.propertyValue != null) {
-        parsedPropertyValues.push(
-          ...(Array.isArray(parsedResultRaw.result.ochre.propertyValue) ?
-            parsedResultRaw.result.ochre.propertyValue
-          : [parsedResultRaw.result.ochre.propertyValue]),
-        );
-      }
+    if (output.result.ochre.propertyValue != null) {
+      parsedPropertyValues.push(
+        ...(Array.isArray(output.result.ochre.propertyValue)
+          ? output.result.ochre.propertyValue
+          : [output.result.ochre.propertyValue]),
+      );
+    }
 
-      if (parsedResultRaw.result.ochre.attributeValue != null) {
-        parsedAttributeValues.push(
-          ...(Array.isArray(parsedResultRaw.result.ochre.attributeValue) ?
-            parsedResultRaw.result.ochre.attributeValue
-          : [parsedResultRaw.result.ochre.attributeValue]),
-        );
-      }
+    if (output.result.ochre.attributeValue != null) {
+      parsedAttributeValues.push(
+        ...(Array.isArray(output.result.ochre.attributeValue)
+          ? output.result.ochre.attributeValue
+          : [output.result.ochre.attributeValue]),
+      );
     }
 
     const propertyValuesByPropertyVariableUuid: Record<
@@ -780,13 +858,11 @@ export async function fetchSetPropertyValues(
       ]),
       propertyValuesByPropertyVariableUuid,
       attributeValues: {
-        bibliographies:
-          attributes.bibliographies ?
-            sortAttributeValues(attributeValuesByType.bibliographies)
+        bibliographies: attributes.bibliographies
+          ? sortAttributeValues(attributeValuesByType.bibliographies)
           : null,
-        periods:
-          attributes.periods ?
-            sortAttributeValues(attributeValuesByType.periods)
+        periods: attributes.periods
+          ? sortAttributeValues(attributeValuesByType.periods)
           : null,
       },
       error: null,
@@ -798,9 +874,9 @@ export async function fetchSetPropertyValues(
       propertyValuesByPropertyVariableUuid: null,
       attributeValues: null,
       error:
-        error instanceof Error ?
-          error.message
-        : "Failed to fetch property values",
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch property values",
     };
   }
 }

@@ -1,16 +1,13 @@
 import * as v from "valibot";
 import type {
-  ApiVersion,
-  DataCategory,
-  PropertyValueContentType,
   Query,
+  QueryablePropertyValueDataType,
   QueryLeaf,
   SetItemsSort,
 } from "#/types/index.js";
-import type { RenderOption, WhitespaceOption } from "#/types/raw.js";
 import type { WebElementComponent } from "#/types/website.js";
-import { DEFAULT_PAGE_SIZE } from "#/utils/helpers.js";
-import { isPseudoUuid } from "#/utils/internal.js";
+import { DEFAULT_PAGE_SIZE } from "#/helpers.js";
+import { isPseudoUuid } from "#/utils.js";
 
 const positiveNumber = (message: string): v.GenericSchema<unknown, number> =>
   v.pipe(v.number(), v.minValue(1, message));
@@ -29,70 +26,14 @@ export const uuidSchema = v.pipe(
   v.check(isPseudoUuid, "Invalid pseudo-UUID"),
 );
 
-export const fakeStringSchema = v.union([v.string(), v.number(), v.boolean()]);
-
-export const richTextStringContentSchema = v.union([
-  fakeStringSchema,
-  v.object({
-    content: v.optional(fakeStringSchema),
-    rend: v.optional(v.string()),
-    whitespace: v.optional(v.string()),
-  }),
-]);
-
 /**
- * Schema for validating rich text string content
+ * Schema for validating language codes
  * @internal
  */
-export const richTextStringSchema = v.object({
-  string: v.union([
-    fakeStringSchema,
-    richTextStringContentSchema,
-    v.array(richTextStringContentSchema),
-  ]),
-  lang: v.optional(v.string()),
-});
-
-/**
- * Schema for validating identification
- * @internal
- */
-export const identificationSchema = v.object({
-  label: v.object({
-    content: v.union([richTextStringSchema, v.array(richTextStringSchema)]),
-  }),
-  abbreviation: v.object({
-    content: v.optional(
-      v.union([richTextStringSchema, v.array(richTextStringSchema)]),
-    ),
-  }),
-  code: v.optional(v.string()),
-});
-
-/**
- * Schema for validating filters
- * @internal
- */
-export const filterSchema = v.optional(v.string());
-
-/**
- * Schema for validating data options
- * @internal
- */
-export const dataOptionsSchema = v.optional(
-  v.object({
-    filter: defaultString(""),
-    start: v.optional(positiveNumber("Start must be positive"), 1),
-    limit: v.optional(positiveNumber("Limit must be positive"), 40),
-  }),
-  { filter: "", start: 1, limit: 40 },
-);
-
-export const apiVersionSuffixSchema = v.pipe(
-  v.picklist(["-v1", "-v2"]),
-  v.transform(
-    (suffix) => Number.parseInt(suffix.replace("-v", ""), 10) as ApiVersion,
-  ),
+export const iso639_3Schema = v.pipe(
+  v.string("Language code must be a string"),
+  v.length(3, "Language code must be exactly 3 characters"),
+  v.regex(/^[a-z]{3}$/, "Language code must be exactly 3 lowercase letters"),
 );
 
 /**
@@ -123,42 +64,25 @@ export const componentSchema = v.picklist(
     "timeline",
     "video",
   ] as const satisfies ReadonlyArray<WebElementComponent["component"]>,
-  "Invalid component",
+  "Invalid/unknown web element component",
 );
 
 /**
- * Schema for validating data categories
+ * Schema for validating gallery parameters
  * @internal
  */
-export const categorySchema = v.picklist([
-  "resource",
-  "spatialUnit",
-  "concept",
-  "period",
-  "bibliography",
-  "person",
-  "propertyVariable",
-  "propertyValue",
-  "text",
-  "tree",
-  "set",
-] as const satisfies ReadonlyArray<DataCategory>);
-
-/**
- * Schema for validating property value content types
- * @internal
- */
-export const propertyValueContentTypeSchema = v.picklist([
-  "string",
-  "integer",
-  "decimal",
-  "boolean",
-  "date",
-  "dateTime",
-  "time",
-  "coordinate",
-  "IDREF",
-] as const satisfies ReadonlyArray<PropertyValueContentType>);
+export const gallerySchema = v.object({
+  uuid: v.pipe(v.string(), v.check(isPseudoUuid, "Invalid pseudo-UUID")),
+  filter: v.optional(v.string()),
+  page: v.pipe(
+    v.number("Page must be positive"),
+    v.check((n) => n > 0, "Page must be positive"),
+  ),
+  perPage: v.pipe(
+    v.number("Per page must be positive"),
+    v.check((n) => n > 0, "Per page must be positive"),
+  ),
+});
 
 /**
  * Schema for validating and parsing render options
@@ -167,13 +91,7 @@ export const propertyValueContentTypeSchema = v.picklist([
 export const renderOptionsSchema = v.pipe(
   v.string(),
   v.transform((str) => str.split(" ")),
-  v.array(
-    v.picklist([
-      "bold",
-      "italic",
-      "underline",
-    ] as const satisfies ReadonlyArray<RenderOption>),
-  ),
+  v.array(v.picklist(["bold", "italic", "underline"])),
 );
 
 /**
@@ -183,55 +101,30 @@ export const renderOptionsSchema = v.pipe(
 export const whitespaceSchema = v.pipe(
   v.string(),
   v.transform((str) => str.split(" ")),
-  v.array(
-    v.picklist([
-      "newline",
-      "trailing",
-      "leading",
-    ] as const satisfies ReadonlyArray<WhitespaceOption>),
-  ),
+  v.array(v.picklist(["newline", "trailing", "leading"])),
 );
 
 /**
  * Schema for validating email addresses
  * @internal
  */
-export const emailSchema = v.pipe(v.string(), v.email("Invalid email"));
+export const emailSchema = v.pipe(v.string(), v.email("Invalid email address"));
 
 /**
- * Schema for parsing and validating a string in the format "[[number, number], [number, number]]"
- * into an array with exactly two bounds
+ * Schema for validating date data types
  * @internal
  */
-export const boundsSchema = v.pipe(
-  v.string(),
-  v.rawTransform(({ dataset, addIssue, NEVER }): unknown => {
-    const trimmed = dataset.value.trim();
-
-    if (!trimmed.startsWith("[[") || !trimmed.endsWith("]]")) {
-      addIssue({ message: "String must start with '[[' and end with ']]'" });
-      return NEVER;
-    }
-
-    try {
-      return JSON.parse(trimmed) as unknown;
-    } catch {
-      addIssue({ message: "Invalid JSON format" });
-      return NEVER;
-    }
-  }),
-  v.tuple(
-    [v.tuple([v.number(), v.number()]), v.tuple([v.number(), v.number()])],
-    "Must contain exactly 2 coordinate pairs",
-  ),
-);
-
 const dateDataTypeSchema = v.picklist([
   "date",
   "dateTime",
 ] as const satisfies ReadonlyArray<
-  Extract<Exclude<PropertyValueContentType, "coordinate">, "date" | "dateTime">
+  Extract<QueryablePropertyValueDataType, "date" | "dateTime">
 >);
+
+/**
+ * Shared schema for query fields
+ * @internal
+ */
 const standardQueryFields = {
   matchMode: v.picklist(["includes", "exact"]),
   isCaseSensitive: v.boolean(),
@@ -256,10 +149,7 @@ const setQueryLeafSchema = v.union([
         "time",
         "IDREF",
       ] as const satisfies ReadonlyArray<
-        Exclude<
-          Exclude<PropertyValueContentType, "coordinate">,
-          "date" | "dateTime"
-        >
+        Exclude<QueryablePropertyValueDataType, "date" | "dateTime">
       >),
       value: v.optional(v.string()),
       ...standardQueryFields,
@@ -322,6 +212,10 @@ const setQueryLeafSchema = v.union([
   }),
 ]) satisfies v.GenericSchema<unknown, QueryLeaf>;
 
+/**
+ * Schema for validating Set queries
+ * @internal
+ */
 const setQuerySchema: v.GenericSchema<unknown, Query> = v.lazy(() =>
   v.union([
     setQueryLeafSchema,
@@ -340,8 +234,16 @@ const setQuerySchema: v.GenericSchema<unknown, Query> = v.lazy(() =>
   ]),
 );
 
+/**
+ * Schema for validating Set queries
+ * @internal
+ */
 const setQueriesSchema = v.optional(v.nullable(setQuerySchema), null);
 
+/**
+ * Schema for validating Set items sort
+ * @internal
+ */
 const setItemsSortSchema = v.optional(
   v.variant("target", [
     v.strictObject({ target: v.literal("none") }),
@@ -362,9 +264,7 @@ const setItemsSortSchema = v.optional(
         "dateTime",
         "time",
         "IDREF",
-      ] as const satisfies ReadonlyArray<
-        Exclude<PropertyValueContentType, "coordinate">
-      >),
+      ] as const satisfies ReadonlyArray<QueryablePropertyValueDataType>),
       direction: sortDirectionSchema,
       language: defaultString("eng"),
     }),
@@ -393,6 +293,10 @@ export const setPropertyValuesParamsSchema = v.object({
   isLimitedToLeafPropertyValues: defaultBoolean(false),
 });
 
+/**
+ * Schema for validating Set items parameters
+ * @internal
+ */
 export const setItemsParamsSchema = v.object({
   setScopeUuids: v.pipe(
     v.array(uuidSchema),

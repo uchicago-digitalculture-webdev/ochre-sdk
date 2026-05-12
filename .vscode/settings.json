@@ -1,1 +1,5 @@
-{ "typescript.tsdk": "node_modules/typescript/lib" }
+{
+  "editor.quickSuggestions": { "strings": "on" },
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.preferences.autoImportSpecifierExcludeRegexes": ["^(node:)?os$"]
+}
