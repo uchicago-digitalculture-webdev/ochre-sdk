@@ -20,15 +20,7 @@ or
 bun add ochre-sdk
 ```
 
-## Start development server
-
-From the root directory of the project, run the following command:
-
-```bash
-pnpm run dev
-```
-
-## Build production server
+## Build the package
 
 From the root directory of the project, run the following command:
 
