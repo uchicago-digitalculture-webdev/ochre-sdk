@@ -837,7 +837,7 @@ describe("string parser integration", () => {
     );
 
     expect(parsedContent.getExactRichText("eng")).toBe(
-      '<br />\n<Annotation type="text-styling" variant="paragraph" size="md">Featured image:</Annotation>   <ExternalLink href="https://ark.lib.uchicago.edu/ark:61001/b23w8rj3328d" content="Snyder\'s 1885 map">Snyder\'s map of Hyde Park, Illinois, 1885</ExternalLink>.  <Annotation type="text-styling" variant="paragraph" size="md">From the</Annotation>   <ExternalLink href="https://node.uchicago.edu/collection/mapping-chicagoland" content="Mapping Chicagoland">Mapping Chicagoland</ExternalLink>  collection. Holding institution: Chicago History Museum.  ',
+      '<br />\n<Annotation type="text-styling" variant="paragraph" size="md">Featured image:</Annotation>   <ExternalLink href="https://ark.lib.uchicago.edu/ark:61001/b23w8rj3328d" content="Snyder\'s 1885 map">Snyder\'s map of Hyde Park, Illinois, 1885</ExternalLink>.  <Annotation type="text-styling" variant="paragraph" size="md">From the</Annotation>   <ExternalLink href="https://node.uchicago.edu/collection/mapping-chicagoland">Mapping Chicagoland</ExternalLink>  collection. Holding institution: Chicago History Museum.  ',
     );
   });
 

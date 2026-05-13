@@ -355,6 +355,7 @@ function createMDXComponent(
   },
 ): string {
   const { uuid, href, height, width, content, text } = properties;
+  const tooltipContent = getDistinctTooltipContent(content, text);
   let returnString = "";
 
   switch (variant) {
@@ -368,21 +369,21 @@ function createMDXComponent(
     case "internalLink": {
       returnString = `<InternalLink uuid="${uuid}"${createMDXStringAttribute(
         "content",
-        content,
+        tooltipContent,
       )}>${text}</InternalLink>`;
       break;
     }
     case "externalLink": {
       returnString = `<ExternalLink href="${href == null ? "#" : transformPermanentIdentificationUrl(href)}"${createMDXStringAttribute(
         "content",
-        content,
+        tooltipContent,
       )}>${text}</ExternalLink>`;
       break;
     }
     case "documentLink": {
       returnString = String.raw`<ExternalLink href="https:\/\/ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${uuid}&load"${createMDXStringAttribute(
         "content",
-        content,
+        tooltipContent,
       )}>${text}</ExternalLink>`;
       break;
     }
@@ -396,6 +397,13 @@ function createMDXComponent(
   }
 
   return returnString;
+}
+
+function getDistinctTooltipContent(
+  content: string | undefined,
+  textContent: string,
+): string | undefined {
+  return content === textContent ? undefined : content;
 }
 
 function createMDXStringAttribute(
@@ -792,7 +800,7 @@ function createInternalLinkComponent(properties: {
           : ""
       }${createMDXStringAttribute(
         "content",
-        properties.content,
+        getDistinctTooltipContent(properties.content, properties.text),
       )}>${innerContent}</InternalLink>`;
     }
   }
