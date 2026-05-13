@@ -6,6 +6,7 @@ import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseGallery } from "#/parsers/index.js";
 import { gallerySchema, iso639_3Schema } from "#/schemas.js";
 import { logIssues, stringLiteral } from "#/utils.js";
+import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLGalleryData as XMLGalleryDataSchema } from "#/xml/schemas.js";
 
 type FetchFunction = (
@@ -171,6 +172,7 @@ export async function fetchGallery(
       logIssues(issues);
       throw new Error("Failed to parse gallery XML");
     }
+    restoreXMLMetadata(output, data);
 
     const languages = resolveGalleryLanguages(output, requestedLanguages);
     const gallery = parseGallery(output, { languages });

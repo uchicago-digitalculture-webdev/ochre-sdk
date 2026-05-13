@@ -52,6 +52,7 @@ export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
 
 export const XML_PARSER_OPTIONS: X2jOptions = {
   alwaysCreateTextNode: true,
+  captureMetaData: true,
   ignoreAttributes: false,
   removeNSPrefix: true,
   ignorePiTags: true,

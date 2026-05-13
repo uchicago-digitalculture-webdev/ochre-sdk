@@ -122,6 +122,7 @@ import {
   parseXMLString,
   transformPermanentIdentificationUrl,
 } from "#/parsers/string.js";
+import { getXMLSourceIndex } from "#/xml/metadata.js";
 
 export type { ParserOptions } from "#/parsers/helpers.js";
 export { getParserOptions, parseStringLike } from "#/parsers/helpers.js";
@@ -188,6 +189,19 @@ type XMLContextValueHierarchy = Record<
   string,
   Array<XMLContextValue> | undefined
 >;
+
+type HierarchyEntryCategory = ItemLinkCategory | "heading";
+
+type HierarchyEntry = {
+  category: HierarchyEntryCategory;
+  item: unknown;
+  fallbackIndex: number;
+};
+
+type EmbeddedItemParserOptions<T extends ReadonlyArray<string>> =
+  ParserOptions<T> & {
+    containedItemCategory?: ContainedItemCategoryOption<ItemCategory>;
+  };
 
 const TREE_ITEM_CATEGORIES = [
   "bibliography",
@@ -459,18 +473,6 @@ function isHeadingItemCategory(
   return HEADING_ITEM_CATEGORIES.includes(category as HeadingItemCategory);
 }
 
-function pushCategoryIfPresent(
-  categories: Array<SetItemCategory>,
-  category: SetItemCategory,
-  items: Array<unknown> | undefined,
-): void {
-  if ((items?.length ?? 0) === 0) {
-    return;
-  }
-
-  pushCategory(categories, category);
-}
-
 function pushCategory(
   categories: Array<SetItemCategory>,
   category: SetItemCategory,
@@ -478,6 +480,97 @@ function pushCategory(
   if (!categories.includes(category)) {
     categories.push(category);
   }
+}
+
+function getHierarchyEntryCategory(key: string): HierarchyEntryCategory | null {
+  switch (key) {
+    case "heading":
+    case "tree":
+    case "bibliography":
+    case "concept":
+    case "spatialUnit":
+    case "period":
+    case "person":
+    case "resource":
+    case "text":
+    case "set":
+    case "dictionaryUnit": {
+      return key;
+    }
+    case "propertyVariable":
+    case "variable": {
+      return "propertyVariable";
+    }
+    case "propertyValue":
+    case "value": {
+      return "propertyValue";
+    }
+    default: {
+      return null;
+    }
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value != null;
+}
+
+function isResourceWrapper(
+  value: unknown,
+): value is { resource: Array<unknown> } {
+  return isRecord(value) && !("uuid" in value) && Array.isArray(value.resource);
+}
+
+function sourceOrderSort(left: HierarchyEntry, right: HierarchyEntry): number {
+  const leftIndex = getXMLSourceIndex(left.item);
+  const rightIndex = getXMLSourceIndex(right.item);
+  if (leftIndex != null && rightIndex != null && leftIndex !== rightIndex) {
+    return leftIndex - rightIndex;
+  }
+
+  return left.fallbackIndex - right.fallbackIndex;
+}
+
+function collectHierarchyEntries(
+  hierarchy: Partial<Record<string, unknown>> | undefined,
+  categories?: ReadonlyArray<HierarchyEntryCategory>,
+): Array<HierarchyEntry> {
+  const entries: Array<HierarchyEntry> = [];
+  if (hierarchy == null) {
+    return entries;
+  }
+
+  let fallbackIndex = 0;
+  for (const key of Object.keys(hierarchy)) {
+    const category = getHierarchyEntryCategory(key);
+    if (
+      category == null ||
+      !(categories == null || categories.includes(category))
+    ) {
+      continue;
+    }
+
+    const values = hierarchy[key];
+    if (!Array.isArray(values)) {
+      continue;
+    }
+
+    for (const value of values) {
+      if (category === "resource" && isResourceWrapper(value)) {
+        for (const resource of value.resource) {
+          entries.push({ category, item: resource, fallbackIndex });
+          fallbackIndex += 1;
+        }
+        continue;
+      }
+
+      entries.push({ category, item: value, fallbackIndex });
+      fallbackIndex += 1;
+    }
+  }
+
+  entries.sort(sourceOrderSort);
+  return entries;
 }
 
 function inferItemCategories(
@@ -488,26 +581,21 @@ function inferItemCategories(
     return categories;
   }
 
-  for (const heading of hierarchy.heading ?? []) {
-    for (const category of inferItemCategories(heading as XMLItemHierarchy)) {
-      pushCategory(categories, category);
-    }
-  }
-
-  for (const category of SET_ITEM_CATEGORIES) {
-    if (category === "propertyVariable") {
-      pushCategoryIfPresent(categories, category, hierarchy.propertyVariable);
-      pushCategoryIfPresent(categories, category, hierarchy.variable);
+  for (const entry of collectHierarchyEntries(hierarchy)) {
+    if (entry.category === "heading") {
+      for (const category of inferItemCategories(
+        entry.item as XMLItemHierarchy,
+      )) {
+        pushCategory(categories, category);
+      }
       continue;
     }
 
-    if (category === "propertyValue") {
-      pushCategoryIfPresent(categories, category, hierarchy.propertyValue);
-      pushCategoryIfPresent(categories, category, hierarchy.value);
+    if (entry.category === "dictionaryUnit") {
       continue;
     }
 
-    pushCategoryIfPresent(categories, category, hierarchy[category]);
+    pushCategory(categories, entry.category);
   }
 
   return categories;
@@ -1006,6 +1094,102 @@ function withoutItems<U extends { items: unknown }>(item: U): Omit<U, "items"> {
   return itemWithoutItems;
 }
 
+function parseEmbeddedItemEntry<T extends ReadonlyArray<string>>(
+  entry: HierarchyEntry,
+  options: EmbeddedItemParserOptions<T>,
+): Item<ItemCategory, SetItemCategory, T, "embedded"> | null {
+  switch (entry.category) {
+    case "tree": {
+      return parseTree(entry.item as XMLTree, {
+        ...options,
+        containedItemCategory: normalizeTreeItemCategory(
+          options.containedItemCategory,
+        ),
+      }) as Item<ItemCategory, SetItemCategory, T, "embedded">;
+    }
+    case "bibliography": {
+      return parseBibliography(entry.item as XMLBibliography, options) as Item<
+        ItemCategory,
+        SetItemCategory,
+        T,
+        "embedded"
+      >;
+    }
+    case "concept": {
+      return parseConcept(entry.item as XMLConcept, options) as Item<
+        ItemCategory,
+        SetItemCategory,
+        T,
+        "embedded"
+      >;
+    }
+    case "spatialUnit": {
+      return parseSpatialUnit(entry.item as XMLSpatialUnit, options) as Item<
+        ItemCategory,
+        SetItemCategory,
+        T,
+        "embedded"
+      >;
+    }
+    case "period": {
+      return parsePeriod(entry.item as XMLPeriod, options) as Item<
+        ItemCategory,
+        SetItemCategory,
+        T,
+        "embedded"
+      >;
+    }
+    case "person": {
+      return parsePerson(entry.item as XMLPerson, options) as Item<
+        ItemCategory,
+        SetItemCategory,
+        T,
+        "embedded"
+      >;
+    }
+    case "propertyVariable": {
+      return parsePropertyVariable(
+        entry.item as XMLPropertyVariable,
+        options,
+      ) as Item<ItemCategory, SetItemCategory, T, "embedded">;
+    }
+    case "propertyValue": {
+      return parsePropertyValue(
+        entry.item as XMLPropertyValueItem,
+        options,
+      ) as Item<ItemCategory, SetItemCategory, T, "embedded">;
+    }
+    case "resource": {
+      return parseResource(entry.item as XMLResource, options) as Item<
+        ItemCategory,
+        SetItemCategory,
+        T,
+        "embedded"
+      >;
+    }
+    case "text": {
+      return parseText(entry.item as XMLText, options) as Item<
+        ItemCategory,
+        SetItemCategory,
+        T,
+        "embedded"
+      >;
+    }
+    case "set": {
+      return parseSet(entry.item as XMLSet, options) as Item<
+        ItemCategory,
+        SetItemCategory,
+        T,
+        "embedded"
+      >;
+    }
+    case "dictionaryUnit":
+    case "heading": {
+      return null;
+    }
+  }
+}
+
 function parseItemHierarchy<T extends ReadonlyArray<string>>(
   hierarchy: XMLItemHierarchy | undefined,
   options: ParserOptions<T>,
@@ -1016,185 +1200,10 @@ function parseItemHierarchy<T extends ReadonlyArray<string>>(
     return items;
   }
 
-  const shouldParse = (category: ItemCategory): boolean =>
-    categories == null || categories.includes(category);
-
-  if (shouldParse("tree")) {
-    for (const tree of hierarchy.tree ?? []) {
-      items.push(
-        parseTree(tree, options) as Item<
-          ItemCategory,
-          SetItemCategory,
-          T,
-          "embedded"
-        >,
-      );
-    }
-  }
-
-  if (shouldParse("bibliography")) {
-    for (const bibliography of hierarchy.bibliography ?? []) {
-      items.push(
-        parseBibliography(bibliography, options) as Item<
-          ItemCategory,
-          SetItemCategory,
-          T,
-          "embedded"
-        >,
-      );
-    }
-  }
-
-  if (shouldParse("concept")) {
-    for (const concept of hierarchy.concept ?? []) {
-      items.push(
-        parseConcept(concept, options) as Item<
-          ItemCategory,
-          SetItemCategory,
-          T,
-          "embedded"
-        >,
-      );
-    }
-  }
-
-  if (shouldParse("spatialUnit")) {
-    for (const spatialUnit of hierarchy.spatialUnit ?? []) {
-      items.push(
-        parseSpatialUnit(spatialUnit, options) as Item<
-          ItemCategory,
-          SetItemCategory,
-          T,
-          "embedded"
-        >,
-      );
-    }
-  }
-
-  if (shouldParse("period")) {
-    for (const period of hierarchy.period ?? []) {
-      items.push(
-        parsePeriod(period, options) as Item<
-          ItemCategory,
-          SetItemCategory,
-          T,
-          "embedded"
-        >,
-      );
-    }
-  }
-
-  if (shouldParse("person")) {
-    for (const person of hierarchy.person ?? []) {
-      items.push(
-        parsePerson(person, options) as Item<
-          ItemCategory,
-          SetItemCategory,
-          T,
-          "embedded"
-        >,
-      );
-    }
-  }
-
-  if (shouldParse("propertyVariable")) {
-    for (const propertyVariable of hierarchy.propertyVariable ?? []) {
-      items.push(
-        parsePropertyVariable(propertyVariable, options) as Item<
-          ItemCategory,
-          SetItemCategory,
-          T,
-          "embedded"
-        >,
-      );
-    }
-
-    for (const propertyVariable of hierarchy.variable ?? []) {
-      items.push(
-        parsePropertyVariable(propertyVariable, options) as Item<
-          ItemCategory,
-          SetItemCategory,
-          T,
-          "embedded"
-        >,
-      );
-    }
-  }
-
-  if (shouldParse("propertyValue")) {
-    for (const propertyValue of hierarchy.propertyValue ?? []) {
-      items.push(
-        parsePropertyValue(propertyValue, options) as Item<
-          ItemCategory,
-          SetItemCategory,
-          T,
-          "embedded"
-        >,
-      );
-    }
-
-    for (const propertyValue of hierarchy.value ?? []) {
-      items.push(
-        parsePropertyValue(propertyValue, options) as Item<
-          ItemCategory,
-          SetItemCategory,
-          T,
-          "embedded"
-        >,
-      );
-    }
-  }
-
-  if (shouldParse("resource")) {
-    for (const resource of hierarchy.resource ?? []) {
-      if (!("uuid" in resource)) {
-        for (const embeddedResource of resource.resource) {
-          items.push(
-            parseResource(embeddedResource, options) as Item<
-              ItemCategory,
-              SetItemCategory,
-              T,
-              "embedded"
-            >,
-          );
-        }
-        continue;
-      }
-
-      items.push(
-        parseResource(resource, options) as Item<
-          ItemCategory,
-          SetItemCategory,
-          T,
-          "embedded"
-        >,
-      );
-    }
-  }
-
-  if (shouldParse("text")) {
-    for (const text of hierarchy.text ?? []) {
-      items.push(
-        parseText(text, options) as Item<
-          ItemCategory,
-          SetItemCategory,
-          T,
-          "embedded"
-        >,
-      );
-    }
-  }
-
-  if (shouldParse("set")) {
-    for (const set of hierarchy.set ?? []) {
-      items.push(
-        parseSet(set, options) as Item<
-          ItemCategory,
-          SetItemCategory,
-          T,
-          "embedded"
-        >,
-      );
+  for (const entry of collectHierarchyEntries(hierarchy, categories)) {
+    const item = parseEmbeddedItemEntry(entry, options);
+    if (item != null) {
+      items.push(item);
     }
   }
 
@@ -1211,136 +1220,115 @@ function parseSetItemHierarchy<T extends ReadonlyArray<string>>(
     return items;
   }
 
-  const shouldParse = (category: SetItemCategory): boolean =>
-    categories == null || categories.includes(category);
-
-  if (shouldParse("tree")) {
-    for (const tree of hierarchy.tree ?? []) {
-      items.push(parseSetTree(tree, options) as SetItem<SetItemCategory, T>);
-    }
-  }
-
-  if (shouldParse("bibliography")) {
-    for (const bibliography of hierarchy.bibliography ?? []) {
-      items.push(
-        parseSetBibliography(bibliography, options) as SetItem<
-          SetItemCategory,
-          T
-        >,
-      );
-    }
-  }
-
-  if (shouldParse("concept")) {
-    for (const concept of hierarchy.concept ?? []) {
-      items.push(
-        parseSetConcept(concept, options) as SetItem<SetItemCategory, T>,
-      );
-    }
-  }
-
-  if (shouldParse("spatialUnit")) {
-    for (const spatialUnit of hierarchy.spatialUnit ?? []) {
-      items.push(
-        parseSetSpatialUnit(spatialUnit, options) as SetItem<
-          SetItemCategory,
-          T
-        >,
-      );
-    }
-  }
-
-  if (shouldParse("period")) {
-    for (const period of hierarchy.period ?? []) {
-      items.push(
-        parseSetPeriod(period, options) as SetItem<SetItemCategory, T>,
-      );
-    }
-  }
-
-  if (shouldParse("person")) {
-    for (const person of hierarchy.person ?? []) {
-      items.push(
-        withSetItemProperties(
-          parsePerson(person, options),
-          person.properties,
-          options,
-        ) as SetItem<SetItemCategory, T>,
-      );
-    }
-  }
-
-  if (shouldParse("propertyVariable")) {
-    for (const propertyVariable of hierarchy.propertyVariable ?? []) {
-      items.push(
-        parsePropertyVariable(propertyVariable, options) as SetItem<
-          SetItemCategory,
-          T
-        >,
-      );
-    }
-
-    for (const propertyVariable of hierarchy.variable ?? []) {
-      items.push(
-        parsePropertyVariable(propertyVariable, options) as SetItem<
-          SetItemCategory,
-          T
-        >,
-      );
-    }
-  }
-
-  if (shouldParse("propertyValue")) {
-    for (const propertyValue of hierarchy.propertyValue ?? []) {
-      items.push(
-        withSetItemProperties(
-          parsePropertyValue(propertyValue, options),
-          propertyValue.properties,
-          options,
-        ) as SetItem<SetItemCategory, T>,
-      );
-    }
-
-    for (const propertyValue of hierarchy.value ?? []) {
-      items.push(
-        withSetItemProperties(
-          parsePropertyValue(propertyValue, options),
-          propertyValue.properties,
-          options,
-        ) as SetItem<SetItemCategory, T>,
-      );
-    }
-  }
-
-  if (shouldParse("resource")) {
-    for (const resource of hierarchy.resource ?? []) {
-      if (!("uuid" in resource)) {
-        for (const embeddedResource of resource.resource) {
-          items.push(
-            parseSetResource(embeddedResource, options) as SetItem<
-              SetItemCategory,
-              T
-            >,
-          );
-        }
-        continue;
+  for (const entry of collectHierarchyEntries(hierarchy, categories)) {
+    switch (entry.category) {
+      case "tree": {
+        items.push(
+          parseSetTree(entry.item as XMLTree, options) as SetItem<
+            SetItemCategory,
+            T
+          >,
+        );
+        break;
       }
-
-      items.push(
-        parseSetResource(resource, options) as SetItem<SetItemCategory, T>,
-      );
-    }
-  }
-
-  if (shouldParse("text")) {
-    for (const text of hierarchy.text ?? []) {
-      items.push(parseText(text, options) as SetItem<SetItemCategory, T>);
-    }
-  }
-
-  if (shouldParse("set")) {
-    for (const set of hierarchy.set ?? []) {
-      items.push(parseSetSet(set, options) as SetItem<SetItemCategory, T>);
+      case "bibliography": {
+        items.push(
+          parseSetBibliography(
+            entry.item as XMLBibliography,
+            options,
+          ) as SetItem<SetItemCategory, T>,
+        );
+        break;
+      }
+      case "concept": {
+        items.push(
+          parseSetConcept(entry.item as XMLConcept, options) as SetItem<
+            SetItemCategory,
+            T
+          >,
+        );
+        break;
+      }
+      case "spatialUnit": {
+        items.push(
+          parseSetSpatialUnit(entry.item as XMLSpatialUnit, options) as SetItem<
+            SetItemCategory,
+            T
+          >,
+        );
+        break;
+      }
+      case "period": {
+        items.push(
+          parseSetPeriod(entry.item as XMLPeriod, options) as SetItem<
+            SetItemCategory,
+            T
+          >,
+        );
+        break;
+      }
+      case "person": {
+        const person = entry.item as XMLPerson;
+        items.push(
+          withSetItemProperties(
+            parsePerson(person, options),
+            person.properties,
+            options,
+          ) as SetItem<SetItemCategory, T>,
+        );
+        break;
+      }
+      case "propertyVariable": {
+        items.push(
+          parsePropertyVariable(
+            entry.item as XMLPropertyVariable,
+            options,
+          ) as SetItem<SetItemCategory, T>,
+        );
+        break;
+      }
+      case "propertyValue": {
+        const propertyValue = entry.item as XMLPropertyValueItem;
+        items.push(
+          withSetItemProperties(
+            parsePropertyValue(propertyValue, options),
+            propertyValue.properties,
+            options,
+          ) as SetItem<SetItemCategory, T>,
+        );
+        break;
+      }
+      case "resource": {
+        items.push(
+          parseSetResource(entry.item as XMLResource, options) as SetItem<
+            SetItemCategory,
+            T
+          >,
+        );
+        break;
+      }
+      case "text": {
+        items.push(
+          parseText(entry.item as XMLText, options) as SetItem<
+            SetItemCategory,
+            T
+          >,
+        );
+        break;
+      }
+      case "set": {
+        items.push(
+          parseSetSet(entry.item as XMLSet, options) as SetItem<
+            SetItemCategory,
+            T
+          >,
+        );
+        break;
+      }
+      case "dictionaryUnit":
+      case "heading": {
+        break;
+      }
     }
   }
 
@@ -1663,54 +1651,83 @@ export function parseLinks<T extends ReadonlyArray<string>>(
 
   const hierarchy = rawLinks as XMLItemLinkHierarchy;
 
-  for (const tree of hierarchy.tree ?? []) {
-    links.push(parseTreeItemLink(tree, options));
-  }
-  for (const bibliography of hierarchy.bibliography ?? []) {
-    links.push(parseBibliographyItemLink(bibliography, options));
-  }
-  for (const concept of hierarchy.concept ?? []) {
-    links.push(parseConceptItemLink(concept, options));
-  }
-  for (const spatialUnit of hierarchy.spatialUnit ?? []) {
-    links.push(parseSpatialUnitItemLink(spatialUnit, options));
-  }
-  for (const period of hierarchy.period ?? []) {
-    links.push(parsePeriodItemLink(period, options));
-  }
-  for (const person of hierarchy.person ?? []) {
-    links.push(parsePersonItemLink(person, options));
-  }
-  for (const propertyVariable of hierarchy.propertyVariable ?? []) {
-    links.push(parsePropertyVariableItemLink(propertyVariable, options));
-  }
-  for (const propertyVariable of hierarchy.variable ?? []) {
-    links.push(parsePropertyVariableItemLink(propertyVariable, options));
-  }
-  for (const propertyValue of hierarchy.propertyValue ?? []) {
-    links.push(parsePropertyValueItemLink(propertyValue, options));
-  }
-  for (const propertyValue of hierarchy.value ?? []) {
-    links.push(parsePropertyValueItemLink(propertyValue, options));
-  }
-  for (const resource of hierarchy.resource ?? []) {
-    if (!("uuid" in resource)) {
-      for (const embeddedResource of resource.resource) {
-        links.push(parseResourceItemLink(embeddedResource, options));
+  for (const entry of collectHierarchyEntries(hierarchy)) {
+    switch (entry.category) {
+      case "tree": {
+        links.push(parseTreeItemLink(entry.item as XMLLinkedTree, options));
+        break;
       }
-      continue;
+      case "bibliography": {
+        links.push(
+          parseBibliographyItemLink(
+            entry.item as XMLLinkedBibliography,
+            options,
+          ),
+        );
+        break;
+      }
+      case "concept": {
+        links.push(
+          parseConceptItemLink(entry.item as XMLLinkedConcept, options),
+        );
+        break;
+      }
+      case "spatialUnit": {
+        links.push(
+          parseSpatialUnitItemLink(entry.item as XMLLinkedSpatialUnit, options),
+        );
+        break;
+      }
+      case "period": {
+        links.push(parsePeriodItemLink(entry.item as XMLLinkedPeriod, options));
+        break;
+      }
+      case "person": {
+        links.push(parsePersonItemLink(entry.item as XMLLinkedPerson, options));
+        break;
+      }
+      case "propertyVariable": {
+        links.push(
+          parsePropertyVariableItemLink(
+            entry.item as XMLLinkedPropertyVariable,
+            options,
+          ),
+        );
+        break;
+      }
+      case "propertyValue": {
+        links.push(
+          parsePropertyValueItemLink(
+            entry.item as XMLLinkedPropertyValue,
+            options,
+          ),
+        );
+        break;
+      }
+      case "resource": {
+        links.push(
+          parseResourceItemLink(entry.item as XMLLinkedResource, options),
+        );
+        break;
+      }
+      case "text": {
+        links.push(parseTextItemLink(entry.item as XMLLinkedText, options));
+        break;
+      }
+      case "set": {
+        links.push(parseSetItemLink(entry.item as XMLLinkedSet, options));
+        break;
+      }
+      case "dictionaryUnit": {
+        links.push(
+          parseDictionaryUnitItemLink(entry.item as XMLDictionaryUnit, options),
+        );
+        break;
+      }
+      case "heading": {
+        break;
+      }
     }
-
-    links.push(parseResourceItemLink(resource, options));
-  }
-  for (const text of hierarchy.text ?? []) {
-    links.push(parseTextItemLink(text, options));
-  }
-  for (const set of hierarchy.set ?? []) {
-    links.push(parseSetItemLink(set, options));
-  }
-  for (const dictionaryUnit of hierarchy.dictionaryUnit ?? []) {
-    links.push(parseDictionaryUnitItemLink(dictionaryUnit, options));
   }
 
   return links;
@@ -1889,26 +1906,38 @@ function parseTree<
   const items: Array<
     Heading<U & HeadingItemCategory, T> | Item<U, never, T, "embedded">
   > = [];
-  if (
-    containedItemCategory != null &&
-    isHeadingItemCategory(containedItemCategory)
-  ) {
-    for (const heading of rawTree.items?.heading ?? []) {
-      items.push(
-        parseHeading(heading, containedItemCategory, childOptions) as Heading<
-          U & HeadingItemCategory,
-          T
-        >,
-      );
-    }
-  }
-
   if (containedItemCategory != null) {
-    items.push(
-      ...(parseItemHierarchy(rawTree.items, childOptions, [
-        containedItemCategory,
-      ]) as Array<Item<U, never, T, "embedded">>),
-    );
+    const itemCategories: Array<HierarchyEntryCategory> = [
+      containedItemCategory,
+    ];
+    if (isHeadingItemCategory(containedItemCategory)) {
+      itemCategories.push("heading");
+    }
+
+    for (const entry of collectHierarchyEntries(
+      rawTree.items,
+      itemCategories,
+    )) {
+      if (entry.category === "heading") {
+        if (!isHeadingItemCategory(containedItemCategory)) {
+          continue;
+        }
+
+        items.push(
+          parseHeading(
+            entry.item as XMLHeading,
+            containedItemCategory,
+            childOptions,
+          ) as Heading<U & HeadingItemCategory, T>,
+        );
+        continue;
+      }
+
+      const item = parseEmbeddedItemEntry(entry, childOptions);
+      if (item != null) {
+        items.push(item as Item<U, never, T, "embedded">);
+      }
+    }
   }
 
   return {
@@ -2681,63 +2710,11 @@ export function parseLinkedItems<
   };
   const items: Array<Item<ItemCategory, SetItemCategory, T, "embedded">> = [];
 
-  for (const tree of rawItems?.tree ?? []) {
-    items.push(
-      parseTree(tree, {
-        ...parserOptions,
-        containedItemCategory: normalizeTreeItemCategory(
-          options.containedItemCategory,
-        ),
-      }) as Item<ItemCategory, SetItemCategory, T, "embedded">,
-    );
-  }
-
-  for (const bibliography of rawItems?.bibliography ?? []) {
-    items.push(parseBibliography(bibliography, parserOptions));
-  }
-
-  for (const concept of rawItems?.concept ?? []) {
-    items.push(parseConcept(concept, parserOptions));
-  }
-
-  for (const spatialUnit of rawItems?.spatialUnit ?? []) {
-    items.push(parseSpatialUnit(spatialUnit, parserOptions));
-  }
-
-  for (const period of rawItems?.period ?? []) {
-    items.push(parsePeriod(period, parserOptions));
-  }
-
-  for (const person of rawItems?.person ?? []) {
-    items.push(parsePerson(person, parserOptions));
-  }
-
-  for (const propertyVariable of rawItems?.propertyVariable ?? []) {
-    items.push(parsePropertyVariable(propertyVariable, parserOptions));
-  }
-
-  for (const propertyVariable of rawItems?.variable ?? []) {
-    items.push(parsePropertyVariable(propertyVariable, parserOptions));
-  }
-
-  for (const propertyValue of rawItems?.propertyValue ?? []) {
-    items.push(parsePropertyValue(propertyValue, parserOptions));
-  }
-
-  for (const propertyValue of rawItems?.value ?? []) {
-    items.push(parsePropertyValue(propertyValue, parserOptions));
-  }
-
-  for (const resource of rawItems?.resource ?? []) {
-    items.push(parseResource(resource, parserOptions));
-  }
-
-  for (const text of rawItems?.text ?? []) {
-    items.push(parseText(text, parserOptions));
-  }
-
-  for (const set of rawItems?.set ?? []) {
-    items.push(parseSet(set, parserOptions));
+  for (const entry of collectHierarchyEntries(rawItems)) {
+    const item = parseEmbeddedItemEntry(entry, parserOptions);
+    if (item != null) {
+      items.push(item);
+    }
   }
 
   return items as Array<

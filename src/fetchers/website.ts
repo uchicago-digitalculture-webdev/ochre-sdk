@@ -5,6 +5,7 @@ import type { Website } from "#/types/website.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseWebsite } from "#/parsers/website/index.js";
 import { logIssues } from "#/utils.js";
+import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
 
 type FetchFunction = (
@@ -46,6 +47,7 @@ export async function fetchWebsite<
       logIssues(issues);
       throw new Error("Failed to parse website XML");
     }
+    restoreXMLMetadata(output, data);
 
     const website = parseWebsite(output, { languages: options?.languages });
 

@@ -12,6 +12,7 @@ import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseLinkedItems } from "#/parsers/index.js";
 import { iso639_3Schema, uuidSchema } from "#/schemas.js";
 import { logIssues } from "#/utils.js";
+import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
 
 type FetchFunction = (
@@ -104,39 +105,46 @@ function resolveItemLinksLanguages(
 function buildXQuery(uuid: string): string {
   const xquery = `let $item-uuid := "${uuid}"
 
-let $uuids :=
-  distinct-values((
+let $source-items := (
+  fn:collection("ochre/resource")/ochre[@uuid = $item-uuid]/resource,
+  fn:collection("ochre/bibliography")/ochre[@uuid = $item-uuid]/bibliography,
+  fn:collection("ochre/period")/ochre[@uuid = $item-uuid]/period,
+  fn:collection("ochre/person")/ochre[@uuid = $item-uuid]/person,
+  fn:collection("ochre/propertyVariable")/ochre[@uuid = $item-uuid]/propertyVariable,
+  fn:collection("ochre/propertyValue")/ochre[@uuid = $item-uuid]/propertyValue,
+  fn:collection("ochre/text")/ochre[@uuid = $item-uuid]/text,
+  fn:collection("ochre/tree")/ochre[@uuid = $item-uuid]/tree,
+  fn:collection("ochre/set")/ochre[@uuid = $item-uuid]/set,
+  fn:collection("ochre/spatialUnit")/ochre[@uuid = $item-uuid]/spatialUnit,
+  fn:collection("ochre/concept")/ochre[@uuid = $item-uuid]/concept
+)
 
-    (: Direct links on most item categories :)
-    fn:collection("ochre/resource")/ochre[@uuid = $item-uuid]/resource/links/*/@uuid/string(),
-    fn:collection("ochre/bibliography")/ochre[@uuid = $item-uuid]/bibliography/links/*/@uuid/string(),
-    fn:collection("ochre/period")/ochre[@uuid = $item-uuid]/period/links/*/@uuid/string(),
-    fn:collection("ochre/person")/ochre[@uuid = $item-uuid]/person/links/*/@uuid/string(),
-    fn:collection("ochre/propertyVariable")/ochre[@uuid = $item-uuid]/propertyVariable/links/*/@uuid/string(),
-    fn:collection("ochre/propertyValue")/ochre[@uuid = $item-uuid]/propertyValue/links/*/@uuid/string(),
-    fn:collection("ochre/text")/ochre[@uuid = $item-uuid]/text/links/*/@uuid/string(),
-    fn:collection("ochre/tree")/ochre[@uuid = $item-uuid]/tree/links/*/@uuid/string(),
-    fn:collection("ochre/set")/ochre[@uuid = $item-uuid]/set/links/*/@uuid/string(),
-
-    (: Special category structures :)
-    fn:collection("ochre/spatialUnit")/ochre[@uuid = $item-uuid]/spatialUnit/observations/observation/links/*/@uuid/string(),
-    fn:collection("ochre/concept")/ochre[@uuid = $item-uuid]/concept/interpretations/interpretation/links/*/@uuid/string()
-  ))
+let $link-nodes := (
+  $source-items/links/*,
+  $source-items/observations/observation/links/*,
+  $source-items/interpretations/interpretation/links/*
+)
 
 return
-    <items>{(
-      fn:collection("ochre/resource")/ochre/resource[@uuid = $uuids],
-      fn:collection("ochre/bibliography")/ochre/bibliography[@uuid = $uuids],
-      fn:collection("ochre/period")/ochre/period[@uuid = $uuids],
-      fn:collection("ochre/person")/ochre/person[@uuid = $uuids],
-      fn:collection("ochre/propertyVariable")/ochre/propertyVariable[@uuid = $uuids],
-      fn:collection("ochre/propertyValue")/ochre/propertyValue[@uuid = $uuids],
-      fn:collection("ochre/text")/ochre/text[@uuid = $uuids],
-      fn:collection("ochre/tree")/ochre/tree[@uuid = $uuids],
-      fn:collection("ochre/set")/ochre/set[@uuid = $uuids],
-      fn:collection("ochre/spatialUnit")/ochre/spatialUnit[@uuid = $uuids],
-      fn:collection("ochre/concept")/ochre/concept[@uuid = $uuids]
-    )}</items>`;
+    <items>{
+      for $link at $position in $link-nodes
+      let $uuid := $link/@uuid/string()
+      let $category := name($link)
+      where $uuid ne "" and not($uuid = $link-nodes[position() lt $position]/@uuid/string())
+      return
+        if ($category = "resource") then fn:collection("ochre/resource")/ochre/resource[@uuid = $uuid]
+        else if ($category = "bibliography") then fn:collection("ochre/bibliography")/ochre/bibliography[@uuid = $uuid]
+        else if ($category = "period") then fn:collection("ochre/period")/ochre/period[@uuid = $uuid]
+        else if ($category = "person") then fn:collection("ochre/person")/ochre/person[@uuid = $uuid]
+        else if ($category = "propertyVariable" or $category = "variable") then fn:collection("ochre/propertyVariable")/ochre/propertyVariable[@uuid = $uuid]
+        else if ($category = "propertyValue" or $category = "value") then fn:collection("ochre/propertyValue")/ochre/propertyValue[@uuid = $uuid]
+        else if ($category = "text") then fn:collection("ochre/text")/ochre/text[@uuid = $uuid]
+        else if ($category = "tree") then fn:collection("ochre/tree")/ochre/tree[@uuid = $uuid]
+        else if ($category = "set") then fn:collection("ochre/set")/ochre/set[@uuid = $uuid]
+        else if ($category = "spatialUnit") then fn:collection("ochre/spatialUnit")/ochre/spatialUnit[@uuid = $uuid]
+        else if ($category = "concept") then fn:collection("ochre/concept")/ochre/concept[@uuid = $uuid]
+        else ()
+    }</items>`;
 
   return `<ochre>{${xquery}}</ochre>`;
 }
@@ -217,6 +225,7 @@ export async function fetchItemLinks(
       logIssues(issues);
       throw new Error("Failed to parse OCHRE item links");
     }
+    restoreXMLMetadata(output, data);
 
     const languages = resolveItemLinksLanguages(output, requestedLanguages);
     const items = parseLinkedItems(output.result.ochre.items, {

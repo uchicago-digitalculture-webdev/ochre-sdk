@@ -22,6 +22,7 @@ import {
   renderOptionsSchema,
   whitespaceSchema,
 } from "#/schemas.js";
+import { getXMLSourceIndex } from "#/xml/metadata.js";
 
 type XMLRichTextLink =
   | NonNullable<XMLLink["tree"]>[number]
@@ -798,7 +799,8 @@ function createInternalLinkComponent(properties: {
 }
 
 function getXMLRichTextLinks(item: XMLRichTextItem): Array<XMLRichTextLink> {
-  const links: Array<XMLRichTextLink> = [];
+  const links: Array<{ link: XMLRichTextLink; fallbackIndex: number }> = [];
+  let fallbackIndex = 0;
   for (const rawLinks of Object.values(item.links ?? {})) {
     if (!Array.isArray(rawLinks)) {
       continue;
@@ -806,12 +808,28 @@ function getXMLRichTextLinks(item: XMLRichTextItem): Array<XMLRichTextLink> {
 
     for (const rawLink of rawLinks) {
       if (isXMLRichTextLink(rawLink) && !isTextAnnotationMarkerLink(rawLink)) {
-        links.push(rawLink);
+        links.push({ link: rawLink, fallbackIndex });
+        fallbackIndex += 1;
       }
     }
   }
 
-  return links;
+  links.sort((left, right) => {
+    const leftIndex = getXMLSourceIndex(left.link);
+    const rightIndex = getXMLSourceIndex(right.link);
+    if (leftIndex != null && rightIndex != null && leftIndex !== rightIndex) {
+      return leftIndex - rightIndex;
+    }
+
+    return left.fallbackIndex - right.fallbackIndex;
+  });
+
+  const sortedLinks: Array<XMLRichTextLink> = [];
+  for (const { link } of links) {
+    sortedLinks.push(link);
+  }
+
+  return sortedLinks;
 }
 
 function renderRichTextItem<V extends ReadonlyArray<string>>(

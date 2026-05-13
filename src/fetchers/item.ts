@@ -14,6 +14,7 @@ import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseItem } from "#/parsers/index.js";
 import { iso639_3Schema, uuidSchema } from "#/schemas.js";
 import { logIssues } from "#/utils.js";
+import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
 
 type FetchFunction = (
@@ -269,6 +270,7 @@ export async function fetchItem(
       logIssues(issues);
       throw new Error("Failed to parse OCHRE data");
     }
+    restoreXMLMetadata(output, data);
 
     const category =
       options?.category ?? inferFetchItemCategory(output.result.ochre);

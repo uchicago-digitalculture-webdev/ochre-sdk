@@ -21,6 +21,7 @@ import {
 } from "#/query.js";
 import { iso639_3Schema, setItemsParamsSchema } from "#/schemas.js";
 import { logIssues, stringLiteral } from "#/utils.js";
+import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLSetItemsData as XMLSetItemsDataSchema } from "#/xml/schemas.js";
 
 type FetchFunction = (
@@ -594,6 +595,7 @@ export async function fetchSetItems(
       logIssues(issues);
       throw new Error("Failed to parse OCHRE Set items");
     }
+    restoreXMLMetadata(output, data);
 
     if (containedItemCategories != null) {
       const missingCategories = containedItemCategories.filter(
