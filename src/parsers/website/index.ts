@@ -894,10 +894,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         WebElementComponent<T>,
         { component: "image" }
       >;
-      const imageLinks = getWebsiteLinks(websiteLinks, "resource").filter(
-        (link) => link.type === "image" || link.type === "IIIF",
-      );
-      if (imageLinks.length === 0) {
+      if (websiteLinks.length === 0) {
         throw new Error(
           formatComponentError(
             "No links found",
@@ -912,12 +909,12 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       >("image-quality", "high");
 
       const images: Array<WebImage<T>> = [];
-      for (const link of imageLinks) {
+      for (const link of websiteLinks) {
         images.push({
           uuid: link.uuid,
           label: link.identification.label,
-          width: link.image?.width ?? 0,
-          height: link.image?.height ?? 0,
+          width: "image" in link ? (link.image?.width ?? 0) : 0,
+          height: "image" in link ? (link.image?.height ?? 0) : 0,
           description: link.description,
           quality: imageQuality,
         });
