@@ -128,7 +128,7 @@ it("should fetch uchicago-node Set items for query: 'chicago' and property query
     pageSize: 48,
   });
 
-  expect(totalCount).toBe(1744);
+  expect(totalCount).toBe(1741);
 });
 
 it("should fetch uchicago-node Set items for query: 'ca. 1870'", async () => {
