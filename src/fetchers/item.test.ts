@@ -17,6 +17,7 @@ import type {
   XMLConcept,
   XMLContent,
   XMLContext,
+  XMLContextGroup,
   XMLData,
   XMLDataItem,
   XMLIdentification,
@@ -418,7 +419,15 @@ function expectIdentificationMatchesRaw(
 function countContextNodes(rawContext: XMLContext): number {
   let count = 0;
   for (const context of rawContext) {
-    count += context.context.length;
+    if (!isXMLContextGroup(context)) {
+      continue;
+    }
+
+    for (const contextItem of context.context) {
+      if ("project" in contextItem) {
+        count += 1;
+      }
+    }
   }
 
   return count;
@@ -427,7 +436,15 @@ function countContextNodes(rawContext: XMLContext): number {
 function countContextHeadings(rawContext: XMLContext): number {
   let count = 0;
   for (const context of rawContext) {
+    if (!isXMLContextGroup(context)) {
+      continue;
+    }
+
     for (const contextItem of context.context) {
+      if (!("project" in contextItem)) {
+        continue;
+      }
+
       count += contextItem.heading?.length ?? 0;
     }
   }
@@ -438,7 +455,15 @@ function countContextHeadings(rawContext: XMLContext): number {
 function countRawContextItems(rawContext: XMLContext, key: string): number {
   let count = 0;
   for (const context of rawContext) {
+    if (!isXMLContextGroup(context)) {
+      continue;
+    }
+
     for (const contextItem of context.context) {
+      if (!("project" in contextItem)) {
+        continue;
+      }
+
       const value = (contextItem as Record<string, unknown>)[key];
       if (Array.isArray(value)) {
         count += value.length;
@@ -447,6 +472,22 @@ function countRawContextItems(rawContext: XMLContext, key: string): number {
   }
 
   return count;
+}
+
+function isXMLContextGroup(
+  rawContextItem: XMLContext[number],
+): rawContextItem is XMLContextGroup {
+  return "context" in rawContextItem;
+}
+
+function getRawContextDisplayPath(rawContext: XMLContext): string {
+  for (const context of rawContext) {
+    if (isXMLContextGroup(context)) {
+      return context.displayPath;
+    }
+  }
+
+  return "";
 }
 
 function expectContextMatchesRaw(
@@ -460,7 +501,7 @@ function expectContextMatchesRaw(
 
   expect(parsedContext).not.toBeNull();
   expect(parsedContext?.nodes).toHaveLength(countContextNodes(rawContext));
-  expect(parsedContext?.displayPath).toBe(rawContext[0]?.displayPath ?? "");
+  expect(parsedContext?.displayPath).toBe(getRawContextDisplayPath(rawContext));
 
   let parsedHeadingCount = 0;
   let parsedPropertyVariableCount = 0;

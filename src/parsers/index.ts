@@ -62,6 +62,8 @@ import type {
   XMLConcept,
   XMLContent,
   XMLContext,
+  XMLContextGroup,
+  XMLContextItem,
   XMLContextValue,
   XMLCoordinate,
   XMLCoordinates,
@@ -190,6 +192,18 @@ type XMLContextValueHierarchy = Record<
   Array<XMLContextValue> | undefined
 >;
 
+function isXMLContextGroup(
+  context: XMLContext[number],
+): context is XMLContextGroup {
+  return "context" in context;
+}
+
+function isXMLContextItem(
+  context: XMLContextGroup["context"][number],
+): context is XMLContextItem {
+  return "project" in context;
+}
+
 type HierarchyEntryCategory = ItemLinkCategory | "heading";
 
 type HierarchyEntry = {
@@ -313,9 +327,20 @@ function emptyContextItem(): ContextItem {
 
 function parseContext(rawContext: XMLContext): Context<ContextItemCategory> {
   const nodes: Array<ContextNode<ContextItemCategory>> = [];
+  let displayPath = "";
 
   for (const rawContextOuterItem of rawContext) {
+    if (!isXMLContextGroup(rawContextOuterItem)) {
+      continue;
+    }
+
+    displayPath = displayPath || rawContextOuterItem.displayPath;
+
     for (const rawContextItem of rawContextOuterItem.context) {
+      if (!isXMLContextItem(rawContextItem)) {
+        continue;
+      }
+
       const node: ContextNode<ContextItemCategory> = {
         tree:
           rawContextItem.tree[0] == null
@@ -344,7 +369,7 @@ function parseContext(rawContext: XMLContext): Context<ContextItemCategory> {
     }
   }
 
-  return { nodes, displayPath: rawContext[0]?.displayPath ?? "" };
+  return { nodes, displayPath };
 }
 
 function parseEventReference<T extends ReadonlyArray<string>>(

@@ -105,10 +105,14 @@ export type XMLContextItem = {
   >
 >;
 
-export type XMLContext = Array<{
-  context: Array<XMLContextItem>;
+export type XMLEmptyContext = { payload: string };
+
+export type XMLContextGroup = {
+  context: Array<XMLContextItem | XMLEmptyContext>;
   displayPath: string;
-}>;
+};
+
+export type XMLContext = Array<XMLContextGroup | XMLEmptyContext>;
 
 export type XMLEvent = {
   dateTime?: Date;

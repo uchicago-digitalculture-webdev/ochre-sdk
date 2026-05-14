@@ -5,6 +5,7 @@ import type {
   XMLBibliography as XMLBibliographyType,
   XMLBoolean as XMLBooleanType,
   XMLConcept as XMLConceptType,
+  XMLContextGroup as XMLContextGroupType,
   XMLContextItem as XMLContextItemType,
   XMLContext as XMLContextType,
   XMLContextValue as XMLContextValueType,
@@ -13,6 +14,7 @@ import type {
   XMLDataItem as XMLDataItemType,
   XMLData as XMLDataType,
   XMLDictionaryUnit as XMLDictionaryUnitType,
+  XMLEmptyContext as XMLEmptyContextType,
   XMLEvent as XMLEventType,
   XMLGalleryData as XMLGalleryDataType,
   XMLGallery as XMLGalleryType,
@@ -381,16 +383,28 @@ const XMLContextItem: v.GenericSchema<unknown, XMLContextItemType> =
     "XMLContextItem: Shape error",
   );
 
+const XMLEmptyContext: v.GenericSchema<unknown, XMLEmptyContextType> = v.object(
+  { payload: v.string("XMLEmptyContext: payload is string and required") },
+  "XMLEmptyContext: Shape error",
+);
+
+const XMLContextGroup: v.GenericSchema<unknown, XMLContextGroupType> = v.object(
+  {
+    context: v.array(
+      v.union([XMLContextItem, XMLEmptyContext]),
+      "XMLContextGroup: context is array of XMLContextItem or XMLEmptyContext",
+    ),
+    displayPath: v.string(
+      "XMLContextGroup: displayPath is string and required",
+    ),
+  },
+  "XMLContextGroup: Shape error",
+);
+
 const XMLContext: v.GenericSchema<unknown, XMLContextType> = v.array(
-  v.object(
-    {
-      context: v.array(
-        XMLContextItem,
-        "XMLContext: context is array of XMLContextItem",
-      ),
-      displayPath: v.string("XMLContext: displayPath is string and required"),
-    },
-    "XMLContext: Shape error",
+  v.union(
+    [XMLContextGroup, XMLEmptyContext],
+    "XMLContext: item is XMLContextGroup or XMLEmptyContext",
   ),
 );
 
