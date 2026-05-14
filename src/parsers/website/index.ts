@@ -242,11 +242,15 @@ function parseResponsiveCssStyles(
 export function parseBounds(
   bounds: string,
 ): [[number, number], [number, number]] {
-  const coordinates = bounds
-    .split(";")
-    .map((pair) =>
-      pair.split(",").map((coordinate) => Number.parseFloat(coordinate.trim())),
-    );
+  const coordinates = bounds.trim().startsWith("[")
+    ? parseJsonBounds(bounds)
+    : bounds
+        .split(";")
+        .map((pair) =>
+          pair
+            .split(",")
+            .map((coordinate) => Number.parseFloat(coordinate.trim())),
+        );
   const [southWest, northEast] = coordinates;
   if (
     southWest?.length !== 2 ||
@@ -261,6 +265,32 @@ export function parseBounds(
     [southWest[0]!, southWest[1]!],
     [northEast[0]!, northEast[1]!],
   ];
+}
+
+function parseJsonBounds(bounds: string): Array<Array<number>> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(bounds) as unknown;
+  } catch {
+    throw new Error(`Invalid bounds: ${bounds}`);
+  }
+
+  if (!isNumberPairArray(parsed)) {
+    throw new Error(`Invalid bounds: ${bounds}`);
+  }
+
+  return parsed;
+}
+
+function isNumberPairArray(value: unknown): value is Array<Array<number>> {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (pair) =>
+        Array.isArray(pair) &&
+        pair.every((coordinate) => typeof coordinate === "number"),
+    )
+  );
 }
 
 /**
