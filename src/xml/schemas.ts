@@ -602,6 +602,7 @@ const XMLImageMapArea: v.GenericSchema<unknown, XMLImageMapAreaType> = v.object(
     ),
     type: v.string("XMLImageMapArea: type is string and required"),
     title: v.string("XMLImageMapArea: title is string and required"),
+    slug: v.optional(v.string("XMLImageMapArea: slug is string and optional")),
     shape: v.picklist(
       ["rect", "circle", "poly"],
       "XMLImageMapArea: shape is rect, circle, or poly",

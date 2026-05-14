@@ -802,6 +802,7 @@ function parseImageMapArea(area: XMLImageMapArea): ImageMapArea {
     publicationDateTime: area.publicationDateTime,
     type: area.type,
     title: area.title,
+    slug: area.slug ?? null,
     items:
       shape === "rectangle"
         ? [

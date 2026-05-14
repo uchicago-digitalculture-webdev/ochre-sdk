@@ -264,6 +264,7 @@ export type ImageMapArea = {
   publicationDateTime: Date | null;
   type: string;
   title: string;
+  slug: string | null;
   items: Array<
     | { shape: "rectangle"; coords: [number, number, number, number] }
     | { shape: "circle"; center: { x: number; y: number }; radius: number }

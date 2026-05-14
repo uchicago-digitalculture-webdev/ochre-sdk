@@ -170,6 +170,7 @@ export type XMLImageMapArea = {
   publicationDateTime: Date;
   type: string;
   title: string;
+  slug?: string;
   shape: "rect" | "circle" | "poly";
   coords: string;
 };
