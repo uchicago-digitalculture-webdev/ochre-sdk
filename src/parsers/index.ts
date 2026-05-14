@@ -946,8 +946,12 @@ function parsePropertyDataType(dataType: string | undefined): PropertyDataType {
     return "string";
   }
 
+  const normalizedDataType = dataType.startsWith("xs:")
+    ? dataType.slice(3)
+    : dataType;
+
   for (const propertyDataType of PROPERTY_DATA_TYPES) {
-    if (dataType === propertyDataType) {
+    if (normalizedDataType === propertyDataType) {
       return propertyDataType;
     }
   }
@@ -963,9 +967,11 @@ function parsePropertyValueContent<T extends ReadonlyArray<string>>(
 ): PropertyValueContent<T> {
   const dataType = parsePropertyDataType(value.dataType);
   const rawLabel =
-    value.content == null
-      ? null
-      : parseRequiredContentLike(value as XMLContent, options);
+    value.content != null
+      ? parseRequiredContentLike(value as XMLContent, options)
+      : value.payload != null && value.payload !== ""
+        ? multilingualFromText(value.payload, options)
+        : null;
   const displayText = rawLabel?.getText() ?? value.payload ?? value.slug ?? "";
   const contentText = value.rawValue ?? value.payload ?? displayText;
   const common = {
