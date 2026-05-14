@@ -128,13 +128,14 @@ export type WebsiteType =
  */
 export type Website<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
+  type: "website" | "segment";
   belongsTo: { uuid: string; abbreviation: string } | null;
   metadata: Metadata<T>;
   publicationDateTime: Date | null;
   identification: Identification<T>;
   creators: Array<Person<T, "embedded">>;
   license: License | null;
-  items: Array<Webpage<T> | WebSegment<T>>;
+  items: Array<Webpage<T>>;
   properties: {
     type: WebsiteType;
     status: "development" | "preview" | "production";
@@ -206,6 +207,9 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
   };
 };
 
+export type WebsiteSegment<T extends LanguageCodes = LanguageCodes> =
+  Website<T> & { type: "segment" };
+
 /**
  * Represents a webpage with its title, slug, properties, items and subpages
  */
@@ -215,7 +219,8 @@ export type Webpage<T extends LanguageCodes = LanguageCodes> = {
   title: MultilingualString<T>;
   slug: string;
   publicationDateTime: Date | null;
-  items: Array<WebSegment<T> | WebElement<T> | WebBlock<T>>;
+  items: Array<WebElement<T> | WebBlock<T>>;
+  segments: Array<WebsiteSegment<T>>;
   properties: {
     width: "full" | "large" | "narrow" | "default";
     variant: "default" | "no-background";
@@ -231,30 +236,6 @@ export type Webpage<T extends LanguageCodes = LanguageCodes> = {
     };
   };
   webpages: Array<Webpage<T>>;
-};
-
-/**
- * Represents a web segment
- */
-export type WebSegment<T extends LanguageCodes = LanguageCodes> = {
-  uuid: string;
-  type: "segment";
-  title: MultilingualString<T>;
-  slug: string;
-  publicationDateTime: Date | null;
-  items: Array<WebSegmentItem<T>>;
-};
-
-/**
- * Represents a web segment item
- */
-export type WebSegmentItem<T extends LanguageCodes = LanguageCodes> = {
-  uuid: string;
-  type: "segment-item";
-  title: MultilingualString<T>;
-  slug: string;
-  publicationDateTime: Date | null;
-  items: Array<Webpage<T> | WebSegment<T>>;
 };
 
 /**

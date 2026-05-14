@@ -18,9 +18,8 @@ import type {
   WebElementComponent,
   WebImage,
   Webpage,
-  WebSegment,
-  WebSegmentItem,
   Website,
+  WebsiteSegment,
   WebTitle,
 } from "#/types/website.js";
 import type {
@@ -60,6 +59,11 @@ import { componentSchema } from "#/schemas.js";
 type WebsiteLinkCategory = Extract<
   ItemLinkCategory,
   "resource" | "set" | "tree"
+>;
+
+type WebsiteParseContext<T extends ReadonlyArray<string>> = Pick<
+  Website<T>,
+  "belongsTo" | "metadata"
 >;
 
 function isWebsiteLink<
@@ -141,7 +145,18 @@ function normalizeWebsiteResources(
 }
 
 const SEGMENT_UNIQUE_SLUG_PREFIX_REGEX = /^\$[^-]*-/;
-const TRAILING_SLASH_REGEX = /\/$/;
+
+function prefixSlug(slug: string, slugPrefix: string | undefined): string {
+  if (slugPrefix == null || slugPrefix === "") {
+    return slug;
+  }
+
+  if (slug === "") {
+    return slugPrefix;
+  }
+
+  return `${slugPrefix}/${slug}`;
+}
 
 function formatXMLWebsiteResourceMetadata(
   resource: XMLWebsiteResource,
@@ -1591,95 +1606,6 @@ function parseWebElement<T extends ReadonlyArray<string>>(
 }
 
 /**
- * Parses raw webpage resources into standardized WebElement or Webpage objects
- *
- * @param webpageResources - Array of raw webpage resources in OCHRE format
- * @param type - Type of resource to parse ("element" or "page")
- * @returns Array of parsed WebElement or Webpage objects
- */
-const parseWebpageResources = <
-  TResource extends "element" | "page" | "block",
-  T extends ReadonlyArray<string>,
->(
-  webpageResources: Array<XMLWebsiteResource>,
-  type: TResource,
-  options: ParserOptions<T>,
-): Array<
-  TResource extends "element"
-    ? WebElement<T>
-    : TResource extends "page"
-      ? Webpage<T>
-      : WebBlock<T>
-> => {
-  const returnElements: Array<
-    TResource extends "element"
-      ? WebElement<T>
-      : TResource extends "page"
-        ? Webpage<T>
-        : WebBlock<T>
-  > = [];
-
-  for (const resource of webpageResources) {
-    const resourceProperties = resource.properties
-      ? parseSimplifiedProperties(resource.properties, options)
-      : [];
-
-    const resourceProperty = websitePresentationReader(
-      resourceProperties,
-    ).propertyByValue("presentation", type);
-    if (resourceProperty === null) {
-      continue;
-    }
-
-    switch (type) {
-      case "element": {
-        const element = parseWebElement(resource, options);
-
-        returnElements.push(
-          element as TResource extends "element"
-            ? WebElement<T>
-            : TResource extends "page"
-              ? Webpage<T>
-              : WebBlock<T>,
-        );
-
-        break;
-      }
-      case "page": {
-        const webpage = parseWebpage(resource, options);
-        if (webpage) {
-          returnElements.push(
-            webpage as TResource extends "element"
-              ? WebElement<T>
-              : TResource extends "page"
-                ? Webpage<T>
-                : WebBlock<T>,
-          );
-        }
-
-        break;
-      }
-      case "block": {
-        const block = parseWebBlock(resource, options);
-        if (block) {
-          returnElements.push(
-            block as TResource extends "element"
-              ? WebElement<T>
-              : TResource extends "page"
-                ? Webpage<T>
-                : WebBlock<T>,
-          );
-        }
-
-        break;
-      }
-    }
-  }
-
-  return returnElements;
-};
-
-/**
  * Parses raw webpage data into a standardized Webpage structure
  *
  * @param webpageResource - Raw webpage resource data in OCHRE format
@@ -1688,6 +1614,7 @@ const parseWebpageResources = <
 function parseWebpage<T extends ReadonlyArray<string>>(
   webpageResource: XMLWebsiteResource,
   options: ParserOptions<T>,
+  context: WebsiteParseContext<T>,
   slugPrefix?: string,
 ): Webpage<T> | null {
   const webpageProperties = webpageResource.properties
@@ -1718,12 +1645,10 @@ function parseWebpage<T extends ReadonlyArray<string>>(
     uuid: webpageResource.uuid,
     type: "page",
     title: identification.label,
-    slug:
-      slugPrefix != null
-        ? `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
-        : slug,
+    slug: prefixSlug(slug, slugPrefix),
     publicationDateTime: webpageResource.publicationDateTime ?? null,
     items: [],
+    segments: [],
     properties: {
       width: "default",
       variant: "default",
@@ -1749,7 +1674,7 @@ function parseWebpage<T extends ReadonlyArray<string>>(
       ? normalizeWebsiteResources(webpageResource.resource)
       : [];
 
-  const items: Array<WebSegment<T> | WebElement<T> | WebBlock<T>> = [];
+  const items: Array<WebElement<T> | WebBlock<T>> = [];
   for (const resource of webpageResources) {
     const resourceProperties =
       resource.properties != null
@@ -1757,20 +1682,13 @@ function parseWebpage<T extends ReadonlyArray<string>>(
         : [];
 
     const resourceType = websitePresentationReader(resourceProperties).value<
-      "segment" | "element" | "block"
+      "element" | "block"
     >("presentation");
     if (resourceType === null) {
       continue;
     }
 
     switch (resourceType) {
-      case "segment": {
-        const segment = parseWebSegment(resource, options);
-        if (segment) {
-          items.push(segment);
-        }
-        break;
-      }
       case "element": {
         const element = parseWebElement(resource, options);
         items.push(element);
@@ -1788,14 +1706,19 @@ function parseWebpage<T extends ReadonlyArray<string>>(
 
   returnWebpage.items = items;
 
-  returnWebpage.webpages =
-    webpageResource.resource != null
-      ? parseWebpageResources(
-          normalizeWebsiteResources(webpageResource.resource),
-          "page",
-          options,
-        )
-      : [];
+  returnWebpage.webpages = parseWebpages(
+    webpageResources,
+    options,
+    context,
+    slugPrefix == null ? undefined : returnWebpage.slug,
+  );
+
+  returnWebpage.segments = parseWebsiteSegments(
+    webpageResource.resource,
+    context,
+    options,
+    returnWebpage.slug,
+  );
 
   const pageReader = webpageReader.nestedByValue("presentation", "page");
   if (pageReader.size > 0) {
@@ -1850,12 +1773,13 @@ function parseWebpage<T extends ReadonlyArray<string>>(
 function parseWebpages<T extends ReadonlyArray<string>>(
   webpageResources: Array<XMLWebsiteResource>,
   options: ParserOptions<T>,
+  context: WebsiteParseContext<T>,
   slugPrefix?: string,
 ): Array<Webpage<T>> {
   const returnPages: Array<Webpage<T>> = [];
 
   for (const webpageResource of webpageResources) {
-    const webpage = parseWebpage(webpageResource, options, slugPrefix);
+    const webpage = parseWebpage(webpageResource, options, context, slugPrefix);
     if (webpage !== null) {
       returnPages.push(webpage);
     }
@@ -1864,188 +1788,27 @@ function parseWebpages<T extends ReadonlyArray<string>>(
   return returnPages;
 }
 
-/**
- * Parses raw segment resource into a standardized WebSegment object
- *
- * @param segmentResource - Raw segment resource in OCHRE format
- * @returns Parsed WebSegment object
- */
-function parseWebSegment<T extends ReadonlyArray<string>>(
-  segmentResource: XMLWebsiteResource,
+function parseWebsiteSegments<T extends ReadonlyArray<string>>(
+  resources: Array<XMLWebsiteResourceItem> | undefined,
+  context: WebsiteParseContext<T>,
   options: ParserOptions<T>,
-  slugPrefix?: string,
-): WebSegment<T> | null {
-  const webpageProperties = segmentResource.properties
-    ? parseSimplifiedProperties(segmentResource.properties, options)
-    : [];
-  const segmentReader = websitePresentationReader(webpageProperties);
+  slugPrefix: string,
+): Array<WebsiteSegment<T>> {
+  const segments: Array<WebsiteSegment<T>> = [];
 
-  if (segmentReader.value("presentation") !== "segment") {
-    return null;
-  }
+  for (const resource of resources ?? []) {
+    if (!("segments" in resource)) {
+      continue;
+    }
 
-  const identification = parseIdentification(
-    segmentResource.identification,
-    options,
-  );
-
-  const slug =
-    segmentResource.identification.abbreviation != null
-      ? parseStringContent(segmentResource.identification.abbreviation, options)
-      : null;
-  if (slug == null) {
-    throw new Error(
-      `Slug not found for segment (${formatXMLWebsiteResourceMetadata(
-        segmentResource,
-      )})`,
-    );
-  }
-
-  const returnSegment: WebSegment<T> = {
-    uuid: segmentResource.uuid,
-    type: "segment",
-    title: identification.label,
-    slug,
-    publicationDateTime: segmentResource.publicationDateTime ?? null,
-    items: [],
-  };
-
-  const childResources = segmentResource.resource
-    ? normalizeWebsiteResources(segmentResource.resource)
-    : [];
-
-  returnSegment.items = parseWebSegmentItems(
-    childResources,
-    options,
-    slugPrefix != null
-      ? `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
-      : slug,
-  );
-
-  return returnSegment;
-}
-
-/**
- * Parses raw segment resources into an array of WebSegment objects
- *
- * @param segmentResources - Array of raw segment resources in OCHRE format
- * @returns Array of parsed WebSegment objects
- */
-function parseSegments<T extends ReadonlyArray<string>>(
-  segmentResources: Array<XMLWebsiteResource>,
-  options: ParserOptions<T>,
-  slugPrefix?: string,
-): Array<WebSegment<T>> {
-  const returnSegments: Array<WebSegment<T>> = [];
-
-  for (const segmentResource of segmentResources) {
-    const segment = parseWebSegment(segmentResource, options, slugPrefix);
-    if (segment !== null) {
-      returnSegments.push(segment);
+    for (const tree of resource.segments.tree) {
+      segments.push(
+        parseWebsiteTree(tree, context, "segment", options, slugPrefix),
+      );
     }
   }
 
-  return returnSegments;
-}
-
-/**
- * Parses raw segment item into a standardized WebSegmentItem object
- *
- * @param segmentItemResource - Raw segment item resource in OCHRE format
- * @returns Parsed WebSegmentItem object
- */
-function parseWebSegmentItem<T extends ReadonlyArray<string>>(
-  segmentItemResource: XMLWebsiteResource,
-  options: ParserOptions<T>,
-  slugPrefix?: string,
-): WebSegmentItem<T> | null {
-  const webpageProperties = segmentItemResource.properties
-    ? parseSimplifiedProperties(segmentItemResource.properties, options)
-    : [];
-  const segmentItemReader = websitePresentationReader(webpageProperties);
-
-  if (segmentItemReader.value("presentation") !== "segment-item") {
-    return null;
-  }
-
-  const identification = parseIdentification(
-    segmentItemResource.identification,
-    options,
-  );
-
-  const slug =
-    segmentItemResource.identification.abbreviation != null
-      ? parseStringContent(
-          segmentItemResource.identification.abbreviation,
-          options,
-        )
-      : null;
-  if (slug == null) {
-    throw new Error(
-      `Slug not found for segment item (${formatXMLWebsiteResourceMetadata(
-        segmentItemResource,
-      )})`,
-    );
-  }
-
-  const returnSegmentItem: WebSegmentItem<T> = {
-    uuid: segmentItemResource.uuid,
-    type: "segment-item",
-    title: identification.label,
-    slug,
-    publicationDateTime: segmentItemResource.publicationDateTime ?? null,
-    items: [],
-  };
-
-  const resources = segmentItemResource.resource
-    ? normalizeWebsiteResources(segmentItemResource.resource)
-    : [];
-
-  returnSegmentItem.items.push(
-    ...parseWebpages(
-      resources,
-      options,
-      slugPrefix != null
-        ? `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
-        : slug,
-    ),
-    ...parseSegments(
-      resources,
-      options,
-      slugPrefix != null
-        ? `${slugPrefix}/${slug}`.replace(TRAILING_SLASH_REGEX, "")
-        : slug,
-    ),
-  );
-
-  return returnSegmentItem;
-}
-
-/**
- * Parses raw segment items into an array of WebSegmentItem objects
- *
- * @param segmentItems - Array of raw segment items in OCHRE format
- * @returns Array of parsed WebSegmentItem objects
- */
-function parseWebSegmentItems<T extends ReadonlyArray<string>>(
-  segmentItems: Array<XMLWebsiteResource>,
-  options: ParserOptions<T>,
-  slugPrefix?: string,
-): Array<WebSegmentItem<T>> {
-  const returnItems: Array<WebSegmentItem<T>> = [];
-
-  for (const segmentItem of segmentItems) {
-    const segmentItemParsed = parseWebSegmentItem(
-      segmentItem,
-      options,
-      slugPrefix,
-    );
-    if (segmentItemParsed !== null) {
-      returnItems.push(segmentItemParsed);
-    }
-  }
-
-  return returnItems;
+  return segments;
 }
 
 /**
@@ -2802,6 +2565,54 @@ function parseFilterContexts<T extends ReadonlyArray<string>>(
   return filterContextTreeLevels;
 }
 
+function parseWebsiteTree<
+  const T extends ReadonlyArray<string>,
+  TType extends Website<T>["type"],
+>(
+  websiteTree: XMLWebsiteTree,
+  context: WebsiteParseContext<T>,
+  type: TType,
+  options: ParserOptions<T>,
+  slugPrefix?: string,
+): Website<T> & { type: TType } {
+  if (!websiteTree.properties) {
+    throw new Error(
+      `Website properties not found (website uuid “${websiteTree.uuid}”)`,
+    );
+  }
+
+  if (type === "website" && websiteTree.items?.resource == null) {
+    throw new Error(
+      `Website pages not found (website uuid “${websiteTree.uuid}”)`,
+    );
+  }
+
+  const resources = normalizeWebsiteResources(websiteTree.items?.resource);
+  const sidebar = parseSidebar(resources, options);
+
+  const properties = parseWebsiteProperties(
+    websiteTree.properties.property,
+    websiteTree,
+    sidebar,
+    options,
+  );
+
+  return {
+    uuid: websiteTree.uuid,
+    type,
+    belongsTo: context.belongsTo,
+    metadata: context.metadata,
+    publicationDateTime: websiteTree.publicationDateTime ?? null,
+    identification: parseIdentification(websiteTree.identification, options),
+    creators: websiteTree.creators
+      ? parsePersonList(websiteTree.creators.creator, options)
+      : [],
+    license: parseLicense(websiteTree.availability),
+    items: parseWebpages(resources, options, context, slugPrefix),
+    properties,
+  };
+}
+
 export function parseWebsite<
   const T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(data: XMLWebsiteData, options?: { languages?: T }): Website<T> {
@@ -2818,51 +2629,16 @@ export function parseWebsite<
     throw new Error("Website tree not found");
   }
 
-  if (!websiteTree.properties) {
-    throw new Error(
-      `Website properties not found (website uuid “${websiteTree.uuid}”)`,
-    );
-  }
-
-  if (websiteTree.items?.resource == null) {
-    throw new Error(
-      `Website pages not found (website uuid “${websiteTree.uuid}”)`,
-    );
-  }
-
-  const resources = normalizeWebsiteResources(websiteTree.items.resource);
-
-  const items = [
-    ...parseWebpages(resources, parserOptions),
-    ...parseSegments(resources, parserOptions),
-  ];
-
-  const sidebar = parseSidebar(resources, parserOptions);
-
-  const properties = parseWebsiteProperties(
-    websiteTree.properties.property,
+  return parseWebsiteTree(
     websiteTree,
-    sidebar,
+    {
+      belongsTo: {
+        uuid: rawOchre.uuidBelongsTo,
+        abbreviation: rawOchre.belongsTo,
+      },
+      metadata: parseMetadata(rawOchre, parserOptions, defaultLanguage),
+    },
+    "website",
     parserOptions,
   );
-
-  return {
-    uuid: websiteTree.uuid,
-    belongsTo: {
-      uuid: rawOchre.uuidBelongsTo,
-      abbreviation: rawOchre.belongsTo,
-    },
-    metadata: parseMetadata(rawOchre, parserOptions, defaultLanguage),
-    publicationDateTime: websiteTree.publicationDateTime ?? null,
-    identification: parseIdentification(
-      websiteTree.identification,
-      parserOptions,
-    ),
-    creators: websiteTree.creators
-      ? parsePersonList(websiteTree.creators.creator, parserOptions)
-      : [],
-    license: parseLicense(websiteTree.availability),
-    items,
-    properties,
-  };
 }
