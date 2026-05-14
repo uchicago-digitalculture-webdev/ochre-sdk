@@ -1802,8 +1802,24 @@ function parseWebsiteSegments<T extends ReadonlyArray<string>>(
     }
 
     for (const tree of resource.segments.tree) {
+      const segmentSlug =
+        tree.identification.abbreviation == null
+          ? null
+          : parseStringContent(tree.identification.abbreviation, options);
+      if (segmentSlug == null) {
+        throw new Error(
+          `Slug not found for segment website (website uuid “${tree.uuid}”)`,
+        );
+      }
+
       segments.push(
-        parseWebsiteTree(tree, context, "segment", options, slugPrefix),
+        parseWebsiteTree(
+          tree,
+          context,
+          "segment",
+          options,
+          prefixSlug(segmentSlug, slugPrefix),
+        ),
       );
     }
   }
