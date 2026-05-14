@@ -160,7 +160,9 @@ export async function fetchGallery(
       },
     );
     if (!response.ok) {
-      throw new Error("Error fetching gallery items, please try again later.");
+      throw new Error("Error fetching gallery items, please try again later.", {
+        cause: response.statusText,
+      });
     }
 
     const dataRaw = await response.text();
@@ -170,7 +172,7 @@ export async function fetchGallery(
     const { success, issues, output } = v.safeParse(XMLGalleryDataSchema, data);
     if (!success) {
       logIssues(issues);
-      throw new Error("Failed to parse gallery XML");
+      throw new Error("Failed to parse gallery XML", { cause: issues });
     }
     restoreXMLMetadata(output, data);
 

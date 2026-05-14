@@ -319,7 +319,7 @@ describe("parseItem", () => {
     expect(Object.hasOwn(linkedResource, "links")).toBe(false);
     expect(Object.hasOwn(linkedResource, "items")).toBe(false);
     if (linkedResource.category !== "resource") {
-      throw new Error("Expected resource item link");
+      throw new Error("Expected resource item link", { cause: linkedResource });
     }
     expect(linkedResource.type).toBe("image");
     expect(linkedResource.href).toBe("https://example.com/image.jpg");

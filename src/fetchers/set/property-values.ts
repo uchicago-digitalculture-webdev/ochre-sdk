@@ -738,7 +738,9 @@ export async function fetchSetPropertyValues(
       },
     );
     if (!response.ok) {
-      throw new Error(`OCHRE API responded with status: ${response.status}`);
+      throw new Error(`OCHRE API responded with status: ${response.status}`, {
+        cause: response.statusText,
+      });
     }
 
     const dataRaw = await response.text();
@@ -748,7 +750,9 @@ export async function fetchSetPropertyValues(
     const { success, issues, output } = v.safeParse(responseSchema, data);
     if (!success) {
       logIssues(issues);
-      throw new Error("Failed to parse OCHRE Set property values");
+      throw new Error("Failed to parse OCHRE Set property values", {
+        cause: issues,
+      });
     }
 
     const parsedPropertyValues: Array<ParsedPropertyValueItem> = [];

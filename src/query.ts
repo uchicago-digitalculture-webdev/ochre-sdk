@@ -1146,7 +1146,9 @@ function buildLeafQueryExpression(
   const searchValue = getLeafSearchValue(query);
 
   if (searchValue == null) {
-    throw new Error("Missing searchable value for query leaf");
+    throw new Error("Missing searchable value for query leaf", {
+      cause: query,
+    });
   }
 
   const exactHelper = registerLeafHelper({
@@ -1294,13 +1296,17 @@ function buildIncludesGroupQueryExpression(
   const firstQuery = queries[0];
 
   if (firstQuery == null) {
-    throw new Error("Cannot build an includes group without queries");
+    throw new Error("Cannot build an includes group without queries", {
+      cause: queries,
+    });
   }
 
   const groupValue = getGroupableIncludesValue(firstQuery);
 
   if (groupValue == null) {
-    throw new Error("Cannot build an includes group without a search value");
+    throw new Error("Cannot build an includes group without a search value", {
+      cause: firstQuery,
+    });
   }
 
   const terms = tokenizeIncludesSearchValue({

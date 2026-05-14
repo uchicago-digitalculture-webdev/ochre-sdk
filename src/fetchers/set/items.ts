@@ -580,7 +580,9 @@ export async function fetchSetItems(
       },
     );
     if (!response.ok) {
-      throw new Error(`OCHRE API responded with status: ${response.status}`);
+      throw new Error(`OCHRE API responded with status: ${response.status}`, {
+        cause: response.statusText,
+      });
     }
 
     const dataRaw = await response.text();
@@ -593,7 +595,7 @@ export async function fetchSetItems(
     );
     if (!success) {
       logIssues(issues);
-      throw new Error("Failed to parse OCHRE Set items");
+      throw new Error("Failed to parse OCHRE Set items", { cause: issues });
     }
     restoreXMLMetadata(output, data);
 
@@ -605,6 +607,7 @@ export async function fetchSetItems(
       if (missingCategories.length > 0) {
         throw new Error(
           `No Set items found for item categories: ${missingCategories.join(", ")}`,
+          { cause: missingCategories },
         );
       }
     }

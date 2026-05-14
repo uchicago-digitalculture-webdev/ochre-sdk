@@ -34,7 +34,9 @@ export async function fetchWebsite<
       `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(`collection('ochre/tree')/ochre[tree/identification/abbreviation/content/string='${cleanAbbreviation}']`)}&xsl=none&lang="*"`,
     );
     if (!response.ok) {
-      throw new Error("Failed to fetch website");
+      throw new Error("Failed to fetch website", {
+        cause: response.statusText,
+      });
     }
 
     const dataRaw = await response.text();
@@ -45,7 +47,7 @@ export async function fetchWebsite<
     const { success, issues, output } = v.safeParse(XMLWebsiteDataSchema, data);
     if (!success) {
       logIssues(issues);
-      throw new Error("Failed to parse website XML");
+      throw new Error("Failed to parse website XML", { cause: issues });
     }
     restoreXMLMetadata(output, data);
 

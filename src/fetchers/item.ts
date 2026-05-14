@@ -116,7 +116,7 @@ function inferFetchItemCategory(
   if ("text" in rawOchre) return "text";
   if ("set" in rawOchre) return "set";
 
-  throw new Error("Could not infer OCHRE item category");
+  throw new Error("Could not infer OCHRE item category", { cause: rawOchre });
 }
 
 /**
@@ -257,7 +257,9 @@ export async function fetchItem(
       `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${parsedUuid}&xsl=none&lang="*"`,
     );
     if (!response.ok) {
-      throw new Error("Failed to fetch OCHRE data");
+      throw new Error("Failed to fetch OCHRE data", {
+        cause: response.statusText,
+      });
     }
 
     const dataRaw = await response.text();
@@ -268,7 +270,7 @@ export async function fetchItem(
     const { success, issues, output } = v.safeParse(XMLDataSchema, data);
     if (!success) {
       logIssues(issues);
-      throw new Error("Failed to parse OCHRE data");
+      throw new Error("Failed to parse OCHRE data", { cause: issues });
     }
     restoreXMLMetadata(output, data);
 

@@ -258,7 +258,7 @@ export function parseBounds(
     southWest.some((coordinate) => Number.isNaN(coordinate)) ||
     northEast.some((coordinate) => Number.isNaN(coordinate))
   ) {
-    throw new Error(`Invalid bounds: ${bounds}`);
+    throw new Error(`Invalid bounds: ${bounds}`, { cause: bounds });
   }
 
   return [
@@ -272,11 +272,11 @@ function parseJsonBounds(bounds: string): Array<Array<number>> {
   try {
     parsed = JSON.parse(bounds) as unknown;
   } catch {
-    throw new Error(`Invalid bounds: ${bounds}`);
+    throw new Error(`Invalid bounds: ${bounds}`, { cause: bounds });
   }
 
   if (!isNumberPairArray(parsed)) {
-    throw new Error(`Invalid bounds: ${bounds}`);
+    throw new Error(`Invalid bounds: ${bounds}`, { cause: bounds });
   }
 
   return parsed;
@@ -425,6 +425,7 @@ function parseStylesheets(
       if (style.valueUuid == null) {
         throw new Error(
           `Stylesheet property value "${style.variableUuid}" is missing a value UUID`,
+          { cause: style },
         );
       }
 
@@ -495,6 +496,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -528,6 +530,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -551,6 +554,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -576,6 +580,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -619,6 +624,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -660,6 +666,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -709,6 +716,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
               componentName,
               elementResource,
             ),
+            { cause: componentProperty },
           );
         } else {
           isExternal = true;
@@ -766,6 +774,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -863,6 +872,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -891,6 +901,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       if (webpageLink?.href == null) {
         throw new Error(
           formatComponentError("URL not found", componentName, elementResource),
+          { cause: componentProperty },
         );
       }
 
@@ -919,6 +930,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -946,6 +958,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -1083,6 +1096,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -1110,6 +1124,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -1177,6 +1192,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -1189,6 +1205,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -1224,6 +1241,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
                 componentName,
                 elementResource,
               ),
+              { cause: propertyVariable },
             );
           }
 
@@ -1235,6 +1253,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
                 componentName,
                 elementResource,
               ),
+              { cause: propertyVariable },
             );
           }
 
@@ -1267,6 +1286,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -1318,6 +1338,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -1345,6 +1366,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -1388,6 +1410,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -1463,6 +1486,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -1482,6 +1506,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             componentName,
             elementResource,
           ),
+          { cause: componentProperty },
         );
       }
 
@@ -1517,6 +1542,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         componentName,
         elementResource,
       ),
+      { cause: componentProperty },
     );
   }
 
@@ -1668,6 +1694,7 @@ function parseWebpage<T extends ReadonlyArray<string>>(
   if (slug == null) {
     throw new Error(
       `Slug not found for page (${formatXMLWebsiteResourceMetadata(webpageResource)})`,
+      { cause: webpageResource },
     );
   }
 
@@ -1839,6 +1866,7 @@ function parseWebsiteSegments<T extends ReadonlyArray<string>>(
       if (segmentSlug == null) {
         throw new Error(
           `Slug not found for segment website (website uuid “${tree.uuid}”)`,
+          { cause: tree },
         );
       }
 
@@ -2225,6 +2253,7 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
           `Accordion only accepts elements, but got “${resourceType}” (${formatXMLWebsiteResourceMetadata(
             resource,
           )})`,
+          { cause: resource },
         );
       }
 
@@ -2237,6 +2266,7 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
           `Accordion only accepts text components, but got “${componentType}” (${formatXMLWebsiteResourceMetadata(
             resource,
           )})`,
+          { cause: resource },
         );
       }
 
@@ -2374,6 +2404,7 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
     } else {
       throw new Error(
         `Contact property must use “name;email”, got “${contactProperty.values[0]?.content}” (website uuid “${websiteTree.uuid}”)`,
+        { cause: websiteTree },
       );
     }
   }
@@ -2624,12 +2655,14 @@ function parseWebsiteTree<
   if (!websiteTree.properties) {
     throw new Error(
       `Website properties not found (website uuid “${websiteTree.uuid}”)`,
+      { cause: websiteTree },
     );
   }
 
   if (type === "website" && websiteTree.items?.resource == null) {
     throw new Error(
       `Website pages not found (website uuid “${websiteTree.uuid}”)`,
+      { cause: websiteTree },
     );
   }
 
@@ -2672,7 +2705,7 @@ export function parseWebsite<
   const defaultLanguage = resolveDefaultLanguage(rawOchre, languages);
   const websiteTree = rawOchre.tree[0];
   if (websiteTree == null) {
-    throw new Error("Website tree not found");
+    throw new Error("Website tree not found", { cause: data });
   }
 
   return parseWebsiteTree(

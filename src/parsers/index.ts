@@ -657,11 +657,15 @@ function normalizeTreeItemCategory(
     containedItemCategory != null &&
     typeof containedItemCategory !== "string"
   ) {
-    throw new Error("Tree containedItemCategory must be a single category");
+    throw new Error("Tree containedItemCategory must be a single category", {
+      cause: containedItemCategory,
+    });
   }
 
   if (containedItemCategory === "tree") {
-    throw new Error('Tree containedItemCategory cannot be "tree"');
+    throw new Error('Tree containedItemCategory cannot be "tree"', {
+      cause: containedItemCategory,
+    });
   }
 
   return containedItemCategory;
@@ -675,12 +679,15 @@ function resolveTreeItemCategory<U extends TreeItemCategory>(
   if (inferredCategories.length > 1) {
     throw new Error(
       `Expected Tree items to contain one category, received ${inferredCategories.join(", ")}`,
+      { cause: inferredCategories },
     );
   }
 
   const inferredCategory = inferredCategories[0] ?? null;
   if (inferredCategory === "tree") {
-    throw new Error('Tree items cannot contain category "tree"');
+    throw new Error('Tree items cannot contain category "tree"', {
+      cause: inferredCategory,
+    });
   }
 
   if (
@@ -690,6 +697,7 @@ function resolveTreeItemCategory<U extends TreeItemCategory>(
   ) {
     throw new Error(
       `Tree containedItemCategory "${containedItemCategory}" does not match XML items category "${inferredCategory}"`,
+      { cause: { containedItemCategory, inferredCategory } },
     );
   }
 
@@ -944,7 +952,9 @@ function parsePropertyDataType(dataType: string | undefined): PropertyDataType {
     }
   }
 
-  throw new Error(`Invalid property value data type: ${dataType}`);
+  throw new Error(`Invalid property value data type: ${dataType}`, {
+    cause: dataType,
+  });
 }
 
 function parsePropertyValueContent<T extends ReadonlyArray<string>>(
@@ -2441,6 +2451,7 @@ export function resolveLanguages<T extends ReadonlyArray<string>>(
         .join(", ")}. Available languages: ${metadataLanguages
         .toSorted((a, b) => a.localeCompare(b, "en-US"))
         .join(", ")}`,
+      { cause: unsupportedLanguages },
     );
   }
 
@@ -2470,7 +2481,7 @@ export function resolveDefaultLanguage<T extends ReadonlyArray<string>>(
 
   const firstLanguage = languages[0];
   if (firstLanguage == null) {
-    throw new Error("Default language not found");
+    throw new Error("Default language not found", { cause: languages });
   }
 
   return firstLanguage;
@@ -2571,7 +2582,7 @@ function inferTopLevelCategory(rawOchre: RawOchre): ItemCategory {
     return "propertyValue";
   }
 
-  throw new Error("Could not infer OCHRE item category");
+  throw new Error("Could not infer OCHRE item category", { cause: rawOchre });
 }
 
 function getSingleTopLevelRawItem<T>(
@@ -2579,11 +2590,13 @@ function getSingleTopLevelRawItem<T>(
   category: string,
 ): T {
   if (items == null || items.length === 0) {
-    throw new Error(`${category} not found`);
+    throw new Error(`${category} not found`, { cause: items });
   }
 
   if (items.length > 1) {
-    throw new Error(`Expected one ${category}, received ${items.length}`);
+    throw new Error(`Expected one ${category}, received ${items.length}`, {
+      cause: items,
+    });
   }
 
   return items[0]!;

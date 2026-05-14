@@ -33,7 +33,7 @@ const result = await fetchItem("<item-uuid>", {
 });
 
 if (result.error != null) {
-  throw new Error(result.error);
+  throw new Error("Failed to fetch item", { cause: result.error });
 }
 
 console.log(result.item.identification.label.getText("eng"));

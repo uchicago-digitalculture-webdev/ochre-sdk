@@ -27,7 +27,7 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
   requiredProperty(label: string, message: string): SimplifiedProperty<T> {
     const property = this.property(label);
     if (property === null) {
-      throw new Error(message);
+      throw new Error(message, { cause: this.sourceProperties });
     }
 
     return property;

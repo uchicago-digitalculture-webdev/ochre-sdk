@@ -209,7 +209,9 @@ export async function fetchItemLinks(
       },
     );
     if (!response.ok) {
-      throw new Error("Failed to fetch OCHRE item links");
+      throw new Error("Failed to fetch OCHRE item links", {
+        cause: response.statusText,
+      });
     }
 
     const dataRaw = await response.text();
@@ -223,7 +225,7 @@ export async function fetchItemLinks(
     );
     if (!success) {
       logIssues(issues);
-      throw new Error("Failed to parse OCHRE item links");
+      throw new Error("Failed to parse OCHRE item links", { cause: issues });
     }
     restoreXMLMetadata(output, data);
 
