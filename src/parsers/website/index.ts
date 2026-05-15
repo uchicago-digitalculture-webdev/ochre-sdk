@@ -1525,25 +1525,13 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     default: {
-      console.warn(
+      throw new Error(
         `Invalid or non-implemented component name “${unparsedComponentName.toString()}” for the following element: “${parseStringContent(
           elementResource.identification.label,
           options,
         )}”`,
       );
-      break;
     }
-  }
-
-  if (properties === null) {
-    throw new Error(
-      formatComponentError(
-        "Properties not found",
-        componentName,
-        elementResource,
-      ),
-      { cause: componentProperty },
-    );
   }
 
   return properties;
