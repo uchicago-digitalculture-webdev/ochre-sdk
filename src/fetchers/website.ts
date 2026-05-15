@@ -4,11 +4,7 @@ import type { LanguageCodes } from "#/types/index.js";
 import type { Website } from "#/types/website.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseWebsite } from "#/parsers/website/index.js";
-import {
-  createSchemaValidationError,
-  getErrorOutput,
-  logIssues,
-} from "#/utils.js";
+import { createSchemaValidationError, getErrorOutput } from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
 
@@ -51,7 +47,6 @@ export async function fetchWebsite<
 
     const { success, issues, output } = v.safeParse(XMLWebsiteDataSchema, data);
     if (!success) {
-      logIssues(issues);
       throw createSchemaValidationError("Failed to parse website XML", issues);
     }
     restoreXMLMetadata(output, data);
@@ -60,7 +55,6 @@ export async function fetchWebsite<
 
     return { website, error: null, detailedError: null };
   } catch (error) {
-    console.error(error);
     return { website: null, ...getErrorOutput(error, "Unknown error") };
   }
 }

@@ -8,7 +8,6 @@ import { gallerySchema, iso639_3Schema } from "#/schemas.js";
 import {
   createSchemaValidationError,
   getErrorOutput,
-  logIssues,
   stringLiteral,
 } from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
@@ -184,7 +183,6 @@ export async function fetchGallery(
 
     const { success, issues, output } = v.safeParse(XMLGalleryDataSchema, data);
     if (!success) {
-      logIssues(issues);
       throw createSchemaValidationError("Failed to parse gallery XML", issues);
     }
     restoreXMLMetadata(output, data);
@@ -194,7 +192,6 @@ export async function fetchGallery(
 
     return { gallery, error: null, detailedError: null };
   } catch (error) {
-    console.error(error);
     return {
       gallery: null,
       ...getErrorOutput(error, "Failed to fetch gallery"),

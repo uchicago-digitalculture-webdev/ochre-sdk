@@ -11,11 +11,7 @@ import type { XMLItemLinksData } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseLinkedItems } from "#/parsers/index.js";
 import { iso639_3Schema, uuidSchema } from "#/schemas.js";
-import {
-  createSchemaValidationError,
-  getErrorOutput,
-  logIssues,
-} from "#/utils.js";
+import { createSchemaValidationError, getErrorOutput } from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
 
@@ -230,7 +226,6 @@ export async function fetchItemLinks(
       data,
     );
     if (!success) {
-      logIssues(issues);
       throw createSchemaValidationError(
         "Failed to parse OCHRE item links",
         issues,
@@ -246,7 +241,6 @@ export async function fetchItemLinks(
 
     return { items, error: null, detailedError: null };
   } catch (error) {
-    console.error(error);
     return { items: null, ...getErrorOutput(error, "Unknown error") };
   }
 }

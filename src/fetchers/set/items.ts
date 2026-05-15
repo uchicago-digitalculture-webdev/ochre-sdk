@@ -23,7 +23,6 @@ import { iso639_3Schema, setItemsParamsSchema } from "#/schemas.js";
 import {
   createSchemaValidationError,
   getErrorOutput,
-  logIssues,
   stringLiteral,
 } from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
@@ -615,7 +614,6 @@ export async function fetchSetItems(
       data,
     );
     if (!success) {
-      logIssues(issues);
       throw createSchemaValidationError(
         "Failed to parse OCHRE Set items",
         issues,
@@ -662,7 +660,6 @@ export async function fetchSetItems(
       detailedError: null,
     };
   } catch (error) {
-    console.error(error);
     return {
       totalCount: null,
       page: null,

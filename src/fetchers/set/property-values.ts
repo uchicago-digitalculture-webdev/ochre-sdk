@@ -23,7 +23,6 @@ import { setPropertyValuesParamsSchema } from "#/schemas.js";
 import {
   createSchemaValidationError,
   getErrorOutput,
-  logIssues,
   stringLiteral,
 } from "#/utils.js";
 
@@ -757,7 +756,6 @@ export async function fetchSetPropertyValues(
 
     const { success, issues, output } = v.safeParse(responseSchema, data);
     if (!success) {
-      logIssues(issues);
       throw createSchemaValidationError(
         "Failed to parse OCHRE Set property values",
         issues,
@@ -882,7 +880,6 @@ export async function fetchSetPropertyValues(
       detailedError: null,
     };
   } catch (error) {
-    console.error(error);
     return {
       propertyValues: null,
       propertyValuesByPropertyVariableUuid: null,
