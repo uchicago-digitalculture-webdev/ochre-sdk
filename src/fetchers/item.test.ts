@@ -221,7 +221,6 @@ function isXMLContent(value: XMLContent | XMLString): value is XMLContent {
 
 function parseStringLikeForTest(
   value: XMLString | string | undefined,
-  options?: { parseEmail?: boolean },
 ): string | null {
   if (value == null) {
     return null;
@@ -231,8 +230,7 @@ function parseStringLikeForTest(
     return value;
   }
 
-  return parseXMLString(value, { parseEmail: options?.parseEmail ?? false })
-    .text;
+  return parseXMLString(value).text;
 }
 
 function transformPermanentIdentificationUrlForTest(
@@ -243,7 +241,6 @@ function transformPermanentIdentificationUrlForTest(
 
 function parseContentLikeForTest(
   value: XMLContent | XMLString | string | undefined,
-  options?: { parseEmail?: boolean },
 ): string | null {
   if (value == null) {
     return null;
@@ -257,7 +254,7 @@ function parseContentLikeForTest(
     return parseXMLContent(value, { languages: TEST_LANGUAGES }).getText("eng");
   }
 
-  return parseStringLikeForTest(value, options);
+  return parseStringLikeForTest(value);
 }
 
 function formatSchemaIssues(issues: Array<v.BaseIssue<unknown>>): string {
@@ -689,7 +686,7 @@ function expectNotesMatchRaw(
     const parsedNote = parsedNotes[index]!;
     const expectedContent =
       rawNote.content == null
-        ? parseXMLString(rawNote, { parseEmail: true }).text
+        ? parseXMLString(rawNote).text
         : parseContentLikeForTest(rawNote as XMLContent);
 
     expect(parsedNote.number).toBe(rawNote.noteNo ?? 0);

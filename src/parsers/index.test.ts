@@ -481,14 +481,9 @@ describe("parseItem", () => {
 });
 
 describe("string parser integration", () => {
-  it("does not duplicate text before parsed email links", () => {
-    expect(
-      parseXMLString(
-        { payload: "Contact me@example.com" },
-        { parseEmail: true },
-      ).richText,
-    ).toBe(
-      'Contact <ExternalLink href="mailto:me@example.com">me@example.com</ExternalLink>',
+  it("leaves email literals for the client markdown parser", () => {
+    expect(parseXMLString({ payload: "Contact me@example.com" }).richText).toBe(
+      "Contact me@example.com",
     );
   });
 
@@ -519,10 +514,7 @@ describe("string parser integration", () => {
 
   it("ports whitespace options and permanent URL rewriting from the old parser", () => {
     expect(
-      parseXMLString(
-        { payload: "word", whitespace: "leading trailing" },
-        { parseEmail: false },
-      ).text,
+      parseXMLString({ payload: "word", whitespace: "leading trailing" }).text,
     ).toBe(" word ");
 
     const parsedContent = parseXMLContent(

@@ -105,12 +105,6 @@ export const whitespaceSchema = v.pipe(
 );
 
 /**
- * Schema for validating email addresses
- * @internal
- */
-export const emailSchema = v.pipe(v.string(), v.email("Invalid email address"));
-
-/**
  * Schema for validating date data types
  * @internal
  */

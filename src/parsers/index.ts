@@ -885,10 +885,7 @@ function parseNote<T extends ReadonlyArray<string>>(
 
   const content =
     rawNote.content == null
-      ? multilingualFromText(
-          parseXMLString(rawNote, { parseEmail: true }),
-          options,
-        )
+      ? multilingualFromText(parseXMLString(rawNote), options)
       : parseRequiredContentLike(rawNote as XMLContent, options);
 
   return {

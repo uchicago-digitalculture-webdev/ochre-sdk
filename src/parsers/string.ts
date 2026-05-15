@@ -17,11 +17,7 @@ import {
   TEXT_ANNOTATION_UUID,
 } from "#/constants.js";
 import { MultilingualString } from "#/parsers/multilingual.js";
-import {
-  emailSchema,
-  renderOptionsSchema,
-  whitespaceSchema,
-} from "#/schemas.js";
+import { renderOptionsSchema, whitespaceSchema } from "#/schemas.js";
 import { getXMLSourceIndex } from "#/xml/metadata.js";
 
 type XMLRichTextLink =
@@ -65,9 +61,6 @@ const ENTRY_PAGE_TOKEN = "entry-page";
 const VARIANT_TOKEN = "variant";
 const HEADING_LEVEL_TOKEN = "heading-level";
 
-const EMAIL_BRACKET_CLEANUP_REGEX = /(?<=\s|^)[([{]+|[)\]}]+(?=\s|$)/g;
-const EMAIL_PUNCTUATION_CLEANUP_REGEX = /[!),:;?\]]/g;
-const EMAIL_TRAILING_PERIOD_REGEX = /\.$/;
 const MDX_QUOTED_ATTRIBUTE_ESCAPE_REGEX = /[\n\r"]/;
 const MDX_RENDER_ELEMENTS = {
   bold: "strong",
@@ -108,43 +101,6 @@ export function transformPermanentIdentificationUrl(url: string): string {
     "https://pi.lib.uchicago.edu/1001/org/ochre/",
     "https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=",
   );
-}
-
-/**
- * Parses email addresses in a string into HTML links
- *
- * @param string - Input string to parse
- * @returns String with emails converted to HTML links
- *
- * @internal
- */
-function parseEmail(string: string): string {
-  const splitString = string.split(" ");
-  const returnSplitString: Array<string> = [];
-
-  for (const string of splitString) {
-    const cleanString = transformPermanentIdentificationUrl(string)
-      .replaceAll(EMAIL_BRACKET_CLEANUP_REGEX, "")
-      .replaceAll(EMAIL_PUNCTUATION_CLEANUP_REGEX, "")
-      .replace(EMAIL_TRAILING_PERIOD_REGEX, "");
-
-    const index = string.indexOf(cleanString);
-
-    const { success } = v.safeParse(emailSchema, cleanString);
-    if (success) {
-      const before = index === -1 ? "" : string.slice(0, index);
-      const after =
-        index === -1 ? "" : string.slice(index + cleanString.length);
-      returnSplitString.push(
-        `${before}<ExternalLink href="mailto:${cleanString}">${cleanString}</ExternalLink>${after}`,
-      );
-      continue;
-    }
-
-    returnSplitString.push(string);
-  }
-
-  return returnSplitString.join(" ");
 }
 
 /**
@@ -265,14 +221,13 @@ function parseWhitespace(
  * @param string - XML string to parse
  * @param options - Options for parsing
  * @param options.rendering - Which text rendering to produce
- * @param options.parseEmail - Whether to parse email addresses
  * @returns Formatted string with whitespace and rendering options
  *
  * @internal
  */
 function parseXMLStringVariant(
   string: XMLString,
-  options: { rendering: TextRendering; parseEmail: boolean },
+  options: { rendering: TextRendering },
 ): string {
   let returnString = parseXMLStringPayload(string, options);
 
@@ -297,29 +252,18 @@ function parseXMLStringVariant(
 
 function parseXMLStringPayload(
   string: XMLString,
-  options: { rendering: TextRendering; parseEmail: boolean },
+  options: { rendering: TextRendering },
 ): string {
-  const returnString = (string.payload ?? "")
+  return (string.payload ?? "")
     .replaceAll("<", options.rendering === "rich" ? String.raw`\<` : "<")
     .replaceAll("{", String.raw`\{`)
     .replaceAll("}", String.raw`\}`);
-
-  return options.parseEmail ? parseEmail(returnString) : returnString;
 }
 
-export function parseXMLString(
-  string: XMLString,
-  options: { parseEmail: boolean },
-): MultilingualStringText {
+export function parseXMLString(string: XMLString): MultilingualStringText {
   return {
-    text: parseXMLStringVariant(string, {
-      rendering: "plain",
-      parseEmail: false,
-    }),
-    richText: parseXMLStringVariant(string, {
-      rendering: "rich",
-      parseEmail: options.parseEmail,
-    }),
+    text: parseXMLStringVariant(string, { rendering: "plain" }),
+    richText: parseXMLStringVariant(string, { rendering: "rich" }),
   };
 }
 
@@ -461,7 +405,7 @@ function parseContentLikeForLanguage(
   }
 
   if (!("content" in value)) {
-    return parseXMLString(value, { parseEmail: false }).text;
+    return parseXMLString(value).text;
   }
 
   const contentItem =
@@ -679,7 +623,7 @@ function hasRichTextEnvelope(item: XMLRichTextItem): boolean {
 function parseXMLStringItem<V extends ReadonlyArray<string>>(
   item: XMLRichTextItem,
   contentItem: XMLContent["content"][number],
-  options: { languages: V; rendering: TextRendering; parseEmail: boolean },
+  options: { languages: V; rendering: TextRendering },
 ): string {
   const hasTextContent = item.payload != null || item.string != null;
   if (!hasTextContent && getXMLRichTextLinks(item).length === 0) {
@@ -691,13 +635,9 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
   if (hasRichTextEnvelope(item)) {
     let linkString =
       item.payload != null
-        ? parseXMLStringPayload(item, {
-            rendering: options.rendering,
-            parseEmail: false,
-          })
+        ? parseXMLStringPayload(item, { rendering: options.rendering })
         : parseNestedStringItems(item.string ?? [], contentItem, {
             ...options,
-            parseEmail: false,
           });
 
     if (item.rend != null) {
@@ -716,10 +656,7 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
   }
 
   if (item.payload != null) {
-    return parseXMLStringVariant(item, {
-      rendering: options.rendering,
-      parseEmail: options.parseEmail,
-    });
+    return parseXMLStringVariant(item, { rendering: options.rendering });
   }
 
   let result = parseNestedStringItems(item.string ?? [], contentItem, options);
@@ -734,7 +671,7 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
 function parseNestedStringItems<V extends ReadonlyArray<string>>(
   items: ReadonlyArray<XMLRichTextItem>,
   contentItem: XMLContent["content"][number],
-  options: { languages: V; rendering: TextRendering; parseEmail: boolean },
+  options: { languages: V; rendering: TextRendering },
 ): string {
   let result = "";
   for (const item of items) {
@@ -868,7 +805,7 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
           ? parseXMLContent(link.identification.label, { languages })
           : MultilingualString.create(
               contentItem.lang,
-              parseXMLString(link.identification.label, { parseEmail: false }),
+              parseXMLString(link.identification.label),
               languages,
             )
         : MultilingualString.create(contentItem.lang, "", languages);
@@ -1058,12 +995,10 @@ function parseXMLContentItem<V extends ReadonlyArray<string>>(
     text: parseNestedStringItems(contentItem.string, contentItem, {
       ...options,
       rendering: "plain",
-      parseEmail: false,
     }),
     richText: parseNestedStringItems(contentItem.string, contentItem, {
       ...options,
       rendering: "rich",
-      parseEmail: true,
     }),
   };
 }

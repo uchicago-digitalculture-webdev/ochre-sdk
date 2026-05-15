@@ -44,7 +44,6 @@ export function parseLicense(
 
 export function parseStringLike(
   value: XMLString | string | undefined,
-  options: { parseEmail?: boolean } = {},
 ): string | null {
   if (value == null) {
     return null;
@@ -54,8 +53,7 @@ export function parseStringLike(
     return value;
   }
 
-  return parseXMLString(value, { parseEmail: options.parseEmail ?? false })
-    .text;
+  return parseXMLString(value).text;
 }
 
 export function isXMLContent(
@@ -91,10 +89,7 @@ export function parseContentLike<T extends ReadonlyArray<string>>(
   }
 
   if (!isXMLContent(value)) {
-    return multilingualFromText(
-      parseXMLString(value, { parseEmail: true }),
-      options,
-    );
+    return multilingualFromText(parseXMLString(value), options);
   }
 
   return parseXMLContent<T>(value, { languages: options.languages });
@@ -133,5 +128,5 @@ export function parseStringContent(
     return parseXMLContent(value, { languages: options.languages }).getText();
   }
 
-  return parseXMLString(value, { parseEmail: true }).text;
+  return parseXMLString(value).text;
 }
