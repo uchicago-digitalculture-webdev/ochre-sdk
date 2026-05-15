@@ -80,7 +80,7 @@ export default antfu({
     },
   },
   rules: {
-    "no-console": ["warn"],
+    "no-console": ["error"],
     "no-restricted-imports": ["error", { patterns: ["..*"] }],
     "antfu/no-top-level-await": ["off"],
     "jsonc/sort-keys": "off",
