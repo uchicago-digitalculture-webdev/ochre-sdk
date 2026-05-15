@@ -5,7 +5,11 @@ import type { XMLGalleryData } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseGallery } from "#/parsers/index.js";
 import { gallerySchema, iso639_3Schema } from "#/schemas.js";
-import { logIssues, stringLiteral } from "#/utils.js";
+import {
+  createSchemaValidationError,
+  logIssues,
+  stringLiteral,
+} from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLGalleryData as XMLGalleryDataSchema } from "#/xml/schemas.js";
 
@@ -172,7 +176,7 @@ export async function fetchGallery(
     const { success, issues, output } = v.safeParse(XMLGalleryDataSchema, data);
     if (!success) {
       logIssues(issues);
-      throw new Error("Failed to parse gallery XML", { cause: issues });
+      throw createSchemaValidationError("Failed to parse gallery XML", issues);
     }
     restoreXMLMetadata(output, data);
 

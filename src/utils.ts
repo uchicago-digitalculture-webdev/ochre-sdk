@@ -5,7 +5,71 @@ import type {
   SetItemProperty,
 } from "./types/index.js";
 
+const MAX_SCHEMA_VALIDATION_ISSUES = 3;
 const PSEUDO_UUID_REGEX = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
+type SchemaValidationIssue = v.BaseIssue<unknown>;
+
+function getSchemaValidationLeafIssues(
+  issues: ReadonlyArray<SchemaValidationIssue>,
+  leaves: Array<SchemaValidationIssue> = [],
+): Array<SchemaValidationIssue> {
+  for (const issue of issues) {
+    if (issue.issues != null && issue.issues.length > 0) {
+      getSchemaValidationLeafIssues(issue.issues, leaves);
+      continue;
+    }
+
+    leaves.push(issue);
+  }
+
+  return leaves;
+}
+
+function formatSchemaValidationIssue(issue: SchemaValidationIssue): string {
+  const path = v.getDotPath(issue);
+  return `${path != null && path.length > 0 ? path : "(root)"}: ${
+    issue.message
+  }`;
+}
+
+/**
+ * Formats Valibot validation issues for compact error messages.
+ * @param issues - The validation issues to format
+ * @internal
+ */
+export function formatSchemaValidationIssues(
+  issues: ReadonlyArray<SchemaValidationIssue>,
+): string {
+  const leafIssues = getSchemaValidationLeafIssues(issues);
+  const issuesToFormat = leafIssues.length > 0 ? leafIssues : issues;
+  const formattedIssues: Array<string> = [];
+
+  for (const issue of issuesToFormat.slice(0, MAX_SCHEMA_VALIDATION_ISSUES)) {
+    formattedIssues.push(formatSchemaValidationIssue(issue));
+  }
+
+  const hiddenIssueCount = issuesToFormat.length - formattedIssues.length;
+  if (hiddenIssueCount > 0) {
+    formattedIssues.push(`+${hiddenIssueCount.toLocaleString("en-US")} more`);
+  }
+
+  return `Schema validation failed: ${formattedIssues.join("; ")}`;
+}
+
+/**
+ * Creates an Error whose message includes compact schema-validation details.
+ * @param message - The base error message
+ * @param issues - The validation issues to include
+ * @internal
+ */
+export function createSchemaValidationError(
+  message: string,
+  issues: ReadonlyArray<SchemaValidationIssue>,
+): Error {
+  return new Error(`${message}. ${formatSchemaValidationIssues(issues)}`, {
+    cause: issues,
+  });
+}
 
 /**
  * Logs Valibot validation issues to the console with detailed formatting

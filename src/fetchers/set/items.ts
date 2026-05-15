@@ -20,7 +20,11 @@ import {
   buildQueryPlan,
 } from "#/query.js";
 import { iso639_3Schema, setItemsParamsSchema } from "#/schemas.js";
-import { logIssues, stringLiteral } from "#/utils.js";
+import {
+  createSchemaValidationError,
+  logIssues,
+  stringLiteral,
+} from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLSetItemsData as XMLSetItemsDataSchema } from "#/xml/schemas.js";
 
@@ -595,7 +599,10 @@ export async function fetchSetItems(
     );
     if (!success) {
       logIssues(issues);
-      throw new Error("Failed to parse OCHRE Set items", { cause: issues });
+      throw createSchemaValidationError(
+        "Failed to parse OCHRE Set items",
+        issues,
+      );
     }
     restoreXMLMetadata(output, data);
 

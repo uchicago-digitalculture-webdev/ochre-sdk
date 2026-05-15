@@ -13,7 +13,7 @@ import type { XMLData } from "#/xml/types.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseItem } from "#/parsers/index.js";
 import { iso639_3Schema, uuidSchema } from "#/schemas.js";
-import { logIssues } from "#/utils.js";
+import { createSchemaValidationError, logIssues } from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
 
@@ -270,7 +270,7 @@ export async function fetchItem(
     const { success, issues, output } = v.safeParse(XMLDataSchema, data);
     if (!success) {
       logIssues(issues);
-      throw new Error("Failed to parse OCHRE data", { cause: issues });
+      throw createSchemaValidationError("Failed to parse OCHRE data", issues);
     }
     restoreXMLMetadata(output, data);
 

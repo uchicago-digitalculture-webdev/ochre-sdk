@@ -20,7 +20,11 @@ import {
   buildQueryPlan,
 } from "#/query.js";
 import { setPropertyValuesParamsSchema } from "#/schemas.js";
-import { logIssues, stringLiteral } from "#/utils.js";
+import {
+  createSchemaValidationError,
+  logIssues,
+  stringLiteral,
+} from "#/utils.js";
 
 type ParsedPropertyValueItem = {
   scope: "global" | "variable";
@@ -750,9 +754,10 @@ export async function fetchSetPropertyValues(
     const { success, issues, output } = v.safeParse(responseSchema, data);
     if (!success) {
       logIssues(issues);
-      throw new Error("Failed to parse OCHRE Set property values", {
-        cause: issues,
-      });
+      throw createSchemaValidationError(
+        "Failed to parse OCHRE Set property values",
+        issues,
+      );
     }
 
     const parsedPropertyValues: Array<ParsedPropertyValueItem> = [];
