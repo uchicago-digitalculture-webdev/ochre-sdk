@@ -22,6 +22,7 @@ import {
 import { setPropertyValuesParamsSchema } from "#/schemas.js";
 import {
   createSchemaValidationError,
+  getErrorOutput,
   logIssues,
   stringLiteral,
 } from "#/utils.js";
@@ -693,12 +694,14 @@ export async function fetchSetPropertyValues(
         periods: Array<SetAttributeValueQueryItem> | null;
       };
       error: null;
+      detailedError: null;
     }
   | {
       propertyValues: null;
       propertyValuesByPropertyVariableUuid: null;
       attributeValues: null;
       error: string;
+      detailedError: string;
     }
 > {
   try {
@@ -721,6 +724,7 @@ export async function fetchSetPropertyValues(
         propertyValuesByPropertyVariableUuid: {},
         attributeValues: { bibliographies: null, periods: null },
         error: null,
+        detailedError: null,
       };
     }
 
@@ -875,6 +879,7 @@ export async function fetchSetPropertyValues(
           : null,
       },
       error: null,
+      detailedError: null,
     };
   } catch (error) {
     console.error(error);
@@ -882,10 +887,7 @@ export async function fetchSetPropertyValues(
       propertyValues: null,
       propertyValuesByPropertyVariableUuid: null,
       attributeValues: null,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch property values",
+      ...getErrorOutput(error, "Failed to fetch property values"),
     };
   }
 }

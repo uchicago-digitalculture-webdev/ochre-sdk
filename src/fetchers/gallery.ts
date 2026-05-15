@@ -7,6 +7,7 @@ import { parseGallery } from "#/parsers/index.js";
 import { gallerySchema, iso639_3Schema } from "#/schemas.js";
 import {
   createSchemaValidationError,
+  getErrorOutput,
   logIssues,
   stringLiteral,
 } from "#/utils.js";
@@ -140,15 +141,23 @@ export async function fetchGallery<
   params: { uuid: string; filter?: string; page: number; perPage: number },
   options?: FetchGalleryBaseOptions<TLanguages>,
 ): Promise<
-  | { gallery: Gallery<FetchGalleryLanguages<TLanguages>>; error: null }
-  | { gallery: null; error: string }
+  | {
+      gallery: Gallery<FetchGalleryLanguages<TLanguages>>;
+      error: null;
+      detailedError: null;
+    }
+  | { gallery: null; error: string; detailedError: string }
 >;
 export async function fetchGallery(
   params: { uuid: string; filter?: string; page: number; perPage: number },
   options?: FetchGalleryRuntimeOptions,
 ): Promise<
-  | { gallery: Gallery<ReadonlyArray<string>>; error: null }
-  | { gallery: null; error: string }
+  | {
+      gallery: Gallery<ReadonlyArray<string>>;
+      error: null;
+      detailedError: null;
+    }
+  | { gallery: null; error: string; detailedError: string }
 > {
   try {
     const { uuid, filter, page, perPage } = v.parse(gallerySchema, params);
@@ -183,12 +192,12 @@ export async function fetchGallery(
     const languages = resolveGalleryLanguages(output, requestedLanguages);
     const gallery = parseGallery(output, { languages });
 
-    return { gallery, error: null };
+    return { gallery, error: null, detailedError: null };
   } catch (error) {
     console.error(error);
     return {
       gallery: null,
-      error: error instanceof Error ? error.message : "Failed to fetch gallery",
+      ...getErrorOutput(error, "Failed to fetch gallery"),
     };
   }
 }

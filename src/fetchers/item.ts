@@ -13,7 +13,11 @@ import type { XMLData } from "#/xml/types.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseItem } from "#/parsers/index.js";
 import { iso639_3Schema, uuidSchema } from "#/schemas.js";
-import { createSchemaValidationError, logIssues } from "#/utils.js";
+import {
+  createSchemaValidationError,
+  getErrorOutput,
+  logIssues,
+} from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
 
@@ -188,8 +192,9 @@ export async function fetchItem<
         FetchItemLanguages<TLanguages>
       >;
       error: null;
+      detailedError: null;
     }
-  | { item: null; error: string }
+  | { item: null; error: string; detailedError: string }
 >;
 export async function fetchItem<
   const TCategory extends ItemContainerCategory,
@@ -211,8 +216,9 @@ export async function fetchItem<
         FetchItemLanguages<TLanguages>
       >;
       error: null;
+      detailedError: null;
     }
-  | { item: null; error: string }
+  | { item: null; error: string; detailedError: string }
 >;
 export async function fetchItem<
   const TCategory extends ItemCategory,
@@ -231,8 +237,9 @@ export async function fetchItem<
         FetchItemLanguages<TLanguages>
       >;
       error: null;
+      detailedError: null;
     }
-  | { item: null; error: string }
+  | { item: null; error: string; detailedError: string }
 >;
 export async function fetchItem(
   uuid: string,
@@ -241,8 +248,9 @@ export async function fetchItem(
   | {
       item: Item<ItemCategory, SetItemCategory, ReadonlyArray<string>>;
       error: null;
+      detailedError: null;
     }
-  | { item: null; error: string }
+  | { item: null; error: string; detailedError: string }
 > {
   try {
     const parsedUuid = v.parse(uuidSchema, uuid);
@@ -284,12 +292,9 @@ export async function fetchItem(
       languages,
     });
 
-    return { item: parsedItem, error: null };
+    return { item: parsedItem, error: null, detailedError: null };
   } catch (error) {
     console.error(error);
-    return {
-      item: null,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
+    return { item: null, ...getErrorOutput(error, "Unknown error") };
   }
 }

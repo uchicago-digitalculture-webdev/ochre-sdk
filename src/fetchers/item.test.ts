@@ -1241,13 +1241,18 @@ describe("fetchItem", () => {
     expect(roundTrippedString.getAliases()).toStrictEqual(["Alias"]);
     expectTypeOf(result).toEqualTypeOf<
       Promise<
-        | { item: Item<"resource", never, ReadonlyArray<string>>; error: null }
-        | { item: null; error: string }
+        | {
+            item: Item<"resource", never, ReadonlyArray<string>>;
+            error: null;
+            detailedError: null;
+          }
+        | { item: null; error: string; detailedError: string }
       >
     >();
     await expect(result).resolves.toStrictEqual({
       item: null,
       error: "Failed to fetch OCHRE data",
+      detailedError: "Error\nMessage: Failed to fetch OCHRE data",
     });
   });
 
@@ -1273,13 +1278,15 @@ describe("fetchItem", () => {
         | {
             item: Item<"resource", never, readonly ["eng", "spa"]>;
             error: null;
+            detailedError: null;
           }
-        | { item: null; error: string }
+        | { item: null; error: string; detailedError: string }
       >
     >();
     await expect(result).resolves.toStrictEqual({
       item: null,
       error: "Failed to fetch OCHRE data",
+      detailedError: "Error\nMessage: Failed to fetch OCHRE data",
     });
   });
 

@@ -4,7 +4,11 @@ import type { LanguageCodes } from "#/types/index.js";
 import type { Website } from "#/types/website.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseWebsite } from "#/parsers/website/index.js";
-import { createSchemaValidationError, logIssues } from "#/utils.js";
+import {
+  createSchemaValidationError,
+  getErrorOutput,
+  logIssues,
+} from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
 
@@ -25,7 +29,8 @@ export async function fetchWebsite<
   abbreviation: string,
   options?: { fetch?: FetchFunction; languages?: T },
 ): Promise<
-  { website: Website<T>; error: null } | { website: null; error: string }
+  | { website: Website<T>; error: null; detailedError: null }
+  | { website: null; error: string; detailedError: string }
 > {
   try {
     const cleanAbbreviation = abbreviation.trim().toLocaleLowerCase("en-US");
@@ -53,12 +58,9 @@ export async function fetchWebsite<
 
     const website = parseWebsite(output, { languages: options?.languages });
 
-    return { website, error: null };
+    return { website, error: null, detailedError: null };
   } catch (error) {
     console.error(error);
-    return {
-      website: null,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
+    return { website: null, ...getErrorOutput(error, "Unknown error") };
   }
 }

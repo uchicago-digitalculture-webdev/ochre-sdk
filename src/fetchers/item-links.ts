@@ -11,7 +11,11 @@ import type { XMLItemLinksData } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseLinkedItems } from "#/parsers/index.js";
 import { iso639_3Schema, uuidSchema } from "#/schemas.js";
-import { createSchemaValidationError, logIssues } from "#/utils.js";
+import {
+  createSchemaValidationError,
+  getErrorOutput,
+  logIssues,
+} from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
 
@@ -180,8 +184,9 @@ export async function fetchItemLinks<
         >
       >;
       error: null;
+      detailedError: null;
     }
-  | { items: null; error: string }
+  | { items: null; error: string; detailedError: string }
 >;
 export async function fetchItemLinks(
   uuid: string,
@@ -192,8 +197,9 @@ export async function fetchItemLinks(
         Item<ItemCategory, ItemCategory, ReadonlyArray<string>, "embedded">
       >;
       error: null;
+      detailedError: null;
     }
-  | { items: null; error: string }
+  | { items: null; error: string; detailedError: string }
 > {
   try {
     const parsedUuid = v.parse(uuidSchema, uuid);
@@ -238,12 +244,9 @@ export async function fetchItemLinks(
       languages,
     });
 
-    return { items, error: null };
+    return { items, error: null, detailedError: null };
   } catch (error) {
     console.error(error);
-    return {
-      items: null,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
+    return { items: null, ...getErrorOutput(error, "Unknown error") };
   }
 }

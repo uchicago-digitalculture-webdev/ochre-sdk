@@ -22,6 +22,7 @@ import {
 import { iso639_3Schema, setItemsParamsSchema } from "#/schemas.js";
 import {
   createSchemaValidationError,
+  getErrorOutput,
   logIssues,
   stringLiteral,
 } from "#/utils.js";
@@ -531,8 +532,16 @@ export async function fetchSetItems<
         >
       >;
       error: null;
+      detailedError: null;
     }
-  | { totalCount: null; page: null; pageSize: null; items: null; error: string }
+  | {
+      totalCount: null;
+      page: null;
+      pageSize: null;
+      items: null;
+      error: string;
+      detailedError: string;
+    }
 >;
 export async function fetchSetItems(
   params: {
@@ -551,8 +560,16 @@ export async function fetchSetItems(
       pageSize: number;
       items: Array<SetItem<SetItemCategory, ReadonlyArray<string>>>;
       error: null;
+      detailedError: null;
     }
-  | { totalCount: null; page: null; pageSize: null; items: null; error: string }
+  | {
+      totalCount: null;
+      page: null;
+      pageSize: null;
+      items: null;
+      error: string;
+      detailedError: string;
+    }
 > {
   try {
     const {
@@ -642,6 +659,7 @@ export async function fetchSetItems(
       pageSize: output.result.ochre.items.pageSize,
       items: uniqueItems,
       error: null,
+      detailedError: null,
     };
   } catch (error) {
     console.error(error);
@@ -650,8 +668,7 @@ export async function fetchSetItems(
       page: null,
       pageSize: null,
       items: null,
-      error:
-        error instanceof Error ? error.message : "Failed to fetch Set items",
+      ...getErrorOutput(error, "Failed to fetch Set items"),
     };
   }
 }
