@@ -12,6 +12,7 @@ import type {
 import type { XMLData } from "#/xml/types.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseItem } from "#/parsers/index.js";
+import { parseWebpageView } from "#/parsers/website/index.js";
 import { iso639_3Schema, uuidSchema } from "#/schemas.js";
 import { createSchemaValidationError, getErrorOutput } from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
@@ -285,6 +286,12 @@ export async function fetchItem(
       category,
       containedItemCategory: options?.containedItemCategory,
       languages,
+      parseResourceView: (view, context) =>
+        parseWebpageView(
+          view,
+          { languages: context.metadata.languages },
+          context,
+        ),
     });
 
     return { item: parsedItem, error: null, detailedError: null };

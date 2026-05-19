@@ -56,6 +56,7 @@ import type {
   Tree,
   TreeItemCategory,
 } from "#/types/index.js";
+import type { Webpage } from "#/types/website.js";
 import type {
   XMLBaseItem,
   XMLBibliography,
@@ -164,6 +165,11 @@ type XMLItemLinkHierarchy = Partial<{
 }>;
 
 export type RawOchre = XMLData["result"]["ochre"];
+
+type ResourceViewParser<T extends ReadonlyArray<string>> = (
+  view: XMLResource["view"],
+  context: Pick<Resource<T, "topLevel">, "belongsTo" | "metadata">,
+) => Webpage<T> | null;
 
 type SetItemCategoryFromCategories<
   T extends ReadonlyArray<SetItemCategory> | undefined,
@@ -2824,6 +2830,7 @@ export function parseItem<
     category?: undefined;
     containedItemCategory?: TContainedItemCategory;
     languages: T;
+    parseResourceView?: ResourceViewParser<T>;
   },
 ): Item<
   ItemCategory,
@@ -2842,6 +2849,7 @@ export function parseItem<
     category: TCategory;
     containedItemCategory?: TContainedItemCategory;
     languages: T;
+    parseResourceView?: ResourceViewParser<T>;
   },
 ): Item<
   TCategory,
@@ -2854,6 +2862,7 @@ export function parseItem(
     category?: ItemCategory;
     containedItemCategory?: ContainedItemCategoryOption<ItemCategory>;
     languages: ReadonlyArray<string>;
+    parseResourceView?: ResourceViewParser<ReadonlyArray<string>>;
   },
 ): Item<ItemCategory, SetItemCategory, ReadonlyArray<string>>;
 export function parseItem(
@@ -2862,6 +2871,7 @@ export function parseItem(
     category?: ItemCategory;
     containedItemCategory?: ContainedItemCategoryOption<ItemCategory>;
     languages: ReadonlyArray<string>;
+    parseResourceView?: ResourceViewParser<ReadonlyArray<string>>;
   },
 ): Item<ItemCategory, SetItemCategory, ReadonlyArray<string>> {
   const rawOchre = rawData.result.ochre;
@@ -2878,16 +2888,37 @@ export function parseItem(
     normalizeCategory(rawOchre.metadata.item?.category) ??
     inferTopLevelCategory(rawOchre);
   const defaultLanguage = resolveDefaultLanguage(rawOchre, languagesToUse);
+  const belongsTo = {
+    uuid: rawOchre.uuidBelongsTo,
+    abbreviation: rawOchre.belongsTo,
+  };
+  const metadata = parseMetadata(rawOchre, parserOptions, defaultLanguage);
+  const persistentUrl = parseHref(rawOchre.persistentUrl);
 
   const item = parseTopLevelItem(rawOchre, category, parserOptions);
 
-  return {
-    ...item,
-    belongsTo: {
-      uuid: rawOchre.uuidBelongsTo,
-      abbreviation: rawOchre.belongsTo,
-    },
-    metadata: parseMetadata(rawOchre, parserOptions, defaultLanguage),
-    persistentUrl: parseHref(rawOchre.persistentUrl),
-  };
+  if (category === "resource") {
+    const rawResource = getSingleTopLevelRawItem(
+      "resource" in rawOchre ? rawOchre.resource : null,
+      "resource",
+    );
+
+    return {
+      ...item,
+      belongsTo,
+      metadata,
+      persistentUrl,
+      view:
+        options.parseResourceView?.(rawResource.view, {
+          belongsTo,
+          metadata,
+        }) ?? null,
+    } as Item<ItemCategory, SetItemCategory, ReadonlyArray<string>>;
+  }
+
+  return { ...item, belongsTo, metadata, persistentUrl } as Item<
+    ItemCategory,
+    SetItemCategory,
+    ReadonlyArray<string>
+  >;
 }

@@ -489,6 +489,7 @@ export type XMLResource = XMLBaseItem & {
   properties?: { property: Array<XMLProperty> };
   bibliographies?: { bibliography: Array<XMLBibliography> };
   resource?: Array<XMLResource>;
+  view?: { resource?: Array<XMLWebsiteResource> };
 };
 
 export type XMLSection = {
@@ -632,7 +633,7 @@ export type XMLWebsiteResourceItem =
 
 export type XMLWebsiteResource = Omit<
   XMLResource,
-  "properties" | "resource"
+  "properties" | "resource" | "view"
 > & {
   format?: string;
   slug?: string;

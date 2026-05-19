@@ -1833,6 +1833,14 @@ function parseWebpages<T extends ReadonlyArray<string>>(
   return returnPages;
 }
 
+export function parseWebpageView<T extends ReadonlyArray<string>>(
+  view: { resource?: Array<XMLWebsiteResource> } | undefined,
+  options: ParserOptions<T>,
+  context: Pick<Website<T>, "belongsTo" | "metadata">,
+): Webpage<T> | null {
+  return parseWebpages(view?.resource ?? [], options, context)[0] ?? null;
+}
+
 function parseWebsiteSegments<T extends ReadonlyArray<string>>(
   resources: Array<XMLWebsiteResourceItem> | undefined,
   context: WebsiteParseContext<T>,

@@ -1,4 +1,5 @@
 import type { MultilingualString } from "#/parsers/multilingual.js";
+import type { Webpage } from "#/types/website.js";
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
@@ -947,7 +948,7 @@ export type Resource<
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "embedded">>;
     items: Array<Resource<T, "embedded">>;
-  }
+  } & (U extends "topLevel" ? { view: Webpage<T> | null } : unknown)
 >;
 
 /**

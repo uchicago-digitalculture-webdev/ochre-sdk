@@ -1589,6 +1589,11 @@ const XMLResource: v.GenericSchema<unknown, XMLResourceType> = v.object(
       v.object({ bibliography: v.array(XMLBibliography) }),
     ),
     resource: v.optional(v.array(v.lazy(() => XMLResource))),
+    view: v.optional(
+      v.object({
+        resource: v.optional(v.array(v.lazy(() => XMLWebsiteResource))),
+      }),
+    ),
   },
   "XMLResource: Shape error",
 );
