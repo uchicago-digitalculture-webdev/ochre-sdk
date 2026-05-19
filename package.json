@@ -54,7 +54,7 @@
     "release": "bumpp"
   },
   "dependencies": {
-    "date-fns": "^4.1.0",
+    "date-fns": "^4.2.1",
     "fast-equals": "^6.0.0",
     "fast-xml-parser": "^5.8.0",
     "valibot": "^1.4.0"
@@ -69,5 +69,5 @@
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"
   },
-  "packageManager": "pnpm@11.1.2"
+  "packageManager": "pnpm@11.1.3"
 }
