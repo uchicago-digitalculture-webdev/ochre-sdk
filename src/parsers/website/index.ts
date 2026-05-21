@@ -789,6 +789,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       const loadingVariant = componentReader.valueOr<
         CollectionComponent["loadingVariant"]
       >("loading-variant", "skeleton");
+      const expectedItemCount = componentReader.valueOr<
+        CollectionComponent["expectedItemCount"]
+      >("item-count", null);
       const isUsingQueryParams = componentReader.valueOr<
         CollectionComponent["isUsingQueryParams"]
       >("is-using-query-params", false);
@@ -834,6 +837,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         paginationVariant,
         loadingVariant,
         imageLayout,
+        expectedItemCount,
         isUsingQueryParams,
         isSortDisplayed,
         filter: {
