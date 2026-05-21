@@ -5,6 +5,7 @@ import type {
   BaseItem,
   Item,
   ItemCategory,
+  ItemWithoutEmbeddedItems,
   Note,
   Property,
   SetItem,
@@ -205,6 +206,7 @@ const CATEGORY_FIXTURES = [
   { category: "set", uuids: SET_UUIDS },
 ] as const satisfies ReadonlyArray<CategoryFixture>;
 
+const TEST_PROJECT_UUID = "0c0aae37-7246-495b-9547-e25dbf5b99a3";
 const parser = new XMLParser(XML_PARSER_OPTIONS);
 
 function normalizeCategory(category: string | undefined): string | null {
@@ -217,6 +219,39 @@ function normalizeCategory(category: string | undefined): string | null {
 
 function isXMLContent(value: XMLContent | XMLString): value is XMLContent {
   return "content" in value;
+}
+
+function createXMLContent(label: string): string {
+  return `<content xml:lang="eng"><string>${label}</string></content>`;
+}
+
+function createXMLIdentification(label: string): string {
+  return `<identification><label>${createXMLContent(label)}</label></identification>`;
+}
+
+function getTestItemType(category: "tree" | "resource" | "set"): string {
+  switch (category) {
+    case "tree": {
+      return "Tree";
+    }
+    case "resource": {
+      return "Resource";
+    }
+    case "set": {
+      return "Set";
+    }
+  }
+}
+
+function createFetchItemXML(params: {
+  uuid: string;
+  category: "tree" | "resource" | "set";
+  itemContent?: string;
+}): string {
+  const { uuid, category, itemContent = "" } = params;
+  const type = getTestItemType(category);
+
+  return `<result><ochre uuid="${uuid}" uuidBelongsTo="${TEST_PROJECT_UUID}" belongsTo="Test" languages="eng" publicationDateTime="2026-05-10T10:08:35Z" persistentUrl="https://pi.lib.uchicago.edu/1001/org/ochre/${uuid}"><metadata><dataset>Dataset</dataset><description>Description</description><publisher>Publisher</publisher><identifier>https://pi.lib.uchicago.edu/1001/org/ochre/${uuid}</identifier><language default="true">eng</language><project uuid="${TEST_PROJECT_UUID}" dateFormat="yyyy-MM-dd" page="item">${createXMLIdentification("Project")}</project><item uuid="${uuid}" category="${category}" type="${type}">${createXMLIdentification(type)}</item></metadata><${category} uuid="${uuid}" publicationDateTime="2026-05-10T10:08:35Z">${createXMLIdentification(type)}${itemContent}</${category}></ochre></result>`;
 }
 
 function parseStringLikeForTest(
@@ -1286,6 +1321,115 @@ describe("fetchItem", () => {
       detailedError: "Error\nMessage: Failed to fetch OCHRE data",
     });
   });
+
+  it("types shouldOmitEmbeddedItems for Tree and Set category overloads only", async () => {
+    const omittedSetResult = fetchItem(SET_UUIDS[0]!, {
+      category: "set",
+      shouldOmitEmbeddedItems: true,
+      languages: ["eng", "spa"],
+      fetch: async () => new Response("", { status: 500 }),
+    });
+    const omittedTreeResult = fetchItem(TREE_UUIDS[0]!, {
+      category: "tree",
+      containedItemCategory: "resource",
+      shouldOmitEmbeddedItems: true,
+      fetch: async () => new Response("", { status: 500 }),
+    });
+    const omittedResourceResult = fetchItem(RESOURCE_UUIDS[0]!, {
+      category: "resource",
+      // @ts-expect-error shouldOmitEmbeddedItems is only valid for Tree and Set categories.
+      shouldOmitEmbeddedItems: true,
+      fetch: async () => new Response("", { status: 500 }),
+    });
+
+    expectTypeOf(omittedSetResult).toEqualTypeOf<
+      Promise<
+        | {
+            item: ItemWithoutEmbeddedItems<
+              "set",
+              SetItemCategory,
+              readonly ["eng", "spa"]
+            >;
+            error: null;
+            detailedError: null;
+          }
+        | { item: null; error: string; detailedError: string }
+      >
+    >();
+    expectTypeOf(omittedTreeResult).toEqualTypeOf<
+      Promise<
+        | {
+            item: ItemWithoutEmbeddedItems<
+              "tree",
+              "resource",
+              ReadonlyArray<string>
+            >;
+            error: null;
+            detailedError: null;
+          }
+        | { item: null; error: string; detailedError: string }
+      >
+    >();
+    await expect(omittedResourceResult).resolves.toStrictEqual({
+      item: null,
+      error:
+        'shouldOmitEmbeddedItems can only be used when category is "tree" or "set"; received category "resource"',
+      detailedError:
+        'Error\nMessage: shouldOmitEmbeddedItems can only be used when category is "tree" or "set"; received category "resource"',
+    });
+  });
+
+  for (const category of ["tree", "set"] as const) {
+    it(`fetches ${category} without embedded items via XQuery`, async () => {
+      const uuid = category === "tree" ? TREE_UUIDS[0]! : SET_UUIDS[0]!;
+      const fetchCalls: Array<{
+        input: string | URL | globalThis.Request;
+        init?: RequestInit;
+      }> = [];
+      const result = await fetchItem(uuid, {
+        category,
+        shouldOmitEmbeddedItems: true,
+        languages: TEST_LANGUAGES,
+        fetch: async (input, init) => {
+          fetchCalls.push({ input, init });
+
+          return new Response(createFetchItemXML({ uuid, category }), {
+            status: 200,
+          });
+        },
+      });
+
+      expect(fetchCalls).toHaveLength(1);
+      expect(fetchCalls[0]?.input).toBe(
+        'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
+      );
+      expect(fetchCalls[0]?.init?.method).toBe("POST");
+      expect(fetchCalls[0]?.init?.headers).toStrictEqual({
+        "Content-Type": "application/xquery",
+      });
+
+      const body = fetchCalls[0]?.init?.body;
+      expect(typeof body).toBe("string");
+      if (typeof body === "string") {
+        expect(body).toContain(`doc()/ochre[@uuid="${uuid}"][1]`);
+        expect(body).toContain('local-name($node) = ("tree", "set")');
+        expect(body).toContain("not(self::items)");
+      }
+
+      expect(result.error).toBeNull();
+      if (result.error !== null) {
+        throw new Error(result.detailedError);
+      }
+
+      expect(result.item.category).toBe(category);
+      expect("items" in result.item).toBe(false);
+      if (result.item.category === "set") {
+        expect(result.item.containedItemCategories).toStrictEqual([]);
+      } else {
+        expect(result.item.containedItemCategory).toBeNull();
+      }
+    });
+  }
 
   it("rejects containedItemCategory for non-hierarchy categories before fetching", async () => {
     let didFetch = false;

@@ -616,6 +616,22 @@ export type Item<
                         : never
   : never;
 
+/**
+ * A Tree or Set fetched without its embedded item hierarchy.
+ */
+export type ItemWithoutEmbeddedItems<
+  U extends ItemContainerCategory = ItemContainerCategory,
+  V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
+  T extends LanguageCodes = LanguageCodes,
+  W extends ItemPayloadKind = "topLevel",
+> = U extends ItemContainerCategory
+  ? U extends "tree"
+    ? Prettify<Omit<Tree<Extract<V, TreeItemCategory>, T, W>, "items">>
+    : U extends "set"
+      ? Prettify<Omit<Set<Extract<V, SetItemCategory>, T, W>, "items">>
+      : never
+  : never;
+
 export type TopLevelItem<
   U extends ItemCategory = ItemCategory,
   V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
