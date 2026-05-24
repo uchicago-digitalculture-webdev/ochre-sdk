@@ -29,9 +29,6 @@ jobs:
           package-manager-cache: false
           registry-url: https://registry.npmjs.org
 
-      - name: Install npm with staged publishing
-        run: npm install --global npm@11.15.0
-
       - name: Install dependencies
         run: pnpm install
 
@@ -45,4 +42,4 @@ jobs:
         run: pnpm run build
 
       - name: Stage NPM package
-        run: npm stage publish --access public
+        run: pnpm stage publish --access public --no-git-checks
