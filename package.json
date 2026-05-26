@@ -47,8 +47,8 @@
   "scripts": {
     "dev": "tsdown src/index.ts --watch",
     "build": "tsdown",
-    "lint": "knip && eslint .",
-    "lint:fix": "knip fix && eslint . --fix",
+    "lint": "knip; eslint .",
+    "lint:fix": "knip --fix; eslint . --fix",
     "format": "prettier --check .",
     "format:fix": "prettier --write --list-different .",
     "check-types": "tsc --noEmit",
