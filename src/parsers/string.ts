@@ -16,6 +16,7 @@ import {
   TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
   TEXT_ANNOTATION_UUID,
 } from "#/constants.js";
+import { serializeMDXText } from "#/parsers/mdx.js";
 import { MultilingualString } from "#/parsers/multilingual.js";
 import { renderOptionsSchema, whitespaceSchema } from "#/schemas.js";
 import { getXMLSourceIndex } from "#/xml/metadata.js";
@@ -254,10 +255,8 @@ function parseXMLStringPayload(
   string: XMLString,
   options: { rendering: TextRendering },
 ): string {
-  return (string.payload ?? "")
-    .replaceAll("<", options.rendering === "rich" ? String.raw`\<` : "<")
-    .replaceAll("{", String.raw`\{`)
-    .replaceAll("}", String.raw`\}`);
+  const payload = string.payload ?? "";
+  return options.rendering === "rich" ? serializeMDXText(payload) : payload;
 }
 
 export function parseXMLString(string: XMLString): MultilingualStringText {
@@ -304,28 +303,40 @@ function createMDXComponent(
 
   switch (variant) {
     case "inlineImage": {
-      returnString = `<InlineImage uuid="${uuid}"${createMDXStringAttribute(
+      returnString = `<InlineImage${createMDXStringAttribute(
+        "uuid",
+        uuid ?? "null",
+      )}${createMDXStringAttribute(
         "content",
         content,
       )} height={${height ?? "null"}} width={${width ?? "null"}} />`;
       break;
     }
     case "internalLink": {
-      returnString = `<InternalLink uuid="${uuid}"${createMDXStringAttribute(
+      returnString = `<InternalLink${createMDXStringAttribute(
+        "uuid",
+        uuid ?? "null",
+      )}${createMDXStringAttribute(
         "content",
         tooltipContent,
       )}>${text}</InternalLink>`;
       break;
     }
     case "externalLink": {
-      returnString = `<ExternalLink href="${href == null ? "#" : transformPermanentIdentificationUrl(href)}"${createMDXStringAttribute(
+      returnString = `<ExternalLink${createMDXStringAttribute(
+        "href",
+        href == null ? "#" : transformPermanentIdentificationUrl(href),
+      )}${createMDXStringAttribute(
         "content",
         tooltipContent,
       )}>${text}</ExternalLink>`;
       break;
     }
     case "documentLink": {
-      returnString = String.raw`<ExternalLink href="https:\/\/ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${uuid}&load"${createMDXStringAttribute(
+      returnString = `<ExternalLink${createMDXStringAttribute(
+        "href",
+        `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${uuid}&load`,
+      )}${createMDXStringAttribute(
         "content",
         tooltipContent,
       )}>${text}</ExternalLink>`;
@@ -693,11 +704,13 @@ function wrapWithTextStyling(
     return content;
   }
 
-  return `<Annotation type="text-styling" variant="${textStyling.variant}" size="${textStyling.size}"${
-    textStyling.headingLevel != null
-      ? ` headingLevel="${textStyling.headingLevel}"`
-      : ""
-  }${
+  return `<Annotation type="text-styling"${createMDXStringAttribute(
+    "variant",
+    textStyling.variant,
+  )}${createMDXStringAttribute("size", textStyling.size)}${createMDXStringAttribute(
+    "headingLevel",
+    textStyling.headingLevel ?? undefined,
+  )}${
     textStyling.cssStyles.length > 0
       ? ` cssStyles={{default: ${JSON.stringify(textStyling.cssStyles)}, tablet: [], mobile: []}}`
       : ""
@@ -718,22 +731,36 @@ function createInternalLinkComponent(properties: {
 
   switch (properties.annotationMetadata.linkVariant) {
     case "hover-card": {
-      return `<Annotation type="hover-card" uuid="${properties.uuid}">${innerContent}</Annotation>`;
+      return `<Annotation type="hover-card"${createMDXStringAttribute(
+        "uuid",
+        properties.uuid ?? "null",
+      )}>${innerContent}</Annotation>`;
     }
     case "item-page": {
-      return `<InternalLink type="item" uuid="${properties.uuid}">${innerContent}</InternalLink>`;
+      return `<InternalLink type="item"${createMDXStringAttribute(
+        "uuid",
+        properties.uuid ?? "null",
+      )}>${innerContent}</InternalLink>`;
     }
     case "entry-page": {
-      return `<InternalLink type="entry" uuid="${properties.uuid}">${innerContent}</InternalLink>`;
+      return `<InternalLink type="entry"${createMDXStringAttribute(
+        "uuid",
+        properties.uuid ?? "null",
+      )}>${innerContent}</InternalLink>`;
     }
     default: {
-      return `<InternalLink uuid="${properties.uuid}"${
+      return `<InternalLink${createMDXStringAttribute(
+        "uuid",
+        properties.uuid ?? "null",
+      )}${
         properties.propertyMetadata != null
-          ? ` properties="${properties.propertyMetadata.labelUuid}"${
-              properties.propertyMetadata.valueUuid != null
-                ? ` value="${properties.propertyMetadata.valueUuid}"`
-                : ""
-            }`
+          ? `${createMDXStringAttribute(
+              "properties",
+              properties.propertyMetadata.labelUuid,
+            )}${createMDXStringAttribute(
+              "value",
+              properties.propertyMetadata.valueUuid ?? undefined,
+            )}`
           : ""
       }${createMDXStringAttribute(
         "content",

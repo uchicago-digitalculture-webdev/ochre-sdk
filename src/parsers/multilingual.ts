@@ -1,4 +1,5 @@
 import { DEFAULT_LANGUAGES } from "#/constants.js";
+import { serializeMDXText } from "#/parsers/mdx.js";
 
 /**
  * One text entry for a language. When OCHRE exposes multiple entries for the
@@ -62,8 +63,11 @@ function normalizeInputText(
   text: MultilingualStringInput,
 ): MultilingualStringText {
   return typeof text === "string"
-    ? { text, richText: text }
-    : { text: text.text, richText: text.richText ?? text.text };
+    ? { text, richText: serializeMDXText(text) }
+    : {
+        text: text.text,
+        richText: text.richText ?? serializeMDXText(text.text),
+      };
 }
 
 function normalizeAliases(
