@@ -16,5 +16,5 @@ export type {
   MultilingualStringObject,
   MultilingualStringText,
 } from "#/parsers/multilingual.js";
-export * from "#/types/index.js";
-export * from "#/types/website.js";
+export type * from "#/types/index.js";
+export type * from "#/types/website.js";

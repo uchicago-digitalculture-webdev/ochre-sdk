@@ -27,12 +27,14 @@
   "publishConfig": {
     "access": "public"
   },
+  "sideEffects": false,
   "imports": {
     "#/*": "./src/*"
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
       "default": "./dist/index.mjs"
     }
   },
