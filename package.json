@@ -56,10 +56,10 @@
     "release": "bumpp"
   },
   "dependencies": {
-    "date-fns": "^4.2.1",
+    "date-fns": "^4.3.0",
     "fast-equals": "^6.0.0",
     "fast-xml-parser": "^5.8.0",
-    "valibot": "^1.4.0"
+    "valibot": "^1.4.1"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.0.0",
