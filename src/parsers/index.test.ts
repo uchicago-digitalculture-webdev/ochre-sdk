@@ -505,6 +505,32 @@ describe("string parser integration", () => {
     expect(parsedContent.getExactText("eng")).toBe("Hola");
   });
 
+  it("parses newline whitespace markers as line breaks", () => {
+    expect(
+      parseXMLString({ payload: "Line two", whitespace: "newline" }),
+    ).toEqual({ text: "\nLine two", richText: "<br />\nLine two" });
+
+    const parsedContent = parseXMLContent(
+      {
+        content: [
+          {
+            lang: "eng",
+            string: [
+              { payload: "Line one" },
+              { payload: "Line two", whitespace: "newline" },
+            ],
+          },
+        ],
+      },
+      { languages: ["eng"] as const },
+    );
+
+    expect(parsedContent.getExactText("eng")).toBe("Line one\nLine two");
+    expect(parsedContent.getExactRichText("eng")).toBe(
+      "Line one<br />\nLine two",
+    );
+  });
+
   it("renders XML rend spans using the actual payload boundary spaces", () => {
     const parsedContent = parseXMLContent(
       {
@@ -801,7 +827,7 @@ describe("string parser integration", () => {
     );
 
     expect(parsedContent.getExactRichText("eng")).toBe(
-      '<Annotation type="text-styling" variant="paragraph" size="md">Featured image:</Annotation> <ExternalLink href="https://ark.lib.uchicago.edu/ark:61001/b23w8rj3328d" content="Snyder\'s 1885 map">Snyder\'s map of Hyde Park, Illinois, 1885</ExternalLink>. <Annotation type="text-styling" variant="paragraph" size="md">From the</Annotation> <ExternalLink href="https://node.uchicago.edu/collection/mapping-chicagoland">Mapping Chicagoland</ExternalLink> collection. Holding institution: Chicago History Museum. ',
+      '<br />\n<Annotation type="text-styling" variant="paragraph" size="md">Featured image:</Annotation> <ExternalLink href="https://ark.lib.uchicago.edu/ark:61001/b23w8rj3328d" content="Snyder\'s 1885 map">Snyder\'s map of Hyde Park, Illinois, 1885</ExternalLink>. <Annotation type="text-styling" variant="paragraph" size="md">From the</Annotation> <ExternalLink href="https://node.uchicago.edu/collection/mapping-chicagoland">Mapping Chicagoland</ExternalLink> collection. Holding institution: Chicago History Museum. ',
     );
   });
 

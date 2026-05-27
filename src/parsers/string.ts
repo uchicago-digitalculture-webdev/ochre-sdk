@@ -167,6 +167,28 @@ function applyMDXRenderElements(
   return result;
 }
 
+function applyNewlineWhitespace(
+  contentString: string,
+  whitespace: string | undefined,
+  rendering: TextRendering,
+): string {
+  if (whitespace == null) {
+    return contentString;
+  }
+
+  if (!whitespace.split(" ").includes("newline")) {
+    return contentString;
+  }
+
+  if (rendering === "rich") {
+    return contentString.trim() === "***"
+      ? `${contentString}\n`
+      : `<br />\n${contentString}`;
+  }
+
+  return `\n${contentString}`;
+}
+
 /**
  * Parses XML string into a formatted string with rendering options
  *
@@ -191,7 +213,11 @@ function parseXMLStringVariant(
     );
   }
 
-  return returnString;
+  return applyNewlineWhitespace(
+    returnString,
+    string.whitespace,
+    options.rendering,
+  );
 }
 
 function parseXMLStringPayload(
@@ -571,7 +597,7 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
 ): string {
   const hasTextContent = item.payload != null || item.string != null;
   if (!hasTextContent && getXMLRichTextLinks(item).length === 0) {
-    return "";
+    return applyNewlineWhitespace("", item.whitespace, options.rendering);
   }
 
   if (hasRichTextEnvelope(item)) {
@@ -587,7 +613,11 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
     }
 
     if (options.rendering === "plain") {
-      return linkString;
+      return applyNewlineWhitespace(
+        linkString,
+        item.whitespace,
+        options.rendering,
+      );
     }
 
     return renderRichTextItem(item, linkString, contentItem, options);
@@ -603,7 +633,7 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
     result = parseRenderOptions(result, item.rend, options.rendering);
   }
 
-  return result;
+  return applyNewlineWhitespace(result, item.whitespace, options.rendering);
 }
 
 function parseNestedStringItems<V extends ReadonlyArray<string>>(
@@ -744,7 +774,11 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
 
   const links = getXMLRichTextLinks(item);
   if (links.length === 0) {
-    return wrapWithTextStyling(linkString, annotationMetadata.textStyling);
+    return applyNewlineWhitespace(
+      wrapWithTextStyling(linkString, annotationMetadata.textStyling),
+      item.whitespace,
+      rendering,
+    );
   }
 
   let result = "";
@@ -853,7 +887,7 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
     }
   }
 
-  return result;
+  return applyNewlineWhitespace(result, item.whitespace, rendering);
 }
 
 /**
