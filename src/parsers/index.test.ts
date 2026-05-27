@@ -487,6 +487,15 @@ describe("string parser integration", () => {
     );
   });
 
+  it("escapes plain XML text that would otherwise be parsed as MDX", () => {
+    const parsedString = parseXMLString({
+      payload: "<Persons & organizations>",
+    });
+
+    expect(parsedString.text).toBe("<Persons & organizations>");
+    expect(parsedString.richText).toBe('{"<Persons & organizations>"}');
+  });
+
   it("falls back to available XML content when a requested language is missing", () => {
     const parsedContent = parseXMLContent(
       { content: [{ lang: "spa", string: [{ payload: "Hola" }] }] },
@@ -494,6 +503,64 @@ describe("string parser integration", () => {
     );
 
     expect(parsedContent.getExactText("eng")).toBe("Hola");
+  });
+
+  it("renders XML rend spans using the actual payload boundary spaces", () => {
+    const parsedContent = parseXMLContent(
+      {
+        content: [
+          {
+            lang: "eng",
+            string: [
+              { payload: "Alpha", rend: "italic" },
+              { payload: " is written. " },
+              { payload: "Bēta", rend: "italic" },
+              { payload: " is long." },
+            ],
+          },
+        ],
+      },
+      { languages: ["eng"] as const },
+    );
+
+    expect(parsedContent.getExactRichText("eng")).toBe(
+      "<em>Alpha</em> is written. <em>Bēta</em> is long.",
+    );
+  });
+
+  it("renders payload-bearing rich text links and rewrites permanent URLs", () => {
+    const parsedContent = parseXMLContent(
+      {
+        content: [
+          {
+            lang: "eng",
+            string: [
+              { payload: "Before " },
+              {
+                links: {
+                  resource: [
+                    {
+                      uuid: "b0000000-0000-4000-8000-000000000000",
+                      type: "webpage",
+                      href: "https://pi.lib.uchicago.edu/1001/org/ochre/c0000000-0000-4000-8000-000000000000",
+                      publicationDateTime: PUBLICATION_DATE,
+                      identification: identification({ eng: "Website" }),
+                    },
+                  ],
+                },
+                payload: "linked site",
+              },
+              { payload: " after" },
+            ],
+          },
+        ],
+      },
+      { languages: ["eng"] as const },
+    );
+
+    expect(parsedContent.getExactRichText("eng")).toBe(
+      'Before <ExternalLink href="https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=c0000000-0000-4000-8000-000000000000" content="Website">linked site</ExternalLink> after',
+    );
   });
 
   it("renders text-styling annotations carried by rich text properties", () => {
