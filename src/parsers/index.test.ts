@@ -554,6 +554,47 @@ describe("string parser integration", () => {
     );
   });
 
+  it("serializes inline MDX boundaries without creating display whitespace", () => {
+    const fourDisplaySpaces = ` ${"\u00A0".repeat(3)}`;
+    const eightDisplaySpaces = ` ${"\u00A0".repeat(7)}`;
+    const parsedContent = parseXMLContent(
+      {
+        content: [
+          {
+            lang: "eng",
+            string: [
+              { payload: "1." },
+              { payload: " " },
+              { payload: "πυλαι ταμασιαι", rend: "italic" },
+              { payload: "2. [", whitespace: "newline" },
+              { payload: "π", rend: "italic" },
+              { payload: "]" },
+              { payload: "υλαι αρων εσβα", rend: "italic" },
+              { payload: "3. [", whitespace: "newline" },
+              { payload: "    " },
+              { payload: "π", rend: "italic" },
+              { payload: "]" },
+              { payload: "υλαι εσακκει", rend: "italic" },
+              { payload: "[ ]" },
+              { payload: "4. [        ]", whitespace: "newline" },
+              { payload: "τιων", rend: "italic" },
+              { payload: " vacat[ ]" },
+              { whitespace: "newline" },
+            ],
+          },
+        ],
+      },
+      { languages: ["eng"] as const },
+    );
+
+    expect(parsedContent.getExactText("eng")).toBe(
+      "1. πυλαι ταμασιαι\n2. [π]υλαι αρων εσβα\n3. [    π]υλαι εσακκει[ ]\n4. [        ]τιων vacat[ ]\n",
+    );
+    expect(parsedContent.getExactRichText("eng")).toBe(
+      `<>\n{"1."}{" "}<em>πυλαι ταμασιαι</em><br />\n{"2. ["}<em>π</em>{"]"}<em>υλαι αρων εσβα</em><br />\n{"3. ["}{"${fourDisplaySpaces}"}<em>π</em>{"]"}<em>υλαι εσακκει</em>{"[ ]"}<br />\n{"4. [${eightDisplaySpaces}]"}<em>τιων</em>{" vacat[ ]"}<br />\n</>`,
+    );
+  });
+
   it("renders payload-bearing rich text links and rewrites permanent URLs", () => {
     const parsedContent = parseXMLContent(
       {
@@ -827,7 +868,7 @@ describe("string parser integration", () => {
     );
 
     expect(parsedContent.getExactRichText("eng")).toBe(
-      '<br />\n<Annotation type="text-styling" variant="paragraph" size="md">Featured image:</Annotation> <ExternalLink href="https://ark.lib.uchicago.edu/ark:61001/b23w8rj3328d" content="Snyder\'s 1885 map">Snyder\'s map of Hyde Park, Illinois, 1885</ExternalLink>. <Annotation type="text-styling" variant="paragraph" size="md">From the</Annotation> <ExternalLink href="https://node.uchicago.edu/collection/mapping-chicagoland">Mapping Chicagoland</ExternalLink> collection. Holding institution: Chicago History Museum. ',
+      '<>\n<br />\n<Annotation type="text-styling" variant="paragraph" size="md">Featured image:</Annotation>{" "}<ExternalLink href="https://ark.lib.uchicago.edu/ark:61001/b23w8rj3328d" content="Snyder\'s 1885 map">Snyder\'s map of Hyde Park, Illinois, 1885</ExternalLink>. <Annotation type="text-styling" variant="paragraph" size="md">From the</Annotation>{" "}<ExternalLink href="https://node.uchicago.edu/collection/mapping-chicagoland">Mapping Chicagoland</ExternalLink> collection. Holding institution: Chicago History Museum. \n</>',
     );
   });
 
@@ -906,7 +947,7 @@ describe("string parser integration", () => {
     );
 
     expect(parsedContent.getExactRichText("eng")).toBe(
-      '<InternalLink uuid="f0000000-0000-4000-8000-000000000000" properties="f1000000-0000-4000-8000-000000000000" value="f2000000-0000-4000-8000-000000000000" content="Doc">doc</InternalLink><TooltipSpan content="Draft">draft</TooltipSpan><InlineImage uuid="f4000000-0000-4000-8000-000000000000" content="Image" height={120} width={90} />',
+      '<>\n<InternalLink uuid="f0000000-0000-4000-8000-000000000000" properties="f1000000-0000-4000-8000-000000000000" value="f2000000-0000-4000-8000-000000000000" content="Doc">doc</InternalLink><TooltipSpan content="Draft">draft</TooltipSpan><InlineImage uuid="f4000000-0000-4000-8000-000000000000" content="Image" height={120} width={90} />\n</>',
     );
   });
 });

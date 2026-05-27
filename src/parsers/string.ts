@@ -16,7 +16,7 @@ import {
   TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
   TEXT_ANNOTATION_UUID,
 } from "#/constants.js";
-import { serializeMDXText } from "#/parsers/mdx.js";
+import { serializeMDXContent, serializeMDXText } from "#/parsers/mdx.js";
 import { MultilingualString } from "#/parsers/multilingual.js";
 import { renderOptionsSchema } from "#/schemas.js";
 import { getXMLSourceIndex } from "#/xml/metadata.js";
@@ -951,15 +951,17 @@ function parseXMLContentItem<V extends ReadonlyArray<string>>(
   contentItem: XMLContent["content"][number],
   options: { languages: V },
 ): MultilingualStringText {
+  const richText = parseNestedStringItems(contentItem.string, contentItem, {
+    ...options,
+    rendering: "rich",
+  });
+
   return {
     text: parseNestedStringItems(contentItem.string, contentItem, {
       ...options,
       rendering: "plain",
     }),
-    richText: parseNestedStringItems(contentItem.string, contentItem, {
-      ...options,
-      rendering: "rich",
-    }),
+    richText: serializeMDXContent(richText),
   };
 }
 
