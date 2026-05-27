@@ -18,7 +18,7 @@ import {
 } from "#/constants.js";
 import { serializeMDXText } from "#/parsers/mdx.js";
 import { MultilingualString } from "#/parsers/multilingual.js";
-import { renderOptionsSchema, whitespaceSchema } from "#/schemas.js";
+import { renderOptionsSchema } from "#/schemas.js";
 import { getXMLSourceIndex } from "#/xml/metadata.js";
 
 type XMLRichTextLink =
@@ -168,61 +168,12 @@ function applyMDXRenderElements(
 }
 
 /**
- * Applies whitespace options to a string (newline)
- *
- * @param contentString - The string content to modify
- * @param whitespace - Space-separated string of whitespace options
- * @param rendering - Which text rendering to produce
- * @returns String with whitespace modifications applied
- *
- * @internal
- */
-function parseWhitespace(
-  contentString: string,
-  whitespace: string,
-  rendering: TextRendering,
-): string {
-  let returnString = contentString;
-
-  const { success, output } = v.safeParse(whitespaceSchema, whitespace);
-  if (!success) {
-    return contentString;
-  }
-
-  for (const option of output) {
-    switch (option) {
-      case "newline": {
-        if (rendering === "rich") {
-          returnString =
-            returnString.trim() === "***"
-              ? `${returnString}\n`
-              : `<br />\n${returnString}`;
-        } else {
-          returnString = `\n${returnString}`;
-        }
-        break;
-      }
-      case "trailing": {
-        returnString = `${returnString} `;
-        break;
-      }
-      case "leading": {
-        returnString = ` ${returnString}`;
-        break;
-      }
-    }
-  }
-
-  return returnString.replaceAll("&#39;", "'");
-}
-
-/**
- * Parses XML string into a formatted string with whitespace and rendering options
+ * Parses XML string into a formatted string with rendering options
  *
  * @param string - XML string to parse
  * @param options - Options for parsing
  * @param options.rendering - Which text rendering to produce
- * @returns Formatted string with whitespace and rendering options
+ * @returns Formatted string with rendering options
  *
  * @internal
  */
@@ -236,14 +187,6 @@ function parseXMLStringVariant(
     returnString = parseRenderOptions(
       returnString,
       string.rend,
-      options.rendering,
-    );
-  }
-
-  if (string.whitespace != null) {
-    returnString = parseWhitespace(
-      returnString,
-      string.whitespace,
       options.rendering,
     );
   }
@@ -374,16 +317,6 @@ function createMDXStringAttribute(
     : `"${value}"`;
 
   return ` ${name}=${serializedValue}`;
-}
-
-function applyWhitespaceToResult(
-  result: string,
-  whitespace: string | undefined,
-  rendering: TextRendering,
-): string {
-  return whitespace == null
-    ? result
-    : parseWhitespace(result, whitespace, rendering);
 }
 
 function getPropertyValueUuid(
@@ -638,9 +571,7 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
 ): string {
   const hasTextContent = item.payload != null || item.string != null;
   if (!hasTextContent && getXMLRichTextLinks(item).length === 0) {
-    return item.whitespace == null
-      ? ""
-      : parseWhitespace("", item.whitespace, options.rendering);
+    return "";
   }
 
   if (hasRichTextEnvelope(item)) {
@@ -656,11 +587,7 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
     }
 
     if (options.rendering === "plain") {
-      return applyWhitespaceToResult(
-        linkString,
-        item.whitespace,
-        options.rendering,
-      );
+      return linkString;
     }
 
     return renderRichTextItem(item, linkString, contentItem, options);
@@ -676,7 +603,7 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
     result = parseRenderOptions(result, item.rend, options.rendering);
   }
 
-  return applyWhitespaceToResult(result, item.whitespace, options.rendering);
+  return result;
 }
 
 function parseNestedStringItems<V extends ReadonlyArray<string>>(
@@ -817,11 +744,7 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
 
   const links = getXMLRichTextLinks(item);
   if (links.length === 0) {
-    return applyWhitespaceToResult(
-      wrapWithTextStyling(linkString, annotationMetadata.textStyling),
-      item.whitespace,
-      rendering,
-    );
+    return wrapWithTextStyling(linkString, annotationMetadata.textStyling);
   }
 
   let result = "";
@@ -855,11 +778,7 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
               content: contentText,
               text: linkString,
             });
-            result += applyWhitespaceToResult(
-              component,
-              item.whitespace,
-              rendering,
-            );
+            result += component;
           } else if (link.publicationDateTime != null) {
             const component = createInternalLinkComponent({
               uuid: getLinkStringProperty(link, "uuid"),
@@ -867,22 +786,14 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
               content: contentText,
               annotationMetadata,
             });
-            result += applyWhitespaceToResult(
-              component,
-              item.whitespace,
-              rendering,
-            );
+            result += component;
           } else {
             const component = createMDXComponent("tooltipSpan", {
               uuid: getLinkStringProperty(link, "uuid"),
               text: linkString,
               content: contentText,
             });
-            result += applyWhitespaceToResult(
-              component,
-              item.whitespace,
-              rendering,
-            );
+            result += component;
           }
           break;
         }
@@ -894,11 +805,7 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
             annotationMetadata,
             propertyMetadata: getFirstPropertyMetadata(item),
           });
-          result += applyWhitespaceToResult(
-            component,
-            item.whitespace,
-            rendering,
-          );
+          result += component;
           break;
         }
         case "externalDocument": {
@@ -914,11 +821,7 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
                   text: linkString,
                   content: contentText,
                 });
-          result += applyWhitespaceToResult(
-            component,
-            item.whitespace,
-            rendering,
-          );
+          result += component;
           break;
         }
         case "webpage": {
@@ -928,11 +831,7 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
             text: linkString,
             content: contentText,
           });
-          result += applyWhitespaceToResult(
-            component,
-            item.whitespace,
-            rendering,
-          );
+          result += component;
           break;
         }
       }
@@ -943,14 +842,14 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
         content: contentText,
         annotationMetadata,
       });
-      result += applyWhitespaceToResult(component, item.whitespace, rendering);
+      result += component;
     } else {
       const component = createMDXComponent("tooltipSpan", {
         uuid: getLinkStringProperty(link, "uuid"),
         text: linkString,
         content: contentText,
       });
-      result += applyWhitespaceToResult(component, item.whitespace, rendering);
+      result += component;
     }
   }
 

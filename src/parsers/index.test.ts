@@ -487,22 +487,6 @@ describe("string parser integration", () => {
     );
   });
 
-  it("applies standalone whitespace without duplicating existing content", () => {
-    const parsedContent = parseXMLContent(
-      {
-        content: [
-          {
-            lang: "eng",
-            string: [{ payload: "Line one" }, { whitespace: "newline" }],
-          },
-        ],
-      },
-      { languages: ["eng"] as const },
-    );
-
-    expect(parsedContent.getExactText("eng")).toBe("Line one\n");
-  });
-
   it("falls back to available XML content when a requested language is missing", () => {
     const parsedContent = parseXMLContent(
       { content: [{ lang: "spa", string: [{ payload: "Hola" }] }] },
@@ -510,85 +494,6 @@ describe("string parser integration", () => {
     );
 
     expect(parsedContent.getExactText("eng")).toBe("Hola");
-  });
-
-  it("ports whitespace options and permanent URL rewriting from the old parser", () => {
-    expect(
-      parseXMLString({ payload: "word", whitespace: "leading trailing" }).text,
-    ).toBe(" word ");
-
-    const parsedContent = parseXMLContent(
-      {
-        content: [
-          {
-            lang: "eng",
-            string: [
-              {
-                string: [
-                  {
-                    links: {
-                      resource: [
-                        {
-                          uuid: "b0000000-0000-4000-8000-000000000000",
-                          type: "webpage",
-                          href: "https://pi.lib.uchicago.edu/1001/org/ochre/c0000000-0000-4000-8000-000000000000",
-                          identification: identification({ eng: "Website" }),
-                        },
-                      ],
-                    },
-                    string: [{ payload: "site" }],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-      { languages: ["eng"] as const },
-    );
-
-    expect(parsedContent.getExactRichText("eng")).toBe(
-      '<ExternalLink href="https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=c0000000-0000-4000-8000-000000000000" content="Website">site</ExternalLink>',
-    );
-  });
-
-  it("renders rich text links whose text is carried by the same XML string node", () => {
-    const parsedContent = parseXMLContent(
-      {
-        content: [
-          {
-            lang: "eng",
-            string: [
-              {
-                string: [
-                  { payload: "Before ", whitespace: "trailing" },
-                  {
-                    links: {
-                      resource: [
-                        {
-                          uuid: "b0000000-0000-4000-8000-000000000000",
-                          type: "webpage",
-                          href: "http://example.com",
-                          publicationDateTime: PUBLICATION_DATE,
-                          identification: identification({ eng: "Example" }),
-                        },
-                      ],
-                    },
-                    payload: "linked text",
-                  },
-                  { payload: " after", whitespace: "leading" },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-      { languages: ["eng"] as const },
-    );
-
-    expect(parsedContent.getExactRichText("eng")).toBe(
-      'Before  <ExternalLink href="http://example.com" content="Example">linked text</ExternalLink>  after',
-    );
   });
 
   it("renders text-styling annotations carried by rich text properties", () => {
@@ -829,7 +734,7 @@ describe("string parser integration", () => {
     );
 
     expect(parsedContent.getExactRichText("eng")).toBe(
-      '<br />\n<Annotation type="text-styling" variant="paragraph" size="md">Featured image:</Annotation>   <ExternalLink href="https://ark.lib.uchicago.edu/ark:61001/b23w8rj3328d" content="Snyder\'s 1885 map">Snyder\'s map of Hyde Park, Illinois, 1885</ExternalLink>.  <Annotation type="text-styling" variant="paragraph" size="md">From the</Annotation>   <ExternalLink href="https://node.uchicago.edu/collection/mapping-chicagoland">Mapping Chicagoland</ExternalLink>  collection. Holding institution: Chicago History Museum.  ',
+      '<Annotation type="text-styling" variant="paragraph" size="md">Featured image:</Annotation> <ExternalLink href="https://ark.lib.uchicago.edu/ark:61001/b23w8rj3328d" content="Snyder\'s 1885 map">Snyder\'s map of Hyde Park, Illinois, 1885</ExternalLink>. <Annotation type="text-styling" variant="paragraph" size="md">From the</Annotation> <ExternalLink href="https://node.uchicago.edu/collection/mapping-chicagoland">Mapping Chicagoland</ExternalLink> collection. Holding institution: Chicago History Museum. ',
     );
   });
 

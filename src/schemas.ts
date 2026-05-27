@@ -95,16 +95,6 @@ export const renderOptionsSchema = v.pipe(
 );
 
 /**
- * Schema for validating and parsing whitespace options
- * @internal
- */
-export const whitespaceSchema = v.pipe(
-  v.string(),
-  v.transform((str) => str.split(" ")),
-  v.array(v.picklist(["newline", "trailing", "leading"])),
-);
-
-/**
  * Schema for validating date data types
  * @internal
  */
