@@ -838,7 +838,7 @@ function parseImageMapArea(area: XMLImageMapArea): ImageMapArea {
 
   return {
     uuid: area.uuid,
-    publicationDateTime: area.publicationDateTime,
+    publicationDateTime: area.publicationDateTime ?? null,
     type: area.type,
     title: area.title,
     slug: area.slug ?? null,

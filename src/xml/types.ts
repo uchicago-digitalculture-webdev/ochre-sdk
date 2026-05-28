@@ -171,7 +171,7 @@ export type XMLImage = {
 
 export type XMLImageMapArea = {
   uuid: string;
-  publicationDateTime: Date;
+  publicationDateTime?: Date;
   type: string;
   title: string;
   slug?: string;
