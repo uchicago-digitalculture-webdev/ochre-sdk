@@ -55,6 +55,28 @@
     "test": "vitest run",
     "release": "bumpp"
   },
+  "changelogithub": {
+    "types": {
+      "feat": {
+        "title": "🚀 Features"
+      },
+      "fix": {
+        "title": "🐞 Bug Fixes"
+      },
+      "refactor": {
+        "title": "🔧 Refactors"
+      },
+      "test": {
+        "title": "🧪 Tests"
+      },
+      "docs": {
+        "title": "📝 Documentation"
+      },
+      "chore": {
+        "title": "🧹 Chores"
+      }
+    }
+  },
   "dependencies": {
     "date-fns": "^4.3.0",
     "fast-equals": "^6.0.0",
