@@ -1,5 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
+import type { FetchFunction } from "#/parsers/helpers.js";
 import type { LanguageCodes } from "#/types/index.js";
 import type { Website } from "#/types/website.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
@@ -7,11 +8,6 @@ import { parseWebsite } from "#/parsers/website/index.js";
 import { createSchemaValidationError, getErrorOutput } from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
-
-type FetchFunction = (
-  input: string | URL | globalThis.Request,
-  init?: RequestInit,
-) => Promise<Response>;
 
 /**
  * Fetches and parses a website configuration from the OCHRE API

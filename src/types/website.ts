@@ -546,3 +546,73 @@ export type WebBlockByLayout<
 
 export type AccordionWebBlock<T extends LanguageCodes = LanguageCodes> =
   WebBlock<T, "accordion">;
+
+export type WebsiteMetadataImage<T extends LanguageCodes = LanguageCodes> = {
+  uuid: string;
+  label: MultilingualString<T> | null;
+  description: MultilingualString<T> | null;
+  width: number | null;
+  height: number | null;
+};
+
+export type WebsiteMetadataWebElement<T extends LanguageCodes = LanguageCodes> =
+  | {
+      uuid: string;
+      type: "element";
+      component: "text";
+      content: MultilingualString<T>;
+    }
+  | {
+      uuid: string;
+      type: "element";
+      component: "button";
+      label: MultilingualString<T> | null;
+      image: WebsiteMetadataImage<T> | null;
+    }
+  | {
+      uuid: string;
+      type: "element";
+      component: "image";
+      images: Array<WebsiteMetadataImage<T>>;
+    };
+
+export type WebsiteMetadataWebBlock<T extends LanguageCodes = LanguageCodes> = {
+  uuid: string;
+  type: "block";
+  items: Array<WebsiteMetadataWebItem<T>>;
+};
+
+export type WebsiteMetadataWebItem<T extends LanguageCodes = LanguageCodes> =
+  | WebsiteMetadataWebElement<T>
+  | WebsiteMetadataWebBlock<T>;
+
+export type WebsiteMetadataWebpage<T extends LanguageCodes = LanguageCodes> = {
+  uuid: string;
+  type: "page";
+  title: MultilingualString<T>;
+  slug: string;
+  items: Array<WebsiteMetadataWebItem<T>>;
+  segments: Array<WebsiteMetadataSegment<T>>;
+  properties: { backgroundImage: WebsiteMetadataImage<T> | null };
+  webpages: Array<WebsiteMetadataWebpage<T>>;
+};
+
+export type WebsiteMetadata<T extends LanguageCodes = LanguageCodes> = {
+  uuid: string;
+  type: "website" | "segment";
+  belongsTo: { uuid: string; abbreviation: string } | null;
+  metadata: Pick<Metadata<T>, "description" | "defaultLanguage" | "languages">;
+  identification: Identification<T>;
+  items: Array<WebsiteMetadataWebpage<T>>;
+  properties: {
+    icon: {
+      logoUuid: string | null;
+      faviconUuid: string | null;
+      appleTouchIconUuid: string | null;
+    };
+    footer: { logoUuid: string | null };
+  };
+};
+
+export type WebsiteMetadataSegment<T extends LanguageCodes = LanguageCodes> =
+  WebsiteMetadata<T> & { type: "segment" };

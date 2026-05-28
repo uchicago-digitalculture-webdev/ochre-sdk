@@ -1,5 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
+import type { FetchBaseOptions, FetchLanguages } from "#/parsers/helpers.js";
 import type {
   ContainedItemCategoryFromOption,
   ContainedItemCategoryOption,
@@ -14,27 +15,6 @@ import { iso639_3Schema, uuidSchema } from "#/schemas.js";
 import { createSchemaValidationError, getErrorOutput } from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
-
-type FetchFunction = (
-  input: string | URL | globalThis.Request,
-  init?: RequestInit,
-) => Promise<Response>;
-
-type FetchItemLinksBaseOptions<
-  TLanguages extends ReadonlyArray<string> | undefined = undefined,
-> = { languages?: TLanguages; fetch?: FetchFunction };
-
-type FetchItemLinksRuntimeOptions = FetchItemLinksBaseOptions<
-  ReadonlyArray<string>
-> & { containedItemCategory?: ContainedItemCategoryOption<ItemCategory> };
-
-type FetchItemLinksLanguages<
-  TLanguages extends ReadonlyArray<string> | undefined,
-> = TLanguages extends readonly []
-  ? ReadonlyArray<string>
-  : TLanguages extends ReadonlyArray<string>
-    ? TLanguages
-    : ReadonlyArray<string>;
 
 function parseLanguages<const T extends ReadonlyArray<string>>(
   languages: T,
@@ -166,7 +146,7 @@ export async function fetchItemLinks<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
-  options?: FetchItemLinksBaseOptions<TLanguages> & {
+  options?: FetchBaseOptions<TLanguages> & {
     containedItemCategory?: TContainedItemCategory;
   },
 ): Promise<
@@ -175,7 +155,7 @@ export async function fetchItemLinks<
         Item<
           ItemCategory,
           ContainedItemCategoryFromOption<ItemCategory, TContainedItemCategory>,
-          FetchItemLinksLanguages<TLanguages>,
+          FetchLanguages<TLanguages>,
           "embedded"
         >
       >;
@@ -186,7 +166,9 @@ export async function fetchItemLinks<
 >;
 export async function fetchItemLinks(
   uuid: string,
-  options?: FetchItemLinksRuntimeOptions,
+  options?: FetchBaseOptions<ReadonlyArray<string>> & {
+    containedItemCategory?: ContainedItemCategoryOption<ItemCategory>;
+  },
 ): Promise<
   | {
       items: Array<

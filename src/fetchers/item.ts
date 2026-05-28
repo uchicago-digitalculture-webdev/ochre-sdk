@@ -1,5 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
+import type { FetchBaseOptions, FetchLanguages } from "#/parsers/helpers.js";
 import type {
   ContainedItemCategory,
   ContainedItemCategoryFromOption,
@@ -23,39 +24,10 @@ import {
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
 
-type FetchFunction = (
-  input: string | URL | globalThis.Request,
-  init?: RequestInit,
-) => Promise<Response>;
-
-type FetchItemBaseOptions<
-  TLanguages extends ReadonlyArray<string> | undefined = undefined,
-> = { languages?: TLanguages; fetch?: FetchFunction };
-
-type FetchItemNoOmitEmbeddedItemsOption = { shouldOmitEmbeddedItems?: false };
-
-type FetchItemRuntimeOptions = FetchItemBaseOptions<ReadonlyArray<string>> & {
-  category?: ItemCategory;
-  containedItemCategory?: ContainedItemCategoryOption<ItemCategory>;
-  shouldOmitEmbeddedItems?: boolean;
-};
-
-type FetchItemLanguages<TLanguages extends ReadonlyArray<string> | undefined> =
-  TLanguages extends readonly []
-    ? ReadonlyArray<string>
-    : TLanguages extends ReadonlyArray<string>
-      ? TLanguages
-      : ReadonlyArray<string>;
-
-type FetchItemSuccess<TItem> = {
-  item: TItem;
-  error: null;
-  detailedError: null;
-};
-
-type FetchItemError = { item: null; error: string; detailedError: string };
-
-type FetchItemResult<TItem> = Promise<FetchItemSuccess<TItem> | FetchItemError>;
+type FetchItemResult<TItem> = Promise<
+  | { item: TItem; error: null; detailedError: null }
+  | { item: null; error: string; detailedError: string }
+>;
 
 function isItemContainerCategory(
   category: ItemCategory,
@@ -251,16 +223,16 @@ export async function fetchItem<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
-  options?: FetchItemBaseOptions<TLanguages> &
-    FetchItemNoOmitEmbeddedItemsOption & {
-      category?: undefined;
-      containedItemCategory?: TContainedItemCategory;
-    },
+  options?: FetchBaseOptions<TLanguages> & {
+    category?: undefined;
+    containedItemCategory?: TContainedItemCategory;
+    shouldOmitEmbeddedItems?: false;
+  },
 ): FetchItemResult<
   Item<
     ItemCategory,
     ContainedItemCategoryFromOption<ItemCategory, TContainedItemCategory>,
-    FetchItemLanguages<TLanguages>
+    FetchLanguages<TLanguages>
   >
 >;
 export async function fetchItem<
@@ -270,10 +242,10 @@ export async function fetchItem<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
-  options: FetchItemBaseOptions<TLanguages> & {
+  options: FetchBaseOptions<TLanguages> & {
     category?: undefined;
     containedItemCategory?: TContainedItemCategory;
-    shouldOmitEmbeddedItems: true;
+    shouldOmitEmbeddedItems?: true;
   },
 ): FetchItemResult<
   ItemWithoutEmbeddedItems<
@@ -282,7 +254,7 @@ export async function fetchItem<
       ItemContainerCategory,
       TContainedItemCategory
     >,
-    FetchItemLanguages<TLanguages>
+    FetchLanguages<TLanguages>
   >
 >;
 export async function fetchItem<
@@ -293,16 +265,16 @@ export async function fetchItem<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
-  options: FetchItemBaseOptions<TLanguages> &
-    FetchItemNoOmitEmbeddedItemsOption & {
-      category: TCategory;
-      containedItemCategory?: TContainedItemCategory;
-    },
+  options: FetchBaseOptions<TLanguages> & {
+    category: TCategory;
+    containedItemCategory?: TContainedItemCategory;
+    shouldOmitEmbeddedItems?: false;
+  },
 ): FetchItemResult<
   Item<
     TCategory,
     ContainedItemCategoryFromOption<TCategory, TContainedItemCategory>,
-    FetchItemLanguages<TLanguages>
+    FetchLanguages<TLanguages>
   >
 >;
 export async function fetchItem<
@@ -313,7 +285,7 @@ export async function fetchItem<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
-  options: FetchItemBaseOptions<TLanguages> & {
+  options: FetchBaseOptions<TLanguages> & {
     category: TCategory;
     containedItemCategory?: TContainedItemCategory;
     shouldOmitEmbeddedItems: true;
@@ -322,7 +294,7 @@ export async function fetchItem<
   ItemWithoutEmbeddedItems<
     TCategory,
     ContainedItemCategoryFromOption<TCategory, TContainedItemCategory>,
-    FetchItemLanguages<TLanguages>
+    FetchLanguages<TLanguages>
   >
 >;
 export async function fetchItem<
@@ -330,21 +302,21 @@ export async function fetchItem<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
-  options: FetchItemBaseOptions<TLanguages> &
-    FetchItemNoOmitEmbeddedItemsOption & {
-      category: TCategory;
-      containedItemCategory?: never;
-    },
+  options: FetchBaseOptions<TLanguages> & {
+    category: TCategory;
+    containedItemCategory?: never;
+    shouldOmitEmbeddedItems?: false;
+  },
 ): FetchItemResult<
-  Item<
-    TCategory,
-    ContainedItemCategory<TCategory>,
-    FetchItemLanguages<TLanguages>
-  >
+  Item<TCategory, ContainedItemCategory<TCategory>, FetchLanguages<TLanguages>>
 >;
 export async function fetchItem(
   uuid: string,
-  options?: FetchItemRuntimeOptions,
+  options?: FetchBaseOptions<ReadonlyArray<string>> & {
+    category?: ItemCategory;
+    containedItemCategory?: ContainedItemCategoryOption<ItemCategory>;
+    shouldOmitEmbeddedItems?: boolean;
+  },
 ): Promise<
   | {
       item:

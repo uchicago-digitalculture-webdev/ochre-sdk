@@ -1,5 +1,10 @@
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
+import type {
+  FetchBaseOptions,
+  FetchLanguages,
+  FetchRuntimeOptions,
+} from "#/parsers/helpers.js";
 import type { Gallery } from "#/types/index.js";
 import type { XMLGalleryData } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
@@ -12,27 +17,6 @@ import {
 } from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLGalleryData as XMLGalleryDataSchema } from "#/xml/schemas.js";
-
-type FetchFunction = (
-  input: string | URL | globalThis.Request,
-  init?: RequestInit,
-) => Promise<Response>;
-
-type FetchGalleryBaseOptions<
-  TLanguages extends ReadonlyArray<string> | undefined = undefined,
-> = { languages?: TLanguages; fetch?: FetchFunction };
-
-type FetchGalleryRuntimeOptions = FetchGalleryBaseOptions<
-  ReadonlyArray<string>
->;
-
-type FetchGalleryLanguages<
-  TLanguages extends ReadonlyArray<string> | undefined,
-> = TLanguages extends readonly []
-  ? ReadonlyArray<string>
-  : TLanguages extends ReadonlyArray<string>
-    ? TLanguages
-    : ReadonlyArray<string>;
 
 function parseLanguages<const T extends ReadonlyArray<string>>(
   languages: T,
@@ -138,10 +122,10 @@ export async function fetchGallery<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   params: { uuid: string; filter?: string; page: number; perPage: number },
-  options?: FetchGalleryBaseOptions<TLanguages>,
+  options?: FetchBaseOptions<TLanguages>,
 ): Promise<
   | {
-      gallery: Gallery<FetchGalleryLanguages<TLanguages>>;
+      gallery: Gallery<FetchLanguages<TLanguages>>;
       error: null;
       detailedError: null;
     }
@@ -149,7 +133,7 @@ export async function fetchGallery<
 >;
 export async function fetchGallery(
   params: { uuid: string; filter?: string; page: number; perPage: number },
-  options?: FetchGalleryRuntimeOptions,
+  options?: FetchRuntimeOptions,
 ): Promise<
   | {
       gallery: Gallery<ReadonlyArray<string>>;

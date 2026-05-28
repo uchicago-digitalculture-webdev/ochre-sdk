@@ -4,6 +4,25 @@ import { DEFAULT_LANGUAGES } from "#/constants.js";
 import { MultilingualString } from "#/parsers/multilingual.js";
 import { parseXMLContent, parseXMLString } from "#/parsers/string.js";
 
+export type FetchFunction = (
+  input: string | URL | globalThis.Request,
+  init?: RequestInit,
+) => Promise<Response>;
+
+export type FetchBaseOptions<
+  TLanguages extends ReadonlyArray<string> | undefined = undefined,
+> = { languages?: TLanguages; fetch?: FetchFunction };
+
+export type FetchRuntimeOptions = FetchBaseOptions<ReadonlyArray<string>>;
+
+export type FetchLanguages<
+  TLanguages extends ReadonlyArray<string> | undefined,
+> = TLanguages extends readonly []
+  ? ReadonlyArray<string>
+  : TLanguages extends ReadonlyArray<string>
+    ? TLanguages
+    : ReadonlyArray<string>;
+
 export type ParserOptions<T extends ReadonlyArray<string>> = { languages: T };
 
 const FALLBACK_PARSER_OPTIONS: ParserOptions<ReadonlyArray<string>> = {

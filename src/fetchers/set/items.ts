@@ -1,6 +1,11 @@
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type {
+  FetchBaseOptions,
+  FetchLanguages,
+  FetchRuntimeOptions,
+} from "#/parsers/helpers.js";
+import type {
   Query,
   QueryLeaf,
   SetItem,
@@ -27,27 +32,6 @@ import {
 } from "#/utils.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLSetItemsData as XMLSetItemsDataSchema } from "#/xml/schemas.js";
-
-type FetchFunction = (
-  input: string | URL | globalThis.Request,
-  init?: RequestInit,
-) => Promise<Response>;
-
-type FetchSetItemsBaseOptions<
-  TLanguages extends ReadonlyArray<string> | undefined = undefined,
-> = { languages?: TLanguages; fetch?: FetchFunction };
-
-type FetchSetItemsRuntimeOptions = FetchSetItemsBaseOptions<
-  ReadonlyArray<string>
->;
-
-type FetchSetItemsLanguages<
-  TLanguages extends ReadonlyArray<string> | undefined,
-> = TLanguages extends readonly []
-  ? ReadonlyArray<string>
-  : TLanguages extends ReadonlyArray<string>
-    ? TLanguages
-    : ReadonlyArray<string>;
 
 type FetchSetItemsCategory<
   TContainedItemCategories extends ReadonlyArray<SetItemCategory> | undefined,
@@ -518,7 +502,7 @@ export async function fetchSetItems<
     pageSize?: number;
   },
   containedItemCategories?: TContainedItemCategories,
-  options?: FetchSetItemsBaseOptions<TLanguages>,
+  options?: FetchBaseOptions<TLanguages>,
 ): Promise<
   | {
       totalCount: number;
@@ -527,7 +511,7 @@ export async function fetchSetItems<
       items: Array<
         SetItem<
           FetchSetItemsCategory<TContainedItemCategories>,
-          FetchSetItemsLanguages<TLanguages>
+          FetchLanguages<TLanguages>
         >
       >;
       error: null;
@@ -551,7 +535,7 @@ export async function fetchSetItems(
     pageSize?: number;
   },
   containedItemCategories?: ReadonlyArray<SetItemCategory>,
-  options?: FetchSetItemsRuntimeOptions,
+  options?: FetchRuntimeOptions,
 ): Promise<
   | {
       totalCount: number;
