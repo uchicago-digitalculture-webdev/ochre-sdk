@@ -640,9 +640,11 @@ function expectPropertyFieldsMatchRaw(
     const rawValue = rawProperty.value![valueIndex]!;
     const parsedValue = parsedProperty.values[valueIndex]!;
     const rawLabel =
-      rawValue.content == null
-        ? null
-        : parseContentLikeForTest(rawValue as XMLContent);
+      rawValue.content != null
+        ? parseContentLikeForTest(rawValue as XMLContent)
+        : rawValue.payload != null && rawValue.payload !== ""
+          ? rawValue.payload
+          : null;
     const expectedContent =
       rawValue.rawValue ?? rawValue.payload ?? rawLabel ?? rawValue.slug ?? "";
     const expectedNumericContent = Number(expectedContent);
@@ -1294,7 +1296,7 @@ describe("fetchItem", () => {
     expect(languages).toStrictEqual(["eng", "spa"]);
     expectTypeOf(languages).toEqualTypeOf<readonly ["eng", "spa"]>();
     expect(() => defineLanguages("english")).toThrow(
-      "Language code must be exactly 3 characters",
+      "Language code must be exactly 3 lowercase letters",
     );
   });
 
