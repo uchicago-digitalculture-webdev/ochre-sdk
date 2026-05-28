@@ -13,7 +13,9 @@ import type {
   ContextTreeLevelItem,
   Style,
   StylesheetItem,
+  WebAccordionItem,
   WebBlock,
+  WebBlockItem,
   WebElement,
   WebElementComponent,
   WebImage,
@@ -1990,28 +1992,17 @@ function parseSidebar<T extends ReadonlyArray<string>>(
   return returnSidebar;
 }
 
-/**
- * Parses raw text element data for accordion layout with items support
- *
- * @param elementResource - Raw element resource data in OCHRE format
- * @returns Parsed text WebElement with items array
- */
-function parseWebElementForAccordion<T extends ReadonlyArray<string>>(
+function parseWebAccordionItem<T extends ReadonlyArray<string>>(
   elementResource: XMLWebsiteResource,
+  childResources: Array<XMLWebsiteResource>,
   options: ParserOptions<T>,
-): Extract<WebElement<T>, { component: "text" }> & {
-  items: Array<WebElement<T> | WebBlock<T>>;
-} {
-  const textElement = parseWebElement(elementResource, options) as Extract<
-    WebElement<T>,
-    { component: "text" }
-  >;
+): WebAccordionItem<T> {
+  const trigger = parseWebElement(
+    elementResource,
+    options,
+  ) as WebAccordionItem<T>["trigger"];
 
-  const childResources = elementResource.resource
-    ? normalizeWebsiteResources(elementResource.resource)
-    : [];
-
-  const items: Array<WebElement<T> | WebBlock<T>> = [];
+  const items: Array<WebBlockItem<T>> = [];
   for (const resource of childResources) {
     const resourceProperties = resource.properties
       ? parseSimplifiedProperties(resource.properties, options)
@@ -2040,7 +2031,7 @@ function parseWebElementForAccordion<T extends ReadonlyArray<string>>(
     }
   }
 
-  return { ...textElement, items };
+  return { uuid: trigger.uuid, type: "accordion-item", trigger, items };
 }
 
 /**
@@ -2231,82 +2222,59 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
     ? normalizeWebsiteResources(blockResource.resource)
     : [];
 
-  if (returnBlock.properties.default.layout === "accordion") {
-    const accordionItems: Array<
-      Extract<WebElement<T>, { component: "text" }> & {
-        items: Array<WebElement<T> | WebBlock<T>>;
-      }
-    > = [];
+  const supportsAccordionItems =
+    returnBlock.properties.default.layout === "accordion" ||
+    returnBlock.properties.tablet?.layout === "accordion" ||
+    returnBlock.properties.mobile?.layout === "accordion";
 
-    for (const resource of blockResources) {
-      const resourceProperties = resource.properties
-        ? parseSimplifiedProperties(resource.properties, options)
-        : [];
-      const resourceReader = websitePresentationReader(resourceProperties);
+  const blockItems: Array<WebAccordionItem<T> | WebBlockItem<T>> = [];
+  for (const resource of blockResources) {
+    const resourceProperties = resource.properties
+      ? parseSimplifiedProperties(resource.properties, options)
+      : [];
+    const resourceReader = websitePresentationReader(resourceProperties);
 
-      const resourceType = resourceReader.value<"element" | "block">(
-        "presentation",
-      );
-
-      if (resourceType !== "element") {
-        throw new Error(
-          `Accordion only accepts elements, but got “${resourceType}” (${formatXMLWebsiteResourceMetadata(
-            resource,
-          )})`,
-          { cause: resource },
-        );
-      }
-
-      const componentType = resourceReader
-        .nestedByValue("presentation", "element")
-        .value<string>("component");
-
-      if (componentType !== "text") {
-        throw new Error(
-          `Accordion only accepts text components, but got “${componentType}” (${formatXMLWebsiteResourceMetadata(
-            resource,
-          )})`,
-          { cause: resource },
-        );
-      }
-
-      const element = parseWebElementForAccordion(resource, options);
-      accordionItems.push(element);
+    const resourceType = resourceReader.value<"element" | "block">(
+      "presentation",
+    );
+    if (resourceType === null) {
+      continue;
     }
 
-    returnBlock.items = accordionItems;
-  } else {
-    const blockItems: Array<WebElement<T> | WebBlock<T>> = [];
-    for (const resource of blockResources) {
-      const resourceProperties = resource.properties
-        ? parseSimplifiedProperties(resource.properties, options)
-        : [];
+    switch (resourceType) {
+      case "element": {
+        const childResources = resource.resource
+          ? normalizeWebsiteResources(resource.resource)
+          : [];
+        const componentType = resourceReader
+          .nestedByValue("presentation", "element")
+          .value<string>("component");
 
-      const resourceType = websitePresentationReader(resourceProperties).value<
-        "element" | "block"
-      >("presentation");
-      if (resourceType === null) {
-        continue;
+        if (
+          supportsAccordionItems &&
+          componentType === "text" &&
+          childResources.length > 0
+        ) {
+          const item = parseWebAccordionItem(resource, childResources, options);
+          blockItems.push(item);
+          break;
+        }
+
+        const element = parseWebElement(resource, options);
+        blockItems.push(element);
+        break;
       }
-
-      switch (resourceType) {
-        case "element": {
-          const element = parseWebElement(resource, options);
-          blockItems.push(element);
-          break;
+      case "block": {
+        const block = parseWebBlock(resource, options);
+        if (block) {
+          blockItems.push(block);
         }
-        case "block": {
-          const block = parseWebBlock(resource, options);
-          if (block) {
-            blockItems.push(block);
-          }
-          break;
-        }
+        break;
       }
     }
-
-    returnBlock.items = blockItems;
   }
+
+  returnBlock.items = blockItems;
 
   returnBlock.cssStyles = parseResponsiveCssStyles(blockProperties);
 

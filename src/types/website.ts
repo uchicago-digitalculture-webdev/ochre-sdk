@@ -496,6 +496,17 @@ export type WebBlockLayout =
   | "horizontal-flex"
   | "accordion";
 
+export type WebBlockItem<T extends LanguageCodes = LanguageCodes> =
+  | WebElement<T>
+  | WebBlock<T>;
+
+export type WebAccordionItem<T extends LanguageCodes = LanguageCodes> = {
+  uuid: string;
+  type: "accordion-item";
+  trigger: WebElementOf<"text", T>;
+  items: Array<WebBlockItem<T>>;
+};
+
 /**
  * Represents a block of vertical or horizontal content alignment
  */
@@ -507,12 +518,8 @@ export type WebBlock<
   type: "block";
   title: WebTitle<T>;
   items: U extends "accordion"
-    ? Array<
-        Extract<WebElement<T>, { component: "text" }> & {
-          items: Array<WebElement<T> | WebBlock<T>>;
-        }
-      >
-    : Array<WebElement<T> | WebBlock<T>>;
+    ? Array<WebAccordionItem<T> | WebBlockItem<T>>
+    : Array<WebBlockItem<T>>;
   properties: {
     default: {
       layout: U;
