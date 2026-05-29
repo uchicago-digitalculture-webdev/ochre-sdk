@@ -605,38 +605,27 @@ const XMLImage: v.GenericSchema<unknown, XMLImageType> = v.object(
   "XMLImage: Shape error",
 );
 
-const XMLImageMapArea: v.GenericSchema<unknown, XMLImageMapAreaType> = v.pipe(
-  v.object(
-    {
-      uuid: v.pipe(
-        v.string("XMLImageMapArea: uuid is string and required"),
-        v.check(
-          isPseudoUuid,
-          "XMLImageMapArea: uuid is not a valid pseudo-UUID",
-        ),
+const XMLImageMapArea: v.GenericSchema<unknown, XMLImageMapAreaType> = v.object(
+  {
+    uuid: v.pipe(
+      v.string("XMLImageMapArea: uuid is string and required"),
+      v.check(isPseudoUuid, "XMLImageMapArea: uuid is not a valid pseudo-UUID"),
+    ),
+    publicationDateTime: v.optional(
+      customDateTime(
+        "XMLImageMapArea: publicationDateTime is not a valid datetime",
       ),
-      publicationDateTime: v.optional(
-        customDateTime(
-          "XMLImageMapArea: publicationDateTime is not a valid datetime",
-        ),
-      ),
-      type: v.string("XMLImageMapArea: type is string and required"),
-      title: v.string("XMLImageMapArea: title is string and required"),
-      slug: v.optional(
-        v.string("XMLImageMapArea: slug is string and optional"),
-      ),
-      shape: v.picklist(
-        ["rect", "circle", "poly"],
-        "XMLImageMapArea: shape is rect, circle, or poly",
-      ),
-      coords: v.string("XMLImageMapArea: coords is string and required"),
-    },
-    "XMLImageMapArea: Shape error",
-  ),
-  v.check(
-    (area) => area.type === "person" || area.publicationDateTime != null,
-    "XMLImageMapArea: publicationDateTime is required unless type is person",
-  ),
+    ),
+    type: v.string("XMLImageMapArea: type is string and required"),
+    title: v.string("XMLImageMapArea: title is string and required"),
+    slug: v.optional(v.string("XMLImageMapArea: slug is string and optional")),
+    shape: v.picklist(
+      ["rect", "circle", "poly"],
+      "XMLImageMapArea: shape is rect, circle, or poly",
+    ),
+    coords: v.string("XMLImageMapArea: coords is string and required"),
+  },
+  "XMLImageMapArea: Shape error",
 );
 
 const XMLImageMap: v.GenericSchema<unknown, XMLImageMapType> = v.object(
