@@ -47,9 +47,9 @@ present and `error` is `null`; on failure, the parsed value is `null` and
 
 - `fetchItem(uuid, options)` fetches and parses a single OCHRE item. Passing
   `category` narrows the returned TypeScript type, and `containedItemCategory`
-  controls how nested Tree or Set contents are parsed. For large Trees or Sets,
-  pass `shouldOmitEmbeddedItems: true` to fetch the top-level item without its
-  embedded `<items>` payload.
+  controls how nested Tree or Set contents are parsed. For large recursive item
+  categories, pass `shouldOmitEmbeddedItems: true` to fetch the top-level item
+  without its embedded item hierarchy.
 - `fetchItemLinks(uuid, options)` fetches items linked from a source item and
   parses them as embedded OCHRE items.
 - `fetchGallery(params, options)` fetches paginated resource galleries with an

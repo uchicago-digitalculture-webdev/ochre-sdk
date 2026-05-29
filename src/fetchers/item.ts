@@ -7,6 +7,7 @@ import type {
   ContainedItemCategoryOption,
   Item,
   ItemCategory,
+  ItemCategoryWithEmbeddedItems,
   ItemContainerCategory,
   ItemWithoutEmbeddedItems,
   SetItemCategory,
@@ -35,10 +36,28 @@ function isItemContainerCategory(
   return category === "tree" || category === "set";
 }
 
-function isItemContainer(
+function isItemCategoryWithEmbeddedItems(
+  category: ItemCategory,
+): category is ItemCategoryWithEmbeddedItems {
+  return (
+    category === "tree" ||
+    category === "bibliography" ||
+    category === "concept" ||
+    category === "spatialUnit" ||
+    category === "period" ||
+    category === "resource" ||
+    category === "set"
+  );
+}
+
+function isItemWithEmbeddedItems(
   item: Item<ItemCategory, SetItemCategory, ReadonlyArray<string>>,
-): item is Item<ItemContainerCategory, SetItemCategory, ReadonlyArray<string>> {
-  return isItemContainerCategory(item.category);
+): item is Item<
+  ItemCategoryWithEmbeddedItems,
+  SetItemCategory,
+  ReadonlyArray<string>
+> {
+  return isItemCategoryWithEmbeddedItems(item.category);
 }
 
 function assertItemCategoryAllowed(
@@ -65,13 +84,13 @@ function assertShouldOmitEmbeddedItemsAllowed(
   if (
     !shouldOmitEmbeddedItems ||
     category == null ||
-    isItemContainerCategory(category)
+    isItemCategoryWithEmbeddedItems(category)
   ) {
     return;
   }
 
   throw new Error(
-    `shouldOmitEmbeddedItems can only be used when category is "tree" or "set"; received category "${category}"`,
+    `shouldOmitEmbeddedItems can only be used when the item category contains embedded items; received category "${category}"`,
   );
 }
 
@@ -133,33 +152,73 @@ function inferFetchItemCategory(
   throw new Error("Could not infer OCHRE item category", { cause: rawOchre });
 }
 
-function buildOmitEmbeddedItemsXQuery(uuid: string): string {
+function buildOmitEmbeddedItemsXQuery(
+  uuid: string,
+  category: ItemCategoryWithEmbeddedItems | undefined,
+): string {
+  const collectionCategories: Array<ItemCategoryWithEmbeddedItems> =
+    category == null
+      ? [
+          "tree",
+          "bibliography",
+          "concept",
+          "spatialUnit",
+          "period",
+          "resource",
+          "set",
+        ]
+      : [category];
+  const collectionQueries: Array<string> = [];
+  for (const collectionCategory of collectionCategories) {
+    collectionQueries.push(
+      `cts:search(fn:collection("ochre/${collectionCategory}")/ochre, $uuid-query)`,
+    );
+  }
+
   return `xquery version "1.0-ml";
 
-let $ochre := doc()/ochre[@uuid=${stringLiteral(uuid)}][1]
+let $uuid := ${stringLiteral(uuid)}
+let $uuid-query := cts:element-attribute-value-query(xs:QName("ochre"), xs:QName("uuid"), $uuid, "exact")
+let $ochre := (
+  ${collectionQueries.join(",\n  ")}
+)[1]
+let $item := (
+  $ochre/tree,
+  $ochre/bibliography,
+  $ochre/concept,
+  $ochre/spatialUnit,
+  $ochre/period,
+  $ochre/resource,
+  $ochre/set
+)[1]
+let $embedded-child-name := if (local-name($item) = ("tree", "set")) then "items" else local-name($item)
 return
-  if (empty($ochre)) then ()
+  if (empty($ochre) or empty($item)) then ()
   else element ochre {
     $ochre/@*,
     for $node in $ochre/node()
     return
-      if (local-name($node) = ("tree", "set"))
-      then element { node-name($node) } { $node/@*, $node/node()[not(self::items)] }
+      if ($node is $item)
+      then element { node-name($item) } { $item/@*, $item/node()[not(self::*[local-name() = $embedded-child-name])] }
       else $node
   }`;
 }
 
 function omitEmbeddedItems(
-  item: Item<ItemContainerCategory, SetItemCategory, ReadonlyArray<string>>,
+  item: Item<
+    ItemCategoryWithEmbeddedItems,
+    SetItemCategory,
+    ReadonlyArray<string>
+  >,
 ): ItemWithoutEmbeddedItems<
-  ItemContainerCategory,
+  ItemCategoryWithEmbeddedItems,
   SetItemCategory,
   ReadonlyArray<string>
 > {
   const { items: _items, ...itemWithoutEmbeddedItems } = item;
 
   return itemWithoutEmbeddedItems as ItemWithoutEmbeddedItems<
-    ItemContainerCategory,
+    ItemCategoryWithEmbeddedItems,
     SetItemCategory,
     ReadonlyArray<string>
   >;
@@ -211,7 +270,7 @@ export function withLanguages<const TLanguages extends ReadonlyArray<string>>(
  * @param options - Required options object
  * @param options.category - The category of the OCHRE item to fetch
  * @param options.containedItemCategory - The category of items inside the OCHRE item to fetch. Only valid for Trees and Sets. Tree accepts one category; Set accepts one category or an array.
- * @param options.shouldOmitEmbeddedItems - Whether to omit the embedded `<items>` node when fetching a Tree or Set.
+ * @param options.shouldOmitEmbeddedItems - Whether to omit the embedded item hierarchy when fetching a recursive item category.
  * @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
  * @param options.fetch - Custom fetch function to use instead of the default fetch
  * @returns An object containing the parsed item
@@ -249,7 +308,7 @@ export async function fetchItem<
   },
 ): FetchItemResult<
   ItemWithoutEmbeddedItems<
-    ItemContainerCategory,
+    ItemCategoryWithEmbeddedItems,
     ContainedItemCategoryFromOption<
       ItemContainerCategory,
       TContainedItemCategory
@@ -278,9 +337,9 @@ export async function fetchItem<
   >
 >;
 export async function fetchItem<
-  const TCategory extends ItemContainerCategory,
+  const TCategory extends ItemCategoryWithEmbeddedItems,
   const TContainedItemCategory extends
-    | ContainedItemCategoryOption<TCategory>
+    | ContainedItemCategoryOption<Extract<TCategory, ItemContainerCategory>>
     | undefined = undefined,
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
@@ -293,7 +352,10 @@ export async function fetchItem<
 ): FetchItemResult<
   ItemWithoutEmbeddedItems<
     TCategory,
-    ContainedItemCategoryFromOption<TCategory, TContainedItemCategory>,
+    ContainedItemCategoryFromOption<
+      Extract<TCategory, ItemContainerCategory>,
+      TContainedItemCategory
+    >,
     FetchLanguages<TLanguages>
   >
 >;
@@ -322,7 +384,7 @@ export async function fetchItem(
       item:
         | Item<ItemCategory, SetItemCategory, ReadonlyArray<string>>
         | ItemWithoutEmbeddedItems<
-            ItemContainerCategory,
+            ItemCategoryWithEmbeddedItems,
             SetItemCategory,
             ReadonlyArray<string>
           >;
@@ -342,6 +404,11 @@ export async function fetchItem(
       options?.category,
       shouldOmitEmbeddedItems,
     );
+    const omitEmbeddedItemsCategory =
+      options?.category == null ||
+      isItemCategoryWithEmbeddedItems(options.category)
+        ? options?.category
+        : undefined;
     const languages: ReadonlyArray<string> =
       options?.languages == null ? [] : parseLanguages(options.languages);
 
@@ -351,7 +418,10 @@ export async function fetchItem(
           'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
           {
             method: "POST",
-            body: buildOmitEmbeddedItemsXQuery(parsedUuid),
+            body: buildOmitEmbeddedItemsXQuery(
+              parsedUuid,
+              omitEmbeddedItemsCategory,
+            ),
             headers: { "Content-Type": "application/xquery" },
           },
         )
@@ -393,7 +463,7 @@ export async function fetchItem(
     });
 
     const item =
-      shouldOmitEmbeddedItems && isItemContainer(parsedItem)
+      shouldOmitEmbeddedItems && isItemWithEmbeddedItems(parsedItem)
         ? omitEmbeddedItems(parsedItem)
         : parsedItem;
 

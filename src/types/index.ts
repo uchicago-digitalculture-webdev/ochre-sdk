@@ -33,6 +33,20 @@ export type ItemCategory =
 export type ItemContainerCategory = Extract<ItemCategory, "tree" | "set">;
 
 /**
+ * OCHRE item categories that expose recursive embedded item payloads.
+ */
+export type ItemCategoryWithEmbeddedItems = Extract<
+  ItemCategory,
+  | "tree"
+  | "bibliography"
+  | "concept"
+  | "spatialUnit"
+  | "period"
+  | "resource"
+  | "set"
+>;
+
+/**
  * The category of items in a Tree
  */
 export type TreeItemCategory = Exclude<ItemCategory, "tree">;
@@ -617,19 +631,29 @@ export type Item<
   : never;
 
 /**
- * A Tree or Set fetched without its embedded item hierarchy.
+ * An item fetched without its embedded item hierarchy.
  */
 export type ItemWithoutEmbeddedItems<
-  U extends ItemContainerCategory = ItemContainerCategory,
+  U extends ItemCategoryWithEmbeddedItems = ItemCategoryWithEmbeddedItems,
   V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
   T extends LanguageCodes = LanguageCodes,
   W extends ItemPayloadKind = "topLevel",
-> = U extends ItemContainerCategory
+> = U extends ItemCategoryWithEmbeddedItems
   ? U extends "tree"
     ? Prettify<Omit<Tree<Extract<V, TreeItemCategory>, T, W>, "items">>
     : U extends "set"
       ? Prettify<Omit<Set<Extract<V, SetItemCategory>, T, W>, "items">>
-      : never
+      : U extends "bibliography"
+        ? Prettify<Omit<Bibliography<T, W>, "items">>
+        : U extends "concept"
+          ? Prettify<Omit<Concept<T, W>, "items">>
+          : U extends "spatialUnit"
+            ? Prettify<Omit<SpatialUnit<T, W>, "items">>
+            : U extends "period"
+              ? Prettify<Omit<Period<T, W>, "items">>
+              : U extends "resource"
+                ? Prettify<Omit<Resource<T, W>, "items">>
+                : never
   : never;
 
 export type TopLevelItem<

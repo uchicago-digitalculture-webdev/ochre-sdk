@@ -1324,7 +1324,7 @@ describe("fetchItem", () => {
     });
   });
 
-  it("types shouldOmitEmbeddedItems for Tree and Set category overloads only", async () => {
+  it("types shouldOmitEmbeddedItems for recursive item category overloads only", async () => {
     const omittedSetResult = fetchItem(SET_UUIDS[0]!, {
       category: "set",
       shouldOmitEmbeddedItems: true,
@@ -1339,7 +1339,12 @@ describe("fetchItem", () => {
     });
     const omittedResourceResult = fetchItem(RESOURCE_UUIDS[0]!, {
       category: "resource",
-      // @ts-expect-error shouldOmitEmbeddedItems is only valid for Tree and Set categories.
+      shouldOmitEmbeddedItems: true,
+      fetch: async () => new Response("", { status: 500 }),
+    });
+    const omittedTextResult = fetchItem(TEXT_UUIDS[0]!, {
+      category: "text",
+      // @ts-expect-error shouldOmitEmbeddedItems is only valid for recursive item categories.
       shouldOmitEmbeddedItems: true,
       fetch: async () => new Response("", { status: 500 }),
     });
@@ -1372,18 +1377,37 @@ describe("fetchItem", () => {
         | { item: null; error: string; detailedError: string }
       >
     >();
-    await expect(omittedResourceResult).resolves.toStrictEqual({
+    expectTypeOf(omittedResourceResult).toEqualTypeOf<
+      Promise<
+        | {
+            item: ItemWithoutEmbeddedItems<
+              "resource",
+              never,
+              ReadonlyArray<string>
+            >;
+            error: null;
+            detailedError: null;
+          }
+        | { item: null; error: string; detailedError: string }
+      >
+    >();
+    await expect(omittedTextResult).resolves.toStrictEqual({
       item: null,
       error:
-        'shouldOmitEmbeddedItems can only be used when category is "tree" or "set"; received category "resource"',
+        'shouldOmitEmbeddedItems can only be used when the item category contains embedded items; received category "text"',
       detailedError:
-        'Error\nMessage: shouldOmitEmbeddedItems can only be used when category is "tree" or "set"; received category "resource"',
+        'Error\nMessage: shouldOmitEmbeddedItems can only be used when the item category contains embedded items; received category "text"',
     });
   });
 
-  for (const category of ["tree", "set"] as const) {
+  for (const category of ["tree", "resource", "set"] as const) {
     it(`fetches ${category} without embedded items via XQuery`, async () => {
-      const uuid = category === "tree" ? TREE_UUIDS[0]! : SET_UUIDS[0]!;
+      const uuid =
+        category === "tree"
+          ? TREE_UUIDS[0]!
+          : category === "resource"
+            ? RESOURCE_UUIDS[0]!
+            : SET_UUIDS[0]!;
       const fetchCalls: Array<{
         input: string | URL | globalThis.Request;
         init?: RequestInit;
@@ -1413,9 +1437,16 @@ describe("fetchItem", () => {
       const body = fetchCalls[0]?.init?.body;
       expect(typeof body).toBe("string");
       if (typeof body === "string") {
-        expect(body).toContain(`doc()/ochre[@uuid="${uuid}"][1]`);
-        expect(body).toContain('local-name($node) = ("tree", "set")');
-        expect(body).toContain("not(self::items)");
+        expect(body).toContain(
+          'cts:element-attribute-value-query(xs:QName("ochre"), xs:QName("uuid"), $uuid, "exact")',
+        );
+        expect(body).toContain(`fn:collection("ochre/${category}")/ochre`);
+        expect(body).toContain(
+          'if (local-name($item) = ("tree", "set")) then "items" else local-name($item)',
+        );
+        expect(body).toContain(
+          "not(self::*[local-name() = $embedded-child-name])",
+        );
       }
 
       expect(result.error).toBeNull();
@@ -1427,8 +1458,10 @@ describe("fetchItem", () => {
       expect("items" in result.item).toBe(false);
       if (result.item.category === "set") {
         expect(result.item.containedItemCategories).toStrictEqual([]);
-      } else {
+      } else if (result.item.category === "tree") {
         expect(result.item.containedItemCategory).toBeNull();
+      } else {
+        expect(result.item.category).toBe("resource");
       }
     });
   }
