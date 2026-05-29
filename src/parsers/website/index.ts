@@ -5,6 +5,7 @@ import type {
   ItemLink,
   ItemLinkCategory,
   ItemLinks,
+  PropertyValueContent,
   SimplifiedProperty,
 } from "#/types/index.js";
 import type {
@@ -66,7 +67,7 @@ type WebsiteLinkCategory = Extract<
 type WebsiteParseContext<T extends ReadonlyArray<string>> = Pick<
   Website<T>,
   "belongsTo" | "metadata"
->;
+> & { pageSlugsByUuid?: ReadonlyMap<string, string> };
 
 function isWebsiteLink<
   U extends WebsiteLinkCategory,
@@ -148,6 +149,10 @@ function normalizeWebsiteResources(
 
 const SEGMENT_UNIQUE_SLUG_PREFIX_REGEX = /^\$[^-]*-/;
 
+function cleanWebsitePageSlug(slug: string | undefined): string | null {
+  return slug?.replace(SEGMENT_UNIQUE_SLUG_PREFIX_REGEX, "") ?? null;
+}
+
 function prefixSlug(slug: string, slugPrefix: string | undefined): string {
   if (slugPrefix == null || slugPrefix === "") {
     return slug;
@@ -158,6 +163,111 @@ function prefixSlug(slug: string, slugPrefix: string | undefined): string {
   }
 
   return `${slugPrefix}/${slug}`;
+}
+
+function collectWebsitePageSlugs<T extends ReadonlyArray<string>>(
+  resources: Array<XMLWebsiteResourceItem> | undefined,
+  options: ParserOptions<T>,
+  slugPrefix?: string,
+  pageSlugsByUuid = new Map<string, string>(),
+  segmentSlugPrefix = slugPrefix,
+): Map<string, string> {
+  for (const resource of resources ?? []) {
+    if ("segments" in resource) {
+      for (const tree of resource.segments.tree) {
+        const segmentSlug =
+          tree.identification.abbreviation == null
+            ? null
+            : parseStringContent(tree.identification.abbreviation, options);
+        if (segmentSlug == null) {
+          throw new Error(
+            `Slug not found for segment website (website uuid “${tree.uuid}”)`,
+            { cause: tree },
+          );
+        }
+
+        collectWebsitePageSlugs(
+          tree.items?.resource,
+          options,
+          prefixSlug(segmentSlug, segmentSlugPrefix),
+          pageSlugsByUuid,
+        );
+      }
+
+      continue;
+    }
+
+    if (!("identification" in resource)) {
+      collectWebsitePageSlugs(
+        resource.resource,
+        options,
+        slugPrefix,
+        pageSlugsByUuid,
+        segmentSlugPrefix,
+      );
+      continue;
+    }
+
+    const resourceProperties =
+      resource.properties != null
+        ? parseSimplifiedProperties(resource.properties, options)
+        : [];
+    const resourceType =
+      websitePresentationReader(resourceProperties).value<string>(
+        "presentation",
+      );
+
+    if (resourceType === "page") {
+      const slug = cleanWebsitePageSlug(resource.slug);
+      if (slug == null) {
+        throw new Error(
+          `Slug not found for page (${formatXMLWebsiteResourceMetadata(resource)})`,
+          { cause: resource },
+        );
+      }
+
+      const pageSlug = prefixSlug(slug, slugPrefix);
+      pageSlugsByUuid.set(resource.uuid, pageSlug);
+
+      collectWebsitePageSlugs(
+        resource.resource,
+        options,
+        slugPrefix == null ? undefined : pageSlug,
+        pageSlugsByUuid,
+        pageSlug,
+      );
+      continue;
+    }
+
+    collectWebsitePageSlugs(
+      resource.resource,
+      options,
+      slugPrefix,
+      pageSlugsByUuid,
+      segmentSlugPrefix,
+    );
+  }
+
+  return pageSlugsByUuid;
+}
+
+function parseWebsiteLinkTarget<T extends ReadonlyArray<string>>(
+  value: PropertyValueContent<T> | null,
+  context: WebsiteParseContext<T>,
+): string | null {
+  if (value == null) {
+    return null;
+  }
+
+  if (value.href != null) {
+    return transformPermanentIdentificationUrlToItemLink(value.href);
+  }
+
+  return (
+    (value.uuid == null
+      ? undefined
+      : context.pageSlugsByUuid?.get(value.uuid)) ?? value.slug
+  );
 }
 
 function formatXMLWebsiteResourceMetadata(
@@ -463,6 +573,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
   componentProperty: SimplifiedProperty<T>,
   elementResource: XMLWebsiteResource,
   options: ParserOptions<T>,
+  context: WebsiteParseContext<T>,
 ): WebElementComponent<T> {
   const unparsedComponentName = componentProperty.values[0]!.content;
   const componentNameResult = v.safeParse(
@@ -520,9 +631,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
     }
     case "advanced-search": {
       const boundElementPropertyUuid = componentReader.uuid("bound-element");
-      const href = componentReader.linkTarget(
-        "link-to",
-        transformPermanentIdentificationUrlToItemLink,
+      const href = parseWebsiteLinkTarget(
+        componentReader.valueNode("link-to"),
+        context,
       );
 
       if (boundElementPropertyUuid == null && href == null) {
@@ -700,15 +811,15 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       );
 
       let isExternal = false;
-      let href = componentReader.linkTarget(
-        "navigate-to",
-        transformPermanentIdentificationUrlToItemLink,
+      let href = parseWebsiteLinkTarget(
+        componentReader.valueNode("navigate-to"),
+        context,
       );
 
       if (href === null) {
-        href = componentReader.linkTarget(
-          "link-to",
-          transformPermanentIdentificationUrlToItemLink,
+        href = parseWebsiteLinkTarget(
+          componentReader.valueNode("link-to"),
+          context,
         );
 
         if (href === null) {
@@ -1360,9 +1471,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         SearchBarComponent["queryVariant"]
       >("query-variant", "submit");
       const boundElementUuid = componentReader.uuid("bound-element");
-      const href = componentReader.linkTarget(
-        "link-to",
-        transformPermanentIdentificationUrlToItemLink,
+      const href = parseWebsiteLinkTarget(
+        componentReader.valueNode("link-to"),
+        context,
       );
 
       if (!boundElementUuid && !href) {
@@ -1603,6 +1714,7 @@ function parseWebTitle<T extends ReadonlyArray<string>>(
 function parseWebElement<T extends ReadonlyArray<string>>(
   elementResource: XMLWebsiteResource,
   options: ParserOptions<T>,
+  context: WebsiteParseContext<T>,
 ): WebElement<T> {
   const identification = parseIdentification(
     elementResource.identification,
@@ -1634,6 +1746,7 @@ function parseWebElement<T extends ReadonlyArray<string>>(
     componentProperty,
     elementResource,
     options,
+    context,
   );
 
   const cssStyles = parseResponsiveCssStyles(elementProperties);
@@ -1682,8 +1795,7 @@ function parseWebpage<T extends ReadonlyArray<string>>(
   );
 
   // TODO: Remove this once OCHRE is updated to allow segment-unique slugs
-  const slug =
-    webpageResource.slug?.replace(SEGMENT_UNIQUE_SLUG_PREFIX_REGEX, "") ?? null;
+  const slug = cleanWebsitePageSlug(webpageResource.slug);
 
   if (slug == null) {
     throw new Error(
@@ -1741,12 +1853,12 @@ function parseWebpage<T extends ReadonlyArray<string>>(
 
     switch (resourceType) {
       case "element": {
-        const element = parseWebElement(resource, options);
+        const element = parseWebElement(resource, options, context);
         items.push(element);
         break;
       }
       case "block": {
-        const block = parseWebBlock(resource, options);
+        const block = parseWebBlock(resource, options, context);
         if (block) {
           items.push(block);
         }
@@ -1896,6 +2008,7 @@ function parseWebsiteSegments<T extends ReadonlyArray<string>>(
 function parseSidebar<T extends ReadonlyArray<string>>(
   resources: Array<XMLWebsiteResource>,
   options: ParserOptions<T>,
+  context: WebsiteParseContext<T>,
 ): Website<T>["properties"]["sidebar"] | null {
   let returnSidebar: Website<T>["properties"]["sidebar"] | null = null;
 
@@ -1963,12 +2076,12 @@ function parseSidebar<T extends ReadonlyArray<string>>(
 
       switch (resourceType) {
         case "element": {
-          const element = parseWebElement(resource, options);
+          const element = parseWebElement(resource, options, context);
           items.push(element);
           break;
         }
         case "block": {
-          const block = parseWebBlock(resource, options);
+          const block = parseWebBlock(resource, options, context);
           if (block) {
             items.push(block);
           }
@@ -1996,10 +2109,12 @@ function parseWebAccordionItem<T extends ReadonlyArray<string>>(
   elementResource: XMLWebsiteResource,
   childResources: Array<XMLWebsiteResource>,
   options: ParserOptions<T>,
+  context: WebsiteParseContext<T>,
 ): WebAccordionItem<T> {
   const trigger = parseWebElement(
     elementResource,
     options,
+    context,
   ) as WebAccordionItem<T>["trigger"];
 
   const items: Array<WebBlockItem<T>> = [];
@@ -2017,12 +2132,12 @@ function parseWebAccordionItem<T extends ReadonlyArray<string>>(
 
     switch (resourceType) {
       case "element": {
-        const element = parseWebElement(resource, options);
+        const element = parseWebElement(resource, options, context);
         items.push(element);
         break;
       }
       case "block": {
-        const block = parseWebBlock(resource, options);
+        const block = parseWebBlock(resource, options, context);
         if (block) {
           items.push(block);
         }
@@ -2043,6 +2158,7 @@ function parseWebAccordionItem<T extends ReadonlyArray<string>>(
 function parseWebBlock<T extends ReadonlyArray<string>>(
   blockResource: XMLWebsiteResource,
   options: ParserOptions<T>,
+  context: WebsiteParseContext<T>,
 ): WebBlock<T> | null {
   const blockProperties = blockResource.properties
     ? parseSimplifiedProperties(blockResource.properties, options)
@@ -2255,17 +2371,22 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
           componentType === "text" &&
           childResources.length > 0
         ) {
-          const item = parseWebAccordionItem(resource, childResources, options);
+          const item = parseWebAccordionItem(
+            resource,
+            childResources,
+            options,
+            context,
+          );
           blockItems.push(item);
           break;
         }
 
-        const element = parseWebElement(resource, options);
+        const element = parseWebElement(resource, options, context);
         blockItems.push(element);
         break;
       }
       case "block": {
-        const block = parseWebBlock(resource, options);
+        const block = parseWebBlock(resource, options, context);
         if (block) {
           blockItems.push(block);
         }
@@ -2635,7 +2756,11 @@ function parseWebsiteTree<
   }
 
   const resources = normalizeWebsiteResources(websiteTree.items?.resource);
-  const sidebar = parseSidebar(resources, options);
+  const pageSlugsByUuid =
+    context.pageSlugsByUuid ??
+    collectWebsitePageSlugs(websiteTree.items?.resource, options, slugPrefix);
+  const treeContext: WebsiteParseContext<T> = { ...context, pageSlugsByUuid };
+  const sidebar = parseSidebar(resources, options, treeContext);
 
   const properties = parseWebsiteProperties(
     websiteTree.properties.property,
@@ -2655,7 +2780,7 @@ function parseWebsiteTree<
       ? parsePersonList(websiteTree.creators.creator, options)
       : [],
     license: parseLicense(websiteTree.availability),
-    items: parseWebpages(resources, options, context, slugPrefix),
+    items: parseWebpages(resources, options, treeContext, slugPrefix),
     properties,
   };
 }

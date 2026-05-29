@@ -84,18 +84,6 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
     return this.valueNode(label)?.uuid ?? null;
   }
 
-  linkTarget(
-    label: string,
-    transformHref: (href: string) => string,
-  ): string | null {
-    const value = this.valueNode(label);
-    if (value?.href != null) {
-      return transformHref(value.href);
-    }
-
-    return value?.slug ?? null;
-  }
-
   multilingualValue(
     label: string,
     options: ParserOptions<T>,
