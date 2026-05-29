@@ -62,6 +62,10 @@ const ENTRY_PAGE_TOKEN = "entry-page";
 const VARIANT_TOKEN = "variant";
 const HEADING_LEVEL_TOKEN = "heading-level";
 
+const RAW_MDX_BLOCK_DELIMITER = "```***```";
+const RAW_MDX_BLOCK_PLACEHOLDER_PREFIX = "\0raw-mdx-block:";
+const RAW_MDX_BLOCK_PLACEHOLDER_SUFFIX = "\0";
+
 const MDX_QUOTED_ATTRIBUTE_ESCAPE_REGEX = /[\n\r"]/;
 const MDX_RENDER_ELEMENTS = {
   bold: "strong",
@@ -593,7 +597,11 @@ function hasRichTextEnvelope(item: XMLRichTextItem): boolean {
 function parseXMLStringItem<V extends ReadonlyArray<string>>(
   item: XMLRichTextItem,
   contentItem: XMLContent["content"][number],
-  options: { languages: V; rendering: TextRendering },
+  options: {
+    languages: V;
+    rendering: TextRendering;
+    rawMDXBlocks?: Array<string>;
+  },
 ): string {
   const hasTextContent = item.payload != null || item.string != null;
   if (!hasTextContent && getXMLRichTextLinks(item).length === 0) {
@@ -639,11 +647,73 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
 function parseNestedStringItems<V extends ReadonlyArray<string>>(
   items: ReadonlyArray<XMLRichTextItem>,
   contentItem: XMLContent["content"][number],
-  options: { languages: V; rendering: TextRendering },
+  options: {
+    languages: V;
+    rendering: TextRendering;
+    rawMDXBlocks?: Array<string>;
+  },
 ): string {
   let result = "";
-  for (const item of items) {
+  let rawMDXBlockStartIndex: number | null = null;
+  for (const [index, item] of items.entries()) {
+    if (
+      item.payload === RAW_MDX_BLOCK_DELIMITER &&
+      item.rend == null &&
+      item.links == null &&
+      item.properties == null &&
+      item.annotation == null &&
+      item.string == null
+    ) {
+      if (rawMDXBlockStartIndex == null) {
+        rawMDXBlockStartIndex = index;
+        continue;
+      }
+
+      let rawMDXBlock = "";
+      for (
+        let rawIndex = rawMDXBlockStartIndex + 1;
+        rawIndex < index;
+        rawIndex += 1
+      ) {
+        const rawItem = items[rawIndex];
+        if (rawItem != null) {
+          rawMDXBlock += parseXMLStringItem(rawItem, contentItem, {
+            languages: options.languages,
+            rendering: "plain",
+          });
+        }
+      }
+
+      if (item.whitespace?.split(" ").includes("newline") === true) {
+        rawMDXBlock += "\n";
+      }
+
+      if (options.rendering === "rich" && options.rawMDXBlocks != null) {
+        const placeholder = `${RAW_MDX_BLOCK_PLACEHOLDER_PREFIX}${options.rawMDXBlocks.length}${RAW_MDX_BLOCK_PLACEHOLDER_SUFFIX}`;
+        options.rawMDXBlocks.push(rawMDXBlock);
+        result += placeholder;
+      } else {
+        result += rawMDXBlock;
+      }
+
+      rawMDXBlockStartIndex = null;
+      continue;
+    }
+
+    if (rawMDXBlockStartIndex != null) {
+      continue;
+    }
+
     result += parseXMLStringItem(item, contentItem, options);
+  }
+
+  if (rawMDXBlockStartIndex != null) {
+    for (let index = rawMDXBlockStartIndex; index < items.length; index += 1) {
+      const item = items[index];
+      if (item != null) {
+        result += parseXMLStringItem(item, contentItem, options);
+      }
+    }
   }
 
   return result;
@@ -951,17 +1021,26 @@ function parseXMLContentItem<V extends ReadonlyArray<string>>(
   contentItem: XMLContent["content"][number],
   options: { languages: V },
 ): MultilingualStringText {
+  const rawMDXBlocks: Array<string> = [];
   const richText = parseNestedStringItems(contentItem.string, contentItem, {
     ...options,
     rendering: "rich",
+    rawMDXBlocks,
   });
+  let serializedRichText = serializeMDXContent(richText);
+  for (const [index, rawMDXBlock] of rawMDXBlocks.entries()) {
+    serializedRichText = serializedRichText.replaceAll(
+      `${RAW_MDX_BLOCK_PLACEHOLDER_PREFIX}${index}${RAW_MDX_BLOCK_PLACEHOLDER_SUFFIX}`,
+      rawMDXBlock,
+    );
+  }
 
   return {
     text: parseNestedStringItems(contentItem.string, contentItem, {
       ...options,
       rendering: "plain",
     }),
-    richText: serializeMDXContent(richText),
+    richText: serializedRichText,
   };
 }
 
