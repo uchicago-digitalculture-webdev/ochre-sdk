@@ -2911,7 +2911,7 @@ export function parseItem(
     abbreviation: rawOchre.belongsTo,
   };
   const metadata = parseMetadata(rawOchre, parserOptions, defaultLanguage);
-  const persistentUrl = parseHref(rawOchre.persistentUrl);
+  const persistentUrl = rawOchre.persistentUrl ?? null;
 
   const item = parseTopLevelItem(rawOchre, category, parserOptions);
 
