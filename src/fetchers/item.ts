@@ -2,17 +2,17 @@ import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type { FetchBaseOptions, FetchLanguages } from "#/parsers/helpers.js";
 import type {
-  ContainedItemCategory,
   ContainedItemCategoryFromOption,
   ContainedItemCategoryOption,
   Item,
   ItemCategory,
+  ItemCategoryFromOption,
+  ItemCategoryOption,
   ItemCategoryWithEmbeddedItems,
   ItemContainerCategory,
   ItemWithoutEmbeddedItems,
   SetItemCategory,
 } from "#/types/index.js";
-import type { XMLData } from "#/xml/types.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseItem } from "#/parsers/index.js";
 import { parseWebpageView } from "#/parsers/website/index.js";
@@ -61,102 +61,52 @@ function isItemWithEmbeddedItems(
 }
 
 function assertItemCategoryAllowed(
-  category: ItemCategory | undefined,
+  category: ItemCategoryOption | undefined,
   containedItemCategory: ContainedItemCategoryOption<ItemCategory> | undefined,
 ): void {
-  if (
-    category == null ||
-    containedItemCategory == null ||
-    isItemContainerCategory(category)
-  ) {
+  if (category == null || containedItemCategory == null) {
     return;
   }
 
+  const categories = typeof category === "string" ? [category] : category;
+  for (const possibleCategory of categories) {
+    if (isItemContainerCategory(possibleCategory)) {
+      return;
+    }
+  }
+
   throw new Error(
-    `containedItemCategory can only be used when category is "tree" or "set"; received category "${category}"`,
+    `containedItemCategory can only be used when category is "tree" or "set"; received category "${categories.join(", ")}"`,
   );
 }
 
 function assertShouldOmitEmbeddedItemsAllowed(
-  category: ItemCategory | undefined,
+  category: ItemCategoryOption | undefined,
   shouldOmitEmbeddedItems: boolean,
 ): void {
-  if (
-    !shouldOmitEmbeddedItems ||
-    category == null ||
-    isItemCategoryWithEmbeddedItems(category)
-  ) {
+  if (!shouldOmitEmbeddedItems || category == null) {
     return;
   }
 
-  throw new Error(
-    `shouldOmitEmbeddedItems can only be used when the item category contains embedded items; received category "${category}"`,
-  );
-}
-
-function normalizeFetchedCategory(
-  category: string | undefined,
-): ItemCategory | null {
-  switch (category) {
-    case "tree":
-    case "bibliography":
-    case "concept":
-    case "spatialUnit":
-    case "period":
-    case "person":
-    case "propertyVariable":
-    case "propertyValue":
-    case "resource":
-    case "text":
-    case "set": {
-      return category;
-    }
-    case "variable": {
-      return "propertyVariable";
-    }
-    case "value": {
-      return "propertyValue";
-    }
-    default: {
-      return null;
+  const categories = typeof category === "string" ? [category] : category;
+  for (const possibleCategory of categories) {
+    if (!isItemCategoryWithEmbeddedItems(possibleCategory)) {
+      throw new Error(
+        `shouldOmitEmbeddedItems can only be used when the item category contains embedded items; received category "${possibleCategory}"`,
+      );
     }
   }
-}
-
-function inferFetchItemCategory(
-  rawOchre: XMLData["result"]["ochre"],
-): ItemCategory {
-  const metadataCategory = normalizeFetchedCategory(
-    rawOchre.metadata.item?.category,
-  );
-  if (metadataCategory != null) {
-    return metadataCategory;
-  }
-
-  if ("tree" in rawOchre) return "tree";
-  if ("bibliography" in rawOchre) return "bibliography";
-  if ("concept" in rawOchre) return "concept";
-  if ("spatialUnit" in rawOchre) return "spatialUnit";
-  if ("period" in rawOchre) return "period";
-  if ("person" in rawOchre) return "person";
-  if ("propertyVariable" in rawOchre || "variable" in rawOchre) {
-    return "propertyVariable";
-  }
-  if ("propertyValue" in rawOchre || "value" in rawOchre) {
-    return "propertyValue";
-  }
-  if ("resource" in rawOchre) return "resource";
-  if ("text" in rawOchre) return "text";
-  if ("set" in rawOchre) return "set";
-
-  throw new Error("Could not infer OCHRE item category", { cause: rawOchre });
 }
 
 function buildOmitEmbeddedItemsXQuery(
   uuid: string,
-  category: ItemCategoryWithEmbeddedItems | undefined,
+  category:
+    | ItemCategoryWithEmbeddedItems
+    | ReadonlyArray<ItemCategoryWithEmbeddedItems>
+    | undefined,
 ): string {
-  const collectionCategories: Array<ItemCategoryWithEmbeddedItems> =
+  const collectionCategories: Array<ItemCategoryWithEmbeddedItems> = [];
+  const categories: ReadonlyArray<ItemCategoryWithEmbeddedItems> =
     category == null
       ? [
           "tree",
@@ -167,7 +117,16 @@ function buildOmitEmbeddedItemsXQuery(
           "resource",
           "set",
         ]
-      : [category];
+      : typeof category === "string"
+        ? [category]
+        : category;
+
+  for (const possibleCategory of categories) {
+    if (!collectionCategories.includes(possibleCategory)) {
+      collectionCategories.push(possibleCategory);
+    }
+  }
+
   const collectionQueries: Array<string> = [];
   for (const collectionCategory of collectionCategories) {
     collectionQueries.push(
@@ -268,7 +227,9 @@ export function withLanguages<const TLanguages extends ReadonlyArray<string>>(
  *
  * @param uuid - The UUID of the OCHRE item to fetch
  * @param options - Required options object
- * @param options.category - The category of the OCHRE item to fetch
+ * @param options.category - The category of the OCHRE item to fetch. Pass a
+ * single category when it is known, or an array when the item may be any
+ * category in that list.
  * @param options.containedItemCategory - The category of items inside the OCHRE item to fetch. Only valid for Trees and Sets. Tree accepts one category; Set accepts one category or an array.
  * @param options.shouldOmitEmbeddedItems - Whether to omit the embedded item hierarchy when fetching a recursive item category.
  * @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
@@ -317,9 +278,9 @@ export async function fetchItem<
   >
 >;
 export async function fetchItem<
-  const TCategory extends ItemContainerCategory,
+  const TCategory extends ItemCategoryOption,
   const TContainedItemCategory extends
-    | ContainedItemCategoryOption<TCategory>
+    | ContainedItemCategoryOption<ItemCategoryFromOption<TCategory>>
     | undefined = undefined,
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
@@ -331,15 +292,23 @@ export async function fetchItem<
   },
 ): FetchItemResult<
   Item<
-    TCategory,
-    ContainedItemCategoryFromOption<TCategory, TContainedItemCategory>,
+    ItemCategoryFromOption<TCategory>,
+    ContainedItemCategoryFromOption<
+      ItemCategoryFromOption<TCategory>,
+      TContainedItemCategory
+    >,
     FetchLanguages<TLanguages>
   >
 >;
 export async function fetchItem<
-  const TCategory extends ItemCategoryWithEmbeddedItems,
+  const TCategory extends ItemCategoryOption,
   const TContainedItemCategory extends
-    | ContainedItemCategoryOption<Extract<TCategory, ItemContainerCategory>>
+    | ContainedItemCategoryOption<
+        Extract<
+          ItemCategoryFromOption<TCategory>,
+          ItemCategoryWithEmbeddedItems
+        >
+      >
     | undefined = undefined,
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
@@ -347,35 +316,24 @@ export async function fetchItem<
   options: FetchBaseOptions<TLanguages> & {
     category: TCategory;
     containedItemCategory?: TContainedItemCategory;
-    shouldOmitEmbeddedItems: true;
+    shouldOmitEmbeddedItems: ItemCategoryFromOption<TCategory> extends ItemCategoryWithEmbeddedItems
+      ? true
+      : never;
   },
 ): FetchItemResult<
   ItemWithoutEmbeddedItems<
-    TCategory,
+    Extract<ItemCategoryFromOption<TCategory>, ItemCategoryWithEmbeddedItems>,
     ContainedItemCategoryFromOption<
-      Extract<TCategory, ItemContainerCategory>,
+      Extract<ItemCategoryFromOption<TCategory>, ItemCategoryWithEmbeddedItems>,
       TContainedItemCategory
     >,
     FetchLanguages<TLanguages>
   >
 >;
-export async function fetchItem<
-  const TCategory extends ItemCategory,
-  const TLanguages extends ReadonlyArray<string> | undefined = undefined,
->(
-  uuid: string,
-  options: FetchBaseOptions<TLanguages> & {
-    category: TCategory;
-    containedItemCategory?: never;
-    shouldOmitEmbeddedItems?: false;
-  },
-): FetchItemResult<
-  Item<TCategory, ContainedItemCategory<TCategory>, FetchLanguages<TLanguages>>
->;
 export async function fetchItem(
   uuid: string,
   options?: FetchBaseOptions<ReadonlyArray<string>> & {
-    category?: ItemCategory;
+    category?: ItemCategoryOption;
     containedItemCategory?: ContainedItemCategoryOption<ItemCategory>;
     shouldOmitEmbeddedItems?: boolean;
   },
@@ -404,11 +362,25 @@ export async function fetchItem(
       options?.category,
       shouldOmitEmbeddedItems,
     );
-    const omitEmbeddedItemsCategory =
-      options?.category == null ||
-      isItemCategoryWithEmbeddedItems(options.category)
-        ? options?.category
-        : undefined;
+    let omitEmbeddedItemsCategory:
+      | ItemCategoryWithEmbeddedItems
+      | ReadonlyArray<ItemCategoryWithEmbeddedItems>
+      | undefined;
+    if (options?.category != null) {
+      if (typeof options.category === "string") {
+        if (isItemCategoryWithEmbeddedItems(options.category)) {
+          omitEmbeddedItemsCategory = options.category;
+        }
+      } else {
+        const categories: Array<ItemCategoryWithEmbeddedItems> = [];
+        for (const possibleCategory of options.category) {
+          if (isItemCategoryWithEmbeddedItems(possibleCategory)) {
+            categories.push(possibleCategory);
+          }
+        }
+        omitEmbeddedItemsCategory = categories;
+      }
+    }
     const languages: ReadonlyArray<string> =
       options?.languages == null ? [] : parseLanguages(options.languages);
 
@@ -445,13 +417,8 @@ export async function fetchItem(
     }
     restoreXMLMetadata(output, data);
 
-    const category =
-      options?.category ?? inferFetchItemCategory(output.result.ochre);
-    assertItemCategoryAllowed(category, options?.containedItemCategory);
-    assertShouldOmitEmbeddedItemsAllowed(category, shouldOmitEmbeddedItems);
-
     const parsedItem = parseItem(output, {
-      category,
+      category: options?.category,
       containedItemCategory: options?.containedItemCategory,
       languages,
       parseResourceView: (view, context) =>
@@ -461,6 +428,14 @@ export async function fetchItem(
           context,
         ),
     });
+    assertItemCategoryAllowed(
+      parsedItem.category,
+      options?.containedItemCategory,
+    );
+    assertShouldOmitEmbeddedItemsAllowed(
+      parsedItem.category,
+      shouldOmitEmbeddedItems,
+    );
 
     const item =
       shouldOmitEmbeddedItems && isItemWithEmbeddedItems(parsedItem)

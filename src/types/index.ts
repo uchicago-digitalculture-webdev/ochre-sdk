@@ -56,6 +56,19 @@ export type TreeItemCategory = Exclude<ItemCategory, "tree">;
  */
 export type SetItemCategory = ItemCategory;
 
+export type ItemCategoryOption<U extends ItemCategory = ItemCategory> =
+  | U
+  | ReadonlyArray<U>;
+
+export type ItemCategoryFromOption<
+  U extends ItemCategoryOption | undefined = undefined,
+> =
+  U extends ReadonlyArray<infer V>
+    ? Extract<V, ItemCategory>
+    : U extends ItemCategory
+      ? U
+      : ItemCategory;
+
 export type ContainedItemCategory<U extends ItemCategory = ItemCategory> =
   U extends "tree"
     ? TreeItemCategory

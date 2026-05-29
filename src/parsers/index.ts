@@ -26,6 +26,9 @@ import type {
   Interpretation,
   Item,
   ItemCategory,
+  ItemCategoryFromOption,
+  ItemCategoryOption,
+  ItemContainerCategory,
   ItemLink,
   ItemLinkCategory,
   ItemLinks,
@@ -2838,9 +2841,11 @@ export function parseItem<
   T
 >;
 export function parseItem<
-  const TCategory extends ItemCategory,
+  const TCategory extends ItemCategoryOption,
   const TContainedItemCategory extends
-    | ContainedItemCategoryOption<TCategory>
+    | ContainedItemCategoryOption<
+        Extract<ItemCategoryFromOption<TCategory>, ItemContainerCategory>
+      >
     | undefined = undefined,
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 >(
@@ -2852,14 +2857,17 @@ export function parseItem<
     parseResourceView?: ResourceViewParser<T>;
   },
 ): Item<
-  TCategory,
-  ContainedItemCategoryFromOption<TCategory, TContainedItemCategory>,
+  ItemCategoryFromOption<TCategory>,
+  ContainedItemCategoryFromOption<
+    ItemCategoryFromOption<TCategory>,
+    TContainedItemCategory
+  >,
   T
 >;
 export function parseItem(
   rawData: XMLData,
   options: {
-    category?: ItemCategory;
+    category?: ItemCategoryOption;
     containedItemCategory?: ContainedItemCategoryOption<ItemCategory>;
     languages: ReadonlyArray<string>;
     parseResourceView?: ResourceViewParser<ReadonlyArray<string>>;
@@ -2868,7 +2876,7 @@ export function parseItem(
 export function parseItem(
   rawData: XMLData,
   options: {
-    category?: ItemCategory;
+    category?: ItemCategoryOption;
     containedItemCategory?: ContainedItemCategoryOption<ItemCategory>;
     languages: ReadonlyArray<string>;
     parseResourceView?: ResourceViewParser<ReadonlyArray<string>>;
@@ -2883,10 +2891,20 @@ export function parseItem(
     languages: languagesToUse,
     containedItemCategory: options.containedItemCategory,
   };
-  const category =
-    options.category ??
+  const inferredCategory =
     normalizeCategory(rawOchre.metadata.item?.category) ??
     inferTopLevelCategory(rawOchre);
+  let category = inferredCategory;
+  if (options.category != null) {
+    if (typeof options.category === "string") {
+      category = options.category;
+    } else if (!options.category.includes(inferredCategory)) {
+      throw new Error(
+        `OCHRE item category "${inferredCategory}" is not one of the expected categories: ${options.category.join(", ")}`,
+        { cause: { category: inferredCategory, categories: options.category } },
+      );
+    }
+  }
   const defaultLanguage = resolveDefaultLanguage(rawOchre, languagesToUse);
   const belongsTo = {
     uuid: rawOchre.uuidBelongsTo,

@@ -46,7 +46,9 @@ present and `error` is `null`; on failure, the parsed value is `null` and
 ## Core API
 
 - `fetchItem(uuid, options)` fetches and parses a single OCHRE item. Passing
-  `category` narrows the returned TypeScript type, and `containedItemCategory`
+  `category` as a single category narrows the returned TypeScript type to that
+  category; passing an array narrows it to any category in that list and lets the
+  parser resolve the actual category from the payload. `containedItemCategory`
   controls how nested Tree or Set contents are parsed. For large recursive item
   categories, pass `shouldOmitEmbeddedItems: true` to fetch the top-level item
   without its embedded item hierarchy.
