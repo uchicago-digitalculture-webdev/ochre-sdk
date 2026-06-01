@@ -192,10 +192,13 @@ export type XMLNote = Partial<XMLContent> &
     authors?: { author: Array<XMLPerson> };
   };
 
+export type XMLPropertyRelation = "related" | "inverse";
+
 export type XMLProperty = {
   label: (XMLContent | XMLString) & {
     uuid: string;
     publicationDateTime?: Date;
+    relation?: XMLPropertyRelation;
   };
   value?: Array<
     Partial<XMLContent> & {
@@ -225,6 +228,7 @@ export type XMLSimplifiedProperty = {
   label: (XMLContent | XMLString) & {
     uuid: string;
     publicationDateTime?: Date;
+    relation?: XMLPropertyRelation;
   };
   value?: Array<
     Partial<XMLContent> & {

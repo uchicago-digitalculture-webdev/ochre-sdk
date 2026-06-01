@@ -1,5 +1,6 @@
 import * as v from "valibot";
 import type {
+  PropertyRelation,
   Query,
   QueryablePropertyValueDataType,
   QueryLeaf,
@@ -15,6 +16,7 @@ const defaultString = (value: string): v.GenericSchema<unknown, string> =>
   v.optional(v.string(), value);
 const defaultBoolean = (value: boolean): v.GenericSchema<unknown, boolean> =>
   v.optional(v.boolean(), value);
+
 const sortDirectionSchema = v.optional(v.picklist(["asc", "desc"]), "asc");
 
 /**
@@ -115,6 +117,11 @@ const standardQueryFields = {
   isNegated: defaultBoolean(false),
 } as const;
 
+const propertyRelationSchema = v.picklist([
+  "related",
+  "inverse",
+] as const satisfies ReadonlyArray<PropertyRelation>);
+
 /**
  * Shared schema for Set queries
  * @internal
@@ -124,6 +131,7 @@ const setQueryLeafSchema = v.union([
     v.strictObject({
       target: v.literal("property"),
       propertyVariable: v.optional(uuidSchema),
+      propertyRelation: v.optional(propertyRelationSchema),
       dataType: v.picklist([
         "string",
         "integer",
@@ -138,13 +146,17 @@ const setQueryLeafSchema = v.union([
       ...standardQueryFields,
     }),
     v.check(
-      (value) => value.propertyVariable != null || value.value != null,
-      "Property queries must include at least one propertyVariable or value",
+      (value) =>
+        value.propertyVariable != null ||
+        value.propertyRelation != null ||
+        value.value != null,
+      "Property queries must include at least one propertyVariable, propertyRelation, or value",
     ),
   ),
   v.strictObject({
     target: v.literal("property"),
     propertyVariable: uuidSchema,
+    propertyRelation: v.optional(propertyRelationSchema),
     dataType: dateDataTypeSchema,
     value: v.string(),
     from: v.optional(v.never()),
@@ -154,6 +166,7 @@ const setQueryLeafSchema = v.union([
   v.strictObject({
     target: v.literal("property"),
     propertyVariable: uuidSchema,
+    propertyRelation: v.optional(propertyRelationSchema),
     dataType: dateDataTypeSchema,
     value: v.optional(v.never()),
     from: v.string(),
@@ -163,6 +176,7 @@ const setQueryLeafSchema = v.union([
   v.strictObject({
     target: v.literal("property"),
     propertyVariable: uuidSchema,
+    propertyRelation: v.optional(propertyRelationSchema),
     dataType: dateDataTypeSchema,
     value: v.optional(v.never()),
     from: v.optional(v.string()),
@@ -172,6 +186,7 @@ const setQueryLeafSchema = v.union([
   v.strictObject({
     target: v.literal("property"),
     propertyVariable: v.optional(uuidSchema),
+    propertyRelation: v.optional(propertyRelationSchema),
     dataType: v.literal("all"),
     value: v.string(),
     ...standardQueryFields,

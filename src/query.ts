@@ -1,4 +1,9 @@
-import type { Query, QueryGroup, QueryLeaf } from "#/types/index.js";
+import type {
+  PropertyRelation,
+  Query,
+  QueryGroup,
+  QueryLeaf,
+} from "#/types/index.js";
 import { stringLiteral } from "#/utils.js";
 
 const CTS_INCLUDES_STOP_WORDS = new Set<string>([
@@ -593,13 +598,24 @@ function buildContentTargetQueryExpression(params: {
 
 function buildPropertyQueryExpression(params: {
   propertyVariable?: string;
+  propertyRelation?: PropertyRelation;
   queryExpression: string;
 }): string {
-  const { propertyVariable, queryExpression } = params;
+  const { propertyVariable, propertyRelation, queryExpression } = params;
   const propertyQueryExpressions: Array<string> = [queryExpression];
 
   if (propertyVariable != null) {
     propertyQueryExpressions.unshift(buildPropertyLabelQuery(propertyVariable));
+  }
+
+  if (propertyRelation != null) {
+    propertyQueryExpressions.unshift(
+      buildPlainElementAttributeValueQueryExpression({
+        elementName: "label",
+        attributeName: "relation",
+        value: propertyRelation,
+      }),
+    );
   }
 
   return buildNestedElementQuery(
@@ -610,6 +626,7 @@ function buildPropertyQueryExpression(params: {
 
 function buildPropertyTextMatchQueryExpression(params: {
   propertyVariable?: string;
+  propertyRelation?: PropertyRelation;
   valueFilters?: Array<string>;
   contentQueryExpression?: string;
   rawValueQueryExpression?: string;
@@ -617,6 +634,7 @@ function buildPropertyTextMatchQueryExpression(params: {
 }): string {
   const {
     propertyVariable,
+    propertyRelation,
     valueFilters = [],
     contentQueryExpression,
     rawValueQueryExpression,
@@ -654,6 +672,16 @@ function buildPropertyTextMatchQueryExpression(params: {
     propertyQueryExpressions.push(buildPropertyLabelQuery(propertyVariable));
   }
 
+  if (propertyRelation != null) {
+    propertyQueryExpressions.push(
+      buildPlainElementAttributeValueQueryExpression({
+        elementName: "label",
+        attributeName: "relation",
+        value: propertyRelation,
+      }),
+    );
+  }
+
   propertyQueryExpressions.push(
     buildNestedElementQuery(
       ["value"],
@@ -675,25 +703,35 @@ function buildPropertyTextMatchQueryExpression(params: {
 
 function buildPropertyPresenceQueryExpression(params: {
   propertyVariable?: string;
+  propertyRelation?: PropertyRelation;
 }): string {
   return buildPropertyQueryExpression({
     propertyVariable: params.propertyVariable,
+    propertyRelation: params.propertyRelation,
     queryExpression: "cts:true-query()",
   });
 }
 
 function buildPropertyStringQueryExpression(params: {
   propertyVariable?: string;
+  propertyRelation?: PropertyRelation;
   value: string;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
   language: string;
 }): string {
-  const { propertyVariable, value, matchMode, isCaseSensitive, language } =
-    params;
+  const {
+    propertyVariable,
+    propertyRelation,
+    value,
+    matchMode,
+    isCaseSensitive,
+    language,
+  } = params;
 
   return buildPropertyTextMatchQueryExpression({
     propertyVariable,
+    propertyRelation,
     valueFilters: [buildValueNotInheritedQuery()],
     contentQueryExpression: buildValueContentInnerQuery({
       language,
@@ -716,14 +754,22 @@ function buildPropertyStringQueryExpression(params: {
 
 function buildPropertyScalarQueryExpression(params: {
   propertyVariable?: string;
+  propertyRelation?: PropertyRelation;
   value: string;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
 }): string {
-  const { propertyVariable, value, matchMode, isCaseSensitive } = params;
+  const {
+    propertyVariable,
+    propertyRelation,
+    value,
+    matchMode,
+    isCaseSensitive,
+  } = params;
 
   return buildPropertyQueryExpression({
     propertyVariable,
+    propertyRelation,
     queryExpression: buildNestedElementQuery(
       ["value"],
       buildOrCtsQueryExpressionInternal([
@@ -743,6 +789,7 @@ function buildPropertyAllQueryExpression(params: {
 
   return buildPropertyTextMatchQueryExpression({
     propertyVariable: query.propertyVariable,
+    propertyRelation: query.propertyRelation,
     valueFilters: [buildValueNotIdRefQuery()],
     contentQueryExpression: buildValueContentInnerQuery({
       language: query.language,
@@ -765,12 +812,14 @@ function buildPropertyAllQueryExpression(params: {
 
 function buildPropertyIdRefQueryExpression(params: {
   propertyVariable?: string;
+  propertyRelation?: PropertyRelation;
   value: string;
 }): string {
-  const { propertyVariable, value } = params;
+  const { propertyVariable, propertyRelation, value } = params;
 
   return buildPropertyQueryExpression({
     propertyVariable,
+    propertyRelation,
     queryExpression: buildNestedElementQuery(
       ["value"],
       buildPlainElementAttributeValueQueryExpression({
@@ -804,6 +853,7 @@ function buildPropertyDateRangeQueryExpression(
 
   return buildPropertyQueryExpression({
     propertyVariable: query.propertyVariable,
+    propertyRelation: query.propertyRelation,
     queryExpression: buildNestedElementQuery(
       ["value"],
       buildAndCtsQueryExpressionInternal(rangeQueryExpressions),
@@ -898,12 +948,14 @@ function buildLeafValueQueryExpression(params: {
         case "IDREF": {
           return buildPropertyIdRefQueryExpression({
             propertyVariable: query.propertyVariable,
+            propertyRelation: query.propertyRelation,
             value,
           });
         }
         case "string": {
           return buildPropertyStringQueryExpression({
             propertyVariable: query.propertyVariable,
+            propertyRelation: query.propertyRelation,
             value,
             matchMode,
             isCaseSensitive: query.isCaseSensitive,
@@ -918,6 +970,7 @@ function buildLeafValueQueryExpression(params: {
         case "dateTime": {
           return buildPropertyScalarQueryExpression({
             propertyVariable: query.propertyVariable,
+            propertyRelation: query.propertyRelation,
             value,
             matchMode,
             isCaseSensitive: query.isCaseSensitive,
@@ -1034,6 +1087,7 @@ function getLeafHelperKey(params: {
         query.target,
         query.dataType,
         query.propertyVariable ?? "",
+        query.propertyRelation ?? "",
         value,
         query.isCaseSensitive ? "case-sensitive" : "case-insensitive",
         query.language,
@@ -1088,6 +1142,7 @@ function getIncludesLeafHelperKey(params: {
         query.target,
         query.dataType,
         query.propertyVariable ?? "",
+        query.propertyRelation ?? "",
         query.isCaseSensitive ? "case-sensitive" : "case-insensitive",
         query.language,
         isWildcarded ? "wildcarded" : "unwildcarded",
@@ -1128,10 +1183,11 @@ function buildLeafQueryExpression(
     query.dataType !== "date" &&
     query.dataType !== "dateTime" &&
     !("value" in query) &&
-    query.propertyVariable != null
+    (query.propertyVariable != null || query.propertyRelation != null)
   ) {
     return buildPropertyPresenceQueryExpression({
       propertyVariable: query.propertyVariable,
+      propertyRelation: query.propertyRelation,
     });
   }
 

@@ -630,6 +630,9 @@ function expectPropertyFieldsMatchRaw(
   expect(parsedProperty.variable.label.getText()).toBe(
     parseContentLikeForTest(rawProperty.label),
   );
+  expect(parsedProperty.variable.relation).toBe(
+    rawProperty.label.relation ?? null,
+  );
   expect(parsedProperty.values).toHaveLength(rawProperty.value?.length ?? 0);
 
   for (

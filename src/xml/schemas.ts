@@ -45,6 +45,7 @@ import type {
   XMLObservation as XMLObservationType,
   XMLPeriod as XMLPeriodType,
   XMLPerson as XMLPersonType,
+  XMLPropertyRelation as XMLPropertyRelationType,
   XMLProperty as XMLPropertyType,
   XMLPropertyValue as XMLPropertyValueType,
   XMLPropertyVariable as XMLPropertyVariableType,
@@ -661,6 +662,11 @@ const XMLNote: v.GenericSchema<unknown, XMLNoteType> = v.object(
   "XMLNote: Shape error",
 );
 
+const XMLPropertyRelation = v.picklist([
+  "related",
+  "inverse",
+] as const satisfies ReadonlyArray<XMLPropertyRelationType>);
+
 const XMLProperty: v.GenericSchema<unknown, XMLPropertyType> = v.lazy(() =>
   v.object(
     {
@@ -686,6 +692,7 @@ const XMLProperty: v.GenericSchema<unknown, XMLPropertyType> = v.lazy(() =>
                 "XMLProperty: publicationDateTime is not a valid datetime",
               ),
             ),
+            relation: v.optional(XMLPropertyRelation),
           },
           "XMLProperty: label is object with uuid",
         ),
@@ -786,6 +793,7 @@ const XMLSimplifiedProperty: v.GenericSchema<
                 "XMLSimplifiedProperty: publicationDateTime is not a valid datetime",
               ),
             ),
+            relation: v.optional(XMLPropertyRelation),
           },
           "XMLSimplifiedProperty: label is object with uuid",
         ),

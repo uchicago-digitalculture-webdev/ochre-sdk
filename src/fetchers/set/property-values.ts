@@ -1,6 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type {
+  PropertyRelation,
   PropertyValueQueryItem,
   Query,
   QueryablePropertyValueDataType,
@@ -45,6 +46,11 @@ type ParsedAttributeValueItem = {
 type PropertyValueQueryDataType = QueryablePropertyValueDataType;
 
 type ParsedPropertyValueLabelContent = XMLContent["content"];
+
+type PropertyFacetSelector = {
+  uuid: string;
+  relation: PropertyRelation | null;
+};
 
 function getLabelContentLanguages(
   content: ParsedPropertyValueLabelContent,
@@ -183,10 +189,10 @@ const propertyValueLabelContentSchema = v.object({
   string: v.array(propertyValueLabelStringSchema),
 });
 
-function getPropertyVariableUuidsFromQueries(
+function getPropertyFacetSelectorsFromQueries(
   queries: Query | null,
-): Array<string> {
-  const propertyVariableUuids = new Set<string>();
+): Array<PropertyFacetSelector> {
+  const propertyFacetSelectors = new Map<string, PropertyFacetSelector>();
 
   if (queries == null) {
     return [];
@@ -201,7 +207,11 @@ function getPropertyVariableUuidsFromQueries(
       }
 
       if (query.propertyVariable != null) {
-        propertyVariableUuids.add(query.propertyVariable);
+        const relation = query.propertyRelation ?? null;
+        propertyFacetSelectors.set(`${query.propertyVariable}|${relation}`, {
+          uuid: query.propertyVariable,
+          relation,
+        });
       }
 
       continue;
@@ -210,7 +220,7 @@ function getPropertyVariableUuidsFromQueries(
     pendingQueries.push(...("and" in query ? query.and : query.or));
   }
 
-  return [...propertyVariableUuids];
+  return [...propertyFacetSelectors.values()];
 }
 
 function getItemFilterQueriesFromPropertyValueQueries(
@@ -372,7 +382,7 @@ const responseSchema = v.object({
  * @param params.setScopeUuids - An array of set scope UUIDs to filter by
  * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
  * @param params.queries - Recursive query tree used to filter matching items
- * @param params.propertyVariableUuids - Property variable UUIDs to aggregate, if any
+ * @param params.propertyFacetSelectors - Property variable/relation selectors to aggregate, if any
  * @param params.attributes - Whether to return values for bibliographies and periods
  * @param params.attributes.bibliographies - Whether to return values for bibliographies
  * @param params.attributes.periods - Whether to return values for periods
@@ -383,7 +393,7 @@ function buildXQuery(params: {
   setScopeUuids: Array<string>;
   belongsToCollectionScopeUuids: Array<string>;
   queries: Query | null;
-  propertyVariableUuids: Array<string>;
+  propertyFacetSelectors: Array<PropertyFacetSelector>;
   attributes: { bibliographies: boolean; periods: boolean };
   isLimitedToLeafPropertyValues: boolean;
 }): string {
@@ -391,7 +401,7 @@ function buildXQuery(params: {
     setScopeUuids,
     belongsToCollectionScopeUuids,
     queries,
-    propertyVariableUuids,
+    propertyFacetSelectors,
     attributes,
     isLimitedToLeafPropertyValues,
   } = params;
@@ -542,14 +552,21 @@ declare function local:add-attribute-facet($counts, $seen, $key) {
     xqueryDeclarations.push(compiledQueryPlan.prolog);
   }
 
-  if (propertyVariableUuids.length > 0) {
-    const propertyVariableValues = propertyVariableUuids.map((uuid) =>
-      stringLiteral(uuid),
-    );
+  if (propertyFacetSelectors.length > 0) {
+    const facetPropertyPredicates: Array<string> = [];
+    for (const selector of propertyFacetSelectors) {
+      const uuidPredicate = `label/@uuid = ${stringLiteral(selector.uuid)}`;
+      facetPropertyPredicates.push(
+        selector.relation == null
+          ? uuidPredicate
+          : `(${uuidPredicate} and label/@relation = ${stringLiteral(selector.relation)})`,
+      );
+    }
+    const facetPropertyPredicate =
+      facetPropertyPredicates.length === 1
+        ? (facetPropertyPredicates[0] ?? "false()")
+        : `(${facetPropertyPredicates.join(" or ")})`;
 
-    xqueryDeclarations.push(
-      `declare variable $facetLabelUuids := (${propertyVariableValues.join(", ")});`,
-    );
     queryBlocks.push(`let $global-property-counts := map:map()
 let $variable-property-counts := map:map()
 let $variable-property-details := map:map()
@@ -559,7 +576,7 @@ let $_property-aggregation := xdmp:eager(
   let $global-seen := map:map()
   let $variable-seen := map:map()
   return
-    for $p in $item/properties/property[label/@uuid = $facetLabelUuids]
+    for $p in $item/properties/property[${facetPropertyPredicate}]
     let $variable-uuid := string($p/label/@uuid)
     for $v in $p/value${valueFilter}
     let $value-uuid := string($v/@uuid)
@@ -711,10 +728,11 @@ export async function fetchSetPropertyValues(
       attributes,
       isLimitedToLeafPropertyValues,
     } = v.parse(setPropertyValuesParamsSchema, params);
-    const propertyVariableUuids = getPropertyVariableUuidsFromQueries(queries);
+    const propertyFacetSelectors =
+      getPropertyFacetSelectorsFromQueries(queries);
 
     if (
-      propertyVariableUuids.length === 0 &&
+      propertyFacetSelectors.length === 0 &&
       !attributes.bibliographies &&
       !attributes.periods
     ) {
@@ -731,7 +749,7 @@ export async function fetchSetPropertyValues(
       setScopeUuids,
       belongsToCollectionScopeUuids,
       queries,
-      propertyVariableUuids,
+      propertyFacetSelectors,
       attributes,
       isLimitedToLeafPropertyValues,
     });

@@ -336,6 +336,12 @@ function buildExactStringPropertyPredicate(
     );
   }
 
+  if (query.propertyRelation != null) {
+    propertyPredicates.push(
+      `label/@relation = ${stringLiteral(query.propertyRelation)}`,
+    );
+  }
+
   propertyPredicates.push(`value[
     not(@inherited = "true")
     and (

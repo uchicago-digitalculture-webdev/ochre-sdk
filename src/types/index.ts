@@ -356,6 +356,7 @@ export type Property<T extends LanguageCodes = LanguageCodes> = {
     uuid: string;
     label: MultilingualString<T>;
     publicationDateTime: Date | null;
+    relation: PropertyRelation | null;
   };
   values: Array<PropertyValueContent<T>>;
   comment: MultilingualString<T> | null;
@@ -367,7 +368,12 @@ export type Property<T extends LanguageCodes = LanguageCodes> = {
  * expose scalar labels rather than multilingual labels.
  */
 export type SimplifiedProperty<T extends LanguageCodes = LanguageCodes> = {
-  variable: { uuid: string; label: string; publicationDateTime: Date | null };
+  variable: {
+    uuid: string;
+    label: string;
+    publicationDateTime: Date | null;
+    relation: PropertyRelation | null;
+  };
   values: Array<PropertyValueContent<T>>;
   comment: MultilingualString<T> | null;
   properties: Array<SimplifiedProperty<T>>;
@@ -400,6 +406,8 @@ export type QueryablePropertyValueDataType = Exclude<
   PropertyValueDataType,
   "coordinate"
 >;
+
+export type PropertyRelation = "related" | "inverse";
 
 type WithSetItemProperties<
   U extends { properties: Array<Property<T>> },
@@ -1180,6 +1188,7 @@ export type QueryLeaf =
   | {
       target: "property";
       propertyVariable?: string;
+      propertyRelation?: PropertyRelation;
       dataType: Exclude<QueryablePropertyValueDataType, "date" | "dateTime">;
       value?: string;
       from?: never;
@@ -1192,6 +1201,7 @@ export type QueryLeaf =
   | {
       target: "property";
       propertyVariable: string;
+      propertyRelation?: PropertyRelation;
       dataType: "date" | "dateTime";
       value: string;
       from?: never;
@@ -1204,6 +1214,7 @@ export type QueryLeaf =
   | {
       target: "property";
       propertyVariable: string;
+      propertyRelation?: PropertyRelation;
       dataType: "date" | "dateTime";
       value?: never;
       from: string;
@@ -1216,6 +1227,7 @@ export type QueryLeaf =
   | {
       target: "property";
       propertyVariable: string;
+      propertyRelation?: PropertyRelation;
       dataType: "date" | "dateTime";
       value?: never;
       from?: string;
@@ -1228,6 +1240,7 @@ export type QueryLeaf =
   | {
       target: "property";
       propertyVariable?: string;
+      propertyRelation?: PropertyRelation;
       dataType: "all";
       value: string;
       matchMode: "includes" | "exact";
