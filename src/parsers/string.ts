@@ -62,7 +62,7 @@ const ENTRY_PAGE_TOKEN = "entry-page";
 const VARIANT_TOKEN = "variant";
 const HEADING_LEVEL_TOKEN = "heading-level";
 
-const RAW_MDX_BLOCK_DELIMITER = "```***```";
+const RAW_MDX_BLOCK_DELIMITER = "``md``";
 const RAW_MDX_BLOCK_PLACEHOLDER_PREFIX = "\0raw-mdx-block:";
 const RAW_MDX_BLOCK_PLACEHOLDER_SUFFIX = "\0";
 
