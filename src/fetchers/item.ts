@@ -80,24 +80,6 @@ function assertItemCategoryAllowed(
   );
 }
 
-function assertShouldOmitEmbeddedItemsAllowed(
-  category: ItemCategoryOption | undefined,
-  shouldOmitEmbeddedItems: boolean,
-): void {
-  if (!shouldOmitEmbeddedItems || category == null) {
-    return;
-  }
-
-  const categories = typeof category === "string" ? [category] : category;
-  for (const possibleCategory of categories) {
-    if (!isItemCategoryWithEmbeddedItems(possibleCategory)) {
-      throw new Error(
-        `shouldOmitEmbeddedItems can only be used when the item category contains embedded items; received category "${possibleCategory}"`,
-      );
-    }
-  }
-}
-
 function buildOmitEmbeddedItemsXQuery(
   uuid: string,
   category:
@@ -231,7 +213,7 @@ export function withLanguages<const TLanguages extends ReadonlyArray<string>>(
  * single category when it is known, or an array when the item may be any
  * category in that list.
  * @param options.containedItemCategory - The category of items inside the OCHRE item to fetch. Only valid for Trees and Sets. Tree accepts one category; Set accepts one category or an array.
- * @param options.shouldOmitEmbeddedItems - Whether to omit the embedded item hierarchy when fetching a recursive item category.
+ * @param options.shouldOmitEmbeddedItems - Whether to omit the embedded item hierarchy when fetching a recursive item category. Ignored when the fetched item does not expose recursive embedded items.
  * @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
  * @param options.fetch - Custom fetch function to use instead of the default fetch
  * @returns An object containing the parsed item
@@ -268,14 +250,19 @@ export async function fetchItem<
     shouldOmitEmbeddedItems?: true;
   },
 ): FetchItemResult<
-  ItemWithoutEmbeddedItems<
-    ItemCategoryWithEmbeddedItems,
-    ContainedItemCategoryFromOption<
-      ItemContainerCategory,
-      TContainedItemCategory
-    >,
-    FetchLanguages<TLanguages>
-  >
+  | ItemWithoutEmbeddedItems<
+      ItemCategoryWithEmbeddedItems,
+      ContainedItemCategoryFromOption<
+        ItemContainerCategory,
+        TContainedItemCategory
+      >,
+      FetchLanguages<TLanguages>
+    >
+  | Item<
+      Exclude<ItemCategory, ItemCategoryWithEmbeddedItems>,
+      never,
+      FetchLanguages<TLanguages>
+    >
 >;
 export async function fetchItem<
   const TCategory extends ItemCategoryOption,
@@ -316,19 +303,25 @@ export async function fetchItem<
   options: FetchBaseOptions<TLanguages> & {
     category: TCategory;
     containedItemCategory?: TContainedItemCategory;
-    shouldOmitEmbeddedItems: ItemCategoryFromOption<TCategory> extends ItemCategoryWithEmbeddedItems
-      ? true
-      : never;
+    shouldOmitEmbeddedItems: true;
   },
 ): FetchItemResult<
-  ItemWithoutEmbeddedItems<
-    Extract<ItemCategoryFromOption<TCategory>, ItemCategoryWithEmbeddedItems>,
-    ContainedItemCategoryFromOption<
+  | ItemWithoutEmbeddedItems<
       Extract<ItemCategoryFromOption<TCategory>, ItemCategoryWithEmbeddedItems>,
-      TContainedItemCategory
-    >,
-    FetchLanguages<TLanguages>
-  >
+      ContainedItemCategoryFromOption<
+        Extract<
+          ItemCategoryFromOption<TCategory>,
+          ItemCategoryWithEmbeddedItems
+        >,
+        TContainedItemCategory
+      >,
+      FetchLanguages<TLanguages>
+    >
+  | Item<
+      Exclude<ItemCategoryFromOption<TCategory>, ItemCategoryWithEmbeddedItems>,
+      never,
+      FetchLanguages<TLanguages>
+    >
 >;
 export async function fetchItem(
   uuid: string,
@@ -358,10 +351,7 @@ export async function fetchItem(
       options?.containedItemCategory,
     );
     const shouldOmitEmbeddedItems = options?.shouldOmitEmbeddedItems === true;
-    assertShouldOmitEmbeddedItemsAllowed(
-      options?.category,
-      shouldOmitEmbeddedItems,
-    );
+    let shouldFetchOmittedEmbeddedItems = shouldOmitEmbeddedItems;
     let omitEmbeddedItemsCategory:
       | ItemCategoryWithEmbeddedItems
       | ReadonlyArray<ItemCategoryWithEmbeddedItems>
@@ -370,6 +360,8 @@ export async function fetchItem(
       if (typeof options.category === "string") {
         if (isItemCategoryWithEmbeddedItems(options.category)) {
           omitEmbeddedItemsCategory = options.category;
+        } else {
+          shouldFetchOmittedEmbeddedItems = false;
         }
       } else {
         const categories: Array<ItemCategoryWithEmbeddedItems> = [];
@@ -379,13 +371,15 @@ export async function fetchItem(
           }
         }
         omitEmbeddedItemsCategory = categories;
+        shouldFetchOmittedEmbeddedItems = categories.length > 0;
       }
     }
     const languages: ReadonlyArray<string> =
       options?.languages == null ? [] : parseLanguages(options.languages);
 
     const fetcher = options?.fetch ?? fetch;
-    const response = shouldOmitEmbeddedItems
+    const regularItemUrl = `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${parsedUuid}&xsl=none&lang="*"`;
+    let response = shouldFetchOmittedEmbeddedItems
       ? await fetcher(
           'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
           {
@@ -397,9 +391,7 @@ export async function fetchItem(
             headers: { "Content-Type": "application/xquery" },
           },
         )
-      : await fetcher(
-          `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${parsedUuid}&xsl=none&lang="*"`,
-        );
+      : await fetcher(regularItemUrl);
     if (!response.ok) {
       throw new Error("Failed to fetch OCHRE data", {
         cause: response.statusText,
@@ -409,7 +401,34 @@ export async function fetchItem(
     const dataRaw = await response.text();
 
     const parser = new XMLParser(XML_PARSER_OPTIONS);
-    const data = parser.parse(dataRaw) as unknown;
+    let data = parser.parse(dataRaw) as unknown;
+    if (
+      shouldFetchOmittedEmbeddedItems &&
+      typeof data === "object" &&
+      data != null &&
+      "result" in data
+    ) {
+      const result = data.result;
+      if (typeof result === "object" && result != null && "ochre" in result) {
+        const ochre = result.ochre;
+        if (
+          typeof ochre === "object" &&
+          ochre != null &&
+          (Object.keys(ochre).length === 0 ||
+            ("payload" in ochre &&
+              ochre.payload === "" &&
+              Object.keys(ochre).length === 1))
+        ) {
+          response = await fetcher(regularItemUrl);
+          if (!response.ok) {
+            throw new Error("Failed to fetch OCHRE data", {
+              cause: response.statusText,
+            });
+          }
+          data = parser.parse(await response.text()) as unknown;
+        }
+      }
+    }
 
     const { success, issues, output } = v.safeParse(XMLDataSchema, data);
     if (!success) {
@@ -431,10 +450,6 @@ export async function fetchItem(
     assertItemCategoryAllowed(
       parsedItem.category,
       options?.containedItemCategory,
-    );
-    assertShouldOmitEmbeddedItemsAllowed(
-      parsedItem.category,
-      shouldOmitEmbeddedItems,
     );
 
     const item =

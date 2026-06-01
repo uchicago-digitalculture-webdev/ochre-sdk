@@ -1324,7 +1324,7 @@ describe("fetchItem", () => {
     });
   });
 
-  it("types shouldOmitEmbeddedItems for recursive item category overloads only", async () => {
+  it("types shouldOmitEmbeddedItems for recursive and non-recursive item category overloads", async () => {
     const omittedSetResult = fetchItem(SET_UUIDS[0]!, {
       category: "set",
       shouldOmitEmbeddedItems: true,
@@ -1342,11 +1342,18 @@ describe("fetchItem", () => {
       shouldOmitEmbeddedItems: true,
       fetch: async () => new Response("", { status: 500 }),
     });
+    const omittedTextFetchCalls: Array<{
+      input: string | URL | globalThis.Request;
+      init?: RequestInit;
+    }> = [];
     const omittedTextResult = fetchItem(TEXT_UUIDS[0]!, {
       category: "text",
-      // @ts-expect-error shouldOmitEmbeddedItems is only valid for recursive item categories.
       shouldOmitEmbeddedItems: true,
-      fetch: async () => new Response("", { status: 500 }),
+      fetch: async (input, init) => {
+        omittedTextFetchCalls.push({ input, init });
+
+        return new Response("", { status: 500 });
+      },
     });
 
     expectTypeOf(omittedSetResult).toEqualTypeOf<
@@ -1391,13 +1398,27 @@ describe("fetchItem", () => {
         | { item: null; error: string; detailedError: string }
       >
     >();
+    expectTypeOf(omittedTextResult).toEqualTypeOf<
+      Promise<
+        | {
+            item: Item<"text", never, ReadonlyArray<string>>;
+            error: null;
+            detailedError: null;
+          }
+        | { item: null; error: string; detailedError: string }
+      >
+    >();
     await expect(omittedTextResult).resolves.toStrictEqual({
       item: null,
-      error:
-        'shouldOmitEmbeddedItems can only be used when the item category contains embedded items; received category "text"',
-      detailedError:
-        'Error\nMessage: shouldOmitEmbeddedItems can only be used when the item category contains embedded items; received category "text"',
+      error: "Failed to fetch OCHRE data",
+      detailedError: "Error\nMessage: Failed to fetch OCHRE data",
     });
+    expect(omittedTextFetchCalls).toStrictEqual([
+      {
+        input: `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${TEXT_UUIDS[0]!}&xsl=none&lang="*"`,
+        init: undefined,
+      },
+    ]);
   });
 
   for (const category of ["tree", "resource", "set"] as const) {
