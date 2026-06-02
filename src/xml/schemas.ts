@@ -1521,6 +1521,9 @@ const XMLPerson: v.GenericSchema<unknown, XMLPersonType> = v.object(
     links: v.optional(v.lazy(() => XMLLink)),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
+    bibliographies: v.optional(
+      v.object({ bibliography: v.array(XMLBibliography) }),
+    ),
   },
   "XMLPerson: Shape error",
 );

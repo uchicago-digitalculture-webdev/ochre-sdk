@@ -837,6 +837,7 @@ export type Person<
     links: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
+    bibliographies: Array<Bibliography<T, "embedded">>;
   }
 >;
 

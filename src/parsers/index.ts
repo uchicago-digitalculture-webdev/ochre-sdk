@@ -2309,6 +2309,7 @@ function parsePerson<T extends ReadonlyArray<string>>(
     links: parseLinks(rawPerson.links, options),
     notes: parseNotes(rawPerson.notes, options),
     properties: parseProperties(rawPerson.properties, options),
+    bibliographies: parseBibliographyList(rawPerson.bibliographies, options),
   };
 }
 
