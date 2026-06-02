@@ -31,11 +31,21 @@ jobs:
       - name: Check types
         run: pnpm run check-types
 
-      - name: Run formatter
+      - name: Run Prettier
         run: pnpm run format
 
-      - name: Run linter
-        run: pnpm run lint
+      - name: Run Knip and ESLint
+        run: |
+          set +e
+          pnpm exec knip
+          knip_exit_code=$?
+          set -e
+
+          if [ "$knip_exit_code" -eq 1 ] || [ "$knip_exit_code" -eq 2 ]; then
+            exit "$knip_exit_code"
+          fi
+
+          pnpm exec eslint .
 
       - name: Run tests
         run: pnpm run test
