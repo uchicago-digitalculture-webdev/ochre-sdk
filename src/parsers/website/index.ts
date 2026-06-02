@@ -811,6 +811,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       );
 
       let isExternal = false;
+      let isRelative = false;
       let href = parseWebsiteLinkTarget(
         componentReader.valueNode("navigate-to"),
         context,
@@ -833,6 +834,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
           );
         } else {
           isExternal = true;
+          isRelative = !href.startsWith("/");
         }
       }
 
@@ -863,6 +865,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         variant,
         href,
         isExternal,
+        isRelative,
         label:
           elementResource.document && "content" in elementResource.document
             ? parseXMLContent(elementResource.document, options)

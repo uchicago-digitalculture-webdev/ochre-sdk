@@ -317,6 +317,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       variant: "default" | "transparent" | "link";
       href: string;
       isExternal: boolean;
+      isRelative: boolean;
       label: MultilingualString<T> | null;
       startIcon: string | null;
       endIcon: string | null;
