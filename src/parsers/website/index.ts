@@ -833,7 +833,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             { cause: componentProperty },
           );
         } else {
-          isExternal = true;
+          isExternal = href.startsWith("http");
           isRelative = !href.startsWith("/");
         }
       }
