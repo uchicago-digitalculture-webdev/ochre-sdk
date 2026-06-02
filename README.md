@@ -52,6 +52,9 @@ present and `error` is `null`; on failure, the parsed value is `null` and
   controls how nested Tree or Set contents are parsed. For large recursive item
   categories, pass `shouldOmitEmbeddedItems: true` to fetch the top-level item
   without its embedded item hierarchy.
+- `fetchItemChildren(uuid, options)` fetches only the direct child items for an
+  OCHRE item UUID. Passing
+  `category` lets the XQuery search only the matching OCHRE collection.
 - `fetchItemLinks(uuid, options)` fetches items linked from a source item and
   parses them as embedded OCHRE items.
 - `fetchGallery(params, options)` fetches paginated resource galleries with an
