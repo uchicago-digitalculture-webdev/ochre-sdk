@@ -1224,9 +1224,7 @@ function expectDataMatchesRaw(
     uuid: rawOchre.uuidBelongsTo,
     abbreviation: rawOchre.belongsTo,
   });
-  expect(data.persistentUrl).toBe(
-    transformPermanentIdentificationUrlForTest(rawOchre.persistentUrl),
-  );
+  expect(data.persistentUrl).toBe(rawOchre.persistentUrl ?? null);
   expectMetadataMatchesRaw(rawOchre.metadata, data);
   expectBaseItemMatchesRaw(rawItem, data, category);
   expectCategorySpecificFields(category, rawItem, data);
