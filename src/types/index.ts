@@ -165,7 +165,22 @@ export type Metadata<T extends LanguageCodes = LanguageCodes> = {
 
 export type BelongsTo = { uuid: string; abbreviation: string };
 
-export type ItemPayloadKind = "topLevel" | "embedded";
+/**
+ * Parsed item payload context.
+ *
+ * Direct children of standalone non-Tree items are shallow. Items parsed from
+ * Trees still use "embedded" and can expose recursive descendants.
+ */
+export type ItemPayloadKind = "topLevel" | "embedded" | "standaloneChild";
+
+type RecursiveChildPayloadKind<U extends ItemPayloadKind> = U extends "topLevel"
+  ? "standaloneChild"
+  : "embedded";
+
+type RecursiveItemChildren<
+  U extends ItemPayloadKind,
+  V,
+> = U extends "standaloneChild" ? Array<never> : Array<V>;
 
 type ItemEnvelopeFields<
   T extends LanguageCodes,
@@ -855,7 +870,7 @@ export type Period<
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "embedded">>;
-    items: Array<Period<T, "embedded">>;
+    items: RecursiveItemChildren<U, Period<T, RecursiveChildPayloadKind<U>>>;
   }
 >;
 
@@ -885,7 +900,10 @@ export type Bibliography<
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "embedded">>;
-    items: Array<Bibliography<T, "embedded">>;
+    items: RecursiveItemChildren<
+      U,
+      Bibliography<T, RecursiveChildPayloadKind<U>>
+    >;
   } & (
       | { type: "zotero"; zoteroId: string; uuid: string | null }
       | { type: string | null }
@@ -903,7 +921,7 @@ export type Concept<
     image: Image<T> | null;
     interpretations: Array<Interpretation<T>>;
     coordinates: Array<Coordinates<T>>;
-    items: Array<Concept<T, "embedded">>;
+    items: RecursiveItemChildren<U, Concept<T, RecursiveChildPayloadKind<U>>>;
   }
 >;
 
@@ -934,7 +952,10 @@ export type SpatialUnit<
     mapData: { geoJSON: { multiPolygon: string; EPSG: number } } | null;
     observations: Array<Observation<T>>;
     bibliographies: Array<Bibliography<T, "embedded">>;
-    items: Array<SpatialUnit<T, "embedded">>;
+    items: RecursiveItemChildren<
+      U,
+      SpatialUnit<T, RecursiveChildPayloadKind<U>>
+    >;
   }
 >;
 
@@ -1009,7 +1030,7 @@ export type Resource<
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "embedded">>;
-    items: Array<Resource<T, "embedded">>;
+    items: RecursiveItemChildren<U, Resource<T, RecursiveChildPayloadKind<U>>>;
   } & (U extends "topLevel" ? { view: Webpage<T> | null } : unknown)
 >;
 

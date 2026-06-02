@@ -2057,6 +2057,67 @@ export const XMLDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.union(
   "XMLDataItem: Shape error",
 );
 
+const XMLTopLevelDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.pipe(
+  XMLDataItem,
+  v.check((dataItem) => {
+    if ("tree" in dataItem) {
+      return true;
+    }
+
+    if ("bibliography" in dataItem) {
+      for (const bibliography of dataItem.bibliography) {
+        for (const child of bibliography.bibliography ?? []) {
+          if ((child.bibliography?.length ?? 0) > 0) {
+            return false;
+          }
+        }
+      }
+    }
+
+    if ("concept" in dataItem) {
+      for (const concept of dataItem.concept) {
+        for (const child of concept.concept ?? []) {
+          if ((child.concept?.length ?? 0) > 0) {
+            return false;
+          }
+        }
+      }
+    }
+
+    if ("spatialUnit" in dataItem) {
+      for (const spatialUnit of dataItem.spatialUnit) {
+        for (const child of spatialUnit.spatialUnit ?? []) {
+          if ((child.spatialUnit?.length ?? 0) > 0) {
+            return false;
+          }
+        }
+      }
+    }
+
+    if ("period" in dataItem) {
+      for (const period of dataItem.period) {
+        for (const child of period.period ?? []) {
+          if ((child.period?.length ?? 0) > 0) {
+            return false;
+          }
+        }
+      }
+    }
+
+    if ("resource" in dataItem) {
+      for (const resource of dataItem.resource) {
+        for (const child of resource.resource ?? []) {
+          if ((child.resource?.length ?? 0) > 0) {
+            return false;
+          }
+        }
+      }
+    }
+
+    return true;
+  }, "XMLDataItem: standalone recursive item children cannot contain nested recursive children"),
+);
+
 const XMLItemLinks: v.GenericSchema<unknown, XMLItemLinksType> = v.object(
   {
     payload: v.optional(
@@ -2233,7 +2294,7 @@ export const XMLData: v.GenericSchema<unknown, XMLDataType> = v.object(
           },
           "XMLData: ochre is object with uuid, belongsTo, uuidBelongsTo, publicationDateTime, metadata, and languages",
         ),
-        XMLDataItem,
+        XMLTopLevelDataItem,
       ]),
     }),
   },
