@@ -371,7 +371,8 @@ export async function fetchItem(
           }
         }
         omitEmbeddedItemsCategory = categories;
-        shouldFetchOmittedEmbeddedItems = categories.length > 0;
+        shouldFetchOmittedEmbeddedItems =
+          shouldOmitEmbeddedItems && categories.length > 0;
       }
     }
     const languages: ReadonlyArray<string> =

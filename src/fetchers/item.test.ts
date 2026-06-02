@@ -1490,6 +1490,57 @@ describe("fetchItem", () => {
     });
   }
 
+  it("keeps embedded items for array categories when omission is false", async () => {
+    const uuid = TREE_UUIDS[0]!;
+    const resourceUuid = RESOURCE_UUIDS[0]!;
+    const fetchCalls: Array<{
+      input: string | URL | globalThis.Request;
+      init?: RequestInit;
+    }> = [];
+    const result = await fetchItem(uuid, {
+      category: ["tree", "set"],
+      containedItemCategory: "resource",
+      shouldOmitEmbeddedItems: false,
+      languages: TEST_LANGUAGES,
+      fetch: async (input, init) => {
+        fetchCalls.push({ input, init });
+
+        return new Response(
+          createFetchItemXML({
+            uuid,
+            category: "tree",
+            itemContent: `<items><resource uuid="${resourceUuid}" publicationDateTime="2026-05-10T10:08:35Z">${createXMLIdentification("Embedded Resource")}</resource></items>`,
+          }),
+          { status: 200 },
+        );
+      },
+    });
+
+    expect(fetchCalls).toStrictEqual([
+      {
+        input: `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${uuid}&xsl=none&lang="*"`,
+        init: undefined,
+      },
+    ]);
+    expect(result.error).toBeNull();
+    if (result.error !== null) {
+      throw new Error(result.detailedError);
+    }
+
+    expect(result.item.category).toBe("tree");
+    if (result.item.category !== "tree") {
+      throw new Error("Expected a tree item");
+    }
+
+    expect(result.item.containedItemCategory).toBe("resource");
+    expect(result.item.items).toHaveLength(1);
+    const [item] = result.item.items;
+    if (item == null || !("category" in item)) {
+      throw new Error("Expected an embedded resource item");
+    }
+    expect(item.uuid).toBe(resourceUuid);
+  });
+
   it("rejects containedItemCategory for non-hierarchy categories before fetching", async () => {
     let didFetch = false;
     const result = await fetchItem(RESOURCE_UUIDS[0]!, {
