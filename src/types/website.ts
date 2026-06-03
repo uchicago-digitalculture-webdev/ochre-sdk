@@ -10,8 +10,6 @@ import type {
   QueryablePropertyValueDataType,
 } from "#/types/index.js";
 
-type WebsitePropertyValueDataType = QueryablePropertyValueDataType;
-
 /**
  * Represents a context tree level item with a variable and value
  */
@@ -99,7 +97,7 @@ export type WebsitePropertyQueryNode<T extends LanguageCodes = LanguageCodes> =
   {
     target: "property";
     propertyVariable: string;
-    dataType: WebsitePropertyValueDataType;
+    dataType: QueryablePropertyValueDataType;
     matchMode: "includes" | "exact";
     isCaseSensitive: boolean;
     language: T[number];

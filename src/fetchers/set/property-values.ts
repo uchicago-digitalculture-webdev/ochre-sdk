@@ -4,7 +4,6 @@ import type {
   PropertyRelation,
   PropertyValueQueryItem,
   Query,
-  QueryablePropertyValueDataType,
   SetAttributeValueQueryItem,
 } from "#/types/index.js";
 import type { XMLContent } from "#/xml/types.js";
@@ -27,23 +26,16 @@ import {
   stringLiteral,
 } from "#/utils.js";
 
-type ParsedPropertyValueItem = {
+type ParsedPropertyValueItem = PropertyValueQueryItem & {
   scope: "global" | "variable";
   variableUuid: string | null;
-  count: number;
   globalCount: number | null;
-  dataType: PropertyValueQueryDataType;
-  content: string | number | boolean | null;
-  label: MultilingualString | null;
 };
 
-type ParsedAttributeValueItem = {
+type ParsedAttributeValueItem = Omit<SetAttributeValueQueryItem, "content"> & {
   attributeType: "bibliographies" | "periods";
-  count: number;
-  content: string | null;
+  content: SetAttributeValueQueryItem["content"] | null;
 };
-
-type PropertyValueQueryDataType = QueryablePropertyValueDataType;
 
 type ParsedPropertyValueLabelContent = XMLContent["content"];
 
@@ -106,7 +98,7 @@ function parsePropertyValueBooleanContent(
 
 function normalizePropertyValueDataType(
   dataType: string,
-): PropertyValueQueryDataType {
+): PropertyValueQueryItem["dataType"] {
   const normalizedDataType = dataType.startsWith("xs:")
     ? dataType.slice(3)
     : dataType;
@@ -149,8 +141,8 @@ function sortPropertyValues(
 }
 
 function getPropertyValueKey(value: {
-  dataType: PropertyValueQueryDataType;
-  content: string | number | boolean;
+  dataType: PropertyValueQueryItem["dataType"];
+  content: NonNullable<PropertyValueQueryItem["content"]>;
 }): string {
   return `${value.dataType}|${typeof value.content}:${value.content.toLocaleString("en-US")}`;
 }
@@ -286,6 +278,7 @@ const propertyValueQueryItemSchema = v.pipe(
     const dataType = normalizePropertyValueDataType(val.dataType);
     const label = parsePropertyValueLabel(val.content, val.payload);
     const returnValue: ParsedPropertyValueItem = {
+      uuid: val.uuid !== "" ? val.uuid : null,
       scope: val.scope,
       variableUuid:
         val.variableUuid != null && val.variableUuid !== ""
@@ -814,6 +807,7 @@ export async function fetchSetPropertyValues(
       }
 
       const propertyValueItem: PropertyValueQueryItem = {
+        uuid: propertyValue.uuid,
         count: propertyValue.count,
         dataType: propertyValue.dataType,
         content: propertyValue.content,
@@ -821,6 +815,7 @@ export async function fetchSetPropertyValues(
       };
 
       const globalPropertyValueItem: PropertyValueQueryItem = {
+        uuid: propertyValue.uuid,
         count: propertyValue.globalCount ?? propertyValue.count,
         dataType: propertyValue.dataType,
         content: propertyValue.content,
