@@ -50,7 +50,7 @@ type AnnotationMetadata = {
 
 type PropertyMetadata = { labelUuid: string; valueUuid: string | null };
 
-type TextRendering = "plain" | "rich";
+type TextRendering = "plain" | "rich" | "rawMDX";
 
 type RenderOption = "bold" | "italic" | "underline";
 
@@ -127,7 +127,7 @@ function parseRenderOptions(
     return contentString;
   }
 
-  if (rendering !== "rich") {
+  if (rendering === "plain") {
     return contentString.replaceAll("&#39;", "'");
   }
 
@@ -670,6 +670,8 @@ function parseNestedStringItems<V extends ReadonlyArray<string>>(
       }
 
       let rawMDXBlock = "";
+      const rawMDXBlockRendering =
+        options.rendering === "plain" ? "plain" : "rawMDX";
       for (
         let rawIndex = rawMDXBlockStartIndex + 1;
         rawIndex < index;
@@ -679,7 +681,8 @@ function parseNestedStringItems<V extends ReadonlyArray<string>>(
         if (rawItem != null) {
           rawMDXBlock += parseXMLStringItem(rawItem, contentItem, {
             languages: options.languages,
-            rendering: "plain",
+            rendering: rawMDXBlockRendering,
+            rawMDXBlocks: options.rawMDXBlocks,
           });
         }
       }
@@ -864,9 +867,9 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
             )
         : MultilingualString.create(contentItem.lang, "", languages);
     const content =
-      rendering === "rich"
-        ? linkContent.getExactRichText(contentItem.lang)
-        : linkContent.getExactText(contentItem.lang);
+      rendering === "plain"
+        ? linkContent.getExactText(contentItem.lang)
+        : linkContent.getExactRichText(contentItem.lang);
     const contentText = content ?? "";
 
     if ("type" in link && link.type != null) {
