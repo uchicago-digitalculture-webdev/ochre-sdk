@@ -766,7 +766,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         { component: "bibliography" }
       >;
       const itemLinks = websiteLinks.filter(
-        (link) => link.category !== "bibliography",
+        (link) => link.category === "bibliography",
       );
       const bibliographies = parseBibliographyList(
         elementResource.bibliographies,
