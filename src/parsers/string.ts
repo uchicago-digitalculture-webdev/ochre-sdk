@@ -687,6 +687,14 @@ function parseNestedStringItems<V extends ReadonlyArray<string>>(
         }
       }
 
+      if (
+        rawMDXBlock !== "" &&
+        !rawMDXBlock.endsWith("\n") &&
+        item.whitespace?.split(" ").includes("newline") === true
+      ) {
+        rawMDXBlock += "\n";
+      }
+
       if (options.rendering === "rich" && options.rawMDXBlocks != null) {
         const placeholder = `${RAW_MDX_BLOCK_PLACEHOLDER_PREFIX}${options.rawMDXBlocks.length}${RAW_MDX_BLOCK_PLACEHOLDER_SUFFIX}`;
         options.rawMDXBlocks.push(rawMDXBlock);
