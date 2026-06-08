@@ -256,6 +256,7 @@ export type WebTitle<T extends LanguageCodes = LanguageCodes> = {
  */
 export type WebElement<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
+  language: string | null;
   type: "element";
   title: WebTitle<T>;
   cssStyles: {

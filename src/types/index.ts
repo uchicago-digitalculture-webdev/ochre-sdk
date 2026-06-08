@@ -1013,6 +1013,7 @@ export type Resource<
   U extends ItemPayloadKind = "topLevel",
 > = Prettify<
   BaseItem<"resource", T, U> & {
+    language: string | null;
     type: string;
     href: string | null;
     fileFormat: string | null;

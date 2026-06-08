@@ -2358,6 +2358,7 @@ function parseResource<T extends ReadonlyArray<string>>(
 
   return {
     ...parseBaseItem("resource", rawResource, options),
+    language: rawResource.lang ?? null,
     type: rawResource.type ?? "",
     href: parseHref(rawResource.href),
     fileFormat: rawResource.fileFormat ?? null,

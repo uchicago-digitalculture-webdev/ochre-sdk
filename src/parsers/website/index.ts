@@ -1764,6 +1764,7 @@ function parseWebElement<T extends ReadonlyArray<string>>(
 
   return {
     uuid: elementResource.uuid,
+    language: elementResource.lang ?? null,
     type: "element",
     title,
     cssStyles,

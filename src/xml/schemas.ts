@@ -1607,6 +1607,7 @@ const XMLResource: v.GenericSchema<unknown, XMLResourceType> = v.object(
         resource: v.optional(v.array(v.lazy(() => XMLWebsiteResource))),
       }),
     ),
+    lang: v.optional(v.string("XMLResource: lang is string and optional")),
   },
   "XMLResource: Shape error",
 );
@@ -1919,6 +1920,9 @@ const XMLWebsiteResource: v.GenericSchema<unknown, XMLWebsiteResourceType> =
     v.object(
       {
         ...XMLBaseItem.entries,
+        lang: v.optional(
+          v.string("XMLWebsiteResource: lang is string and optional"),
+        ),
         type: v.optional(
           v.string("XMLWebsiteResource: type is string and optional"),
         ),

@@ -474,6 +474,7 @@ export type XMLPropertyValue = XMLBaseItem & {
 };
 
 export type XMLResource = XMLBaseItem & {
+  lang?: string;
   type?: string;
   date?: Date | XMLString;
   href?: string;
