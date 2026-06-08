@@ -65,6 +65,8 @@ const HEADING_LEVEL_TOKEN = "heading-level";
 const RAW_MDX_BLOCK_DELIMITER = "``md``";
 const RAW_MDX_BLOCK_PLACEHOLDER_PREFIX = "\0raw-mdx-block:";
 const RAW_MDX_BLOCK_PLACEHOLDER_SUFFIX = "\0";
+const RICH_LINE_BREAK = "<br />\n";
+const RICH_PARAGRAPH_BREAK = "\n\n";
 
 const MDX_QUOTED_ATTRIBUTE_ESCAPE_REGEX = /[\n\r"]/;
 const MDX_RENDER_ELEMENTS = {
@@ -188,10 +190,14 @@ function applyNewlineWhitespace(
     return contentString;
   }
 
+  if (contentString === "" && rendering !== "plain") {
+    return RICH_PARAGRAPH_BREAK;
+  }
+
   if (rendering === "rich") {
     return contentString.trim() === "***"
       ? `${contentString}\n`
-      : `<br />\n${contentString}`;
+      : `${RICH_LINE_BREAK}${contentString}`;
   }
 
   return `\n${contentString}`;
@@ -716,7 +722,13 @@ function parseNestedStringItems<V extends ReadonlyArray<string>>(
       continue;
     }
 
-    result += parseXMLStringItem(item, contentItem, options);
+    const parsedItem = parseXMLStringItem(item, contentItem, options);
+    result +=
+      options.rendering === "rich" &&
+      result.endsWith("\n") &&
+      parsedItem.startsWith(RICH_LINE_BREAK)
+        ? parsedItem.slice("<br />".length)
+        : parsedItem;
   }
 
   if (rawMDXBlockStartIndex != null) {
