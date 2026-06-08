@@ -31,10 +31,10 @@ jobs:
       - name: Check types
         run: pnpm run check-types
 
-      - name: Run Prettier
+      - name: Run formatter
         run: pnpm run format
 
-      - name: Run Knip and ESLint
+      - name: Run linters
         run: |
           set +e
           pnpm exec knip
