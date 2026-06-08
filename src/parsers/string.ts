@@ -73,6 +73,10 @@ const MDX_RENDER_ELEMENTS = {
   underline: "u",
 } as const satisfies Record<RenderOption, string>;
 
+function hasNewlineWhitespace(value: string | undefined): boolean {
+  return value?.split(" ").includes("newline") === true;
+}
+
 function isXMLRichTextLink(value: unknown): value is XMLRichTextLink {
   return typeof value === "object" && value != null;
 }
@@ -180,7 +184,7 @@ function applyNewlineWhitespace(
     return contentString;
   }
 
-  if (!whitespace.split(" ").includes("newline")) {
+  if (!hasNewlineWhitespace(whitespace)) {
     return contentString;
   }
 
@@ -658,6 +662,7 @@ function parseNestedStringItems<V extends ReadonlyArray<string>>(
   for (const [index, item] of items.entries()) {
     if (
       item.payload === RAW_MDX_BLOCK_DELIMITER &&
+      (index === 0 || hasNewlineWhitespace(item.whitespace)) &&
       item.rend == null &&
       item.links == null &&
       item.properties == null &&
@@ -690,7 +695,7 @@ function parseNestedStringItems<V extends ReadonlyArray<string>>(
       if (
         rawMDXBlock !== "" &&
         !rawMDXBlock.endsWith("\n") &&
-        item.whitespace?.split(" ").includes("newline") === true
+        hasNewlineWhitespace(item.whitespace)
       ) {
         rawMDXBlock += "\n";
       }
