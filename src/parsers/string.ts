@@ -66,9 +66,11 @@ const RAW_MDX_BLOCK_DELIMITER = "``md``";
 const RAW_MDX_BLOCK_PLACEHOLDER_PREFIX = "\0raw-mdx-block:";
 const RAW_MDX_BLOCK_PLACEHOLDER_SUFFIX = "\0";
 const RICH_LINE_BREAK = "<br />\n";
-const RICH_PARAGRAPH_BREAK = "\n\n";
 
 const MDX_QUOTED_ATTRIBUTE_ESCAPE_REGEX = /[\n\r"]/;
+const MDX_NEWLINE_RUN_REGEX = /\n{3,}/g;
+const MDX_SIMPLE_INLINE_TAG_REGEX = /<\/?(?:em|strong|u)>/g;
+const MDX_MARKDOWN_LIST_LINE_REGEX = /^\s*(?:[*+-]|\d+[).])\s+/;
 const MDX_RENDER_ELEMENTS = {
   bold: "strong",
   italic: "em",
@@ -77,6 +79,98 @@ const MDX_RENDER_ELEMENTS = {
 
 function hasNewlineWhitespace(value: string | undefined): boolean {
   return value?.split(" ").includes("newline") === true;
+}
+
+function hasNoRichTextPayload(item: XMLRichTextItem): boolean {
+  return (
+    (item.payload == null || item.payload === "") &&
+    item.rend == null &&
+    item.links == null &&
+    item.properties == null &&
+    item.annotation == null &&
+    item.string == null
+  );
+}
+
+function isRawMDXBlockDelimiter(item: XMLRichTextItem, index: number): boolean {
+  return (
+    item.payload === RAW_MDX_BLOCK_DELIMITER &&
+    (index === 0 || hasNewlineWhitespace(item.whitespace)) &&
+    item.rend == null &&
+    item.links == null &&
+    item.properties == null &&
+    item.annotation == null &&
+    item.string == null
+  );
+}
+
+function normalizeMDXNewlineRuns(value: string): string {
+  return value.replaceAll(MDX_NEWLINE_RUN_REGEX, "\n\n");
+}
+
+function isMarkdownListLine(value: string): boolean {
+  return MDX_MARKDOWN_LIST_LINE_REGEX.test(value);
+}
+
+function isStandaloneFormattedLine(value: string): boolean {
+  const trimmedValue = value.trim();
+  if (trimmedValue === "" || isMarkdownListLine(trimmedValue)) {
+    return false;
+  }
+
+  const unwrappedValue = trimmedValue
+    .replaceAll(MDX_SIMPLE_INLINE_TAG_REGEX, "")
+    .trim();
+
+  return unwrappedValue !== trimmedValue && unwrappedValue !== "";
+}
+
+function pushBlankLine(lines: Array<string>): void {
+  if (lines.length > 0 && lines.at(-1) !== "") {
+    lines.push("");
+  }
+}
+
+function getLastNonBlankLine(lines: ReadonlyArray<string>): string | null {
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const line = lines[index];
+    if (line != null && line.trim() !== "") {
+      return line;
+    }
+  }
+
+  return null;
+}
+
+function normalizeRawMDXBlock(value: string): string {
+  const sourceLines = normalizeMDXNewlineRuns(value).split("\n");
+  const normalizedLines: Array<string> = [];
+
+  for (const [index, line] of sourceLines.entries()) {
+    const nextLine = sourceLines[index + 1];
+    const shouldStartOwnParagraph = isStandaloneFormattedLine(line);
+    const lastNonBlankLine = getLastNonBlankLine(normalizedLines);
+    if (
+      shouldStartOwnParagraph ||
+      (isMarkdownListLine(line) &&
+        (lastNonBlankLine == null || !isMarkdownListLine(lastNonBlankLine)))
+    ) {
+      pushBlankLine(normalizedLines);
+    }
+
+    normalizedLines.push(line);
+
+    if (
+      shouldStartOwnParagraph &&
+      nextLine != null &&
+      nextLine.trim() !== "" &&
+      !isMarkdownListLine(nextLine)
+    ) {
+      pushBlankLine(normalizedLines);
+    }
+  }
+
+  return normalizeMDXNewlineRuns(normalizedLines.join("\n"));
 }
 
 function isXMLRichTextLink(value: unknown): value is XMLRichTextLink {
@@ -190,8 +284,8 @@ function applyNewlineWhitespace(
     return contentString;
   }
 
-  if (contentString === "" && rendering !== "plain") {
-    return RICH_PARAGRAPH_BREAK;
+  if (contentString === "") {
+    return rendering === "rich" ? RICH_LINE_BREAK : "\n";
   }
 
   if (rendering === "rich") {
@@ -666,15 +760,7 @@ function parseNestedStringItems<V extends ReadonlyArray<string>>(
   let result = "";
   let rawMDXBlockStartIndex: number | null = null;
   for (const [index, item] of items.entries()) {
-    if (
-      item.payload === RAW_MDX_BLOCK_DELIMITER &&
-      (index === 0 || hasNewlineWhitespace(item.whitespace)) &&
-      item.rend == null &&
-      item.links == null &&
-      item.properties == null &&
-      item.annotation == null &&
-      item.string == null
-    ) {
+    if (isRawMDXBlockDelimiter(item, index)) {
       if (rawMDXBlockStartIndex == null) {
         rawMDXBlockStartIndex = index;
         continue;
@@ -705,6 +791,7 @@ function parseNestedStringItems<V extends ReadonlyArray<string>>(
       ) {
         rawMDXBlock += "\n";
       }
+      rawMDXBlock = normalizeRawMDXBlock(rawMDXBlock);
 
       if (options.rendering === "rich" && options.rawMDXBlocks != null) {
         const placeholder = `${RAW_MDX_BLOCK_PLACEHOLDER_PREFIX}${options.rawMDXBlocks.length}${RAW_MDX_BLOCK_PLACEHOLDER_SUFFIX}`;
@@ -719,6 +806,18 @@ function parseNestedStringItems<V extends ReadonlyArray<string>>(
     }
 
     if (rawMDXBlockStartIndex != null) {
+      continue;
+    }
+
+    const nextItem = items[index + 1];
+    if (
+      options.rendering === "rich" &&
+      hasNoRichTextPayload(item) &&
+      hasNewlineWhitespace(item.whitespace) &&
+      nextItem != null &&
+      isRawMDXBlockDelimiter(nextItem, index + 1)
+    ) {
+      result += "\n";
       continue;
     }
 
@@ -1058,6 +1157,7 @@ function parseXMLContentItem<V extends ReadonlyArray<string>>(
       rawMDXBlock,
     );
   }
+  serializedRichText = normalizeMDXNewlineRuns(serializedRichText);
 
   return {
     text: parseNestedStringItems(contentItem.string, contentItem, {
