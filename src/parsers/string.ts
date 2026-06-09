@@ -184,13 +184,6 @@ function applyNewlineWhitespace(
     return contentString;
   }
 
-  if (contentString === "") {
-    if (rendering === "rich") {
-      return "<br />\n<br />\n";
-    }
-    return "\n\n";
-  }
-
   if (rendering === "rich") {
     return contentString.trim() === "***"
       ? `${contentString}\n`
