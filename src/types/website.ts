@@ -522,6 +522,7 @@ export type WebBlock<
   U extends WebBlockLayout = WebBlockLayout,
 > = {
   uuid: string;
+  language: string | null;
   type: "block";
   title: WebTitle<T>;
   items: U extends "accordion"

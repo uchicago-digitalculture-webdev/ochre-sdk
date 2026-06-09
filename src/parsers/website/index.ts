@@ -2192,6 +2192,7 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
 
   const returnBlock: WebBlock<T> = {
     uuid: blockResource.uuid,
+    language: blockResource.lang ?? null,
     type: "block",
     title: parseWebTitle(
       blockProperties,
