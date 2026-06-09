@@ -837,7 +837,9 @@ function parseImageMapArea(area: XMLImageMapArea): ImageMapArea {
       ? "rectangle"
       : area.shape === "circle"
         ? "circle"
-        : "polygon";
+        : area.shape === "point"
+          ? "point"
+          : "polygon";
 
   return {
     uuid: area.uuid,
@@ -866,7 +868,9 @@ function parseImageMapArea(area: XMLImageMapArea): ImageMapArea {
                 radius: coords[2] ?? 0,
               },
             ]
-          : [{ shape, coords }],
+          : shape === "point"
+            ? [{ shape, point: { x: coords[0] ?? 0, y: coords[1] ?? 0 } }]
+            : [{ shape, coords }],
   };
 }
 

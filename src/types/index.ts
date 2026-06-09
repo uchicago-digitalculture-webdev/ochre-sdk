@@ -312,6 +312,7 @@ export type ImageMapArea = {
     | { shape: "rectangle"; coords: [number, number, number, number] }
     | { shape: "circle"; center: { x: number; y: number }; radius: number }
     | { shape: "polygon"; coords: Array<number> }
+    | { shape: "point"; point: { x: number; y: number } }
   >;
 };
 

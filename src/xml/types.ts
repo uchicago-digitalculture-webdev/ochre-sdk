@@ -175,7 +175,7 @@ export type XMLImageMapArea = {
   type: string;
   title: string;
   slug?: string;
-  shape: "rect" | "circle" | "poly";
+  shape: "rect" | "circle" | "poly" | "point";
   coords: string;
 };
 
