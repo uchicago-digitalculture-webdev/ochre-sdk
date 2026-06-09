@@ -122,7 +122,23 @@ export type WebsiteType =
   | "palm";
 
 /**
- * Represents a website with its properties and elements
+ * Represents a sidebar with its title, items, layout and responsive styles
+ */
+export type WebSidebar<T extends LanguageCodes = LanguageCodes> = {
+  isDisplayed: boolean;
+  items: Array<WebElement<T> | WebBlock<T>>;
+  title: WebTitle<T>;
+  layout: "start" | "end";
+  mobileLayout: "default" | "inline";
+  cssStyles: {
+    default: Array<Style>;
+    tablet: Array<Style>;
+    mobile: Array<Style>;
+  };
+};
+
+/**
+ * Represents a website with its properties and items
  */
 export type Website<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
@@ -170,18 +186,7 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
       logoUuid: string | null;
       items: Array<WebElement<T> | WebBlock<T>> | null;
     };
-    sidebar: {
-      isDisplayed: boolean;
-      items: Array<WebElement<T> | WebBlock<T>>;
-      title: WebTitle<T>;
-      layout: "start" | "end";
-      mobileLayout: "default" | "inline";
-      cssStyles: {
-        default: Array<Style>;
-        tablet: Array<Style>;
-        mobile: Array<Style>;
-      };
-    } | null;
+    sidebar: WebSidebar<T> | null;
     itemPage: {
       isMainContentDisplayed: boolean;
       isDescriptionDisplayed: boolean;
@@ -227,6 +232,7 @@ export type Webpage<T extends LanguageCodes = LanguageCodes> = {
     isDisplayedInNavbar: boolean;
     isNavbarSearchBarDisplayed: boolean;
     backgroundImage: WebImage<T> | null;
+    sidebar: WebSidebar<T> | null;
     cssStyles: {
       default: Array<Style>;
       tablet: Array<Style>;

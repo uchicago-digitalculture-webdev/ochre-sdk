@@ -21,6 +21,7 @@ import type {
   WebElementComponent,
   WebImage,
   Webpage,
+  WebSidebar,
   Website,
   WebsiteSegment,
   WebTitle,
@@ -1828,6 +1829,7 @@ function parseWebpage<T extends ReadonlyArray<string>>(
       isDisplayedInNavbar: true,
       isNavbarSearchBarDisplayed: true,
       backgroundImage: null,
+      sidebar: null,
       cssStyles: { default: [], tablet: [], mobile: [] },
     },
     webpages: [],
@@ -1889,6 +1891,12 @@ function parseWebpage<T extends ReadonlyArray<string>>(
     context,
     options,
     returnWebpage.slug,
+  );
+
+  returnWebpage.properties.sidebar = parseSidebar(
+    webpageResources,
+    options,
+    context,
   );
 
   const pageReader = webpageReader.nestedByValue("presentation", "page");
@@ -2017,16 +2025,18 @@ function parseSidebar<T extends ReadonlyArray<string>>(
   resources: Array<XMLWebsiteResource>,
   options: ParserOptions<T>,
   context: WebsiteParseContext<T>,
-): Website<T>["properties"]["sidebar"] | null {
-  let returnSidebar: Website<T>["properties"]["sidebar"] | null = null;
+): WebSidebar<T> | null {
+  let returnSidebar: WebSidebar<T> | null = null;
 
-  const items: NonNullable<Website<T>["properties"]["sidebar"]>["items"] = [];
+  const items: WebSidebar<T>["items"] = [];
   let title: WebTitle<T> | null = null;
   let layout: "start" | "end" = "start";
   let mobileLayout: "default" | "inline" = "default";
-  const cssStyles: NonNullable<
-    Website<T>["properties"]["sidebar"]
-  >["cssStyles"] = { default: [], tablet: [], mobile: [] };
+  const cssStyles: WebSidebar<T>["cssStyles"] = {
+    default: [],
+    tablet: [],
+    mobile: [],
+  };
 
   const sidebarResource = resources.find((resource) => {
     const resourceProperties = resource.properties
@@ -2419,7 +2429,7 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
 function parseWebsiteProperties<T extends ReadonlyArray<string>>(
   properties: XMLWebsiteProperties["property"],
   websiteTree: XMLWebsiteTree,
-  sidebar: Website<T>["properties"]["sidebar"] | null,
+  sidebar: WebSidebar<T> | null,
   options: ParserOptions<T>,
 ): Website<T>["properties"] {
   const mainProperties = parseSimplifiedProperties(
