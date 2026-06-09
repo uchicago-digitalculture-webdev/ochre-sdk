@@ -333,6 +333,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       paginationVariant: "default" | "numeric";
       loadingVariant: "spinner" | "skeleton" | "animation" | "none";
       imageLayout: "top" | "bottom" | "start" | "end" | null;
+      isImagePlaceholderDisplayed: boolean;
       expectedItemCount: number | null;
       isSortDisplayed: boolean;
       isUsingQueryParams: boolean;
