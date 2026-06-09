@@ -601,10 +601,28 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
     languages: V;
     rendering: TextRendering;
     rawMDXBlocks?: Array<string>;
+    nextItem?: XMLRichTextItem;
   },
 ): string {
-  const hasTextContent = item.payload != null || item.string != null;
+  const hasTextContent =
+    (item.payload != null && item.payload !== "") || item.string != null;
   if (!hasTextContent && getXMLRichTextLinks(item).length === 0) {
+    const hasNewlineWhitespace =
+      item.whitespace?.split(" ").includes("newline") === true;
+    const nextHasNewlineWhitespace =
+      options.nextItem?.whitespace?.split(" ").includes("newline") === true;
+    if (hasNewlineWhitespace && options.rendering === "plain") {
+      return nextHasNewlineWhitespace ? "\n" : "\n\n";
+    }
+
+    if (hasNewlineWhitespace && options.rendering === "rawMDX") {
+      return nextHasNewlineWhitespace ? "\n<br />" : "\n<br />\n";
+    }
+
+    if (hasNewlineWhitespace && options.rendering === "rich") {
+      return nextHasNewlineWhitespace ? "<br />\n" : "<br />\n<br />\n";
+    }
+
     return applyNewlineWhitespace("", item.whitespace, options.rendering);
   }
 
@@ -683,6 +701,7 @@ function parseNestedStringItems<V extends ReadonlyArray<string>>(
             languages: options.languages,
             rendering: rawMDXBlockRendering,
             rawMDXBlocks: options.rawMDXBlocks,
+            nextItem: rawIndex + 1 < index ? items[rawIndex + 1] : undefined,
           });
         }
       }
@@ -711,7 +730,10 @@ function parseNestedStringItems<V extends ReadonlyArray<string>>(
       continue;
     }
 
-    result += parseXMLStringItem(item, contentItem, options);
+    result += parseXMLStringItem(item, contentItem, {
+      ...options,
+      nextItem: items[index + 1],
+    });
   }
 
   if (rawMDXBlockStartIndex != null) {
