@@ -1863,6 +1863,14 @@ function parseWebpage<T extends ReadonlyArray<string>>(
 
     switch (resourceType) {
       case "element": {
+        const componentName = websitePresentationReader(resourceProperties)
+          .nestedByValue("presentation", "element")
+          .value<string>("component");
+
+        if (componentName === "sidebar") {
+          continue;
+        }
+
         const element = parseWebElement(resource, options, context);
         items.push(element);
         break;
