@@ -588,10 +588,10 @@ describe("string parser integration", () => {
     );
 
     expect(parsedContent.getExactText("eng")).toBe(
-      "1. πυλαι ταμασιαι\n2. [π]υλαι αρων εσβα\n3. [    π]υλαι εσακκει[ ]\n4. [        ]τιων vacat[ ]\n",
+      "1. πυλαι ταμασιαι\n2. [π]υλαι αρων εσβα\n3. [    π]υλαι εσακκει[ ]\n4. [        ]τιων vacat[ ]\n\n",
     );
     expect(parsedContent.getExactRichText("eng")).toBe(
-      `<>\n{"1."}{" "}<em>πυλαι ταμασιαι</em><br />\n{"2. ["}<em>π</em>{"]"}<em>υλαι αρων εσβα</em><br />\n{"3. ["}{"${fourDisplaySpaces}"}<em>π</em>{"]"}<em>υλαι εσακκει</em>{"[ ]"}<br />\n{"4. [${eightDisplaySpaces}]"}<em>τιων</em>{" vacat[ ]"}<br />\n</>`,
+      `<>\n{"1."}{" "}<em>πυλαι ταμασιαι</em><br />\n{"2. ["}<em>π</em>{"]"}<em>υλαι αρων εσβα</em><br />\n{"3. ["}{"${fourDisplaySpaces}"}<em>π</em>{"]"}<em>υλαι εσακκει</em>{"[ ]"}<br />\n{"4. [${eightDisplaySpaces}]"}<em>τιων</em>{" vacat[ ]"}<br />\n<br />\n</>`,
     );
   });
 
