@@ -417,7 +417,7 @@ function parsePropertyValueText(
   }
 
   if (value.content != null) {
-    return parseContentLikeForLanguage(value as XMLContent, options);
+    return parseContentLikeForLanguage(value, options);
   }
 
   return "";

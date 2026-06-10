@@ -325,10 +325,7 @@ function parseRawData(
   rawData: XMLData,
   category: ItemCategory,
 ): TopLevelItemForTest {
-  return parseItem(rawData, {
-    category,
-    languages: TEST_LANGUAGES,
-  }) as TopLevelItemForTest;
+  return parseItem(rawData, { category, languages: TEST_LANGUAGES });
 }
 
 function getTopLevelRawItems(
@@ -644,7 +641,7 @@ function expectPropertyFieldsMatchRaw(
     const parsedValue = parsedProperty.values[valueIndex]!;
     const rawLabel =
       rawValue.content != null
-        ? parseContentLikeForTest(rawValue as XMLContent)
+        ? parseContentLikeForTest(rawValue)
         : rawValue.payload != null && rawValue.payload !== ""
           ? rawValue.payload
           : null;
@@ -685,7 +682,7 @@ function expectPropertiesMatchRaw(
   expect(parsedProperties).toHaveLength(rawPropertyItems.length);
 
   for (const [index, rawPropertyItem] of rawPropertyItems.entries()) {
-    const rawProperty = rawPropertyItem!;
+    const rawProperty = rawPropertyItem;
     const parsedProperty = parsedProperties[index]!;
 
     expectPropertyFieldsMatchRaw(rawProperty, parsedProperty);
@@ -706,7 +703,7 @@ function expectSetItemPropertiesMatchRaw(
   expect(parsedProperties).toHaveLength(rawPropertyItems.length);
 
   for (const [index, rawPropertyItem] of rawPropertyItems.entries()) {
-    const rawProperty = rawPropertyItem!;
+    const rawProperty = rawPropertyItem;
     const parsedProperty = parsedProperties[index]!;
 
     expectPropertyFieldsMatchRaw(rawProperty, parsedProperty);
@@ -722,12 +719,12 @@ function expectNotesMatchRaw(
   expect(parsedNotes).toHaveLength(rawNoteItems.length);
 
   for (const [index, rawNoteItem] of rawNoteItems.entries()) {
-    const rawNote = rawNoteItem!;
+    const rawNote = rawNoteItem;
     const parsedNote = parsedNotes[index]!;
     const expectedContent =
       rawNote.content == null
         ? parseXMLString(rawNote).text
-        : parseContentLikeForTest(rawNote as XMLContent);
+        : parseContentLikeForTest(rawNote);
 
     expect(parsedNote.number).toBe(rawNote.noteNo ?? 0);
     expect(parsedNote.content.getText("eng")).toBe(expectedContent);
@@ -916,9 +913,7 @@ function expectSetItemsMatchRaw(
   rawSet: XMLSet,
   parsedSet: { items: ReadonlyArray<ParsedSetItem> },
 ): void {
-  const rawItemEntries = getRawSetItemEntries(
-    rawSet.items as XMLItemHierarchy | undefined,
-  );
+  const rawItemEntries = getRawSetItemEntries(rawSet.items);
   expect(parsedSet.items).toHaveLength(rawItemEntries.length);
 
   for (const [index, rawEntry] of rawItemEntries.entries()) {
@@ -1169,14 +1164,8 @@ function expectCategorySpecificFields(
       ) {
         throw new Error("Parsed set is missing set fields");
       }
-      const parsedSet = parsedItem as Item<
-        "set",
-        SetItemCategory,
-        typeof TEST_LANGUAGES
-      >;
-      expect(parsedSet.items).toHaveLength(
-        countItemsInHierarchy(rawSet.items as XMLItemHierarchy | undefined),
-      );
+      const parsedSet = parsedItem;
+      expect(parsedSet.items).toHaveLength(countItemsInHierarchy(rawSet.items));
       expectSetItemsMatchRaw(rawSet, parsedSet);
       break;
     }
@@ -1261,13 +1250,13 @@ describe("fetchItem", () => {
       fetch: async () => new Response("", { status: 500 }),
     });
 
-    expectTypeOf(implicitString.getExactText)
+    expectTypeOf(implicitString.getExactText.bind(implicitString))
       .parameter(0)
       .toEqualTypeOf<string>();
-    expectTypeOf(explicitString.getExactText)
+    expectTypeOf(explicitString.getExactText.bind(explicitString))
       .parameter(0)
       .toEqualTypeOf<"eng" | "spa">();
-    expectTypeOf(constructedString.getExactText)
+    expectTypeOf(constructedString.getExactText.bind(constructedString))
       .parameter(0)
       .toEqualTypeOf<"eng" | "spa">();
     expect(roundTrippedString.getRichText("spa")).toBe(

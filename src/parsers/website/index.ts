@@ -1484,7 +1484,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         context,
       );
 
-      if (!boundElementUuid && !href) {
+      if (boundElementUuid === null && href === null) {
         throw new Error(
           formatComponentError(
             "Bound element or href not found",

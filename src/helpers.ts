@@ -72,8 +72,5 @@ export function flattenItemProperties<
     }
   }
 
-  return {
-    ...item,
-    properties: flattenProperties(allProperties),
-  } as FlattenedItem<Item<U, V, T, W>, T>;
+  return { ...item, properties: flattenProperties(allProperties) };
 }

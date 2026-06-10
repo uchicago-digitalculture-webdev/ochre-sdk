@@ -158,11 +158,7 @@ function omitEmbeddedItems(
 > {
   const { items: _items, ...itemWithoutEmbeddedItems } = item;
 
-  return itemWithoutEmbeddedItems as ItemWithoutEmbeddedItems<
-    ItemCategoryWithEmbeddedItems,
-    SetItemCategory,
-    ReadonlyArray<string>
-  >;
+  return itemWithoutEmbeddedItems;
 }
 
 /**

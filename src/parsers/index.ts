@@ -1159,83 +1159,37 @@ function parseEmbeddedItemEntry<T extends ReadonlyArray<string>>(
         containedItemCategory: normalizeTreeItemCategory(
           options.containedItemCategory,
         ),
-      }) as Item<ItemCategory, SetItemCategory, T, "embedded">;
+      });
     }
     case "bibliography": {
-      return parseBibliography(entry.item as XMLBibliography, options) as Item<
-        ItemCategory,
-        SetItemCategory,
-        T,
-        "embedded"
-      >;
+      return parseBibliography(entry.item as XMLBibliography, options);
     }
     case "concept": {
-      return parseConcept(entry.item as XMLConcept, options) as Item<
-        ItemCategory,
-        SetItemCategory,
-        T,
-        "embedded"
-      >;
+      return parseConcept(entry.item as XMLConcept, options);
     }
     case "spatialUnit": {
-      return parseSpatialUnit(entry.item as XMLSpatialUnit, options) as Item<
-        ItemCategory,
-        SetItemCategory,
-        T,
-        "embedded"
-      >;
+      return parseSpatialUnit(entry.item as XMLSpatialUnit, options);
     }
     case "period": {
-      return parsePeriod(entry.item as XMLPeriod, options) as Item<
-        ItemCategory,
-        SetItemCategory,
-        T,
-        "embedded"
-      >;
+      return parsePeriod(entry.item as XMLPeriod, options);
     }
     case "person": {
-      return parsePerson(entry.item as XMLPerson, options) as Item<
-        ItemCategory,
-        SetItemCategory,
-        T,
-        "embedded"
-      >;
+      return parsePerson(entry.item as XMLPerson, options);
     }
     case "propertyVariable": {
-      return parsePropertyVariable(
-        entry.item as XMLPropertyVariable,
-        options,
-      ) as Item<ItemCategory, SetItemCategory, T, "embedded">;
+      return parsePropertyVariable(entry.item as XMLPropertyVariable, options);
     }
     case "propertyValue": {
-      return parsePropertyValue(
-        entry.item as XMLPropertyValueItem,
-        options,
-      ) as Item<ItemCategory, SetItemCategory, T, "embedded">;
+      return parsePropertyValue(entry.item as XMLPropertyValueItem, options);
     }
     case "resource": {
-      return parseResource(entry.item as XMLResource, options) as Item<
-        ItemCategory,
-        SetItemCategory,
-        T,
-        "embedded"
-      >;
+      return parseResource(entry.item as XMLResource, options);
     }
     case "text": {
-      return parseText(entry.item as XMLText, options) as Item<
-        ItemCategory,
-        SetItemCategory,
-        T,
-        "embedded"
-      >;
+      return parseText(entry.item as XMLText, options);
     }
     case "set": {
-      return parseSet(entry.item as XMLSet, options) as Item<
-        ItemCategory,
-        SetItemCategory,
-        T,
-        "embedded"
-      >;
+      return parseSet(entry.item as XMLSet, options);
     }
     case "dictionaryUnit":
     case "heading": {
@@ -1277,48 +1231,25 @@ function parseSetItemHierarchy<T extends ReadonlyArray<string>>(
   for (const entry of collectHierarchyEntries(hierarchy, categories)) {
     switch (entry.category) {
       case "tree": {
-        items.push(
-          parseSetTree(entry.item as XMLTree, options) as SetItem<
-            SetItemCategory,
-            T
-          >,
-        );
+        items.push(parseSetTree(entry.item as XMLTree, options));
         break;
       }
       case "bibliography": {
         items.push(
-          parseSetBibliography(
-            entry.item as XMLBibliography,
-            options,
-          ) as SetItem<SetItemCategory, T>,
+          parseSetBibliography(entry.item as XMLBibliography, options),
         );
         break;
       }
       case "concept": {
-        items.push(
-          parseSetConcept(entry.item as XMLConcept, options) as SetItem<
-            SetItemCategory,
-            T
-          >,
-        );
+        items.push(parseSetConcept(entry.item as XMLConcept, options));
         break;
       }
       case "spatialUnit": {
-        items.push(
-          parseSetSpatialUnit(entry.item as XMLSpatialUnit, options) as SetItem<
-            SetItemCategory,
-            T
-          >,
-        );
+        items.push(parseSetSpatialUnit(entry.item as XMLSpatialUnit, options));
         break;
       }
       case "period": {
-        items.push(
-          parseSetPeriod(entry.item as XMLPeriod, options) as SetItem<
-            SetItemCategory,
-            T
-          >,
-        );
+        items.push(parseSetPeriod(entry.item as XMLPeriod, options));
         break;
       }
       case "person": {
@@ -1328,16 +1259,13 @@ function parseSetItemHierarchy<T extends ReadonlyArray<string>>(
             parsePerson(person, options),
             person.properties,
             options,
-          ) as SetItem<SetItemCategory, T>,
+          ),
         );
         break;
       }
       case "propertyVariable": {
         items.push(
-          parsePropertyVariable(
-            entry.item as XMLPropertyVariable,
-            options,
-          ) as SetItem<SetItemCategory, T>,
+          parsePropertyVariable(entry.item as XMLPropertyVariable, options),
         );
         break;
       }
@@ -1348,35 +1276,20 @@ function parseSetItemHierarchy<T extends ReadonlyArray<string>>(
             parsePropertyValue(propertyValue, options),
             propertyValue.properties,
             options,
-          ) as SetItem<SetItemCategory, T>,
+          ),
         );
         break;
       }
       case "resource": {
-        items.push(
-          parseSetResource(entry.item as XMLResource, options) as SetItem<
-            SetItemCategory,
-            T
-          >,
-        );
+        items.push(parseSetResource(entry.item as XMLResource, options));
         break;
       }
       case "text": {
-        items.push(
-          parseText(entry.item as XMLText, options) as SetItem<
-            SetItemCategory,
-            T
-          >,
-        );
+        items.push(parseText(entry.item as XMLText, options));
         break;
       }
       case "set": {
-        items.push(
-          parseSetSet(entry.item as XMLSet, options) as SetItem<
-            SetItemCategory,
-            T
-          >,
-        );
+        items.push(parseSetSet(entry.item as XMLSet, options));
         break;
       }
       case "dictionaryUnit":
@@ -1982,7 +1895,7 @@ function parseTree<
             entry.item as XMLHeading,
             containedItemCategory,
             childOptions,
-          ) as Heading<U & HeadingItemCategory, T>,
+          ),
         );
         continue;
       }
@@ -2046,7 +1959,7 @@ function parseSetBibliography<T extends ReadonlyArray<string>>(
       rawBibliography.properties,
       options,
     ),
-  ) as SetBibliography<T>;
+  );
 }
 
 function parseSetConcept<T extends ReadonlyArray<string>>(
@@ -2129,7 +2042,7 @@ function parseSetTree<T extends ReadonlyArray<string>>(
       rawTree.properties,
       options,
     ),
-  ) as SetTree<T>;
+  );
 }
 
 function parseSetSet<T extends ReadonlyArray<string>>(
@@ -2142,7 +2055,7 @@ function parseSetSet<T extends ReadonlyArray<string>>(
       rawSet.properties,
       options,
     ),
-  ) as SetItem<"set", T>;
+  );
 }
 
 function parseBibliography<T extends ReadonlyArray<string>>(

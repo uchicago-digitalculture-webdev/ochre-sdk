@@ -324,7 +324,7 @@ export class MultilingualString<
         normalizedContent,
         defaultOptions,
         availableLanguages,
-      ) as MultilingualString<ReadonlyArray<string>>;
+      );
     }
 
     const normalizedContent: Partial<
@@ -460,9 +460,7 @@ export class MultilingualString<
    */
   getText(language?: T[number]): string {
     if (language == null) {
-      const defaultEntry = this.getPrimaryEntry(
-        this._options.defaultLanguage as T[number],
-      );
+      const defaultEntry = this.getPrimaryEntry(this._options.defaultLanguage);
       if (defaultEntry != null) return defaultEntry.text;
     }
 
@@ -471,9 +469,7 @@ export class MultilingualString<
       if (requestedEntry != null) return requestedEntry.text;
     }
 
-    const defaultEntry = this.getPrimaryEntry(
-      this._options.defaultLanguage as T[number],
-    );
+    const defaultEntry = this.getPrimaryEntry(this._options.defaultLanguage);
     if (defaultEntry != null) return defaultEntry.text;
 
     for (const availableLanguage of this._availableLanguages) {
@@ -489,9 +485,7 @@ export class MultilingualString<
    */
   getRichText(language?: T[number]): string {
     if (language == null) {
-      const defaultEntry = this.getPrimaryEntry(
-        this._options.defaultLanguage as T[number],
-      );
+      const defaultEntry = this.getPrimaryEntry(this._options.defaultLanguage);
       if (defaultEntry != null) return defaultEntry.richText;
     }
 
@@ -500,9 +494,7 @@ export class MultilingualString<
       if (requestedEntry != null) return requestedEntry.richText;
     }
 
-    const defaultEntry = this.getPrimaryEntry(
-      this._options.defaultLanguage as T[number],
-    );
+    const defaultEntry = this.getPrimaryEntry(this._options.defaultLanguage);
     if (defaultEntry != null) return defaultEntry.richText;
 
     for (const availableLanguage of this._availableLanguages) {
@@ -664,11 +656,8 @@ export class MultilingualString<
    * Check if the multilingual string has any content
    */
   hasContent(): boolean {
-    const contentEntries = Object.values(this._content) as Array<
-      ReadonlyArray<MultilingualStringEntry> | undefined
-    >;
-    for (const entries of contentEntries) {
-      for (const entry of entries ?? []) {
+    for (const language of this._availableLanguages) {
+      for (const entry of this._content[language] ?? []) {
         if (entry.text.trim().length > 0 || entry.richText.trim().length > 0) {
           return true;
         }
@@ -682,7 +671,7 @@ export class MultilingualString<
    * Get the default language
    */
   getDefaultLanguage(): T[number] {
-    return this._options.defaultLanguage as T[number];
+    return this._options.defaultLanguage;
   }
 
   /**

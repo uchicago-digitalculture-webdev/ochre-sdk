@@ -220,7 +220,7 @@ function getNormalizedProperty<
   return {
     ...property,
     values: transformValues != null ? transformValues(values) : values,
-  } as TProperty;
+  };
 }
 
 function getFirstPropertyValueResult<T extends LanguageCodes>(
