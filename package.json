@@ -47,8 +47,8 @@
   "scripts": {
     "dev": "tsdown src/index.ts --watch",
     "build": "tsdown",
-    "lint": "knip; eslint .",
-    "lint:fix": "knip --fix; eslint . --fix",
+    "lint": "knip; eslint --concurrency auto .",
+    "lint:fix": "knip --fix; eslint --concurrency auto --fix .",
     "format": "oxfmt --check",
     "format:fix": "oxfmt",
     "check-types": "tsc --noEmit",
