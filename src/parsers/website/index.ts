@@ -939,6 +939,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       const isImagePlaceholderDisplayed = componentReader.valueOr<
         CollectionComponent["isImagePlaceholderDisplayed"]
       >("image-placeholder-displayed", true);
+      const isInteractive = componentReader.valueOr<
+        CollectionComponent["isInteractive"]
+      >("is-interactive", false);
 
       const componentOptions = parseWebsiteOptions(
         elementResource.options,
@@ -959,8 +962,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         imageLayout,
         isImagePlaceholderDisplayed,
         expectedItemCount,
-        isUsingQueryParams,
         isSortDisplayed,
+        isUsingQueryParams,
+        isInteractive,
         filter: {
           isSidebarDisplayed: isFilterSidebarDisplayed,
           isResultsBarDisplayed: isFilterResultsBarDisplayed,

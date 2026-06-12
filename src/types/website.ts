@@ -343,6 +343,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       expectedItemCount: number | null;
       isSortDisplayed: boolean;
       isUsingQueryParams: boolean;
+      isInteractive: boolean;
       filter: {
         isSidebarDisplayed: boolean;
         isResultsBarDisplayed: boolean;
