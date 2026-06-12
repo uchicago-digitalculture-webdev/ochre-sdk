@@ -1,7 +1,7 @@
 import type { MultilingualString } from "#/parsers/multilingual.js";
 import type { Webpage } from "#/types/website.js";
 
-type Prettify<T> = { [K in keyof T]: T[K] } & {};
+export type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
 /**
  * Language-code tuple or array used by OCHRE multilingual fields.

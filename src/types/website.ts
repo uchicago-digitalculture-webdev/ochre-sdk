@@ -7,6 +7,7 @@ import type {
   License,
   Metadata,
   Person,
+  Prettify,
   QueryablePropertyValueDataType,
 } from "#/types/index.js";
 
@@ -421,28 +422,14 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
         contextTree: ContextTree<T> | null;
         labels: { title: MultilingualString<T> | null };
       };
-      collectionProperties: {
-        displayedProperties: Extract<
-          WebElementComponent<T>,
-          { component: "collection" }
-        >["displayedProperties"];
-        variant: Extract<
-          WebElementComponent<T>,
-          { component: "collection" }
-        >["variant"];
-        paginationVariant: Extract<
-          WebElementComponent<T>,
-          { component: "collection" }
-        >["paginationVariant"];
-        loadingVariant: Extract<
-          WebElementComponent<T>,
-          { component: "collection" }
-        >["loadingVariant"];
-        imageLayout: Extract<
-          WebElementComponent<T>,
-          { component: "collection" }
-        >["imageLayout"];
-      };
+      collectionProperties: Prettify<
+        Partial<
+          Omit<
+            Extract<WebElementComponent<T>, { component: "collection" }>,
+            "component" | "linkUuids" | "options"
+          >
+        >
+      >;
     }
   | {
       component: "search-bar";

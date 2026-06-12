@@ -1313,6 +1313,10 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         WebElementComponent<T>,
         { component: "query" }
       >;
+      type CollectionComponent = Extract<
+        WebElementComponent<T>,
+        { component: "collection" }
+      >;
       const setLinks = getWebsiteLinks(websiteLinks, "set");
       if (setLinks.length === 0) {
         throw new Error(
@@ -1424,37 +1428,95 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         options,
       );
 
-      const displayedProperties = componentReader.property("use-property");
+      const collectionProperties: QueryComponent["collectionProperties"] = {};
 
-      const variant = componentReader.valueOr<
-        QueryComponent["collectionProperties"]["variant"]
-      >("variant", "slide");
-      const paginationVariant = componentReader.valueOr<
-        QueryComponent["collectionProperties"]["paginationVariant"]
-      >("pagination-variant", "default");
-      const loadingVariant = componentReader.valueOr<
-        QueryComponent["collectionProperties"]["loadingVariant"]
-      >("loading-variant", "skeleton");
-      const imageLayout = componentReader.valueOr<
-        QueryComponent["collectionProperties"]["imageLayout"]
-      >("image-layout", "start");
+      const displayedProperties = componentReader.property("use-property");
+      if (displayedProperties != null) {
+        collectionProperties.displayedProperties = displayedProperties.values
+          .filter((value) => value.uuid !== null)
+          .map((value) => ({ uuid: value.uuid!, label: value.label }));
+      }
+
+      const overrideReader = componentReader.nestedByValue(
+        "sub-component-override",
+        "collection",
+      );
+
+      const variant =
+        overrideReader.value<CollectionComponent["variant"]>("variant");
+      if (variant != null) {
+        collectionProperties.variant = variant;
+      }
+
+      const paginationVariant =
+        overrideReader.value<CollectionComponent["paginationVariant"]>(
+          "pagination-variant",
+        );
+      if (paginationVariant != null) {
+        collectionProperties.paginationVariant = paginationVariant;
+      }
+
+      const loadingVariant =
+        overrideReader.value<CollectionComponent["loadingVariant"]>(
+          "loading-variant",
+        );
+      if (loadingVariant != null) {
+        collectionProperties.loadingVariant = loadingVariant;
+      }
+
+      const imageLayout =
+        overrideReader.value<CollectionComponent["imageLayout"]>(
+          "image-layout",
+        );
+      if (imageLayout != null) {
+        collectionProperties.imageLayout = imageLayout;
+      }
+
+      const isImagePlaceholderDisplayed = overrideReader.value<
+        CollectionComponent["isImagePlaceholderDisplayed"]
+      >("image-placeholder-displayed");
+      if (isImagePlaceholderDisplayed != null) {
+        collectionProperties.isImagePlaceholderDisplayed =
+          isImagePlaceholderDisplayed;
+      }
+
+      const expectedItemCount =
+        overrideReader.value<CollectionComponent["expectedItemCount"]>(
+          "item-count",
+        );
+      if (expectedItemCount != null) {
+        collectionProperties.expectedItemCount = expectedItemCount;
+      }
+
+      const isSortDisplayed =
+        overrideReader.value<CollectionComponent["isSortDisplayed"]>(
+          "sort-displayed",
+        );
+      if (isSortDisplayed != null) {
+        collectionProperties.isSortDisplayed = isSortDisplayed;
+      }
+
+      const isUsingQueryParams = overrideReader.value<
+        CollectionComponent["isUsingQueryParams"]
+      >("is-using-query-params");
+      if (isUsingQueryParams != null) {
+        collectionProperties.isUsingQueryParams = isUsingQueryParams;
+      }
+
+      const isInteractive =
+        overrideReader.value<CollectionComponent["isInteractive"]>(
+          "is-interactive",
+        );
+      if (isInteractive != null) {
+        collectionProperties.isInteractive = isInteractive;
+      }
 
       properties = {
         component: "query",
         linkUuids: setLinks.map((link) => link.uuid),
         items,
         options: componentOptions,
-        collectionProperties: {
-          displayedProperties:
-            displayedProperties?.values
-              .filter((value) => value.uuid !== null)
-              .map((value) => ({ uuid: value.uuid!, label: value.label })) ??
-            null,
-          variant,
-          paginationVariant,
-          loadingVariant,
-          imageLayout,
-        },
+        collectionProperties,
       };
       break;
     }
