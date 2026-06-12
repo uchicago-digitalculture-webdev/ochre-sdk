@@ -941,7 +941,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       >("image-placeholder-displayed", true);
       const isInteractive = componentReader.valueOr<
         CollectionComponent["isInteractive"]
-      >("is-interactive", false);
+      >("is-interactive", true);
 
       const componentOptions = parseWebsiteOptions(
         elementResource.options,
