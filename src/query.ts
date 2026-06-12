@@ -440,16 +440,6 @@ function buildPropertyLabelQuery(propertyVariable: string): string {
   });
 }
 
-function buildValueNotInheritedQuery(): string {
-  return buildNotCtsQueryExpression(
-    buildPlainElementAttributeValueQueryExpression({
-      elementName: "value",
-      attributeName: "inherited",
-      value: "true",
-    }),
-  );
-}
-
 function buildValueNotIdRefQuery(): string {
   return buildNotCtsQueryExpression(
     buildPlainElementAttributeValueQueryExpression({
@@ -498,6 +488,26 @@ function buildValueContentInnerQuery(params: {
       matchMode,
       isCaseSensitive,
     }),
+  );
+}
+
+function buildValueContentExactInnerQuery(params: {
+  language: string;
+  value: string;
+  isCaseSensitive: boolean;
+}): string {
+  const { language, value, isCaseSensitive } = params;
+
+  return buildNestedElementQuery(
+    ["content"],
+    buildAndCtsQueryExpressionInternal([
+      buildContentLanguageQuery(language),
+      buildCtsElementValueQueryExpression({
+        elementName: "string",
+        value,
+        isCaseSensitive,
+      }),
+    ]),
   );
 }
 
@@ -732,13 +742,15 @@ function buildPropertyStringQueryExpression(params: {
   return buildPropertyTextMatchQueryExpression({
     propertyVariable,
     propertyRelation,
-    valueFilters: [buildValueNotInheritedQuery()],
-    contentQueryExpression: buildValueContentInnerQuery({
-      language,
-      value,
-      matchMode,
-      isCaseSensitive,
-    }),
+    contentQueryExpression:
+      matchMode === "exact"
+        ? buildValueContentExactInnerQuery({ language, value, isCaseSensitive })
+        : buildValueContentInnerQuery({
+            language,
+            value,
+            matchMode,
+            isCaseSensitive,
+          }),
     rawValueQueryExpression: buildValueRawValueInnerQuery({
       value,
       matchMode,

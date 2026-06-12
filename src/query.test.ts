@@ -317,7 +317,7 @@ describe("property target queries", () => {
     expect(queryExpression).not.toContain('xs:QName("value")');
   });
 
-  it("compiles string property queries against content, rawValue, and direct text", () => {
+  it("compiles exact string property queries as indexed value equality against content/string, rawValue, and direct text", () => {
     const queryText = compiledQueryText({
       target: "property",
       propertyVariable: MEDIA_TYPE_UUID,
@@ -332,12 +332,34 @@ describe("property target queries", () => {
     expectContainsAll(queryText, [
       `cts:element-attribute-value-query(xs:QName("label"), xs:QName("uuid"), "${MEDIA_TYPE_UUID}")`,
       'cts:element-attribute-value-query(xs:QName("label"), xs:QName("relation"), "related")',
-      'cts:not-query(cts:element-attribute-value-query(xs:QName("value"), xs:QName("inherited"), "true"))',
       "let $contentQuery :=",
       "let $rawValueQuery :=",
       "let $bareValueQuery :=",
+      'cts:element-value-query(xs:QName("string"), "Map"',
       'cts:element-attribute-value-query(xs:QName("value"), xs:QName("rawValue"), "Map"',
       'cts:element-value-query(xs:QName("value"), "Map"',
+    ]);
+    expectContainsNone(queryText, [
+      "cts:word-query(",
+      'cts:not-query(cts:element-attribute-value-query(xs:QName("value"), xs:QName("inherited"), "true"))',
+    ]);
+  });
+
+  it("compiles includes string property queries as content word queries", () => {
+    const queryText = compiledQueryText({
+      target: "property",
+      propertyVariable: MEDIA_TYPE_UUID,
+      dataType: "string",
+      value: "Map",
+      matchMode: "includes",
+      isCaseSensitive: false,
+      language: "eng",
+    });
+
+    expectContainsAll(queryText, [
+      `cts:element-attribute-value-query(xs:QName("label"), xs:QName("uuid"), "${MEDIA_TYPE_UUID}")`,
+      "let $contentQuery :=",
+      "cts:word-query(",
     ]);
   });
 
@@ -647,7 +669,7 @@ describe("query groups", () => {
 });
 
 describe("fetchSetItems query assembly", () => {
-  it("keeps exact string property filters in the XPath path", async () => {
+  it("compiles a standalone exact string property filter as an indexed CTS query", async () => {
     const postedBody = await captureSetItemsQuery({
       setScopeUuids: [SET_UUID],
       queries: {
@@ -665,16 +687,18 @@ describe("fetchSetItems query assembly", () => {
     });
 
     expectContainsAll(postedBody, [
-      `label/@uuid = "${LOCI_VERTICAL_RELATION_UUID}"`,
-      'label/@relation = "related"',
-      'content[@xml:lang = "eng"]/string = "Locus 6082"',
-      "let $searchedItems := doc()/ochre/set[@uuid = $setScopeUuids]/items/*",
-      "let $items := $searchedItems[.//properties/property[",
+      `cts:element-attribute-value-query(xs:QName("label"), xs:QName("uuid"), "${LOCI_VERTICAL_RELATION_UUID}")`,
+      'cts:element-attribute-value-query(xs:QName("label"), xs:QName("relation"), "related")',
+      'cts:element-value-query(xs:QName("string"), "Locus 6082"',
+      "let $items := cts:search(",
     ]);
-    expect(postedBody).not.toContain("let $query :=");
+    expectContainsNone(postedBody, [
+      "let $items := $searchedItems[",
+      'content[@xml:lang = "eng"]/string = "Locus 6082"',
+    ]);
   });
 
-  it("combines CTS filtering with exact string XPath filtering for AND groups", async () => {
+  it("compiles AND groups with exact string properties entirely through CTS", async () => {
     const postedBody = await captureSetItemsQuery({
       setScopeUuids: [SET_UUID],
       queries: {
@@ -702,14 +726,18 @@ describe("fetchSetItems query assembly", () => {
     });
 
     expectContainsAll(postedBody, [
-      "let $query := local:queryHelper1()",
-      "let $searchedItems := cts:search(",
-      `label/@uuid = "${MEDIA_TYPE_UUID}"`,
+      "let $query := cts:and-query((",
+      "let $items := cts:search(",
+      `cts:element-attribute-value-query(xs:QName("label"), xs:QName("uuid"), "${MEDIA_TYPE_UUID}")`,
+      'cts:element-value-query(xs:QName("string"), "Map"',
+    ]);
+    expectContainsNone(postedBody, [
+      "let $items := $searchedItems[",
       'content[@xml:lang = "eng"]/string = "Map"',
     ]);
   });
 
-  it("uses CTS filtering, not XPath extraction, for OR groups with exact string properties", async () => {
+  it("compiles OR groups with exact string properties through CTS, not XPath extraction", async () => {
     const postedBody = await captureSetItemsQuery({
       setScopeUuids: [SET_UUID],
       queries: {
@@ -738,7 +766,68 @@ describe("fetchSetItems query assembly", () => {
 
     expectContainsAll(postedBody, [
       "let $query := cts:or-query((",
-      "let $searchedItems := cts:search(",
+      "let $items := cts:search(",
+      'cts:element-value-query(xs:QName("string"), "Map"',
+    ]);
+    expect(postedBody).not.toContain("let $items := $searchedItems[");
+  });
+
+  it("compiles a text OR AND-ed with an exact-property OR (search box + multi-select facet) through CTS", async () => {
+    const postedBody = await captureSetItemsQuery({
+      setScopeUuids: [SET_UUID],
+      queries: {
+        and: [
+          {
+            or: [
+              {
+                target: "title",
+                value: "chicago",
+                matchMode: "includes",
+                isCaseSensitive: false,
+                language: "eng",
+              },
+              {
+                target: "property",
+                dataType: "all",
+                value: "chicago",
+                matchMode: "includes",
+                isCaseSensitive: false,
+                language: "eng",
+              },
+            ],
+          },
+          {
+            or: [
+              {
+                target: "property",
+                propertyVariable: MEDIA_TYPE_UUID,
+                dataType: "string",
+                value: "Map",
+                matchMode: "exact",
+                isCaseSensitive: true,
+                language: "eng",
+              },
+              {
+                target: "property",
+                propertyVariable: MEDIA_TYPE_UUID,
+                dataType: "string",
+                value: "Video",
+                matchMode: "exact",
+                isCaseSensitive: true,
+                language: "eng",
+              },
+            ],
+          },
+        ],
+      },
+      page: 1,
+      pageSize: 10,
+    });
+
+    expectContainsAll(postedBody, [
+      "let $items := cts:search(",
+      'cts:element-value-query(xs:QName("string"), "Map"',
+      'cts:element-value-query(xs:QName("string"), "Video"',
     ]);
     expect(postedBody).not.toContain("let $items := $searchedItems[");
   });

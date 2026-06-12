@@ -131,6 +131,43 @@ it("should fetch uchicago-node Set items for query: 'chicago' and property query
   expect(totalCount).toBe(1741);
 });
 
+it("should fetch uchicago-node Set items for query: 'chicago' and exact property OR facet: 'Media type filter' in ('Map', 'Video')", async () => {
+  const { totalCount } = await fetchSetItems({
+    setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],
+    queries: {
+      and: [
+        buildInputValueQueries("chicago"),
+        {
+          or: [
+            {
+              target: "property",
+              propertyVariable: "8383140a-e676-417f-b5d8-863d9df6d905",
+              dataType: "string",
+              value: "Map",
+              matchMode: "exact",
+              isCaseSensitive: true,
+              language: "eng",
+            },
+            {
+              target: "property",
+              propertyVariable: "8383140a-e676-417f-b5d8-863d9df6d905",
+              dataType: "string",
+              value: "Video",
+              matchMode: "exact",
+              isCaseSensitive: true,
+              language: "eng",
+            },
+          ],
+        },
+      ],
+    },
+    page: 1,
+    pageSize: 48,
+  });
+
+  expect(totalCount).toBe(2220);
+});
+
 it("should fetch uchicago-node Set items for query: 'ca. 1870'", async () => {
   const { totalCount } = await fetchSetItems({
     setScopeUuids: [...UCHICAGO_NODE_SET_SCOPE_UUIDS],

@@ -7,7 +7,6 @@ import type {
 } from "#/parsers/helpers.js";
 import type {
   Query,
-  QueryLeaf,
   SetItem,
   SetItemCategory,
   SetItemsSort,
@@ -43,11 +42,6 @@ type FetchSetItemsCategory<
 type SortWithDirection = Exclude<SetItemsSort, { target: "none" }>;
 type PropertyValueSort = Extract<SetItemsSort, { target: "propertyValue" }>;
 type PropertyValueSortDataType = PropertyValueSort["dataType"];
-type ExactStringPropertyQuery = Extract<QueryLeaf, { target: "property" }> & {
-  dataType: "string";
-  value: string;
-  matchMode: "exact";
-};
 
 function parseLanguages<const T extends ReadonlyArray<string>>(
   languages: T,
@@ -276,119 +270,6 @@ function buildOrderedItemsClause(sort: SetItemsSort): string {
       return $item`;
 }
 
-function isExactStringPropertyQuery(
-  query: Query,
-): query is ExactStringPropertyQuery {
-  return (
-    "target" in query &&
-    query.target === "property" &&
-    query.dataType === "string" &&
-    query.value != null &&
-    query.matchMode === "exact" &&
-    query.isNegated !== true
-  );
-}
-
-function getCtsQueriesWithoutExactStringPropertyQueries(
-  queries: Query | null,
-): Query | null {
-  if (queries == null) {
-    return null;
-  }
-
-  if ("target" in queries) {
-    return isExactStringPropertyQuery(queries) ? null : queries;
-  }
-
-  if ("or" in queries) {
-    return queries;
-  }
-
-  const filteredChildren: Array<Query> = [];
-
-  for (const childQuery of queries.and) {
-    const filteredChildQuery =
-      getCtsQueriesWithoutExactStringPropertyQueries(childQuery);
-
-    if (filteredChildQuery != null) {
-      filteredChildren.push(filteredChildQuery);
-    }
-  }
-
-  if (filteredChildren.length === 0) {
-    return null;
-  }
-
-  return filteredChildren.length === 1
-    ? (filteredChildren[0] ?? null)
-    : { and: filteredChildren };
-}
-
-function buildExactStringPropertyPredicate(
-  query: ExactStringPropertyQuery,
-): string {
-  const propertyPredicates: Array<string> = [];
-  const value = stringLiteral(query.value);
-
-  if (query.propertyVariable != null) {
-    propertyPredicates.push(
-      `label/@uuid = ${stringLiteral(query.propertyVariable)}`,
-    );
-  }
-
-  if (query.propertyRelation != null) {
-    propertyPredicates.push(
-      `label/@relation = ${stringLiteral(query.propertyRelation)}`,
-    );
-  }
-
-  propertyPredicates.push(`value[
-    not(@inherited = "true")
-    and (
-      content[@xml:lang = ${stringLiteral(query.language)}]/string = ${value}
-      or @rawValue = ${value}
-      or (not(content) and text() = ${value})
-    )
-  ]`);
-
-  return `.//properties/property[${propertyPredicates.join(" and ")}]`;
-}
-
-function buildExactStringPropertyXPathFilterExpression(
-  queries: Query | null,
-): string | null {
-  if (queries == null) {
-    return null;
-  }
-
-  if ("target" in queries) {
-    return isExactStringPropertyQuery(queries)
-      ? buildExactStringPropertyPredicate(queries)
-      : null;
-  }
-
-  if ("or" in queries) {
-    return null;
-  }
-
-  const childExpressions: Array<string> = [];
-
-  for (const childQuery of queries.and) {
-    const childExpression =
-      buildExactStringPropertyXPathFilterExpression(childQuery);
-
-    if (childExpression != null) {
-      childExpressions.push(childExpression);
-    }
-  }
-
-  if (childExpressions.length === 0) {
-    return null;
-  }
-
-  return childExpressions.join(" and ");
-}
-
 /**
  * Build an XQuery string to fetch Set items from the OCHRE API
  * @param params - The parameters for the fetch
@@ -422,10 +303,7 @@ function buildXQuery(params: {
   const setScopeValues = setScopeUuids.map((uuid) => stringLiteral(uuid));
   const setScopeDeclaration = `declare variable $setScopeUuids := (${setScopeValues.join(", ")});`;
   const baseItemsExpression = "doc()/ochre/set[@uuid = $setScopeUuids]/items/*";
-  const ctsQueries = getCtsQueriesWithoutExactStringPropertyQueries(queries);
-  const exactStringPropertyXPathFilterExpression =
-    buildExactStringPropertyXPathFilterExpression(queries);
-  const compiledQueryPlan = buildQueryPlan({ queries: ctsQueries });
+  const compiledQueryPlan = buildQueryPlan({ queries });
   const itemsQueryExpressions: Array<string> = [];
   const belongsToCollectionQueryExpression =
     buildBelongsToCollectionQueryExpression(
@@ -451,17 +329,11 @@ function buildXQuery(params: {
     xqueryDeclarations.push(compiledQueryPlan.prolog);
   }
 
-  const searchedItemsClause =
-    itemsQueryExpression == null
-      ? `let $searchedItems := ${baseItemsExpression}`
-      : `let $query := ${itemsQueryExpression}
-  let $searchedItems := cts:search(${baseItemsExpression}, $query)`;
   const itemsClause =
-    exactStringPropertyXPathFilterExpression == null
-      ? `${searchedItemsClause}
-  let $items := $searchedItems`
-      : `${searchedItemsClause}
-  let $items := $searchedItems[${exactStringPropertyXPathFilterExpression}]`;
+    itemsQueryExpression == null
+      ? `let $items := ${baseItemsExpression}`
+      : `let $query := ${itemsQueryExpression}
+  let $items := cts:search(${baseItemsExpression}, $query)`;
 
   const xquery = `${xqueryDeclarations.join("\n\n")}
 
