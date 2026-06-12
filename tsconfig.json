@@ -27,7 +27,8 @@
     "tsdown.config.ts",
     "vitest.config.ts",
     "knip.config.ts",
-    "bump.config.ts"
+    "bump.config.ts",
+    "changelogithub.config.ts"
   ],
   "exclude": ["node_modules"]
 }
