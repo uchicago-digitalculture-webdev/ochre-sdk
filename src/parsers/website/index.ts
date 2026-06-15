@@ -766,14 +766,11 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         WebElementComponent<T>,
         { component: "bibliography" }
       >;
-      const itemLinks = websiteLinks.filter(
-        (link) => link.category === "bibliography",
-      );
       const bibliographies = parseBibliographyList(
         elementResource.bibliographies,
         options,
       );
-      if (itemLinks.length === 0 && bibliographies.length === 0) {
+      if (websiteLinks.length === 0 && bibliographies.length === 0) {
         throw new Error(
           formatComponentError(
             "No links found",
@@ -794,7 +791,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
 
       properties = {
         component: "bibliography",
-        linkUuids: itemLinks.map((link) => link.uuid),
+        linkUuids: websiteLinks.map((link) => link.uuid),
         bibliographies,
         layout,
         isSourceDocumentDisplayed,
