@@ -1,5 +1,6 @@
 import * as v from "valibot";
 import type { ParserOptions } from "#/parsers/helpers.js";
+import type { WebsitePresentationReader } from "#/parsers/website/reader.js";
 import type {
   Identification,
   ItemLink,
@@ -563,6 +564,85 @@ function parseStylesheets(
   return parsedStyles;
 }
 
+type CollectionComponent<T extends ReadonlyArray<string>> = Extract<
+  WebElementComponent<T>,
+  { component: "collection" }
+>;
+
+/**
+ * Default values for a collection's display properties, shared between the
+ * "collection" component and the "query" component's collection overrides.
+ */
+const COLLECTION_PROPERTY_DEFAULTS = {
+  variant: "slide",
+  paginationVariant: "default",
+  loadingVariant: "skeleton",
+  imageLayout: "start",
+  isImagePlaceholderDisplayed: true,
+  minimumColumnCount: null,
+  maximumColumnCount: null,
+  expectedItemCount: null,
+  isSortDisplayed: false,
+  isUsingQueryParams: false,
+  isInteractive: true,
+} as const satisfies Partial<
+  Extract<WebElementComponent, { component: "collection" }>
+>;
+
+type CollectionPropertyKey = keyof typeof COLLECTION_PROPERTY_DEFAULTS;
+
+/**
+ * Reads the collection display properties explicitly set on a reader, omitting
+ * any that are unset. The "collection" component merges these over
+ * {@link COLLECTION_PROPERTY_DEFAULTS}, while the "query" component uses them as
+ * partial overrides for its embedded collection.
+ */
+function parseCollectionPropertyOverrides<T extends ReadonlyArray<string>>(
+  reader: WebsitePresentationReader<T>,
+): Partial<Pick<CollectionComponent<T>, CollectionPropertyKey>> {
+  const overrides: Partial<
+    Pick<CollectionComponent<T>, CollectionPropertyKey>
+  > = {};
+
+  function read<K extends CollectionPropertyKey>(key: K, label: string): void {
+    const value = reader.value<CollectionComponent<T>[K]>(label);
+    if (value != null) {
+      overrides[key] = value;
+    }
+  }
+
+  read("variant", "variant");
+  read("paginationVariant", "pagination-variant");
+  read("loadingVariant", "loading-variant");
+  read("imageLayout", "image-layout");
+  read("isImagePlaceholderDisplayed", "image-placeholder-displayed");
+  read("minimumColumnCount", "minimum-column-count");
+  read("maximumColumnCount", "maximum-column-count");
+  read("expectedItemCount", "item-count");
+  read("isSortDisplayed", "sort-displayed");
+  read("isUsingQueryParams", "is-using-query-params");
+  read("isInteractive", "is-interactive");
+
+  return overrides;
+}
+
+/**
+ * Parses the "use-property" values defining which item properties a collection
+ * displays, returning `null` when none are set.
+ */
+function parseCollectionDisplayedProperties<T extends ReadonlyArray<string>>(
+  reader: WebsitePresentationReader<T>,
+): CollectionComponent<T>["displayedProperties"] {
+  const property = reader.property("use-property");
+  if (property == null) {
+    return null;
+  }
+
+  return property.values
+    .filter((value) => value.uuid !== null)
+    .map((value) => ({ uuid: value.uuid!, label: value.label }));
+}
+
 /**
  * Parses raw web element properties into a standardized WebElementComponent structure
  *
@@ -876,10 +956,6 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       break;
     }
     case "collection": {
-      type CollectionComponent = Extract<
-        WebElementComponent<T>,
-        { component: "collection" }
-      >;
       const setLinks = getWebsiteLinks(websiteLinks, "set");
       if (setLinks.length === 0) {
         throw new Error(
@@ -892,59 +968,24 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      const displayedProperties = componentReader.property("use-property");
-      const variant = componentReader.valueOr<CollectionComponent["variant"]>(
-        "variant",
-        "slide",
-      );
-      const paginationVariant = componentReader.valueOr<
-        CollectionComponent["paginationVariant"]
-      >("pagination-variant", "default");
-      const loadingVariant = componentReader.valueOr<
-        CollectionComponent["loadingVariant"]
-      >("loading-variant", "skeleton");
-      const minimumColumnCount = componentReader.valueOr<
-        CollectionComponent["minimumColumnCount"]
-      >("minimum-column-count", null);
-      const maximumColumnCount = componentReader.valueOr<
-        CollectionComponent["maximumColumnCount"]
-      >("maximum-column-count", null);
-      const expectedItemCount = componentReader.valueOr<
-        CollectionComponent["expectedItemCount"]
-      >("item-count", null);
-      const isUsingQueryParams = componentReader.valueOr<
-        CollectionComponent["isUsingQueryParams"]
-      >("is-using-query-params", false);
       const isFilterResultsBarDisplayed = componentReader.valueOr<
-        CollectionComponent["filter"]["isResultsBarDisplayed"]
+        CollectionComponent<T>["filter"]["isResultsBarDisplayed"]
       >("filter-results-bar-displayed", false);
       const isFilterInputDisplayed = componentReader.valueOr<
-        CollectionComponent["filter"]["isInputDisplayed"]
+        CollectionComponent<T>["filter"]["isInputDisplayed"]
       >("filter-input-displayed", false);
       const isFilterLimitedToInputFilter = componentReader.valueOr<
-        CollectionComponent["filter"]["isLimitedToInputFilter"]
+        CollectionComponent<T>["filter"]["isLimitedToInputFilter"]
       >("filter-limit-to-input-filter", false);
       const isFilterLimitedToLeafPropertyValues = componentReader.valueOr<
-        CollectionComponent["filter"]["isLimitedToLeafPropertyValues"]
+        CollectionComponent<T>["filter"]["isLimitedToLeafPropertyValues"]
       >("filter-limit-to-leaf-property-values", false);
-      const isSortDisplayed = componentReader.valueOr<
-        CollectionComponent["isSortDisplayed"]
-      >("sort-displayed", false);
       const isFilterSidebarDisplayed = componentReader.valueOr<
-        CollectionComponent["filter"]["isSidebarDisplayed"]
+        CollectionComponent<T>["filter"]["isSidebarDisplayed"]
       >("filter-sidebar-displayed", false);
       const filterSidebarSort = componentReader.valueOr<
-        CollectionComponent["filter"]["sidebarSort"]
+        CollectionComponent<T>["filter"]["sidebarSort"]
       >("filter-sidebar-sort", "default");
-      const imageLayout = componentReader.valueOr<
-        CollectionComponent["imageLayout"]
-      >("image-layout", "start");
-      const isImagePlaceholderDisplayed = componentReader.valueOr<
-        CollectionComponent["isImagePlaceholderDisplayed"]
-      >("image-placeholder-displayed", true);
-      const isInteractive = componentReader.valueOr<
-        CollectionComponent["isInteractive"]
-      >("is-interactive", true);
 
       const componentOptions = parseWebsiteOptions(
         elementResource.options,
@@ -955,21 +996,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         component: "collection",
         linkUuids: setLinks.map((link) => link.uuid),
         displayedProperties:
-          displayedProperties?.values
-            .filter(({ uuid }) => uuid !== null)
-            .map((value) => ({ uuid: value.uuid!, label: value.label })) ??
-          null,
-        variant,
-        paginationVariant,
-        loadingVariant,
-        imageLayout,
-        isImagePlaceholderDisplayed,
-        minimumColumnCount,
-        maximumColumnCount,
-        expectedItemCount,
-        isSortDisplayed,
-        isUsingQueryParams,
-        isInteractive,
+          parseCollectionDisplayedProperties(componentReader),
+        ...COLLECTION_PROPERTY_DEFAULTS,
+        ...parseCollectionPropertyOverrides(componentReader),
         filter: {
           isSidebarDisplayed: isFilterSidebarDisplayed,
           isResultsBarDisplayed: isFilterResultsBarDisplayed,
@@ -1318,10 +1347,6 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         WebElementComponent<T>,
         { component: "query" }
       >;
-      type CollectionComponent = Extract<
-        WebElementComponent<T>,
-        { component: "collection" }
-      >;
       const setLinks = getWebsiteLinks(websiteLinks, "set");
       if (setLinks.length === 0) {
         throw new Error(
@@ -1433,87 +1458,18 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         options,
       );
 
-      const collectionProperties: QueryComponent["collectionProperties"] = {};
-
-      const displayedProperties = componentReader.property("use-property");
-      if (displayedProperties != null) {
-        collectionProperties.displayedProperties = displayedProperties.values
-          .filter((value) => value.uuid !== null)
-          .map((value) => ({ uuid: value.uuid!, label: value.label }));
-      }
-
       const overrideReader = componentReader.nestedByValue(
         "sub-component-override",
         "collection",
       );
 
-      const variant =
-        overrideReader.value<CollectionComponent["variant"]>("variant");
-      if (variant != null) {
-        collectionProperties.variant = variant;
-      }
+      const collectionProperties: QueryComponent["collectionProperties"] =
+        parseCollectionPropertyOverrides(overrideReader);
 
-      const paginationVariant =
-        overrideReader.value<CollectionComponent["paginationVariant"]>(
-          "pagination-variant",
-        );
-      if (paginationVariant != null) {
-        collectionProperties.paginationVariant = paginationVariant;
-      }
-
-      const loadingVariant =
-        overrideReader.value<CollectionComponent["loadingVariant"]>(
-          "loading-variant",
-        );
-      if (loadingVariant != null) {
-        collectionProperties.loadingVariant = loadingVariant;
-      }
-
-      const imageLayout =
-        overrideReader.value<CollectionComponent["imageLayout"]>(
-          "image-layout",
-        );
-      if (imageLayout != null) {
-        collectionProperties.imageLayout = imageLayout;
-      }
-
-      const isImagePlaceholderDisplayed = overrideReader.value<
-        CollectionComponent["isImagePlaceholderDisplayed"]
-      >("image-placeholder-displayed");
-      if (isImagePlaceholderDisplayed != null) {
-        collectionProperties.isImagePlaceholderDisplayed =
-          isImagePlaceholderDisplayed;
-      }
-
-      const expectedItemCount =
-        overrideReader.value<CollectionComponent["expectedItemCount"]>(
-          "item-count",
-        );
-      if (expectedItemCount != null) {
-        collectionProperties.expectedItemCount = expectedItemCount;
-      }
-
-      const isSortDisplayed =
-        overrideReader.value<CollectionComponent["isSortDisplayed"]>(
-          "sort-displayed",
-        );
-      if (isSortDisplayed != null) {
-        collectionProperties.isSortDisplayed = isSortDisplayed;
-      }
-
-      const isUsingQueryParams = overrideReader.value<
-        CollectionComponent["isUsingQueryParams"]
-      >("is-using-query-params");
-      if (isUsingQueryParams != null) {
-        collectionProperties.isUsingQueryParams = isUsingQueryParams;
-      }
-
-      const isInteractive =
-        overrideReader.value<CollectionComponent["isInteractive"]>(
-          "is-interactive",
-        );
-      if (isInteractive != null) {
-        collectionProperties.isInteractive = isInteractive;
+      const displayedProperties =
+        parseCollectionDisplayedProperties(componentReader);
+      if (displayedProperties != null) {
+        collectionProperties.displayedProperties = displayedProperties;
       }
 
       properties = {
