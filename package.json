@@ -58,7 +58,7 @@
   "dependencies": {
     "date-fns": "^4.4.0",
     "fast-equals": "^6.0.0",
-    "fast-xml-parser": "^5.8.0",
+    "fast-xml-parser": "^5.9.0",
     "valibot": "^1.4.1"
   },
   "devDependencies": {
@@ -66,11 +66,11 @@
     "@types/node": "^24.13.2",
     "bumpp": "^11.1.0",
     "eslint": "^10.5.0",
-    "knip": "^6.16.1",
-    "oxfmt": "^0.54.0",
+    "knip": "^6.17.1",
+    "oxfmt": "^0.55.0",
     "tsdown": "^0.22.2",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   },
-  "packageManager": "pnpm@11.6.0"
+  "packageManager": "pnpm@11.7.0"
 }
