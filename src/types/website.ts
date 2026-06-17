@@ -341,6 +341,8 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       loadingVariant: "spinner" | "skeleton" | "animation" | "none";
       imageLayout: "top" | "bottom" | "start" | "end" | null;
       isImagePlaceholderDisplayed: boolean;
+      minimumColumnCount: number | null;
+      maximumColumnCount: number | null;
       expectedItemCount: number | null;
       isSortDisplayed: boolean;
       isUsingQueryParams: boolean;

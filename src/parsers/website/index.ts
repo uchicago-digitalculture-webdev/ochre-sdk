@@ -903,6 +903,12 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       const loadingVariant = componentReader.valueOr<
         CollectionComponent["loadingVariant"]
       >("loading-variant", "skeleton");
+      const minimumColumnCount = componentReader.valueOr<
+        CollectionComponent["minimumColumnCount"]
+      >("minimum-column-count", null);
+      const maximumColumnCount = componentReader.valueOr<
+        CollectionComponent["maximumColumnCount"]
+      >("maximum-column-count", null);
       const expectedItemCount = componentReader.valueOr<
         CollectionComponent["expectedItemCount"]
       >("item-count", null);
@@ -958,6 +964,8 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         loadingVariant,
         imageLayout,
         isImagePlaceholderDisplayed,
+        minimumColumnCount,
+        maximumColumnCount,
         expectedItemCount,
         isSortDisplayed,
         isUsingQueryParams,
