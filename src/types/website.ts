@@ -328,6 +328,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       startIcon: string | null;
       endIcon: string | null;
       image: WebImage<T> | null;
+      elements: Array<WebElement<T>>;
     }
   | {
       component: "collection";

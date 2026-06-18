@@ -938,6 +938,29 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         };
       }
 
+      const childResources = elementResource.resource
+        ? normalizeWebsiteResources(elementResource.resource)
+        : [];
+      const elements: Array<WebElement<T>> = [];
+      for (const childResource of childResources) {
+        const childReader = websitePresentationReader(
+          childResource.properties
+            ? parseSimplifiedProperties(childResource.properties, options)
+            : [],
+        );
+        if (childReader.value("presentation") !== "element") {
+          continue;
+        }
+        const childComponent = childReader
+          .nestedByValue("presentation", "element")
+          .value<string>("component");
+        if (childComponent === "button") {
+          continue;
+        }
+
+        elements.push(parseWebElement(childResource, options, context));
+      }
+
       properties = {
         component: "button",
         variant,
@@ -951,6 +974,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         startIcon,
         endIcon,
         image,
+        elements,
       };
 
       break;
