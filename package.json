@@ -58,19 +58,19 @@
   "dependencies": {
     "date-fns": "^4.4.0",
     "fast-equals": "^6.0.0",
-    "fast-xml-parser": "^5.9.2",
+    "fast-xml-parser": "^5.9.3",
     "valibot": "^1.4.1"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^9.0.0",
+    "@antfu/eslint-config": "^9.1.0",
     "@types/node": "^24.13.2",
     "bumpp": "^11.1.0",
     "eslint": "^10.5.0",
-    "knip": "^6.17.1",
-    "oxfmt": "^0.55.0",
+    "knip": "^6.20.0",
+    "oxfmt": "^0.56.0",
     "tsdown": "^0.22.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"
   },
-  "packageManager": "pnpm@11.7.0"
+  "packageManager": "pnpm@11.9.0"
 }
