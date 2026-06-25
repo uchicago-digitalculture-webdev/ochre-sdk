@@ -1759,6 +1759,7 @@ function parseInterpretation<T extends ReadonlyArray<string>>(
     observers: parsePersonList(rawInterpretation.observers?.observer, options),
     periods: parsePeriodList(rawInterpretation.periods, options),
     links: parseLinks(rawInterpretation.links, options),
+    reverseLinks: parseReverseLinks(rawInterpretation.reverseLinks, options),
     notes: parseNotes(rawInterpretation.notes, options),
     properties: parseProperties(rawInterpretation.properties, options),
     bibliographies: parseBibliographyList(
@@ -1778,6 +1779,7 @@ function parseObservation<T extends ReadonlyArray<string>>(
     observers: parsePersonList(rawObservation.observers?.observer, options),
     periods: parsePeriodList(rawObservation.periods, options),
     links: parseLinks(rawObservation.links, options),
+    reverseLinks: parseReverseLinks(rawObservation.reverseLinks, options),
     notes: parseNotes(rawObservation.notes, options),
     properties: parseProperties(rawObservation.properties, options),
     bibliographies: parseBibliographyList(
@@ -1913,6 +1915,7 @@ function parseTree<
     type: rawTree.type ?? null,
     containedItemCategory: containedItemCategory as U | null,
     links: parseLinks(rawTree.links, childOptions),
+    reverseLinks: parseReverseLinks(rawTree.reverseLinks, childOptions),
     notes: parseNotes(rawTree.notes, childOptions),
     properties: parseProperties(rawTree.properties, childOptions),
     bibliographies: parseBibliographyList(rawTree.bibliographies, childOptions),
@@ -1940,6 +1943,7 @@ function parseSet<
     isTabularStructure: rawSet.tabularStructure ?? false,
     isSuppressingBlanks: rawSet.suppressBlanks ?? false,
     links: parseLinks(rawSet.links, childOptions),
+    reverseLinks: parseReverseLinks(rawSet.reverseLinks, childOptions),
     notes: parseNotes(rawSet.notes, childOptions),
     properties: parseProperties(rawSet.properties, childOptions),
     items: parseSetItemHierarchy(
@@ -2108,6 +2112,7 @@ function parseBibliography<T extends ReadonlyArray<string>>(
     authors: parsePersonList(rawBibliography.authors?.person, options),
     periods: parsePeriodList(rawBibliography.periods, options),
     links: parseLinks(rawBibliography.links, options),
+    reverseLinks: parseReverseLinks(rawBibliography.reverseLinks, options),
     notes: parseNotes(rawBibliography.notes, options),
     properties: parseProperties(rawBibliography.properties, options),
     bibliographies,
@@ -2190,6 +2195,7 @@ function parsePeriod<T extends ReadonlyArray<string>>(
     type: rawPeriod.type ?? null,
     coordinates: parseCoordinates(rawPeriod.coordinates, options),
     links: parseLinks(rawPeriod.links, options),
+    reverseLinks: parseReverseLinks(rawPeriod.reverseLinks, options),
     notes: parseNotes(rawPeriod.notes, options),
     properties: parseProperties(rawPeriod.properties, options),
     bibliographies: parseBibliographyList(rawPeriod.bibliographies, options),
@@ -2221,6 +2227,7 @@ function parsePerson<T extends ReadonlyArray<string>>(
         : parseRequiredContentLike(rawPerson as XMLContent, options),
     periods: parsePeriodList(rawPerson.periods, options),
     links: parseLinks(rawPerson.links, options),
+    reverseLinks: parseReverseLinks(rawPerson.reverseLinks, options),
     notes: parseNotes(rawPerson.notes, options),
     properties: parseProperties(rawPerson.properties, options),
     bibliographies: parseBibliographyList(rawPerson.bibliographies, options),
@@ -2236,6 +2243,7 @@ function parsePropertyVariable<T extends ReadonlyArray<string>>(
     type: rawPropertyVariable.type ?? null,
     coordinates: parseCoordinates(rawPropertyVariable.coordinates, options),
     links: parseLinks(rawPropertyVariable.links, options),
+    reverseLinks: parseReverseLinks(rawPropertyVariable.reverseLinks, options),
     notes: parseNotes(rawPropertyVariable.notes, options),
     bibliographies: parseBibliographyList(
       rawPropertyVariable.bibliographies,
@@ -2252,6 +2260,7 @@ function parsePropertyValue<T extends ReadonlyArray<string>>(
     ...parseBaseItem("propertyValue", rawPropertyValue, options),
     coordinates: parseCoordinates(rawPropertyValue.coordinates, options),
     links: parseLinks(rawPropertyValue.links, options),
+    reverseLinks: parseReverseLinks(rawPropertyValue.reverseLinks, options),
     notes: parseNotes(rawPropertyValue.notes, options),
     properties: parseProperties(rawPropertyValue.properties, options),
     bibliographies: parseBibliographyList(

@@ -1205,6 +1205,13 @@ const XMLTree: v.GenericSchema<unknown, XMLTreeType> = v.object(
       ]),
     ),
     links: v.optional(v.lazy(() => XMLLink)),
+    reverseLinks: v.optional(
+      v.union([
+        v.lazy(() => XMLLink),
+        v.lazy(() => XMLDataItem),
+        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+      ]),
+    ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     bibliographies: v.optional(
@@ -1246,6 +1253,13 @@ const XMLSet: v.GenericSchema<unknown, XMLSetType> = v.object(
     suppressBlanks: v.optional(XMLBoolean),
     tabularStructure: v.optional(XMLBoolean),
     links: v.optional(v.lazy(() => XMLLink)),
+    reverseLinks: v.optional(
+      v.union([
+        v.lazy(() => XMLLink),
+        v.lazy(() => XMLDataItem),
+        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+      ]),
+    ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     items: v.optional(
@@ -1364,6 +1378,13 @@ const XMLBibliography: v.GenericSchema<unknown, XMLBibliographyType> = v.object(
     authors: v.optional(v.object({ person: v.array(v.lazy(() => XMLPerson)) })),
     periods: v.optional(v.object({ period: v.array(v.lazy(() => XMLPeriod)) })),
     links: v.optional(v.lazy(() => XMLLink)),
+    reverseLinks: v.optional(
+      v.union([
+        v.lazy(() => XMLLink),
+        v.lazy(() => XMLDataItem),
+        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+      ]),
+    ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     bibliographies: v.optional(
@@ -1388,6 +1409,13 @@ const XMLInterpretation: v.GenericSchema<unknown, XMLInterpretationType> =
         v.object({ period: v.array(v.lazy(() => XMLPeriod)) }),
       ),
       links: v.optional(v.lazy(() => XMLLink)),
+      reverseLinks: v.optional(
+        v.union([
+          v.lazy(() => XMLLink),
+          v.lazy(() => XMLDataItem),
+          v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+        ]),
+      ),
       notes: v.optional(v.object({ note: v.array(XMLNote) })),
       properties: v.optional(v.object({ property: v.array(XMLProperty) })),
       bibliographies: v.optional(
@@ -1422,6 +1450,13 @@ const XMLObservation: v.GenericSchema<unknown, XMLObservationType> = v.object(
     ),
     periods: v.optional(v.object({ period: v.array(v.lazy(() => XMLPeriod)) })),
     links: v.optional(v.lazy(() => XMLLink)),
+    reverseLinks: v.optional(
+      v.union([
+        v.lazy(() => XMLLink),
+        v.lazy(() => XMLDataItem),
+        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+      ]),
+    ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     bibliographies: v.optional(
@@ -1469,6 +1504,13 @@ const XMLPeriod: v.GenericSchema<unknown, XMLPeriodType> = v.object(
     type: v.optional(v.string("XMLPeriod: type is string and optional")),
     coordinates: v.optional(XMLCoordinates),
     links: v.optional(v.lazy(() => XMLDataItem)),
+    reverseLinks: v.optional(
+      v.union([
+        v.lazy(() => XMLLink),
+        v.lazy(() => XMLDataItem),
+        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+      ]),
+    ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     bibliographies: v.optional(
@@ -1519,6 +1561,13 @@ const XMLPerson: v.GenericSchema<unknown, XMLPersonType> = v.object(
     coordinates: v.optional(XMLCoordinates),
     periods: v.optional(v.object({ period: v.array(XMLPeriod) })),
     links: v.optional(v.lazy(() => XMLLink)),
+    reverseLinks: v.optional(
+      v.union([
+        v.lazy(() => XMLLink),
+        v.lazy(() => XMLDataItem),
+        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+      ]),
+    ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     bibliographies: v.optional(
@@ -1534,6 +1583,13 @@ const XMLPropertyValue: v.GenericSchema<unknown, XMLPropertyValueType> =
       ...XMLBaseItem.entries,
       coordinates: v.optional(XMLCoordinates),
       links: v.optional(v.lazy(() => XMLLink)),
+      reverseLinks: v.optional(
+        v.union([
+          v.lazy(() => XMLLink),
+          v.lazy(() => XMLDataItem),
+          v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+        ]),
+      ),
       notes: v.optional(v.object({ note: v.array(XMLNote) })),
       properties: v.optional(v.object({ property: v.array(XMLProperty) })),
       bibliographies: v.optional(
@@ -1552,6 +1608,13 @@ const XMLPropertyVariable: v.GenericSchema<unknown, XMLPropertyVariableType> =
       ),
       coordinates: v.optional(XMLCoordinates),
       links: v.optional(v.lazy(() => XMLLink)),
+      reverseLinks: v.optional(
+        v.union([
+          v.lazy(() => XMLLink),
+          v.lazy(() => XMLDataItem),
+          v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+        ]),
+      ),
       notes: v.optional(v.object({ note: v.array(XMLNote) })),
       bibliographies: v.optional(
         v.object({ bibliography: v.array(XMLBibliography) }),

@@ -299,6 +299,7 @@ export type XMLBibliography = Partial<XMLBaseItem> & {
   authors?: { person: Array<XMLPerson> };
   periods?: { period: Array<XMLPeriod> };
   links?: XMLLink;
+  reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;
   notes?: { note: Array<XMLNote> };
   properties?: { property: Array<XMLProperty> };
   bibliographies?: { bibliography: Array<XMLBibliography> };
@@ -394,6 +395,7 @@ export type XMLInterpretation = {
   observers?: { observer: Array<XMLPerson> };
   periods?: { period: Array<XMLPeriod> };
   links?: XMLLink;
+  reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;
   notes?: { note: Array<XMLNote> };
   properties?: { property: Array<XMLProperty> };
   bibliographies?: { bibliography: Array<XMLBibliography> };
@@ -414,6 +416,7 @@ export type XMLObservation = {
   observers?: { observer: Array<XMLPerson> };
   periods?: { period: Array<XMLPeriod> };
   links?: XMLLink;
+  reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;
   notes?: { note: Array<XMLNote> };
   properties?: { property: Array<XMLProperty> };
   bibliographies?: { bibliography: Array<XMLBibliography> };
@@ -433,6 +436,7 @@ export type XMLPeriod = XMLBaseItem & {
   type?: string;
   coordinates?: XMLCoordinates;
   links?: XMLDataItem;
+  reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;
   notes?: { note: Array<XMLNote> };
   properties?: { property: Array<XMLProperty> };
   bibliographies?: { bibliography: Array<XMLBibliography> };
@@ -452,6 +456,7 @@ export type XMLPerson = XMLBaseItem &
     coordinates?: XMLCoordinates;
     periods?: { period: Array<XMLPeriod> };
     links?: XMLLink;
+    reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;
     notes?: { note: Array<XMLNote> };
     properties?: { property: Array<XMLProperty> };
     bibliographies?: { bibliography: Array<XMLBibliography> };
@@ -461,6 +466,7 @@ export type XMLPropertyVariable = XMLBaseItem & {
   type?: string;
   coordinates?: XMLCoordinates;
   links?: XMLLink;
+  reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;
   notes?: { note: Array<XMLNote> };
   bibliographies?: { bibliography: Array<XMLBibliography> };
 };
@@ -468,6 +474,7 @@ export type XMLPropertyVariable = XMLBaseItem & {
 export type XMLPropertyValue = XMLBaseItem & {
   coordinates?: XMLCoordinates;
   links?: XMLLink;
+  reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;
   notes?: { note: Array<XMLNote> };
   properties?: { property: Array<XMLProperty> };
   bibliographies?: { bibliography: Array<XMLBibliography> };
@@ -547,6 +554,7 @@ export type XMLTree = XMLBaseItem & {
   type?: string;
   date?: Date | XMLString;
   links?: XMLLink;
+  reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;
   notes?: { note: Array<XMLNote> };
   properties?: { property: Array<XMLProperty> };
   bibliographies?: { bibliography: Array<XMLBibliography> };
@@ -659,6 +667,7 @@ export type XMLSet = XMLBaseItem & {
   suppressBlanks?: XMLBoolean;
   tabularStructure?: XMLBoolean;
   links?: XMLLink;
+  reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;
   notes?: { note: Array<XMLNote> };
   properties?: { property: Array<XMLProperty> };
   items?: {

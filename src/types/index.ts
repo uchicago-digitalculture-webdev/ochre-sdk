@@ -735,6 +735,7 @@ export type Tree<
     type: string | null;
     containedItemCategory: U | null;
     links: ItemLinks<T>;
+    reverseLinks: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "embedded">>;
@@ -757,6 +758,7 @@ export type Set<
     isTabularStructure: boolean;
     isSuppressingBlanks: boolean;
     links: ItemLinks<T>;
+    reverseLinks: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     items: Array<SetItem<U, T>>;
@@ -851,6 +853,7 @@ export type Person<
     content: MultilingualString<T> | null;
     periods: Array<Period<T, "embedded">>;
     links: ItemLinks<T>;
+    reverseLinks: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "embedded">>;
@@ -868,6 +871,7 @@ export type Period<
     type: string | null;
     coordinates: Array<Coordinates<T>>;
     links: ItemLinks<T>;
+    reverseLinks: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "embedded">>;
@@ -898,6 +902,7 @@ export type Bibliography<
     authors: Array<Person<T, "embedded">>;
     periods: Array<Period<T, "embedded">>;
     links: ItemLinks<T>;
+    reverseLinks: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "embedded">>;
@@ -935,6 +940,7 @@ export type Interpretation<T extends LanguageCodes = LanguageCodes> = {
   observers: Array<Person<T, "embedded">>;
   periods: Array<Period<T, "embedded">>;
   links: ItemLinks<T>;
+  reverseLinks: ItemLinks<T>;
   notes: Array<Note<T>>;
   properties: Array<Property<T>>;
   bibliographies: Array<Bibliography<T, "embedded">>;
@@ -969,6 +975,7 @@ export type Observation<T extends LanguageCodes = LanguageCodes> = {
   observers: Array<string> | Array<Person<T, "embedded">>;
   periods: Array<Period<T, "embedded">>;
   links: ItemLinks<T>;
+  reverseLinks: ItemLinks<T>;
   notes: Array<Note<T>>;
   properties: Array<Property<T>>;
   bibliographies: Array<Bibliography<T, "embedded">>;
@@ -985,6 +992,7 @@ export type PropertyVariable<
     type: string | null;
     coordinates: Array<Coordinates<T>>;
     links: ItemLinks<T>;
+    reverseLinks: ItemLinks<T>;
     notes: Array<Note<T>>;
     bibliographies: Array<Bibliography<T, "embedded">>;
   }
@@ -1000,6 +1008,7 @@ export type PropertyValue<
   BaseItem<"propertyValue", T, U> & {
     coordinates: Array<Coordinates<T>>;
     links: ItemLinks<T>;
+    reverseLinks: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "embedded">>;
