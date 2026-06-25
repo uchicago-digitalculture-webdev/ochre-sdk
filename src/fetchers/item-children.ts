@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/no-incorrect-template-string-interpolation */
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type { FetchBaseOptions, FetchLanguages } from "#/parsers/helpers.js";
@@ -20,7 +21,7 @@ import {
   createSchemaValidationError,
   getErrorOutput,
   stringLiteral,
-} from "#/utils.js";
+} from "#/utilities.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
 
@@ -66,10 +67,9 @@ const ITEM_COLLECTION_CATEGORIES = [
 function parseLanguages<const T extends ReadonlyArray<string>>(
   languages: T,
 ): T {
-  const parsedLanguages: Array<string> = [];
-  for (const language of languages) {
-    parsedLanguages.push(v.parse(iso639_3Schema, language));
-  }
+  const parsedLanguages: Array<string> = Array.from(languages, (language) =>
+    v.parse(iso639_3Schema, language),
+  );
 
   return parsedLanguages as unknown as T;
 }
@@ -133,12 +133,11 @@ function buildXQuery(
       : typeof category === "string"
         ? [category]
         : category;
-  const collectionQueries: Array<string> = [];
-  for (const possibleCategory of categories) {
-    collectionQueries.push(
+  const collectionQueries: Array<string> = Array.from(
+    categories,
+    (possibleCategory) =>
       `cts:search(fn:collection("ochre/${possibleCategory}")/ochre, $uuid-query)`,
-    );
-  }
+  );
 
   return `xquery version "1.0-ml";
 

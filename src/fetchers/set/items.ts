@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/no-incorrect-template-string-interpolation */
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type {
@@ -23,12 +24,12 @@ import {
   buildBelongsToCollectionQueryExpression,
   buildQueryPlan,
 } from "#/query.js";
-import { iso639_3Schema, setItemsParamsSchema } from "#/schemas.js";
+import { iso639_3Schema, setItemsParametersSchema } from "#/schemas.js";
 import {
   createSchemaValidationError,
   getErrorOutput,
   stringLiteral,
-} from "#/utils.js";
+} from "#/utilities.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLSetItemsData as XMLSetItemsDataSchema } from "#/xml/schemas.js";
 
@@ -46,10 +47,9 @@ type PropertyValueSortDataType = PropertyValueSort["dataType"];
 function parseLanguages<const T extends ReadonlyArray<string>>(
   languages: T,
 ): T {
-  const parsedLanguages: Array<string> = [];
-  for (const language of languages) {
-    parsedLanguages.push(v.parse(iso639_3Schema, language));
-  }
+  const parsedLanguages: Array<string> = Array.from(languages, (language) =>
+    v.parse(iso639_3Schema, language),
+  );
 
   return parsedLanguages as unknown as T;
 }
@@ -184,11 +184,12 @@ function buildPropertyValueStringSortKeyExpression(
         return $candidate)[1])`;
 }
 
-function buildPropertyValueTypedSortKeyExpression(params: {
+function buildPropertyValueTypedSortKeyExpression(parameters: {
   sort: PropertyValueSort;
   dataType: Exclude<PropertyValueSortDataType, "string" | "IDREF">;
 }): string {
-  const { sort, dataType } = params;
+  const { sort, dataType } = parameters;
+
   const propertyValuePath = buildPropertyValueValuePath(sort);
 
   switch (dataType) {
@@ -226,15 +227,17 @@ function buildPropertyValueTypedSortKeyExpression(params: {
   }
 }
 
-function buildPropertyValueOrderByClause(params: {
+function buildPropertyValueOrderByClause(parameters: {
   dataType: PropertyValueSortDataType;
   direction: "ascending" | "descending";
 }): string {
-  const { dataType, direction } = params;
+  const { dataType, direction } = parameters;
 
-  return dataType === "string" || dataType === "IDREF"
-    ? buildStringOrderByClause(direction)
-    : buildTypedOrderByClause(direction);
+  const buildOrderByClause =
+    dataType === "string" || dataType === "IDREF"
+      ? buildStringOrderByClause
+      : buildTypedOrderByClause;
+  return buildOrderByClause(direction);
 }
 
 function buildOrderedItemsClause(sort: SetItemsSort): string {
@@ -272,17 +275,17 @@ function buildOrderedItemsClause(sort: SetItemsSort): string {
 
 /**
  * Build an XQuery string to fetch Set items from the OCHRE API
- * @param params - The parameters for the fetch
- * @param params.setScopeUuids - An array of Set scope UUIDs to filter by
- * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
- * @param params.queries - Recursive query tree used to filter matching items
- * @param params.sort - Optional sorting configuration applied before pagination.
+ * @param parameters - The parameters for the fetch
+ * @param parameters.setScopeUuids - An array of Set scope UUIDs to filter by
+ * @param parameters.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
+ * @param parameters.queries - Recursive query tree used to filter matching items
+ * @param parameters.sort - Optional sorting configuration applied before pagination.
  * For propertyValue sorting, dataType is required and the sort key uses the first valid leaf value (value[not(@i)]).
- * @param params.page - The page number (1-indexed)
- * @param params.pageSize - The number of items per page
+ * @param parameters.page - The page number (1-indexed)
+ * @param parameters.pageSize - The number of items per page
  * @returns An XQuery string
  */
-function buildXQuery(params: {
+function buildXQuery(parameters: {
   setScopeUuids: Array<string>;
   belongsToCollectionScopeUuids: Array<string>;
   queries: Query | null;
@@ -297,7 +300,7 @@ function buildXQuery(params: {
     belongsToCollectionScopeUuids,
     page,
     pageSize,
-  } = params;
+  } = parameters;
 
   const startPosition = (page - 1) * pageSize + 1;
   const setScopeValues = setScopeUuids.map((uuid) => stringLiteral(uuid));
@@ -354,13 +357,13 @@ ${itemsClause}
 /**
  * Fetches and parses Set items from the OCHRE API
  *
- * @param params - The parameters for the fetch
- * @param params.setScopeUuids - The Set scope UUIDs to filter by
- * @param params.queries - Recursive query tree used to filter matching items
- * @param params.sort - Optional sorting configuration applied before pagination.
+ * @param parameters - The parameters for the fetch
+ * @param parameters.setScopeUuids - The Set scope UUIDs to filter by
+ * @param parameters.queries - Recursive query tree used to filter matching items
+ * @param parameters.sort - Optional sorting configuration applied before pagination.
  * For propertyValue sorting, dataType is required and the sort key uses the first valid leaf value (value[not(@i)]).
- * @param params.page - The page number (1-indexed)
- * @param params.pageSize - The number of items per page
+ * @param parameters.page - The page number (1-indexed)
+ * @param parameters.pageSize - The number of items per page
  * @param containedItemCategories - The categories of the items to fetch
  * @param options - Options for the fetch
  * @param options.fetch - The fetch function to use
@@ -372,7 +375,7 @@ export async function fetchSetItems<
     | undefined = undefined,
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
-  params: {
+  parameters: {
     setScopeUuids: Array<string>;
     queries?: Query | null;
     sort?: SetItemsSort;
@@ -405,7 +408,7 @@ export async function fetchSetItems<
     }
 >;
 export async function fetchSetItems(
-  params: {
+  parameters: {
     setScopeUuids: Array<string>;
     queries?: Query | null;
     sort?: SetItemsSort;
@@ -440,7 +443,7 @@ export async function fetchSetItems(
       sort,
       page,
       pageSize,
-    } = v.parse(setItemsParamsSchema, params);
+    } = v.parse(setItemsParametersSchema, parameters);
     const requestedLanguages: ReadonlyArray<string> =
       options?.languages == null ? [] : parseLanguages(options.languages);
 
@@ -511,7 +514,7 @@ export async function fetchSetItems(
         itemsByUuid.set(item.uuid, item);
       }
     }
-    const uniqueItems = [...itemsByUuid.values()];
+    const uniqueItems = itemsByUuid.values().toArray();
 
     return {
       totalCount: output.result.ochre.items.totalCount,

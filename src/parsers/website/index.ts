@@ -84,13 +84,10 @@ function findWebsiteLink<
 >(
   links: ItemLinks<T>,
   category: U,
-  predicate?: (link: ItemLink<U, T>) => boolean,
+  isMatch?: (link: ItemLink<U, T>) => boolean,
 ): ItemLink<U, T> | null {
   for (const link of links) {
-    if (
-      isWebsiteLink(link, category) &&
-      (predicate == null || predicate(link))
-    ) {
+    if (isWebsiteLink(link, category) && (isMatch == null || isMatch(link))) {
       return link;
     }
   }
@@ -135,7 +132,8 @@ function normalizeWebsiteResources(
   resources: Array<XMLWebsiteResourceItem> | undefined,
 ): Array<XMLWebsiteResource> {
   const normalized: Array<XMLWebsiteResource> = [];
-  for (const resource of resources ?? []) {
+  const resourcesToNormalize = resources ?? [];
+  for (const resource of resourcesToNormalize) {
     if ("identification" in resource) {
       normalized.push(resource);
       continue;
@@ -174,7 +172,8 @@ function collectWebsitePageSlugs<T extends ReadonlyArray<string>>(
   pageSlugsByUuid = new Map<string, string>(),
   segmentSlugPrefix = slugPrefix,
 ): Map<string, string> {
-  for (const resource of resources ?? []) {
+  const slugResources = resources ?? [];
+  for (const resource of slugResources) {
     if ("segments" in resource) {
       for (const tree of resource.segments.tree) {
         const segmentSlug =
@@ -361,9 +360,7 @@ export function parseBounds(
     : bounds
         .split(";")
         .map((pair) =>
-          pair
-            .split(",")
-            .map((coordinate) => Number.parseFloat(coordinate.trim())),
+          pair.split(",").map((coordinate) => Number(coordinate.trim())),
         );
   const [southWest, northEast] = coordinates;
   if (
@@ -471,14 +468,12 @@ function parseWebsiteScopes<T extends ReadonlyArray<string>>(
     return null;
   }
 
-  const parsedScopes: NonNullable<ParsedWebsiteOptions<T>["scopes"]> = [];
-  for (const scope of scopes.scope) {
-    parsedScopes.push({
+  const parsedScopes: NonNullable<ParsedWebsiteOptions<T>["scopes"]> =
+    Array.from(scopes.scope, (scope) => ({
       uuid: scope.uuid.payload,
       type: scope.uuid.type,
       identification: parseIdentification(scope.identification, options),
-    });
-  }
+    }));
 
   return parsedScopes;
 }
@@ -494,11 +489,14 @@ function parseWebsiteOptions<T extends ReadonlyArray<string>>(
     labels: { title: null },
   };
 
-  for (const note of parseNotes(rawOptions?.notes, options)) {
-    if (note.title?.getText() === "Title label") {
-      parsedOptions.labels.title = note.content;
-      break;
+  const notes = parseNotes(rawOptions?.notes, options);
+  for (const note of notes) {
+    if (note.title?.getText() !== "Title label") {
+      continue;
     }
+
+    parsedOptions.labels.title = note.content;
+    break;
   }
 
   return parsedOptions;
@@ -514,11 +512,13 @@ function parseStylesheets(
 
     for (const [label, value] of Object.entries(style)) {
       if (
-        label === "variableUuid" ||
-        label === "valueUuid" ||
-        label === "category" ||
-        label === "payload" ||
-        label === "content"
+        [
+          "variableUuid",
+          "valueUuid",
+          "category",
+          "payload",
+          "content",
+        ].includes(label)
       ) {
         continue;
       }
@@ -910,10 +910,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             ),
             { cause: componentProperty },
           );
-        } else {
-          isExternal = href.startsWith("http");
-          isRelative = !href.startsWith("/");
         }
+        isExternal = href.startsWith("http");
+        isRelative = !href.startsWith("/");
       }
 
       const startIcon =
@@ -1153,17 +1152,14 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         ImageComponent["imageQuality"]
       >("image-quality", "high");
 
-      const images: Array<WebImage<T>> = [];
-      for (const link of websiteLinks) {
-        images.push({
-          uuid: link.uuid,
-          label: link.identification.label,
-          width: "image" in link ? (link.image?.width ?? 0) : 0,
-          height: "image" in link ? (link.image?.height ?? 0) : 0,
-          description: link.description,
-          quality: imageQuality,
-        });
-      }
+      const images: Array<WebImage<T>> = Array.from(websiteLinks, (link) => ({
+        uuid: link.uuid,
+        label: link.identification.label,
+        width: "image" in link ? (link.image?.width ?? 0) : 0,
+        height: "image" in link ? (link.image?.height ?? 0) : 0,
+        description: link.description,
+        quality: imageQuality,
+      }));
 
       const variant = componentReader.valueOr<ImageComponent["variant"]>(
         "variant",
@@ -1179,7 +1175,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         if (typeof widthProperty === "number") {
           width = widthProperty;
         } else if (typeof widthProperty === "string") {
-          width = Number.parseFloat(widthProperty);
+          width = Number(widthProperty);
         }
       }
 
@@ -1189,7 +1185,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         if (typeof heightProperty === "number") {
           height = heightProperty;
         } else if (typeof heightProperty === "string") {
-          height = Number.parseFloat(heightProperty);
+          height = Number(heightProperty);
         }
       }
 
@@ -1226,7 +1222,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
             if (typeof secondsPerImageProperty === "number") {
               secondsPerImage = secondsPerImageProperty;
             } else if (typeof secondsPerImageProperty === "string") {
-              secondsPerImage = Number.parseFloat(secondsPerImageProperty);
+              secondsPerImage = Number(secondsPerImageProperty);
             }
           }
         }
@@ -1383,8 +1379,6 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
-      const items: Array<QueryComponent["items"][number]> = [];
-
       if (componentProperty.properties.length === 0) {
         throw new Error(
           formatComponentError(
@@ -1396,6 +1390,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         );
       }
 
+      const items: Array<QueryComponent["items"][number]> = [];
       for (const queryItem of componentProperty.properties) {
         const queryReader = websitePresentationReader(queryItem.properties);
 
@@ -1811,10 +1806,11 @@ function parseWebElement<T extends ReadonlyArray<string>>(
   const cssStyles = parseResponsiveCssStyles(elementProperties);
 
   const title = parseWebTitle(elementProperties, identification, {
-    isNameDisplayed:
-      properties.component === "annotated-image" ||
-      properties.component === "annotated-document" ||
-      properties.component === "collection",
+    isNameDisplayed: [
+      "annotated-image",
+      "annotated-document",
+      "collection",
+    ].includes(properties.component),
     isCountDisplayed: properties.component === "collection",
   });
 
@@ -2042,7 +2038,8 @@ function parseWebsiteSegments<T extends ReadonlyArray<string>>(
 ): Array<WebsiteSegment<T>> {
   const segments: Array<WebsiteSegment<T>> = [];
 
-  for (const resource of resources ?? []) {
+  const segmentResources = resources ?? [];
+  for (const resource of segmentResources) {
     if (!("segments" in resource)) {
       continue;
     }
@@ -2416,7 +2413,7 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
     ? normalizeWebsiteResources(blockResource.resource)
     : [];
 
-  const supportsAccordionItems =
+  const isSupportingAccordionItems =
     returnBlock.properties.default.layout === "accordion" ||
     returnBlock.properties.tablet?.layout === "accordion" ||
     returnBlock.properties.mobile?.layout === "accordion";
@@ -2445,7 +2442,7 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
           .value<string>("component");
 
         if (
-          supportsAccordionItems &&
+          isSupportingAccordionItems &&
           componentType === "text" &&
           childResources.length > 0
         ) {
@@ -2695,7 +2692,8 @@ function parseContextItem<T extends ReadonlyArray<string>>(
 ): ContextTreeLevel<T> {
   let type = "";
   const levels: Array<ContextTreeLevelItem> = [];
-  for (const level of contextItemToParse.levels?.level ?? []) {
+  const levelsToParse = contextItemToParse.levels?.level ?? [];
+  for (const level of levelsToParse) {
     const [rawVariableUuid = "", rawValueUuid] = level.payload.split(",");
     const valueUuid =
       rawValueUuid == null || rawValueUuid.trim() === "null"

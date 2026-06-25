@@ -310,10 +310,12 @@ describe("parseItem", () => {
     expect(parsedResource.links).toHaveLength(3);
     let linkedResource = parsedResource.links[0]!;
     for (const link of parsedResource.links) {
-      if (link.category === "resource") {
-        linkedResource = link;
-        break;
+      if (link.category !== "resource") {
+        continue;
       }
+
+      linkedResource = link;
+      break;
     }
     expect(linkedResource.category).toBe("resource");
     expect(Object.hasOwn(linkedResource, "links")).toBe(false);
@@ -332,10 +334,10 @@ describe("parseItem", () => {
       "Linked image",
     );
 
-    const linkedCategories: Array<string> = [];
-    for (const link of parsedResource.links) {
-      linkedCategories.push(link.category);
-    }
+    const linkedCategories: Array<string> = Array.from(
+      parsedResource.links,
+      (link) => link.category,
+    );
     expect(linkedCategories).toContain("propertyValue");
     expect(linkedCategories).toContain("dictionaryUnit");
   });
@@ -385,10 +387,10 @@ describe("parseItem", () => {
       "text",
     ]);
     expect(set.items).toHaveLength(3);
-    const containedItemCategories: Array<string> = [];
-    for (const item of set.items) {
-      containedItemCategories.push(item.category);
-    }
+    const containedItemCategories: Array<string> = Array.from(
+      set.items,
+      (item) => item.category,
+    );
     expect(containedItemCategories).toStrictEqual(["tree", "resource", "text"]);
   });
 
@@ -555,8 +557,8 @@ describe("string parser integration", () => {
   });
 
   it("serializes inline MDX boundaries without creating display whitespace", () => {
-    const fourDisplaySpaces = ` ${"\u00A0".repeat(3)}`;
-    const eightDisplaySpaces = ` ${"\u00A0".repeat(7)}`;
+    const fourDisplaySpaces = ` ${"\u{A0}".repeat(3)}`;
+    const eightDisplaySpaces = ` ${"\u{A0}".repeat(7)}`;
     const parsedContent = parseXMLContent(
       {
         content: [
@@ -571,7 +573,7 @@ describe("string parser integration", () => {
               { payload: "]" },
               { payload: "υλαι αρων εσβα", rend: "italic" },
               { payload: "3. [", whitespace: "newline" },
-              { payload: "    " },
+              { payload: " ".repeat(4) },
               { payload: "π", rend: "italic" },
               { payload: "]" },
               { payload: "υλαι εσακκει", rend: "italic" },

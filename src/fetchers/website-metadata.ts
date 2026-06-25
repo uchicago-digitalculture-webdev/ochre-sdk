@@ -21,7 +21,7 @@ import {
   createSchemaValidationError,
   getErrorOutput,
   stringLiteral,
-} from "#/utils.js";
+} from "#/utilities.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
 
@@ -76,7 +76,10 @@ function parseWebsiteMetadata<T extends ReadonlyArray<string>>(
   };
 }
 
-function buildXQuery(params: { abbreviation: string; slug: string }): string {
+function buildXQuery(parameters: {
+  abbreviation: string;
+  slug: string;
+}): string {
   return String.raw`xquery version "1.0-ml";
 
 declare function local:resource-items($resources) {
@@ -161,9 +164,9 @@ declare function local:metadata-tree($tree, $target-slug, $slug-prefix) {
 };
 
 let $website := collection("ochre/tree")/ochre[tree/identification/abbreviation/content/string = ${stringLiteral(
-    params.abbreviation,
+    parameters.abbreviation,
   )}][1]
-let $target-slug := ${stringLiteral(params.slug)}
+let $target-slug := ${stringLiteral(parameters.slug)}
 return
   <ochre>{
     $website/@uuid,
@@ -205,16 +208,16 @@ export async function fetchWebsiteMetadata(
   | { websiteMetadata: null; error: string; detailedError: string }
 > {
   try {
-    const cleanAbbreviation = abbreviation.trim().toLocaleLowerCase("en-US");
     if (options?.slug == null) {
       throw new Error("Website metadata slug is required");
     }
 
+    const cleanAbbreviation = abbreviation.trim().toLocaleLowerCase("en-US");
     const slug = options.slug.trim().replaceAll(/^\/+|\/+$/g, "");
-    const requestedLanguages: Array<string> = [];
-    for (const language of options.languages ?? []) {
-      requestedLanguages.push(v.parse(iso639_3Schema, language));
-    }
+    const requestedLanguages: Array<string> = Array.from(
+      options.languages ?? [],
+      (language) => v.parse(iso639_3Schema, language),
+    );
 
     const response = await (options.fetch ?? fetch)(
       'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',

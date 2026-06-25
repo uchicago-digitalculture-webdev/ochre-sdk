@@ -63,20 +63,16 @@ export const XML_PARSER_OPTIONS: X2jOptions = {
   textNodeName: "payload",
   stopNodes: ["*.referenceFormatDiv", "*.citationFormatSpan"],
   htmlEntities: true,
-  isArray(tagName, jPath, isLeafNode, isAttribute) {
+  isArray(tagName, _, __, isAttribute) {
     if (isAttribute) {
       return false;
     }
 
-    if (XML_ARRAY_TAGS.includes(tagName)) {
-      return true;
-    }
-
-    return false;
+    return XML_ARRAY_TAGS.includes(tagName);
   },
-  attributeValueProcessor: (attrName, attrValue) => {
-    if (attrValue.startsWith("xs:")) {
-      return attrValue.replace("xs:", "");
+  attributeValueProcessor: (_, attributeValue) => {
+    if (attributeValue.startsWith("xs:")) {
+      return attributeValue.replace("xs:", "");
     }
 
     return null;

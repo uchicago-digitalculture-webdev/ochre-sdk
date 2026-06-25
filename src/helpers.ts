@@ -7,7 +7,7 @@ import type {
   Property,
   SetItemProperty,
 } from "#/types/index.js";
-import { flattenProperties } from "#/utils.js";
+import { flattenProperties } from "#/utilities.js";
 
 type FlattenedItem<U, T extends LanguageCodes> = Omit<U, "properties"> & {
   properties: Array<SetItemProperty<T>>;

@@ -72,7 +72,7 @@ function getPropertyVariableLabel<T extends LanguageCodes>(
     : property.variable.label.getText();
 }
 
-function propertyHasValue<T extends LanguageCodes>(
+function hasPropertyValue<T extends LanguageCodes>(
   property: SearchableProperty<T>,
   value: PropertyValueContent<T>,
 ): boolean {
@@ -85,7 +85,7 @@ function propertyHasValue<T extends LanguageCodes>(
   return false;
 }
 
-function propertyHasValueContent<T extends LanguageCodes>(
+function hasPropertyValueContent<T extends LanguageCodes>(
   property: SearchableProperty<T>,
   valueContent: PropertyContent<T>,
 ): boolean {
@@ -98,7 +98,7 @@ function propertyHasValueContent<T extends LanguageCodes>(
   return false;
 }
 
-function propertyValueContentsEqual<T extends LanguageCodes>(
+function hasEqualPropertyValueContents<T extends LanguageCodes>(
   property: SearchableProperty<T>,
   valueContents: ReadonlyArray<PropertyContent<T>>,
 ): boolean {
@@ -157,14 +157,14 @@ function searchPropertyResult<T extends LanguageCodes, TResult>(
 
 function getPropertyValuesResult<T extends LanguageCodes>(
   values: ReadonlyArray<PropertyValueContent<T>>,
-  limitToLeafPropertyValues: boolean,
-  copyValuesWhenUnfiltered: boolean,
+  shouldLimitToLeafPropertyValues: boolean,
+  shouldCopyValuesWhenUnfiltered: boolean,
 ): Array<PropertyValueContent<T>> {
-  if (limitToLeafPropertyValues) {
+  if (shouldLimitToLeafPropertyValues) {
     return getLeafPropertyValues(values);
   }
 
-  if (copyValuesWhenUnfiltered) {
+  if (shouldCopyValuesWhenUnfiltered) {
     return clonePropertyValues(values);
   }
 
@@ -206,12 +206,12 @@ function getNormalizedProperty<
   TProperty extends SearchableProperty<T>,
 >(
   property: TProperty,
-  limitToLeafPropertyValues: boolean,
+  shouldLimitToLeafPropertyValues: boolean,
   transformValues?: (
     values: Array<PropertyValueContent<T>>,
   ) => Array<PropertyValueContent<T>>,
 ): TProperty {
-  if (!limitToLeafPropertyValues) {
+  if (!shouldLimitToLeafPropertyValues) {
     return property;
   }
 
@@ -225,9 +225,9 @@ function getNormalizedProperty<
 
 function getFirstPropertyValueResult<T extends LanguageCodes>(
   values: ReadonlyArray<PropertyValueContent<T>>,
-  limitToLeafPropertyValues: boolean,
+  shouldLimitToLeafPropertyValues: boolean,
 ): PropertyValueContent<T> | null {
-  if (limitToLeafPropertyValues) {
+  if (shouldLimitToLeafPropertyValues) {
     return getLeafPropertyValues(values)[0] ?? null;
   }
 
@@ -236,9 +236,9 @@ function getFirstPropertyValueResult<T extends LanguageCodes>(
 
 function getFirstPropertyValueContentResult<T extends LanguageCodes>(
   values: ReadonlyArray<PropertyValueContent<T>>,
-  limitToLeafPropertyValues: boolean,
+  shouldLimitToLeafPropertyValues: boolean,
 ): PropertyContent<T> | null {
-  if (limitToLeafPropertyValues) {
+  if (shouldLimitToLeafPropertyValues) {
     return getLeafPropertyValues(values)[0]?.content ?? null;
   }
 
@@ -247,14 +247,18 @@ function getFirstPropertyValueContentResult<T extends LanguageCodes>(
 
 function visitProperties<T extends LanguageCodes>(
   properties: ReadonlyArray<SearchableProperty<T>>,
-  includeNestedProperties: boolean,
+  shouldIncludeNestedProperties: boolean,
   visit: (property: SearchableProperty<T>) => void,
 ): void {
   for (const property of properties) {
     visit(property);
 
-    if (includeNestedProperties && "properties" in property) {
-      visitProperties(property.properties, includeNestedProperties, visit);
+    if (shouldIncludeNestedProperties && "properties" in property) {
+      visitProperties(
+        property.properties,
+        shouldIncludeNestedProperties,
+        visit,
+      );
     }
   }
 }
@@ -383,14 +387,14 @@ export function getPropertyValueContentsByVariableUuid<
         return null;
       }
 
-      const valueContents: Array<PropertyContent<T>> = [];
-      for (const value of getPropertyValuesResult(
-        property.values,
-        limitToLeafPropertyValues,
-        false,
-      )) {
-        valueContents.push(value.content);
-      }
+      const valueContents: Array<PropertyContent<T>> = Array.from(
+        getPropertyValuesResult(
+          property.values,
+          limitToLeafPropertyValues,
+          false,
+        ),
+        (value) => value.content,
+      );
 
       return valueContents;
     },
@@ -658,7 +662,7 @@ export function getPropertyByVariableLabelAndValueContents<
       for (const property of currentProperties) {
         if (
           getPropertyVariableLabel(property) === variableLabel &&
-          propertyValueContentsEqual(property, valueContents)
+          hasEqualPropertyValueContents(property, valueContents)
         ) {
           return getNormalizedProperty(
             property,
@@ -734,7 +738,7 @@ export function getPropertyByVariableLabelAndValue<
       for (const property of currentProperties) {
         if (
           getPropertyVariableLabel(property) === variableLabel &&
-          propertyHasValue(property, value)
+          hasPropertyValue(property, value)
         ) {
           return getNormalizedProperty(property, limitToLeafPropertyValues);
         }
@@ -806,7 +810,7 @@ export function getPropertyByVariableLabelAndValueContent<
       for (const property of currentProperties) {
         if (
           getPropertyVariableLabel(property) === variableLabel &&
-          propertyHasValueContent(property, valueContent)
+          hasPropertyValueContent(property, valueContent)
         ) {
           return getNormalizedProperty(property, limitToLeafPropertyValues);
         }
@@ -979,12 +983,10 @@ export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
   });
 
   if (limitToLeafPropertyValues) {
-    const normalizedProperties: Array<SearchableProperty<T>> = [];
-    for (const property of uniqueProperties) {
-      normalizedProperties.push(
-        getNormalizedProperty(property, limitToLeafPropertyValues),
-      );
-    }
+    const normalizedProperties: Array<SearchableProperty<T>> = Array.from(
+      uniqueProperties,
+      (property) => getNormalizedProperty(property, limitToLeafPropertyValues),
+    );
 
     return normalizedProperties;
   }
@@ -1039,7 +1041,7 @@ export function getLeafPropertyValues<T extends LanguageCodes = LanguageCodes>(
   return leafPropertyValues;
 }
 
-function contentMatchesFilter<T extends LanguageCodes>(
+function isContentMatchingFilter<T extends LanguageCodes>(
   content: PropertyContent<T>,
   filterContent: PropertyContent<T>,
 ): boolean {
@@ -1069,6 +1071,7 @@ function contentMatchesFilter<T extends LanguageCodes>(
  * @param options - Search options, including whether to include nested properties
  * @returns True if the property matches the filter criteria, false otherwise
  */
+// eslint-disable-next-line unicorn/consistent-boolean-name -- public API; renaming would be a breaking change
 export function filterProperties<T extends LanguageCodes = LanguageCodes>(
   property: SearchableProperty<T>,
   filter: { variableLabel: string; value: PropertyValueContent<T> },
@@ -1091,7 +1094,7 @@ export function filterProperties<T extends LanguageCodes = LanguageCodes>(
       false,
     );
     for (const value of values) {
-      if (contentMatchesFilter(value.content, filter.value.content)) {
+      if (isContentMatchingFilter(value.content, filter.value.content)) {
         return true;
       }
     }

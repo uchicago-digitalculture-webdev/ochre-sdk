@@ -343,7 +343,7 @@ function parseContext(rawContext: XMLContext): Context<ContextItemCategory> {
       continue;
     }
 
-    displayPath = displayPath || rawContextOuterItem.displayPath;
+    displayPath ||= rawContextOuterItem.displayPath;
 
     for (const rawContextItem of rawContextOuterItem.context) {
       if (!isXMLContextItem(rawContextItem)) {
@@ -361,7 +361,8 @@ function parseContext(rawContext: XMLContext): Context<ContextItemCategory> {
 
       const rawContextValues =
         rawContextItem as unknown as XMLContextValueHierarchy;
-      for (const heading of rawContextValues.heading ?? []) {
+      const headings = rawContextValues.heading ?? [];
+      for (const heading of headings) {
         node.heading.push(parseContextItem(heading));
       }
 
@@ -441,15 +442,15 @@ function parseBaseItem<U extends ItemCategory, T extends ReadonlyArray<string>>(
   },
   options: ParserOptions<T>,
 ): BaseItem<U, T, "embedded"> {
-  const events: Array<Event<T>> = [];
-  for (const event of rawItem.events?.event ?? []) {
-    events.push(parseEvent(event, options));
-  }
+  const events: Array<Event<T>> = Array.from(
+    rawItem.events?.event ?? [],
+    (event) => parseEvent(event, options),
+  );
 
-  const creators: Array<Person<T, "embedded">> = [];
-  for (const creator of rawItem.creators?.creator ?? []) {
-    creators.push(parsePerson(creator, options));
-  }
+  const creators: Array<Person<T, "embedded">> = Array.from(
+    rawItem.creators?.creator ?? [],
+    (creator) => parsePerson(creator, options),
+  );
 
   return {
     uuid: rawItem.uuid ?? "",
@@ -575,7 +576,7 @@ function collectHierarchyEntries(
   }
 
   let fallbackIndex = 0;
-  for (const key of Object.keys(hierarchy)) {
+  for (const [key, values] of Object.entries(hierarchy)) {
     const category = getHierarchyEntryCategory(key);
     if (
       category == null ||
@@ -584,7 +585,6 @@ function collectHierarchyEntries(
       continue;
     }
 
-    const values = hierarchy[key];
     if (!Array.isArray(values)) {
       continue;
     }
@@ -817,10 +817,10 @@ function parseCoordinates<T extends ReadonlyArray<string>>(
   rawCoordinates: XMLCoordinates | undefined,
   options: ParserOptions<T>,
 ): Array<Coordinates<T>> {
-  const coordinates: Array<Coordinates<T>> = [];
-  for (const coordinate of rawCoordinates?.coord ?? []) {
-    coordinates.push(parseCoordinate(coordinate, options));
-  }
+  const coordinates: Array<Coordinates<T>> = Array.from(
+    rawCoordinates?.coord ?? [],
+    (coordinate) => parseCoordinate(coordinate, options),
+  );
 
   return coordinates;
 }
@@ -879,10 +879,9 @@ function parseImageMap(rawImageMap: XMLImageMap | undefined): ImageMap | null {
     return null;
   }
 
-  const areas: Array<ImageMapArea> = [];
-  for (const area of rawImageMap.area) {
-    areas.push(parseImageMapArea(area));
-  }
+  const areas: Array<ImageMapArea> = Array.from(rawImageMap.area, (area) =>
+    parseImageMapArea(area),
+  );
 
   return { areas, width: rawImageMap.width, height: rawImageMap.height };
 }
@@ -891,10 +890,10 @@ function parseNote<T extends ReadonlyArray<string>>(
   rawNote: XMLNote,
   options: ParserOptions<T>,
 ): Note<T> {
-  const authors: Array<Person<T, "embedded">> = [];
-  for (const author of rawNote.authors?.author ?? []) {
-    authors.push(parsePerson(author, options));
-  }
+  const authors: Array<Person<T, "embedded">> = Array.from(
+    rawNote.authors?.author ?? [],
+    (author) => parsePerson(author, options),
+  );
 
   const content =
     rawNote.content == null
@@ -918,7 +917,8 @@ function parseNoteTitle<T extends ReadonlyArray<string>>(
   }
 
   const titleContent: Partial<Record<T[number], string>> = {};
-  for (const content of rawNote.content ?? []) {
+  const noteContents = rawNote.content ?? [];
+  for (const content of noteContents) {
     if (!options.languages.includes(content.lang) || content.title == null) {
       continue;
     }
@@ -930,7 +930,7 @@ function parseNoteTitle<T extends ReadonlyArray<string>>(
     return MultilingualString.fromObject(titleContent, options.languages);
   }
 
-  for (const content of rawNote.content ?? []) {
+  for (const content of noteContents) {
     if (content.lang !== "zxx" && content.title != null) {
       return multilingualFromText(content.title, options);
     }
@@ -943,10 +943,9 @@ export function parseNotes<T extends ReadonlyArray<string>>(
   rawNotes: { note: Array<XMLNote> } | undefined,
   options: ParserOptions<T>,
 ): Array<Note<T>> {
-  const notes: Array<Note<T>> = [];
-  for (const note of rawNotes?.note ?? []) {
-    notes.push(parseNote(note, options));
-  }
+  const notes: Array<Note<T>> = Array.from(rawNotes?.note ?? [], (note) =>
+    parseNote(note, options),
+  );
 
   return notes;
 }
@@ -1031,15 +1030,15 @@ function parseProperty<T extends ReadonlyArray<string>>(
   rawProperty: XMLProperty,
   options: ParserOptions<T>,
 ): Property<T> {
-  const values: Array<PropertyValueContent<T>> = [];
-  for (const value of rawProperty.value ?? []) {
-    values.push(parsePropertyValueContent(value, options));
-  }
+  const values: Array<PropertyValueContent<T>> = Array.from(
+    rawProperty.value ?? [],
+    (value) => parsePropertyValueContent(value, options),
+  );
 
-  const properties: Array<Property<T>> = [];
-  for (const property of rawProperty.property ?? []) {
-    properties.push(parseProperty(property, options));
-  }
+  const properties: Array<Property<T>> = Array.from(
+    rawProperty.property ?? [],
+    (property) => parseProperty(property, options),
+  );
 
   return {
     variable: {
@@ -1058,10 +1057,10 @@ export function parseProperties<T extends ReadonlyArray<string>>(
   rawProperties: { property: Array<XMLProperty> } | undefined,
   options: ParserOptions<T>,
 ): Array<Property<T>> {
-  const properties: Array<Property<T>> = [];
-  for (const property of rawProperties?.property ?? []) {
-    properties.push(parseProperty(property, options));
-  }
+  const properties: Array<Property<T>> = Array.from(
+    rawProperties?.property ?? [],
+    (property) => parseProperty(property, options),
+  );
 
   return properties;
 }
@@ -1070,15 +1069,15 @@ function parseSimplifiedProperty<T extends ReadonlyArray<string>>(
   rawProperty: XMLSimplifiedProperty,
   options: ParserOptions<T>,
 ): SimplifiedProperty<T> {
-  const values: Array<PropertyValueContent<T>> = [];
-  for (const value of rawProperty.value ?? []) {
-    values.push(parsePropertyValueContent(value, options));
-  }
+  const values: Array<PropertyValueContent<T>> = Array.from(
+    rawProperty.value ?? [],
+    (value) => parsePropertyValueContent(value, options),
+  );
 
-  const properties: Array<SimplifiedProperty<T>> = [];
-  for (const property of rawProperty.property ?? []) {
-    properties.push(parseSimplifiedProperty(property, options));
-  }
+  const properties: Array<SimplifiedProperty<T>> = Array.from(
+    rawProperty.property ?? [],
+    (property) => parseSimplifiedProperty(property, options),
+  );
 
   return {
     variable: {
@@ -1097,10 +1096,10 @@ export function parseSimplifiedProperties<T extends ReadonlyArray<string>>(
   rawProperties: { property: Array<XMLSimplifiedProperty> } | undefined,
   options: ParserOptions<T>,
 ): Array<SimplifiedProperty<T>> {
-  const properties: Array<SimplifiedProperty<T>> = [];
-  for (const property of rawProperties?.property ?? []) {
-    properties.push(parseSimplifiedProperty(property, options));
-  }
+  const properties: Array<SimplifiedProperty<T>> = Array.from(
+    rawProperties?.property ?? [],
+    (property) => parseSimplifiedProperty(property, options),
+  );
 
   return properties;
 }
@@ -1121,10 +1120,10 @@ function parseSetItemProperties<T extends ReadonlyArray<string>>(
   rawProperties: { property: Array<XMLProperty> } | undefined,
   options: ParserOptions<T>,
 ): Array<SetItemProperty<T>> {
-  const properties: Array<SetItemProperty<T>> = [];
-  for (const property of rawProperties?.property ?? []) {
-    properties.push(parseSetItemProperty(property, options));
-  }
+  const properties: Array<SetItemProperty<T>> = Array.from(
+    rawProperties?.property ?? [],
+    (property) => parseSetItemProperty(property, options),
+  );
 
   return properties;
 }
@@ -1412,17 +1411,17 @@ function firstItemLink<
 ): ItemLink<U, T> | null {
   const links = parseLinks(rawLinks, options);
   const link = links[0];
-  return link == null ? null : (link as ItemLink<U, T>);
+  return (link ?? null) as ItemLink<U, T> | null;
 }
 
 function parsePersonItemLinks<T extends ReadonlyArray<string>>(
   rawPersons: Array<XMLLinkedPerson> | undefined,
   options: ParserOptions<T>,
 ): Array<ItemLink<"person", T>> {
-  const people: Array<ItemLink<"person", T>> = [];
-  for (const person of rawPersons ?? []) {
-    people.push(parsePersonItemLink(person, options));
-  }
+  const people: Array<ItemLink<"person", T>> = Array.from(
+    rawPersons ?? [],
+    (person) => parsePersonItemLink(person, options),
+  );
 
   return people;
 }
@@ -1431,10 +1430,10 @@ function parsePeriodItemLinks<T extends ReadonlyArray<string>>(
   rawPeriods: Array<XMLLinkedPeriod> | undefined,
   options: ParserOptions<T>,
 ): Array<ItemLink<"period", T>> {
-  const periods: Array<ItemLink<"period", T>> = [];
-  for (const period of rawPeriods ?? []) {
-    periods.push(parsePeriodItemLink(period, options));
-  }
+  const periods: Array<ItemLink<"period", T>> = Array.from(
+    rawPeriods ?? [],
+    (period) => parsePeriodItemLink(period, options),
+  );
 
   return periods;
 }
@@ -1718,10 +1717,10 @@ function parsePeriodList<T extends ReadonlyArray<string>>(
   rawPeriods: { period: Array<XMLPeriod> } | undefined,
   options: ParserOptions<T>,
 ): Array<Period<T, "embedded">> {
-  const periods: Array<Period<T, "embedded">> = [];
-  for (const period of rawPeriods?.period ?? []) {
-    periods.push(parsePeriod(period, options));
-  }
+  const periods: Array<Period<T, "embedded">> = Array.from(
+    rawPeriods?.period ?? [],
+    (period) => parsePeriod(period, options),
+  );
 
   return periods;
 }
@@ -1730,10 +1729,10 @@ export function parseBibliographyList<T extends ReadonlyArray<string>>(
   rawBibliographies: { bibliography: Array<XMLBibliography> } | undefined,
   options: ParserOptions<T>,
 ): Array<Bibliography<T, "embedded">> {
-  const bibliographies: Array<Bibliography<T, "embedded">> = [];
-  for (const bibliography of rawBibliographies?.bibliography ?? []) {
-    bibliographies.push(parseBibliography(bibliography, options));
-  }
+  const bibliographies: Array<Bibliography<T, "embedded">> = Array.from(
+    rawBibliographies?.bibliography ?? [],
+    (bibliography) => parseBibliography(bibliography, options),
+  );
 
   return bibliographies;
 }
@@ -1742,10 +1741,10 @@ export function parsePersonList<T extends ReadonlyArray<string>>(
   rawPersons: Array<XMLPerson> | undefined,
   options: ParserOptions<T>,
 ): Array<Person<T, "embedded">> {
-  const persons: Array<Person<T, "embedded">> = [];
-  for (const person of rawPersons ?? []) {
-    persons.push(parsePerson(person, options));
-  }
+  const persons: Array<Person<T, "embedded">> = Array.from(
+    rawPersons ?? [],
+    (person) => parsePerson(person, options),
+  );
 
   return persons;
 }
@@ -1820,13 +1819,15 @@ function parseSections<T extends ReadonlyArray<string>>(
     return sections;
   }
 
-  for (const translation of rawSections.translation ?? []) {
+  const translations = rawSections.translation ?? [];
+  for (const translation of translations) {
     for (const section of translation.section) {
       sections.push(parseSection(section, options));
     }
   }
 
-  for (const phonemic of rawSections.phonemic ?? []) {
+  const phonemics = rawSections.phonemic ?? [];
+  for (const phonemic of phonemics) {
     for (const section of phonemic.section) {
       sections.push(parseSection(section, options));
     }
@@ -1843,10 +1844,10 @@ function parseHeading<
   containedItemCategory: U,
   options: ParserOptions<T>,
 ): Heading<U, T> {
-  const headings: Array<Heading<U, T>> = [];
-  for (const heading of rawHeading.heading ?? []) {
-    headings.push(parseHeading(heading, containedItemCategory, options));
-  }
+  const headings: Array<Heading<U, T>> = Array.from(
+    rawHeading.heading ?? [],
+    (heading) => parseHeading(heading, containedItemCategory, options),
+  );
 
   return {
     name: rawHeading.name,
@@ -2070,10 +2071,10 @@ function parseBibliography<T extends ReadonlyArray<string>>(
     rawBibliography.bibliographies,
     options,
   );
-  const items: Array<Bibliography<T, "embedded">> = [];
-  for (const bibliography of rawBibliography.bibliography ?? []) {
-    items.push(parseBibliography(bibliography, options));
-  }
+  const items: Array<Bibliography<T, "embedded">> = Array.from(
+    rawBibliography.bibliography ?? [],
+    (bibliography) => parseBibliography(bibliography, options),
+  );
 
   const baseBibliography = {
     ...parseBaseItem("bibliography", rawBibliography, options),
@@ -2103,10 +2104,7 @@ function parseBibliography<T extends ReadonlyArray<string>>(
             ),
           },
     entryInfo: parseBibliographyEntryInfo(rawBibliography.entryInfo),
-    source:
-      sourceItems[0] == null
-        ? null
-        : (sourceItems[0] as ItemLink<TreeItemCategory, T>),
+    source: (sourceItems[0] ?? null) as ItemLink<TreeItemCategory, T> | null,
     authors: parsePersonList(rawBibliography.authors?.person, options),
     periods: parsePeriodList(rawBibliography.periods, options),
     links: parseLinks(rawBibliography.links, options),
@@ -2131,16 +2129,15 @@ function parseConcept<T extends ReadonlyArray<string>>(
   rawConcept: XMLConcept,
   options: ParserOptions<T>,
 ): Concept<T, "embedded"> {
-  const interpretations: Array<Interpretation<T>> = [];
-  for (const interpretation of rawConcept.interpretations?.interpretation ??
-    []) {
-    interpretations.push(parseInterpretation(interpretation, options));
-  }
+  const interpretations: Array<Interpretation<T>> = Array.from(
+    rawConcept.interpretations?.interpretation ?? [],
+    (interpretation) => parseInterpretation(interpretation, options),
+  );
 
-  const items: Array<Concept<T, "embedded">> = [];
-  for (const concept of rawConcept.concept ?? []) {
-    items.push(parseConcept(concept, options));
-  }
+  const items: Array<Concept<T, "embedded">> = Array.from(
+    rawConcept.concept ?? [],
+    (concept) => parseConcept(concept, options),
+  );
 
   return {
     ...parseBaseItem("concept", rawConcept, options),
@@ -2155,15 +2152,15 @@ function parseSpatialUnit<T extends ReadonlyArray<string>>(
   rawSpatialUnit: XMLSpatialUnit,
   options: ParserOptions<T>,
 ): SpatialUnit<T, "embedded"> {
-  const observations: Array<Observation<T>> = [];
-  for (const observation of rawSpatialUnit.observations?.observation ?? []) {
-    observations.push(parseObservation(observation, options));
-  }
+  const observations: Array<Observation<T>> = Array.from(
+    rawSpatialUnit.observations?.observation ?? [],
+    (observation) => parseObservation(observation, options),
+  );
 
-  const items: Array<SpatialUnit<T, "embedded">> = [];
-  for (const spatialUnit of rawSpatialUnit.spatialUnit ?? []) {
-    items.push(parseSpatialUnit(spatialUnit, options));
-  }
+  const items: Array<SpatialUnit<T, "embedded">> = Array.from(
+    rawSpatialUnit.spatialUnit ?? [],
+    (spatialUnit) => parseSpatialUnit(spatialUnit, options),
+  );
 
   return {
     ...parseBaseItem("spatialUnit", rawSpatialUnit, options),
@@ -2183,10 +2180,10 @@ function parsePeriod<T extends ReadonlyArray<string>>(
   rawPeriod: XMLPeriod,
   options: ParserOptions<T>,
 ): Period<T, "embedded"> {
-  const items: Array<Period<T, "embedded">> = [];
-  for (const period of rawPeriod.period ?? []) {
-    items.push(parsePeriod(period, options));
-  }
+  const items: Array<Period<T, "embedded">> = Array.from(
+    rawPeriod.period ?? [],
+    (period) => parsePeriod(period, options),
+  );
 
   return {
     ...parseBaseItem("period", rawPeriod, options),
@@ -2268,10 +2265,10 @@ function parseResource<T extends ReadonlyArray<string>>(
   rawResource: XMLResource,
   options: ParserOptions<T>,
 ): Resource<T, "embedded"> {
-  const items: Array<Resource<T, "embedded">> = [];
-  for (const resource of rawResource.resource ?? []) {
-    items.push(parseResource(resource, options));
-  }
+  const items: Array<Resource<T, "embedded">> = Array.from(
+    rawResource.resource ?? [],
+    (resource) => parseResource(resource, options),
+  );
 
   return {
     ...parseBaseItem("resource", rawResource, options),
@@ -2301,14 +2298,16 @@ function parseText<T extends ReadonlyArray<string>>(
   rawText: XMLText,
   options: ParserOptions<T>,
 ): Text<T, "embedded"> {
-  const editions: Array<Person<T, "embedded">> = [];
-  for (const edition of rawText.editions?.edition ?? []) {
-    editions.push(parsePerson(edition, options));
-  }
-  for (const editor of rawText.editions?.editor ?? []) {
+  const editions: Array<Person<T, "embedded">> = Array.from(
+    rawText.editions?.edition ?? [],
+    (edition) => parsePerson(edition, options),
+  );
+  const editors = rawText.editions?.editor ?? [];
+  for (const editor of editors) {
     editions.push(parsePerson(editor, options));
   }
-  for (const publisher of rawText.editions?.publisher ?? []) {
+  const publishers = rawText.editions?.publisher ?? [];
+  for (const publisher of publishers) {
     editions.push(parsePerson(publisher, options));
   }
 
@@ -2335,7 +2334,8 @@ export function parseMetadataLanguages(rawOchre: {
 }): Array<string> {
   const languages: Array<string> = [];
 
-  for (const language of rawOchre.metadata.language ?? []) {
+  const metadataLanguages = rawOchre.metadata.language ?? [];
+  for (const language of metadataLanguages) {
     const parsedLanguage = parseStringLike(language);
     if (parsedLanguage != null) {
       languages.push(parsedLanguage);
@@ -2395,7 +2395,8 @@ export function resolveDefaultLanguage<T extends ReadonlyArray<string>>(
   rawOchre: { metadata: XMLMetadata },
   languages: T,
 ): T[number] {
-  for (const language of rawOchre.metadata.language ?? []) {
+  const metadataLanguages = rawOchre.metadata.language ?? [];
+  for (const language of metadataLanguages) {
     const parsedLanguage = parseStringLike(language);
     if (
       parsedLanguage != null &&
@@ -2502,7 +2503,7 @@ export function parseMetadata<T extends ReadonlyArray<string>>(
 
 function inferTopLevelCategory(rawOchre: RawOchre): ItemCategory {
   for (const category of SET_ITEM_CATEGORIES) {
-    if (category in rawOchre) {
+    if (Object.hasOwn(rawOchre, category)) {
       return category;
     }
   }
@@ -2727,10 +2728,10 @@ export function parseGallery<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
 ): Gallery<T> {
   const gallery = rawData.result.ochre.gallery;
-  const resources: Array<Resource<T, "embedded">> = [];
-  for (const resource of gallery.resource ?? []) {
-    resources.push(parseResource(resource, options));
-  }
+  const resources: Array<Resource<T, "embedded">> = Array.from(
+    gallery.resource ?? [],
+    (resource) => parseResource(resource, options),
+  );
 
   return {
     identification: parseIdentification(gallery.item.identification, options),

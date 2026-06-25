@@ -36,10 +36,10 @@ export function getParserOptions<T extends ReadonlyArray<string>>(
 }
 
 export function cleanObject<T extends Record<string, unknown>>(
-  obj: T,
+  object: T,
 ): Partial<T> {
   const cleaned: Partial<T> = {};
-  for (const [key, value] of Object.entries(obj)) {
+  for (const [key, value] of Object.entries(object)) {
     if (value !== undefined) {
       cleaned[key as keyof T] = value as T[keyof T];
     }

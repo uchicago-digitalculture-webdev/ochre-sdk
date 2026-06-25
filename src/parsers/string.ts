@@ -430,7 +430,7 @@ function normalizePropertyToken(value: string): string {
     .replaceAll(/[\s_]+/g, "-");
 }
 
-function propertyLabelMatches(
+function hasMatchingPropertyLabel(
   property: XMLProperty,
   uuid: string,
   tokens: ReadonlyArray<string>,
@@ -446,7 +446,7 @@ function propertyLabelMatches(
   return tokens.includes(label);
 }
 
-function propertyValueMatches(
+function hasMatchingPropertyValue(
   property: XMLProperty,
   uuid: string,
   tokens: ReadonlyArray<string>,
@@ -473,13 +473,13 @@ function extractAnnotationMetadata(
   }
 
   if (
-    !propertyLabelMatches(
+    !hasMatchingPropertyLabel(
       itemProperty,
       PRESENTATION_ITEM_UUID,
       ["presentation"],
       options,
     ) ||
-    !propertyValueMatches(
+    !hasMatchingPropertyValue(
       itemProperty,
       TEXT_ANNOTATION_UUID,
       [TEXT_ANNOTATION_TOKEN],
@@ -489,9 +489,10 @@ function extractAnnotationMetadata(
     return result;
   }
 
-  for (const textAnnotationProperty of itemProperty.property ?? []) {
+  const textAnnotationProperties = itemProperty.property ?? [];
+  for (const textAnnotationProperty of textAnnotationProperties) {
     if (
-      propertyValueMatches(
+      hasMatchingPropertyValue(
         textAnnotationProperty,
         TEXT_ANNOTATION_HOVER_CARD_UUID,
         [HOVER_CARD_TOKEN],
@@ -503,7 +504,7 @@ function extractAnnotationMetadata(
     }
 
     if (
-      propertyValueMatches(
+      hasMatchingPropertyValue(
         textAnnotationProperty,
         TEXT_ANNOTATION_ITEM_PAGE_VARIANT_UUID,
         [ITEM_PAGE_TOKEN],
@@ -515,7 +516,7 @@ function extractAnnotationMetadata(
     }
 
     if (
-      propertyValueMatches(
+      hasMatchingPropertyValue(
         textAnnotationProperty,
         TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID,
         [ENTRY_PAGE_TOKEN],
@@ -527,7 +528,7 @@ function extractAnnotationMetadata(
     }
 
     if (
-      propertyValueMatches(
+      hasMatchingPropertyValue(
         textAnnotationProperty,
         TEXT_ANNOTATION_TEXT_STYLING_UUID,
         [TEXT_STYLING_TOKEN],
@@ -542,7 +543,7 @@ function extractAnnotationMetadata(
 
       for (const textStylingProperty of textStylingProperties) {
         if (
-          propertyLabelMatches(
+          hasMatchingPropertyLabel(
             textStylingProperty,
             TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
             [VARIANT_TOKEN],
@@ -551,8 +552,11 @@ function extractAnnotationMetadata(
         ) {
           variant = parsePropertyValueText(textStylingProperty, options);
 
-          for (const nestedProperty of textStylingProperty.property ?? []) {
-            if (propertyLabelMatches(nestedProperty, "", ["size"], options)) {
+          const nestedProperties = textStylingProperty.property ?? [];
+          for (const nestedProperty of nestedProperties) {
+            if (
+              hasMatchingPropertyLabel(nestedProperty, "", ["size"], options)
+            ) {
               size = parsePropertyValueText(nestedProperty, options);
             }
           }
@@ -560,7 +564,7 @@ function extractAnnotationMetadata(
         }
 
         if (
-          propertyLabelMatches(
+          hasMatchingPropertyLabel(
             textStylingProperty,
             TEXT_ANNOTATION_TEXT_STYLING_HEADING_LEVEL_UUID,
             [HEADING_LEVEL_TOKEN],
@@ -581,7 +585,6 @@ function extractAnnotationMetadata(
       }
 
       result.textStyling = { variant, size, headingLevel, cssStyles };
-      continue;
     }
   }
 
@@ -609,18 +612,20 @@ function parseXMLStringItem<V extends ReadonlyArray<string>>(
   if (!hasTextContent && getXMLRichTextLinks(item).length === 0) {
     const hasNewlineWhitespace =
       item.whitespace?.split(" ").includes("newline") === true;
-    const nextHasNewlineWhitespace =
+    const isNextContainingNewlineWhitespace =
       options.nextItem?.whitespace?.split(" ").includes("newline") === true;
     if (hasNewlineWhitespace && options.rendering === "plain") {
-      return nextHasNewlineWhitespace ? "\n" : "\n\n";
+      return isNextContainingNewlineWhitespace ? "\n" : "\n\n";
     }
 
     if (hasNewlineWhitespace && options.rendering === "rawMDX") {
-      return nextHasNewlineWhitespace ? "\n<br />" : "\n<br />\n";
+      return isNextContainingNewlineWhitespace ? "\n<br />" : "\n<br />\n";
     }
 
     if (hasNewlineWhitespace && options.rendering === "rich") {
-      return nextHasNewlineWhitespace ? "<br />\n" : "<br />\n<br />\n";
+      return isNextContainingNewlineWhitespace
+        ? "<br />\n"
+        : "<br />\n<br />\n";
     }
 
     return applyNewlineWhitespace("", item.whitespace, options.rendering);
@@ -821,16 +826,21 @@ function createInternalLinkComponent(properties: {
 function getXMLRichTextLinks(item: XMLRichTextItem): Array<XMLRichTextLink> {
   const links: Array<{ link: XMLRichTextLink; fallbackIndex: number }> = [];
   let fallbackIndex = 0;
-  for (const rawLinks of Object.values(item.links ?? {})) {
+  const linkGroups = Object.values(item.links ?? {});
+  for (const rawLinks of linkGroups) {
     if (!Array.isArray(rawLinks)) {
       continue;
     }
 
     for (const rawLink of rawLinks) {
-      if (isXMLRichTextLink(rawLink) && !isTextAnnotationMarkerLink(rawLink)) {
-        links.push({ link: rawLink, fallbackIndex });
-        fallbackIndex += 1;
+      if (
+        !(isXMLRichTextLink(rawLink) && !isTextAnnotationMarkerLink(rawLink))
+      ) {
+        continue;
       }
+
+      links.push({ link: rawLink, fallbackIndex });
+      fallbackIndex += 1;
     }
   }
 
@@ -894,8 +904,9 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
       switch (link.type) {
         case "IIIF":
         case "image": {
+          let component: string;
           if ("rend" in link && link.rend === "inline") {
-            const component = createMDXComponent("inlineImage", {
+            component = createMDXComponent("inlineImage", {
               uuid: getLinkStringProperty(link, "uuid"),
               href: getLinkStringProperty(link, "href") ?? undefined,
               height: getLinkStringProperty(link, "height") ?? undefined,
@@ -903,23 +914,21 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
               content: contentText,
               text: linkString,
             });
-            result += component;
           } else if (link.publicationDateTime != null) {
-            const component = createInternalLinkComponent({
+            component = createInternalLinkComponent({
               uuid: getLinkStringProperty(link, "uuid"),
               text: linkString,
               content: contentText,
               annotationMetadata,
             });
-            result += component;
           } else {
-            const component = createMDXComponent("tooltipSpan", {
+            component = createMDXComponent("tooltipSpan", {
               uuid: getLinkStringProperty(link, "uuid"),
               text: linkString,
               content: contentText,
             });
-            result += component;
           }
+          result += component;
           break;
         }
         case "internalDocument": {
@@ -934,18 +943,14 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
           break;
         }
         case "externalDocument": {
-          const component =
-            link.publicationDateTime != null
-              ? createMDXComponent("documentLink", {
-                  uuid: getLinkStringProperty(link, "uuid"),
-                  text: linkString,
-                  content: contentText,
-                })
-              : createMDXComponent("tooltipSpan", {
-                  uuid: getLinkStringProperty(link, "uuid"),
-                  text: linkString,
-                  content: contentText,
-                });
+          const component = createMDXComponent(
+            link.publicationDateTime != null ? "documentLink" : "tooltipSpan",
+            {
+              uuid: getLinkStringProperty(link, "uuid"),
+              text: linkString,
+              content: contentText,
+            },
+          );
           result += component;
           break;
         }
@@ -1052,7 +1057,7 @@ function parseXMLContentItem<V extends ReadonlyArray<string>>(
   for (const [index, rawMDXBlock] of rawMDXBlocks.entries()) {
     serializedRichText = serializedRichText.replaceAll(
       `${RAW_MDX_BLOCK_PLACEHOLDER_PREFIX}${index}${RAW_MDX_BLOCK_PLACEHOLDER_SUFFIX}`,
-      rawMDXBlock,
+      () => rawMDXBlock,
     );
   }
 

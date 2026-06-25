@@ -74,7 +74,8 @@ function normalizeAliases(
   aliases: ReadonlyArray<string> | undefined,
 ): Array<string> {
   const normalizedAliases: Array<string> = [];
-  for (const alias of aliases ?? []) {
+  const candidateAliases = aliases ?? [];
+  for (const alias of candidateAliases) {
     if (alias !== "") {
       normalizedAliases.push(alias);
     }
@@ -107,14 +108,14 @@ function cloneContent<T extends ReadonlyArray<string>>(
     [T[number], ReadonlyArray<MultilingualStringEntry> | undefined]
   >;
   for (const [language, entries] of entriesByLanguage) {
-    const clonedEntries: Array<MultilingualStringEntry> = [];
-    for (const entry of entries ?? []) {
-      clonedEntries.push({
+    const clonedEntries: Array<MultilingualStringEntry> = Array.from(
+      entries ?? [],
+      (entry) => ({
         text: entry.text,
         richText: entry.richText,
         isPrimary: entry.isPrimary,
-      });
-    }
+      }),
+    );
     clonedContent[language] = normalizePrimary(clonedEntries);
   }
 
@@ -155,8 +156,9 @@ function getImplicitLanguages(
   options: MultilingualOptions,
 ): ReadonlyArray<string> {
   const languages: Array<string> = [];
+  const availableLanguages = options.availableLanguages ?? [];
 
-  for (const language of options.availableLanguages ?? []) {
+  for (const language of availableLanguages) {
     if (!languages.includes(language)) {
       languages.push(language);
     }
@@ -177,7 +179,7 @@ function isInternalInit<T extends ReadonlyArray<string>>(
   return (
     typeof value === "object" &&
     value != null &&
-    MULTILINGUAL_STRING_INTERNAL_INIT in value
+    Object.hasOwn(value, MULTILINGUAL_STRING_INTERNAL_INIT)
   );
 }
 
@@ -187,6 +189,217 @@ function isInternalInit<T extends ReadonlyArray<string>>(
 export class MultilingualString<
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
 > {
+  private static fromNormalized<U extends ReadonlyArray<string>>(
+    content: MultilingualContent<U>,
+    options: Required<MultilingualOptions>,
+    availableLanguages: ReadonlyArray<U[number]>,
+  ): MultilingualString<U> {
+    return new MultilingualString<U>({
+      [MULTILINGUAL_STRING_INTERNAL_INIT]: true,
+      content,
+      options,
+      availableLanguages,
+    });
+  }
+
+  /**
+   * Create a new multilingual string from an object of language codes to text
+   */
+  static fromObject<U extends ReadonlyArray<string>>(
+    content: MultilingualStringObject<U>,
+    languages: U,
+    options?: MultilingualOptions,
+  ): MultilingualString<U>;
+  static fromObject(
+    content: Partial<Record<string, MultilingualStringInput>>,
+    languages?: undefined,
+    options?: MultilingualOptions,
+  ): MultilingualString<ReadonlyArray<string>>;
+  static fromObject<U extends ReadonlyArray<string>>(
+    content: Partial<Record<string, MultilingualStringInput>>,
+    languages?: U,
+    options: MultilingualOptions = {},
+  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
+    const entries: Partial<
+      Record<string, ReadonlyArray<MultilingualStringInput>>
+    > = {};
+    for (const [language, text] of Object.entries(content)) {
+      if (text != null) {
+        entries[language] = [text];
+      }
+    }
+
+    if (languages === undefined) {
+      return this.fromEntries(entries, undefined, options);
+    }
+
+    return this.fromEntries(entries, languages, options);
+  }
+
+  /**
+   * Create a new multilingual string from language entries.
+   */
+  static fromEntries<U extends ReadonlyArray<string>>(
+    content: MultilingualStringEntries<U>,
+    languages: U,
+    options?: MultilingualOptions,
+  ): MultilingualString<U>;
+  static fromEntries(
+    content: Partial<Record<string, ReadonlyArray<MultilingualStringInput>>>,
+    languages?: undefined,
+    options?: MultilingualOptions,
+  ): MultilingualString<ReadonlyArray<string>>;
+  static fromEntries<U extends ReadonlyArray<string>>(
+    content: Partial<Record<string, ReadonlyArray<MultilingualStringInput>>>,
+    languages?: U,
+    options: MultilingualOptions = {},
+  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
+    if (languages === undefined) {
+      const actualLanguages = getImplicitLanguages(content, options);
+      const normalizedContent: Partial<
+        Record<string, Array<MultilingualStringEntry>>
+      > = {};
+      for (const language of actualLanguages) {
+        normalizedContent[language] = entriesFromTexts(content[language] ?? []);
+      }
+
+      const availableLanguages = getLanguagesWithEntries<ReadonlyArray<string>>(
+        normalizedContent,
+        actualLanguages,
+      );
+      const defaultOptions: Required<MultilingualOptions> = {
+        defaultLanguage:
+          options.defaultLanguage ??
+          availableLanguages[0] ??
+          actualLanguages[0]!,
+        availableLanguages: actualLanguages,
+        aliases: normalizeAliases(options.aliases),
+      };
+
+      return this.fromNormalized(
+        normalizedContent,
+        defaultOptions,
+        availableLanguages,
+      );
+    }
+
+    const normalizedContent: Partial<
+      Record<U[number], Array<MultilingualStringEntry>>
+    > = {};
+    for (const language of languages) {
+      const typedLanguage = language as U[number];
+      normalizedContent[typedLanguage] = entriesFromTexts(
+        content[typedLanguage] ?? [],
+      );
+    }
+
+    const availableLanguages = getLanguagesWithEntries(
+      normalizedContent,
+      languages,
+    );
+    const defaultOptions: Required<MultilingualOptions> = {
+      defaultLanguage:
+        options.defaultLanguage ?? availableLanguages[0] ?? languages[0]!,
+      availableLanguages: languages,
+      aliases: normalizeAliases(options.aliases),
+    };
+
+    return this.fromNormalized(
+      normalizedContent,
+      defaultOptions,
+      availableLanguages,
+    );
+  }
+
+  /**
+   * Create a new multilingual string for a single language
+   */
+  static create<U extends ReadonlyArray<string>>(
+    language: U[number],
+    text: MultilingualStringInput,
+    languages: U,
+    options?: MultilingualOptions,
+  ): MultilingualString<U>;
+  static create(
+    language: string,
+    text: MultilingualStringInput,
+    languages?: undefined,
+    options?: MultilingualOptions,
+  ): MultilingualString<ReadonlyArray<string>>;
+  static create<U extends ReadonlyArray<string>>(
+    language: string,
+    text: MultilingualStringInput,
+    languages?: U,
+    options: MultilingualOptions = {},
+  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
+    if (languages === undefined) {
+      return this.fromObject({ [language]: text }, undefined, {
+        ...options,
+        defaultLanguage: language,
+      });
+    }
+
+    return this.fromObject(
+      { [language]: text } as Partial<
+        Record<U[number], MultilingualStringInput>
+      >,
+      languages,
+      { ...options, defaultLanguage: language },
+    );
+  }
+
+  /**
+   * Create an empty multilingual string
+   */
+  static empty<U extends ReadonlyArray<string>>(
+    languages: U,
+    options?: MultilingualOptions,
+  ): MultilingualString<U>;
+  static empty(
+    languages?: undefined,
+    options?: MultilingualOptions,
+  ): MultilingualString<ReadonlyArray<string>>;
+  static empty<U extends ReadonlyArray<string>>(
+    languages?: U,
+    options: MultilingualOptions = {},
+  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
+    if (languages === undefined) {
+      return this.fromObject({}, undefined, options);
+    }
+
+    return this.fromObject({}, languages, options);
+  }
+
+  /**
+   * Recreate a multilingual string from its JSON representation.
+   */
+  static fromJSON<U extends ReadonlyArray<string>>(
+    json: MultilingualStringJSON<U>,
+    languages: U,
+    options?: Omit<MultilingualOptions, "aliases">,
+  ): MultilingualString<U>;
+  static fromJSON(
+    json: MultilingualStringJSON,
+    languages?: undefined,
+    options?: Omit<MultilingualOptions, "aliases">,
+  ): MultilingualString<ReadonlyArray<string>>;
+  static fromJSON<U extends ReadonlyArray<string>>(
+    json: MultilingualStringJSON | MultilingualStringJSON<U>,
+    languages?: U,
+    options: Omit<MultilingualOptions, "aliases"> = {},
+  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
+    const content = json.content as Partial<
+      Record<string, ReadonlyArray<MultilingualStringInput>>
+    >;
+    const mergedOptions = { ...options, aliases: json.aliases };
+
+    if (languages === undefined) {
+      return this.fromEntries(content, undefined, mergedOptions);
+    }
+
+    return this.fromEntries(content, languages, mergedOptions);
+  }
+
   private readonly _content: Readonly<MultilingualContent<T>>;
   private readonly _options: Required<MultilingualOptions>;
   private readonly _availableLanguages: ReadonlyArray<T[number]>;
@@ -231,217 +444,6 @@ export class MultilingualString<
     this._options = parsed._options;
     this._availableLanguages = parsed._availableLanguages;
     this._aliases = parsed._aliases;
-  }
-
-  private static fromNormalized<U extends ReadonlyArray<string>>(
-    content: MultilingualContent<U>,
-    options: Required<MultilingualOptions>,
-    availableLanguages: ReadonlyArray<U[number]>,
-  ): MultilingualString<U> {
-    return new MultilingualString<U>({
-      [MULTILINGUAL_STRING_INTERNAL_INIT]: true,
-      content,
-      options,
-      availableLanguages,
-    });
-  }
-
-  /**
-   * Create a new multilingual string from an object of language codes to text
-   */
-  static fromObject<U extends ReadonlyArray<string>>(
-    content: MultilingualStringObject<U>,
-    languages: U,
-    options?: MultilingualOptions,
-  ): MultilingualString<U>;
-  static fromObject(
-    content: Partial<Record<string, MultilingualStringInput>>,
-    languages?: undefined,
-    options?: MultilingualOptions,
-  ): MultilingualString<ReadonlyArray<string>>;
-  static fromObject<U extends ReadonlyArray<string>>(
-    content: Partial<Record<string, MultilingualStringInput>>,
-    languages?: U,
-    options: MultilingualOptions = {},
-  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
-    const entries: Partial<
-      Record<string, ReadonlyArray<MultilingualStringInput>>
-    > = {};
-    for (const [language, text] of Object.entries(content)) {
-      if (text != null) {
-        entries[language] = [text];
-      }
-    }
-
-    if (languages === undefined) {
-      return MultilingualString.fromEntries(entries, undefined, options);
-    }
-
-    return MultilingualString.fromEntries(entries, languages, options);
-  }
-
-  /**
-   * Create a new multilingual string from language entries.
-   */
-  static fromEntries<U extends ReadonlyArray<string>>(
-    content: MultilingualStringEntries<U>,
-    languages: U,
-    options?: MultilingualOptions,
-  ): MultilingualString<U>;
-  static fromEntries(
-    content: Partial<Record<string, ReadonlyArray<MultilingualStringInput>>>,
-    languages?: undefined,
-    options?: MultilingualOptions,
-  ): MultilingualString<ReadonlyArray<string>>;
-  static fromEntries<U extends ReadonlyArray<string>>(
-    content: Partial<Record<string, ReadonlyArray<MultilingualStringInput>>>,
-    languages?: U,
-    options: MultilingualOptions = {},
-  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
-    if (languages === undefined) {
-      const actualLanguages = getImplicitLanguages(content, options);
-      const normalizedContent: Partial<
-        Record<string, Array<MultilingualStringEntry>>
-      > = {};
-      for (const language of actualLanguages) {
-        normalizedContent[language] = entriesFromTexts(content[language] ?? []);
-      }
-
-      const availableLanguages = getLanguagesWithEntries<ReadonlyArray<string>>(
-        normalizedContent,
-        actualLanguages,
-      );
-      const defaultOptions: Required<MultilingualOptions> = {
-        defaultLanguage:
-          options.defaultLanguage ??
-          availableLanguages[0] ??
-          actualLanguages[0]!,
-        availableLanguages: actualLanguages,
-        aliases: normalizeAliases(options.aliases),
-      };
-
-      return MultilingualString.fromNormalized(
-        normalizedContent,
-        defaultOptions,
-        availableLanguages,
-      );
-    }
-
-    const normalizedContent: Partial<
-      Record<U[number], Array<MultilingualStringEntry>>
-    > = {};
-    for (const language of languages) {
-      const typedLanguage = language as U[number];
-      normalizedContent[typedLanguage] = entriesFromTexts(
-        content[typedLanguage] ?? [],
-      );
-    }
-
-    const availableLanguages = getLanguagesWithEntries(
-      normalizedContent,
-      languages,
-    );
-    const defaultOptions: Required<MultilingualOptions> = {
-      defaultLanguage:
-        options.defaultLanguage ?? availableLanguages[0] ?? languages[0]!,
-      availableLanguages: languages,
-      aliases: normalizeAliases(options.aliases),
-    };
-
-    return MultilingualString.fromNormalized(
-      normalizedContent,
-      defaultOptions,
-      availableLanguages,
-    );
-  }
-
-  /**
-   * Create a new multilingual string for a single language
-   */
-  static create<U extends ReadonlyArray<string>>(
-    language: U[number],
-    text: MultilingualStringInput,
-    languages: U,
-    options?: MultilingualOptions,
-  ): MultilingualString<U>;
-  static create(
-    language: string,
-    text: MultilingualStringInput,
-    languages?: undefined,
-    options?: MultilingualOptions,
-  ): MultilingualString<ReadonlyArray<string>>;
-  static create<U extends ReadonlyArray<string>>(
-    language: string,
-    text: MultilingualStringInput,
-    languages?: U,
-    options: MultilingualOptions = {},
-  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
-    if (languages === undefined) {
-      return MultilingualString.fromObject({ [language]: text }, undefined, {
-        ...options,
-        defaultLanguage: language,
-      });
-    }
-
-    return MultilingualString.fromObject(
-      { [language]: text } as Partial<
-        Record<U[number], MultilingualStringInput>
-      >,
-      languages,
-      { ...options, defaultLanguage: language },
-    );
-  }
-
-  /**
-   * Create an empty multilingual string
-   */
-  static empty<U extends ReadonlyArray<string>>(
-    languages: U,
-    options?: MultilingualOptions,
-  ): MultilingualString<U>;
-  static empty(
-    languages?: undefined,
-    options?: MultilingualOptions,
-  ): MultilingualString<ReadonlyArray<string>>;
-  static empty<U extends ReadonlyArray<string>>(
-    languages?: U,
-    options: MultilingualOptions = {},
-  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
-    if (languages === undefined) {
-      return MultilingualString.fromObject({}, undefined, options);
-    }
-
-    return MultilingualString.fromObject({}, languages, options);
-  }
-
-  /**
-   * Recreate a multilingual string from its JSON representation.
-   */
-  static fromJSON<U extends ReadonlyArray<string>>(
-    json: MultilingualStringJSON<U>,
-    languages: U,
-    options?: Omit<MultilingualOptions, "aliases">,
-  ): MultilingualString<U>;
-  static fromJSON(
-    json: MultilingualStringJSON,
-    languages?: undefined,
-    options?: Omit<MultilingualOptions, "aliases">,
-  ): MultilingualString<ReadonlyArray<string>>;
-  static fromJSON<U extends ReadonlyArray<string>>(
-    json: MultilingualStringJSON | MultilingualStringJSON<U>,
-    languages?: U,
-    options: Omit<MultilingualOptions, "aliases"> = {},
-  ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
-    const content = json.content as Partial<
-      Record<string, ReadonlyArray<MultilingualStringInput>>
-    >;
-    const mergedOptions = { ...options, aliases: json.aliases };
-
-    if (languages === undefined) {
-      return MultilingualString.fromEntries(content, undefined, mergedOptions);
-    }
-
-    return MultilingualString.fromEntries(content, languages, mergedOptions);
   }
 
   private getPrimaryEntry(language: T[number]): MultilingualStringEntry | null {
@@ -523,10 +525,10 @@ export class MultilingualString<
    * Get all text entries in a specific language without fallback
    */
   getExactTexts(language: T[number]): Array<string> {
-    const texts: Array<string> = [];
-    for (const entry of this._content[language] ?? []) {
-      texts.push(entry.text);
-    }
+    const texts: Array<string> = Array.from(
+      this._content[language] ?? [],
+      (entry) => entry.text,
+    );
 
     return texts;
   }
@@ -535,10 +537,10 @@ export class MultilingualString<
    * Get all rich text entries in a specific language without fallback
    */
   getExactRichTexts(language: T[number]): Array<string> {
-    const texts: Array<string> = [];
-    for (const entry of this._content[language] ?? []) {
-      texts.push(entry.richText);
-    }
+    const texts: Array<string> = Array.from(
+      this._content[language] ?? [],
+      (entry) => entry.richText,
+    );
 
     return texts;
   }
@@ -581,14 +583,14 @@ export class MultilingualString<
    * Get all entries in a specific language without fallback
    */
   getExactEntries(language: T[number]): Array<MultilingualStringEntry> {
-    const entries: Array<MultilingualStringEntry> = [];
-    for (const entry of this._content[language] ?? []) {
-      entries.push({
+    const entries: Array<MultilingualStringEntry> = Array.from(
+      this._content[language] ?? [],
+      (entry) => ({
         text: entry.text,
         richText: entry.richText,
         isPrimary: entry.isPrimary,
-      });
-    }
+      }),
+    );
 
     return entries;
   }
@@ -657,7 +659,8 @@ export class MultilingualString<
    */
   hasContent(): boolean {
     for (const language of this._availableLanguages) {
-      for (const entry of this._content[language] ?? []) {
+      const entries = this._content[language] ?? [];
+      for (const entry of entries) {
         if (entry.text.trim().length > 0 || entry.richText.trim().length > 0) {
           return true;
         }
@@ -768,20 +771,20 @@ export class MultilingualString<
    * Transform all language versions (returns new instance)
    */
   map(
-    fn: (text: string, language: T[number]) => string,
+    function_: (text: string, language: T[number]) => string,
   ): MultilingualString<T> {
     const newContent: Partial<
       Record<T[number], Array<MultilingualStringEntry>>
     > = {};
     for (const language of this._availableLanguages) {
-      const mappedEntries: Array<MultilingualStringEntry> = [];
-      for (const entry of this._content[language] ?? []) {
-        mappedEntries.push({
-          text: fn(entry.text, language),
-          richText: fn(entry.richText, language),
+      const mappedEntries: Array<MultilingualStringEntry> = Array.from(
+        this._content[language] ?? [],
+        (entry) => ({
+          text: function_(entry.text, language),
+          richText: function_(entry.richText, language),
           isPrimary: entry.isPrimary,
-        });
-      }
+        }),
+      );
       newContent[language] = normalizePrimary(mappedEntries);
     }
 
@@ -796,7 +799,7 @@ export class MultilingualString<
    * Filter languages based on predicate (returns new instance)
    */
   filter(
-    predicate: (text: string, language: T[number]) => boolean,
+    shouldInclude: (text: string, language: T[number]) => boolean,
   ): MultilingualString<T> {
     const newContent: Partial<
       Record<T[number], Array<MultilingualStringEntry>>
@@ -804,8 +807,9 @@ export class MultilingualString<
 
     for (const language of this._availableLanguages) {
       const entries: Array<MultilingualStringEntry> = [];
-      for (const entry of this._content[language] ?? []) {
-        if (predicate(entry.text, language)) {
+      const languageEntries = this._content[language] ?? [];
+      for (const entry of languageEntries) {
+        if (shouldInclude(entry.text, language)) {
           entries.push(entry);
         }
       }

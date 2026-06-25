@@ -8,14 +8,16 @@ import type {
 } from "#/types/index.js";
 import type { WebElementComponent } from "#/types/website.js";
 import { DEFAULT_PAGE_SIZE } from "#/helpers.js";
-import { isPseudoUuid } from "#/utils.js";
+import { isPseudoUuid } from "#/utilities.js";
 
 const positiveNumber = (message: string): v.GenericSchema<unknown, number> =>
   v.pipe(v.number(), v.minValue(1, message));
 const defaultString = (value: string): v.GenericSchema<unknown, string> =>
   v.optional(v.string(), value);
-const defaultBoolean = (value: boolean): v.GenericSchema<unknown, boolean> =>
-  v.optional(v.boolean(), value);
+const defaultBoolean = (
+  // eslint-disable-next-line unicorn/consistent-boolean-name -- `value` is the default value, not a predicate
+  value: boolean,
+): v.GenericSchema<unknown, boolean> => v.optional(v.boolean(), value);
 
 const sortDirectionSchema = v.optional(v.picklist(["asc", "desc"]), "asc");
 
@@ -91,7 +93,7 @@ export const gallerySchema = v.object({
  */
 export const renderOptionsSchema = v.pipe(
   v.string(),
-  v.transform((str) => str.split(" ")),
+  v.transform((string) => string.split(" ")),
   v.array(v.picklist(["bold", "italic", "underline"])),
 );
 
@@ -274,7 +276,7 @@ const setItemsSortSchema = v.optional(
  * Schema for validating the parameters for the Set property values fetching function
  * @internal
  */
-export const setPropertyValuesParamsSchema = v.object({
+export const setPropertyValuesParametersSchema = v.object({
   setScopeUuids: v.pipe(
     v.array(uuidSchema),
     v.minLength(1, "At least one set scope UUID is required"),
@@ -295,7 +297,7 @@ export const setPropertyValuesParamsSchema = v.object({
  * Schema for validating Set items parameters
  * @internal
  */
-export const setItemsParamsSchema = v.object({
+export const setItemsParametersSchema = v.object({
   setScopeUuids: v.pipe(
     v.array(uuidSchema),
     v.minLength(1, "At least one set scope UUID is required"),

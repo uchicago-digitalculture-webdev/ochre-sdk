@@ -54,7 +54,7 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
 
   value<U = WebsitePropertyContent<T>>(label: string): U | null {
     const value = this.valueNode(label)?.content;
-    return value == null ? null : (value as U);
+    return (value ?? null) as U | null;
   }
 
   valueOr<U>(label: string, fallback: U): U {
@@ -72,11 +72,11 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
       return value;
     }
 
-    if (typeof value !== "string") {
+    if (typeof value !== "string" || value.trim() === "") {
       return null;
     }
 
-    const parsedValue = Number.parseFloat(value);
+    const parsedValue = Number(value);
     return Number.isNaN(parsedValue) ? null : parsedValue;
   }
 

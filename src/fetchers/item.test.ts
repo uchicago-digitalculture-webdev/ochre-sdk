@@ -243,12 +243,12 @@ function getTestItemType(category: "tree" | "resource" | "set"): string {
   }
 }
 
-function createFetchItemXML(params: {
+function createFetchItemXML(parameters: {
   uuid: string;
   category: "tree" | "resource" | "set";
   itemContent?: string;
 }): string {
-  const { uuid, category, itemContent = "" } = params;
+  const { uuid, category, itemContent = "" } = parameters;
   const type = getTestItemType(category);
 
   return `<result><ochre uuid="${uuid}" uuidBelongsTo="${TEST_PROJECT_UUID}" belongsTo="Test" languages="eng" publicationDateTime="2026-05-10T10:08:35Z" persistentUrl="https://pi.lib.uchicago.edu/1001/org/ochre/${uuid}"><metadata><dataset>Dataset</dataset><description>Description</description><publisher>Publisher</publisher><identifier>https://pi.lib.uchicago.edu/1001/org/ochre/${uuid}</identifier><language default="true">eng</language><project uuid="${TEST_PROJECT_UUID}" dateFormat="yyyy-MM-dd" page="item">${createXMLIdentification("Project")}</project><item uuid="${uuid}" category="${category}" type="${type}">${createXMLIdentification(type)}</item></metadata><${category} uuid="${uuid}" publicationDateTime="2026-05-10T10:08:35Z">${createXMLIdentification(type)}${itemContent}</${category}></ochre></result>`;
@@ -295,10 +295,9 @@ function parseContentLikeForTest(
 function formatSchemaIssues(issues: Array<v.BaseIssue<unknown>>): string {
   const messages: Array<string> = [];
   for (const issue of issues) {
-    const path: Array<string> = [];
-    for (const pathItem of issue.path ?? []) {
-      path.push(String(pathItem.key));
-    }
+    const path: Array<string> = Array.from(issue.path ?? [], (pathItem) =>
+      String(pathItem.key),
+    );
     messages.push(`${path.join(".")}: ${issue.message}`);
   }
 
@@ -535,7 +534,8 @@ function expectContextMatchesRaw(
   let parsedHeadingCount = 0;
   let parsedPropertyVariableCount = 0;
   let parsedPropertyValueCount = 0;
-  for (const node of parsedContext?.nodes ?? []) {
+  const parsedNodes = parsedContext?.nodes ?? [];
+  for (const node of parsedNodes) {
     parsedHeadingCount += node.heading.length;
     parsedPropertyVariableCount += node.propertyVariable?.length ?? 0;
     parsedPropertyValueCount += node.propertyValue?.length ?? 0;
@@ -657,9 +657,7 @@ function expectPropertyFieldsMatchRaw(
     expect(parsedValue.content).toBe(
       parsedValue.dataType === "boolean"
         ? expectedContent === "true"
-        : parsedValue.dataType === "integer" ||
-            parsedValue.dataType === "decimal" ||
-            parsedValue.dataType === "time"
+        : ["integer", "decimal", "time"].includes(parsedValue.dataType)
           ? Number.isNaN(expectedNumericContent)
             ? 0
             : expectedNumericContent
@@ -737,7 +735,8 @@ function countResourceItems(
     | undefined,
 ): number {
   let count = 0;
-  for (const resource of rawResources ?? []) {
+  const resources = rawResources ?? [];
+  for (const resource of resources) {
     if (!("uuid" in resource)) {
       count += resource.resource.length;
       continue;
@@ -800,34 +799,44 @@ function getRawSetItemEntries(
     return entries;
   }
 
-  for (const tree of hierarchy.tree ?? []) {
+  const trees = hierarchy.tree ?? [];
+  for (const tree of trees) {
     entries.push({ category: "tree", item: tree });
   }
-  for (const bibliography of hierarchy.bibliography ?? []) {
+  const bibliographies = hierarchy.bibliography ?? [];
+  for (const bibliography of bibliographies) {
     entries.push({ category: "bibliography", item: bibliography });
   }
-  for (const concept of hierarchy.concept ?? []) {
+  const concepts = hierarchy.concept ?? [];
+  for (const concept of concepts) {
     entries.push({ category: "concept", item: concept });
   }
-  for (const spatialUnit of hierarchy.spatialUnit ?? []) {
+  const spatialUnits = hierarchy.spatialUnit ?? [];
+  for (const spatialUnit of spatialUnits) {
     entries.push({ category: "spatialUnit", item: spatialUnit });
   }
-  for (const period of hierarchy.period ?? []) {
+  const periods = hierarchy.period ?? [];
+  for (const period of periods) {
     entries.push({ category: "period", item: period });
   }
-  for (const person of hierarchy.person ?? []) {
+  const persons = hierarchy.person ?? [];
+  for (const person of persons) {
     entries.push({ category: "person", item: person });
   }
-  for (const propertyVariable of hierarchy.propertyVariable ?? []) {
+  const propertyVariables = hierarchy.propertyVariable ?? [];
+  for (const propertyVariable of propertyVariables) {
     entries.push({ category: "propertyVariable", item: propertyVariable });
   }
-  for (const propertyVariable of hierarchy.variable ?? []) {
+  const variables = hierarchy.variable ?? [];
+  for (const propertyVariable of variables) {
     entries.push({ category: "propertyVariable", item: propertyVariable });
   }
-  for (const propertyValue of hierarchy.propertyValue ?? []) {
+  const propertyValues = hierarchy.propertyValue ?? [];
+  for (const propertyValue of propertyValues) {
     entries.push({ category: "propertyValue", item: propertyValue });
   }
-  for (const resource of hierarchy.resource ?? []) {
+  const resources = hierarchy.resource ?? [];
+  for (const resource of resources) {
     if (!("uuid" in resource)) {
       for (const embeddedResource of resource.resource) {
         entries.push({ category: "resource", item: embeddedResource });
@@ -837,10 +846,12 @@ function getRawSetItemEntries(
 
     entries.push({ category: "resource", item: resource });
   }
-  for (const text of hierarchy.text ?? []) {
+  const texts = hierarchy.text ?? [];
+  for (const text of texts) {
     entries.push({ category: "text", item: text });
   }
-  for (const set of hierarchy.set ?? []) {
+  const sets = hierarchy.set ?? [];
+  for (const set of sets) {
     entries.push({ category: "set", item: set });
   }
 
@@ -1007,10 +1018,10 @@ function expectCategorySpecificFields(
       break;
     }
     case "concept": {
-      const rawConcept = rawItem as XMLConcept;
       if (!("interpretations" in parsedItem)) {
         throw new Error("Parsed concept is missing concept fields");
       }
+      const rawConcept = rawItem as XMLConcept;
       expect(parsedItem.interpretations).toHaveLength(
         rawConcept.interpretations?.interpretation.length ?? 0,
       );
@@ -1021,10 +1032,10 @@ function expectCategorySpecificFields(
       break;
     }
     case "spatialUnit": {
-      const rawSpatialUnit = rawItem as XMLSpatialUnit;
       if (!("observations" in parsedItem)) {
         throw new Error("Parsed spatial unit is missing spatial unit fields");
       }
+      const rawSpatialUnit = rawItem as XMLSpatialUnit;
       expect(parsedItem.observations).toHaveLength(
         rawSpatialUnit.observations?.observation.length ?? 0,
       );
@@ -1131,10 +1142,10 @@ function expectCategorySpecificFields(
       break;
     }
     case "text": {
-      const rawText = rawItem as XMLText;
       if (!("sections" in parsedItem)) {
         throw new Error("Parsed text is missing text fields");
       }
+      const rawText = rawItem as XMLText;
       expect(parsedItem.text).toBe(rawText.text ?? null);
       expect(parsedItem.language).toBe(rawText.language ?? null);
       expect(parsedItem.coordinates).toHaveLength(
@@ -1181,10 +1192,12 @@ function countRawSections(rawText: XMLText): number {
   }
 
   let count = 0;
-  for (const translation of rawText.sections.translation ?? []) {
+  const translations = rawText.sections.translation ?? [];
+  for (const translation of translations) {
     count += translation.section.length;
   }
-  for (const phonemic of rawText.sections.phonemic ?? []) {
+  const phonemics = rawText.sections.phonemic ?? [];
+  for (const phonemic of phonemics) {
     count += phonemic.section.length;
   }
 

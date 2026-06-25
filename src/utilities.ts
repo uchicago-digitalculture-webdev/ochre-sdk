@@ -198,7 +198,7 @@ function appendDetailedError(
 
     if (error.cause != null) {
       const causeLines: Array<string> = [];
-      if (appendDetailedCause(causeLines, error.cause, depth, seenErrors)) {
+      if (didAppendDetailedCause(causeLines, error.cause, depth, seenErrors)) {
         lines.push("", ...causeLines);
       }
     }
@@ -213,7 +213,7 @@ function appendDetailedError(
   }
 }
 
-function appendDetailedCause(
+function didAppendDetailedCause(
   lines: Array<string>,
   cause: unknown,
   depth: number,
@@ -242,14 +242,11 @@ function appendDetailedCause(
   return false;
 }
 
-export function getErrorMessage(
-  error: unknown,
-  fallbackMessage: string,
-): string {
+function getErrorMessage(error: unknown, fallbackMessage: string): string {
   return error instanceof Error ? error.message : fallbackMessage;
 }
 
-export function getDetailedError(
+function getDetailedError(
   error: unknown,
   fallbackMessage = "Unknown error",
 ): string {

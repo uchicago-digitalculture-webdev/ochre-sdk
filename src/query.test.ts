@@ -40,7 +40,7 @@ function countOccurrences(value: string, search: string): number {
   return value.split(search).length - 1;
 }
 
-async function captureSetItemsQuery(params: {
+async function captureSetItemsQuery(parameters: {
   setScopeUuids: Array<string>;
   queries?: Query | null;
   sort?: SetItemsSort;
@@ -49,7 +49,7 @@ async function captureSetItemsQuery(params: {
 }): Promise<string> {
   let postedBody = "";
 
-  await fetchSetItems(params, undefined, {
+  await fetchSetItems(parameters, undefined, {
     fetch: async (_input, init) => {
       postedBody = String(init?.body ?? "");
 
@@ -62,7 +62,7 @@ async function captureSetItemsQuery(params: {
   return postedBody;
 }
 
-async function captureSetPropertyValuesQuery(params: {
+async function captureSetPropertyValuesQuery(parameters: {
   setScopeUuids: Array<string>;
   queries?: Query | null;
   attributes?: { bibliographies: boolean; periods: boolean };
@@ -70,7 +70,7 @@ async function captureSetPropertyValuesQuery(params: {
 }): Promise<string> {
   let postedBody = "";
 
-  await fetchSetPropertyValues(params, {
+  await fetchSetPropertyValues(parameters, {
     fetch: async (_input, init) => {
       postedBody = String(init?.body ?? "");
 

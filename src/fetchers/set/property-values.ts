@@ -1,3 +1,5 @@
+/* eslint-disable unicorn/prefer-https */
+/* eslint-disable unicorn/no-incorrect-template-string-interpolation */
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type {
@@ -19,12 +21,12 @@ import {
   buildBelongsToCollectionQueryExpression,
   buildQueryPlan,
 } from "#/query.js";
-import { setPropertyValuesParamsSchema } from "#/schemas.js";
+import { setPropertyValuesParametersSchema } from "#/schemas.js";
 import {
   createSchemaValidationError,
   getErrorOutput,
   stringLiteral,
-} from "#/utils.js";
+} from "#/utilities.js";
 
 type ParsedPropertyValueItem = PropertyValueQueryItem & {
   scope: "global" | "variable";
@@ -161,12 +163,12 @@ function sortAttributeValues(
 
 const countSchema = v.pipe(
   v.optional(v.union([v.number(), v.string()]), 1),
-  v.transform((val) => {
-    if (val === "") {
+  v.transform((value) => {
+    if (value === "") {
       return 1;
     }
 
-    const count = Number(val);
+    const count = Number(value);
 
     return Number.isFinite(count) ? count : 1;
   }),
@@ -184,15 +186,19 @@ const propertyValueLabelContentSchema = v.object({
 function getPropertyFacetSelectorsFromQueries(
   queries: Query | null,
 ): Array<PropertyFacetSelector> {
-  const propertyFacetSelectors = new Map<string, PropertyFacetSelector>();
-
   if (queries == null) {
     return [];
   }
 
+  const propertyFacetSelectors = new Map<string, PropertyFacetSelector>();
   const pendingQueries: Array<Query> = [queries];
 
-  for (const query of pendingQueries) {
+  while (pendingQueries.length > 0) {
+    const query = pendingQueries.shift();
+    if (query == null) {
+      continue;
+    }
+
     if ("target" in query) {
       if (query.target !== "property") {
         continue;
@@ -212,7 +218,7 @@ function getPropertyFacetSelectorsFromQueries(
     pendingQueries.push(...("and" in query ? query.and : query.or));
   }
 
-  return [...propertyFacetSelectors.values()];
+  return propertyFacetSelectors.values().toArray();
 }
 
 function getItemFilterQueriesFromPropertyValueQueries(
@@ -274,18 +280,18 @@ const propertyValueQueryItemSchema = v.pipe(
     payload: v.optional(v.string()),
     content: v.optional(v.array(propertyValueLabelContentSchema)),
   }),
-  v.transform((val): ParsedPropertyValueItem => {
-    const dataType = normalizePropertyValueDataType(val.dataType);
-    const label = parsePropertyValueLabel(val.content, val.payload);
+  v.transform((value): ParsedPropertyValueItem => {
+    const dataType = normalizePropertyValueDataType(value.dataType);
+    const label = parsePropertyValueLabel(value.content, value.payload);
     const returnValue: ParsedPropertyValueItem = {
-      uuid: val.uuid !== "" ? val.uuid : null,
-      scope: val.scope,
+      uuid: value.uuid !== "" ? value.uuid : null,
+      scope: value.scope,
       variableUuid:
-        val.variableUuid != null && val.variableUuid !== ""
-          ? val.variableUuid
+        value.variableUuid != null && value.variableUuid !== ""
+          ? value.variableUuid
           : null,
-      count: val.count,
-      globalCount: val.globalCount ?? null,
+      count: value.count,
+      globalCount: value.globalCount ?? null,
       dataType,
       content: null,
       label,
@@ -293,14 +299,14 @@ const propertyValueQueryItemSchema = v.pipe(
 
     switch (dataType) {
       case "IDREF": {
-        returnValue.content = val.uuid !== "" ? val.uuid : null;
+        returnValue.content = value.uuid !== "" ? value.uuid : null;
         break;
       }
       case "integer":
       case "decimal":
       case "time": {
-        if (val.rawValue != null && val.rawValue !== "") {
-          const numericContent = Number(val.rawValue);
+        if (value.rawValue != null && value.rawValue !== "") {
+          const numericContent = Number(value.rawValue);
           returnValue.content = Number.isNaN(numericContent)
             ? null
             : numericContent;
@@ -308,14 +314,14 @@ const propertyValueQueryItemSchema = v.pipe(
         break;
       }
       case "boolean": {
-        returnValue.content = parsePropertyValueBooleanContent(val.rawValue);
+        returnValue.content = parsePropertyValueBooleanContent(value.rawValue);
         break;
       }
       default: {
         const labelText = label?.getText() ?? null;
         returnValue.content =
-          val.rawValue != null && val.rawValue !== ""
-            ? val.rawValue.toString()
+          value.rawValue != null && value.rawValue !== ""
+            ? value.rawValue
             : labelText;
         break;
       }
@@ -333,14 +339,14 @@ const attributeValueQueryItemSchema = v.pipe(
     payload: v.optional(v.string()),
   }),
   v.transform(
-    (val): ParsedAttributeValueItem => ({
-      attributeType: val.attributeType,
-      count: val.count,
+    (value): ParsedAttributeValueItem => ({
+      attributeType: value.attributeType,
+      count: value.count,
       content:
-        val.content != null && val.content !== ""
-          ? val.content
-          : val.payload != null && val.payload !== ""
-            ? val.payload
+        value.content != null && value.content !== ""
+          ? value.content
+          : value.payload != null && value.payload !== ""
+            ? value.payload
             : null,
     }),
   ),
@@ -371,18 +377,18 @@ const responseSchema = v.object({
 
 /**
  * Build an XQuery string to fetch property values from the OCHRE API
- * @param params - The parameters for the fetch
- * @param params.setScopeUuids - An array of set scope UUIDs to filter by
- * @param params.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
- * @param params.queries - Recursive query tree used to filter matching items
- * @param params.propertyFacetSelectors - Property variable/relation selectors to aggregate, if any
- * @param params.attributes - Whether to return values for bibliographies and periods
- * @param params.attributes.bibliographies - Whether to return values for bibliographies
- * @param params.attributes.periods - Whether to return values for periods
- * @param params.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
+ * @param parameters - The parameters for the fetch
+ * @param parameters.setScopeUuids - An array of set scope UUIDs to filter by
+ * @param parameters.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
+ * @param parameters.queries - Recursive query tree used to filter matching items
+ * @param parameters.propertyFacetSelectors - Property variable/relation selectors to aggregate, if any
+ * @param parameters.attributes - Whether to return values for bibliographies and periods
+ * @param parameters.attributes.bibliographies - Whether to return values for bibliographies
+ * @param parameters.attributes.periods - Whether to return values for periods
+ * @param parameters.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
  * @returns An XQuery string
  */
-function buildXQuery(params: {
+function buildXQuery(parameters: {
   setScopeUuids: Array<string>;
   belongsToCollectionScopeUuids: Array<string>;
   queries: Query | null;
@@ -397,7 +403,7 @@ function buildXQuery(params: {
     propertyFacetSelectors,
     attributes,
     isLimitedToLeafPropertyValues,
-  } = params;
+  } = parameters;
 
   const setScopeValues = setScopeUuids.map((uuid) => stringLiteral(uuid));
   const setScopeDeclaration = `declare variable $setScopeUuids := (${setScopeValues.join(", ")});`;
@@ -666,20 +672,20 @@ return (${returnedSequences.join(", ")})
 /**
  * Fetches and parses Set property values from the OCHRE API
  *
- * @param params - The parameters for the fetch
- * @param params.setScopeUuids - An array of set scope UUIDs to filter by
- * @param params.queries - Recursive query tree used to filter matching items
- * @param params.attributes - Whether to return values for bibliographies and periods
- * @param params.attributes.bibliographies - Whether to return values for bibliographies
- * @param params.attributes.periods - Whether to return values for periods
- * @param params.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
+ * @param parameters - The parameters for the fetch
+ * @param parameters.setScopeUuids - An array of set scope UUIDs to filter by
+ * @param parameters.queries - Recursive query tree used to filter matching items
+ * @param parameters.attributes - Whether to return values for bibliographies and periods
+ * @param parameters.attributes.bibliographies - Whether to return values for bibliographies
+ * @param parameters.attributes.periods - Whether to return values for periods
+ * @param parameters.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
  * @param options - Options for the fetch
  * @param options.fetch - The fetch function to use
  * @returns Parsed Set property values and requested attribute values.
  * Returns empty arrays/objects when no matches are found, and null outputs on fetch/parse errors.
  */
 export async function fetchSetPropertyValues(
-  params: {
+  parameters: {
     setScopeUuids: Array<string>;
     queries?: Query | null;
     attributes?: { bibliographies: boolean; periods: boolean };
@@ -720,7 +726,7 @@ export async function fetchSetPropertyValues(
       queries,
       attributes,
       isLimitedToLeafPropertyValues,
-    } = v.parse(setPropertyValuesParamsSchema, params);
+    } = v.parse(setPropertyValuesParametersSchema, parameters);
     const propertyFacetSelectors =
       getPropertyFacetSelectorsFromQueries(queries);
 
@@ -877,9 +883,9 @@ export async function fetchSetPropertyValues(
     }
 
     return {
-      propertyValues: sortPropertyValues([
-        ...flattenedPropertyValuesByKey.values(),
-      ]),
+      propertyValues: sortPropertyValues(
+        flattenedPropertyValuesByKey.values().toArray(),
+      ),
       propertyValuesByPropertyVariableUuid,
       attributeValues: {
         bibliographies: attributes.bibliographies

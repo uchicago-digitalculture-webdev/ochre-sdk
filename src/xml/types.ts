@@ -515,11 +515,11 @@ export type XMLText = XMLBaseItem & {
   reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;
   notes?: { note: Array<XMLNote> };
   sections?:
+    | XMLString
     | {
         translation?: Array<{ section: Array<XMLSection> }>;
         phonemic?: Array<{ section: Array<XMLSection> }>;
-      }
-    | XMLString;
+      };
   periods?: { period: Array<XMLPeriod> };
   creators?: { creator: Array<XMLPerson> };
   editions?: {

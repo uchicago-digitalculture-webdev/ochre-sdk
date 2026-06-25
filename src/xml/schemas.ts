@@ -73,7 +73,7 @@ import type {
   XMLWebsiteStyle as XMLWebsiteStyleType,
   XMLWebsiteTree as XMLWebsiteTreeType,
 } from "#/xml/types.js";
-import { isPseudoUuid } from "#/utils.js";
+import { isPseudoUuid } from "#/utilities.js";
 
 function getXMLStringPayload(value: string | XMLStringType): string | null {
   return typeof value === "string" ? value : (value.payload ?? null);
@@ -190,11 +190,11 @@ const XMLOptionalNumber: v.GenericSchema<unknown, XMLNumberType | undefined> =
 
 const XMLBoolean: v.GenericSchema<unknown, XMLBooleanType> = v.pipe(
   v.union([v.string("XMLBoolean: string is string and required"), XMLString]),
-  v.check((val) => {
-    const payload = getXMLStringPayload(val);
+  v.check((value) => {
+    const payload = getXMLStringPayload(value);
     return payload === "true" || payload === "false";
   }, "XMLBoolean: string is not a boolean"),
-  v.transform((val) => getXMLStringPayload(val) === "true"),
+  v.transform((value) => getXMLStringPayload(value) === "true"),
 );
 
 // Custom datetime validation for ISO strings and OCHRE's "YYYY-MM-DD HH:mm:ss".
@@ -1699,13 +1699,13 @@ export const XMLLink: v.GenericSchema<unknown, XMLLinkType> = v.pipe(
     },
     "XMLLink: Shape error",
   ),
-  v.check((val) => {
-    if (Object.keys(val).length > 0) {
+  v.check((value) => {
+    if (Object.keys(value).length > 0) {
       return true;
     }
 
     for (const knownCategory of ITEM_CATEGORIES) {
-      if (val[knownCategory] != null) {
+      if (value[knownCategory] != null) {
         return true;
       }
     }
@@ -2070,7 +2070,8 @@ const XMLTopLevelDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.pipe(
 
     if ("bibliography" in dataItem) {
       for (const bibliography of dataItem.bibliography) {
-        for (const child of bibliography.bibliography ?? []) {
+        const children = bibliography.bibliography ?? [];
+        for (const child of children) {
           if ((child.bibliography?.length ?? 0) > 0) {
             return false;
           }
@@ -2080,7 +2081,8 @@ const XMLTopLevelDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.pipe(
 
     if ("concept" in dataItem) {
       for (const concept of dataItem.concept) {
-        for (const child of concept.concept ?? []) {
+        const children = concept.concept ?? [];
+        for (const child of children) {
           if ((child.concept?.length ?? 0) > 0) {
             return false;
           }
@@ -2090,7 +2092,8 @@ const XMLTopLevelDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.pipe(
 
     if ("spatialUnit" in dataItem) {
       for (const spatialUnit of dataItem.spatialUnit) {
-        for (const child of spatialUnit.spatialUnit ?? []) {
+        const children = spatialUnit.spatialUnit ?? [];
+        for (const child of children) {
           if ((child.spatialUnit?.length ?? 0) > 0) {
             return false;
           }
@@ -2100,7 +2103,8 @@ const XMLTopLevelDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.pipe(
 
     if ("period" in dataItem) {
       for (const period of dataItem.period) {
-        for (const child of period.period ?? []) {
+        const children = period.period ?? [];
+        for (const child of children) {
           if ((child.period?.length ?? 0) > 0) {
             return false;
           }
@@ -2110,7 +2114,8 @@ const XMLTopLevelDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.pipe(
 
     if ("resource" in dataItem) {
       for (const resource of dataItem.resource) {
-        for (const child of resource.resource ?? []) {
+        const children = resource.resource ?? [];
+        for (const child of children) {
           if ((child.resource?.length ?? 0) > 0) {
             return false;
           }

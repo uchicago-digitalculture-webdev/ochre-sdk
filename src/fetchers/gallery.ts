@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/no-incorrect-template-string-interpolation */
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type {
@@ -14,17 +15,16 @@ import {
   createSchemaValidationError,
   getErrorOutput,
   stringLiteral,
-} from "#/utils.js";
+} from "#/utilities.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLGalleryData as XMLGalleryDataSchema } from "#/xml/schemas.js";
 
 function parseLanguages<const T extends ReadonlyArray<string>>(
   languages: T,
 ): T {
-  const parsedLanguages: Array<string> = [];
-  for (const language of languages) {
-    parsedLanguages.push(v.parse(iso639_3Schema, language));
-  }
+  const parsedLanguages: Array<string> = Array.from(languages, (language) =>
+    v.parse(iso639_3Schema, language),
+  );
 
   return parsedLanguages as unknown as T;
 }
@@ -78,13 +78,13 @@ function resolveGalleryLanguages(
   return languages.size > 0 ? [...languages] : [...DEFAULT_LANGUAGES];
 }
 
-function buildXQuery(params: {
+function buildXQuery(parameters: {
   uuid: string;
   filter: string | undefined;
   page: number;
   perPage: number;
 }): string {
-  const { uuid, filter, page, perPage } = params;
+  const { uuid, filter, page, perPage } = parameters;
   const start = (page - 1) * perPage + 1;
   const filterLiteral = stringLiteral(filter?.trim() ?? "");
 
@@ -108,11 +108,11 @@ function buildXQuery(params: {
 /**
  * Fetches and parses a gallery from the OCHRE API
  *
- * @param params - The parameters for the fetch
- * @param params.uuid - The UUID of the gallery
- * @param params.filter - The filter to apply to the gallery
- * @param params.page - The page number to fetch
- * @param params.perPage - The number of items per page
+ * @param parameters - The parameters for the fetch
+ * @param parameters.uuid - The UUID of the gallery
+ * @param parameters.filter - The filter to apply to the gallery
+ * @param parameters.page - The page number to fetch
+ * @param parameters.perPage - The number of items per page
  * @param options - The options for the fetch
  * @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
  * @param options.fetch - The fetch function to use
@@ -121,7 +121,7 @@ function buildXQuery(params: {
 export async function fetchGallery<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
-  params: { uuid: string; filter?: string; page: number; perPage: number },
+  parameters: { uuid: string; filter?: string; page: number; perPage: number },
   options?: FetchBaseOptions<TLanguages>,
 ): Promise<
   | {
@@ -132,7 +132,7 @@ export async function fetchGallery<
   | { gallery: null; error: string; detailedError: string }
 >;
 export async function fetchGallery(
-  params: { uuid: string; filter?: string; page: number; perPage: number },
+  parameters: { uuid: string; filter?: string; page: number; perPage: number },
   options?: FetchRuntimeOptions,
 ): Promise<
   | {
@@ -143,7 +143,7 @@ export async function fetchGallery(
   | { gallery: null; error: string; detailedError: string }
 > {
   try {
-    const { uuid, filter, page, perPage } = v.parse(gallerySchema, params);
+    const { uuid, filter, page, perPage } = v.parse(gallerySchema, parameters);
     const requestedLanguages: ReadonlyArray<string> =
       options?.languages == null ? [] : parseLanguages(options.languages);
 

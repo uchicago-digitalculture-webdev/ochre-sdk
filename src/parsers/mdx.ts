@@ -15,17 +15,17 @@ const MDX_INLINE_BOUNDARY_REGEX = new RegExp(
 function preserveMultipleSpaces(value: string): string {
   return value.replaceAll(
     MDX_MULTIPLE_SPACES_REGEX,
-    (spaces) => `${spaces.slice(0, 1)}${"\u00A0".repeat(spaces.length - 1)}`,
+    (spaces) => `${spaces.slice(0, 1)}${"\u{A0}".repeat(spaces.length - 1)}`,
   );
 }
 
 export function serializeMDXText(value: string): string {
   const displaySafeValue = preserveMultipleSpaces(value);
-  const preservesDisplaySpacing = displaySafeValue !== value;
+  const isPreservingDisplaySpacing = displaySafeValue !== value;
 
   if (
     displaySafeValue === "" ||
-    (!preservesDisplaySpacing &&
+    (!isPreservingDisplaySpacing &&
       !MDX_LITERAL_EXPRESSION_REGEX.test(displaySafeValue) &&
       !MDX_LITERAL_BLOCK_REGEX.test(displaySafeValue))
   ) {

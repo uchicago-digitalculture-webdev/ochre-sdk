@@ -12,17 +12,16 @@ import type { XMLItemLinksData } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseLinkedItems } from "#/parsers/index.js";
 import { iso639_3Schema, uuidSchema } from "#/schemas.js";
-import { createSchemaValidationError, getErrorOutput } from "#/utils.js";
+import { createSchemaValidationError, getErrorOutput } from "#/utilities.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
 
 function parseLanguages<const T extends ReadonlyArray<string>>(
   languages: T,
 ): T {
-  const parsedLanguages: Array<string> = [];
-  for (const language of languages) {
-    parsedLanguages.push(v.parse(iso639_3Schema, language));
-  }
+  const parsedLanguages: Array<string> = Array.from(languages, (language) =>
+    v.parse(iso639_3Schema, language),
+  );
 
   return parsedLanguages as unknown as T;
 }

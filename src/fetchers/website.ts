@@ -5,7 +5,7 @@ import type { LanguageCodes } from "#/types/index.js";
 import type { Website } from "#/types/website.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseWebsite } from "#/parsers/website/index.js";
-import { createSchemaValidationError, getErrorOutput } from "#/utils.js";
+import { createSchemaValidationError, getErrorOutput } from "#/utilities.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
 

@@ -21,7 +21,7 @@ import {
   createSchemaValidationError,
   getErrorOutput,
   stringLiteral,
-} from "#/utils.js";
+} from "#/utilities.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
 
@@ -39,15 +39,16 @@ function isItemContainerCategory(
 function isItemCategoryWithEmbeddedItems(
   category: ItemCategory,
 ): category is ItemCategoryWithEmbeddedItems {
-  return (
-    category === "tree" ||
-    category === "bibliography" ||
-    category === "concept" ||
-    category === "spatialUnit" ||
-    category === "period" ||
-    category === "resource" ||
-    category === "set"
-  );
+  const categories: ReadonlyArray<ItemCategory> = [
+    "tree",
+    "bibliography",
+    "concept",
+    "spatialUnit",
+    "period",
+    "resource",
+    "set",
+  ];
+  return categories.includes(category);
 }
 
 function isItemWithEmbeddedItems(
@@ -109,12 +110,11 @@ function buildOmitEmbeddedItemsXQuery(
     }
   }
 
-  const collectionQueries: Array<string> = [];
-  for (const collectionCategory of collectionCategories) {
-    collectionQueries.push(
+  const collectionQueries: Array<string> = Array.from(
+    collectionCategories,
+    (collectionCategory) =>
       `cts:search(fn:collection("ochre/${collectionCategory}")/ochre, $uuid-query)`,
-    );
-  }
+  );
 
   return `xquery version "1.0-ml";
 
@@ -167,10 +167,9 @@ function omitEmbeddedItems(
 function parseLanguages<const T extends ReadonlyArray<string>>(
   languages: T,
 ): T {
-  const parsedLanguages: Array<string> = [];
-  for (const language of languages) {
-    parsedLanguages.push(v.parse(iso639_3Schema, language));
-  }
+  const parsedLanguages: Array<string> = Array.from(languages, (language) =>
+    v.parse(iso639_3Schema, language),
+  );
 
   return parsedLanguages as unknown as T;
 }
