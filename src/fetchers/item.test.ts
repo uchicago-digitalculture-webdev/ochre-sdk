@@ -64,7 +64,7 @@ const BIBLIOGRAPHY_UUIDS: ReadonlyArray<string> = [
   "6ca9abf6-fdc1-4da4-a280-32268eb52eb2",
   "0ba44014-f8d5-41d6-96fe-3020d1978d92",
   "148a3acb-ca28-47ae-92c4-d21e8fd127aa",
-  "954d5fce-e9c3-4c89-a727-d877edd76bdc",
+  "bd30b090-9ab3-4b6c-a4fb-5733955584c7",
 ];
 const CONCEPT_UUIDS: ReadonlyArray<string> = [
   "f4feb402-dafa-4d43-b2b8-112f620249a7",
