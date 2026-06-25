@@ -964,6 +964,22 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
           result += component;
           break;
         }
+        default: {
+          result +=
+            link.publicationDateTime != null
+              ? createInternalLinkComponent({
+                  uuid: getLinkStringProperty(link, "uuid"),
+                  text: linkString,
+                  content: contentText,
+                  annotationMetadata,
+                })
+              : createMDXComponent("tooltipSpan", {
+                  uuid: getLinkStringProperty(link, "uuid"),
+                  text: linkString,
+                  content: contentText,
+                });
+          break;
+        }
       }
     } else if (link.publicationDateTime != null) {
       const component = createInternalLinkComponent({
