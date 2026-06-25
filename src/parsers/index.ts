@@ -1756,7 +1756,10 @@ function parseInterpretation<T extends ReadonlyArray<string>>(
   return {
     number: rawInterpretation.interpretationNo,
     date: rawInterpretation.date ?? null,
-    observers: parsePersonList(rawInterpretation.observers?.observer, options),
+    interpreters: parsePersonList(
+      rawInterpretation.interpreters?.interpreter,
+      options,
+    ),
     periods: parsePeriodList(rawInterpretation.periods, options),
     links: parseLinks(rawInterpretation.links, options),
     reverseLinks: parseReverseLinks(rawInterpretation.reverseLinks, options),

@@ -392,7 +392,7 @@ export type XMLDictionaryUnit = XMLLinkedBaseItem;
 export type XMLInterpretation = {
   interpretationNo: XMLNumber;
   date?: Date;
-  observers?: { observer: Array<XMLPerson> };
+  interpreters?: { interpreter: Array<XMLPerson> };
   periods?: { period: Array<XMLPeriod> };
   links?: XMLLink;
   reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;

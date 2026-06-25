@@ -1402,8 +1402,8 @@ const XMLInterpretation: v.GenericSchema<unknown, XMLInterpretationType> =
       date: v.optional(
         customDateTime("XMLInterpretation: date is not a valid datetime"),
       ),
-      observers: v.optional(
-        v.object({ observer: v.array(v.lazy(() => XMLPerson)) }),
+      interpreters: v.optional(
+        v.object({ interpreter: v.array(v.lazy(() => XMLPerson)) }),
       ),
       periods: v.optional(
         v.object({ period: v.array(v.lazy(() => XMLPeriod)) }),

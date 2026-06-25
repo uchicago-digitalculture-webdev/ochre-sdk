@@ -937,7 +937,7 @@ export type Concept<
 export type Interpretation<T extends LanguageCodes = LanguageCodes> = {
   number: number;
   date: Date | null;
-  observers: Array<Person<T, "embedded">>;
+  interpreters: Array<Person<T, "embedded">>;
   periods: Array<Period<T, "embedded">>;
   links: ItemLinks<T>;
   reverseLinks: ItemLinks<T>;

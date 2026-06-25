@@ -23,6 +23,7 @@ export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
   "author",
   "event",
   "interpretation",
+  "interpreter",
   "observation",
   "observer",
   "heading",
