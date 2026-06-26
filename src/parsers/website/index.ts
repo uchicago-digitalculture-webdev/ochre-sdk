@@ -1169,23 +1169,23 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         ImageComponent["captionLayout"]
       >("layout-caption", "bottom");
 
-      let width: number | null = null;
+      let width: string | null = null;
       const widthProperty = componentReader.value<string | number>("width");
       if (widthProperty !== null) {
-        if (typeof widthProperty === "number") {
+        if (typeof widthProperty === "string") {
           width = widthProperty;
-        } else if (typeof widthProperty === "string") {
-          width = Number(widthProperty);
+        } else if (typeof widthProperty === "number") {
+          width = widthProperty.toString();
         }
       }
 
-      let height: number | null = null;
+      let height: string | null = null;
       const heightProperty = componentReader.value<string | number>("height");
       if (heightProperty !== null) {
-        if (typeof heightProperty === "number") {
+        if (typeof heightProperty === "string") {
           height = heightProperty;
-        } else if (typeof heightProperty === "string") {
-          height = Number(heightProperty);
+        } else if (typeof heightProperty === "number") {
+          height = heightProperty.toString();
         }
       }
 

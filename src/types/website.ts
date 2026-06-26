@@ -379,8 +379,8 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       component: "image";
       images: Array<WebImage<T>>;
       variant: "default" | "carousel" | "grid" | "hero";
-      width: number | null;
-      height: number | null;
+      width: string | null;
+      height: string | null;
       isFullWidth: boolean;
       isFullHeight: boolean;
       imageQuality: "high" | "low";
