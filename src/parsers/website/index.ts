@@ -1992,14 +1992,27 @@ function parseWebpage<T extends ReadonlyArray<string>>(
       Webpage<T>["properties"]["isNavbarSearchBarDisplayed"]
     >("navbar-search-bar-displayed", true);
 
-    const redirectHref = parseWebsiteLinkTarget(
-      pageReader.valueNode("redirect-to"),
-      context,
-    );
-    if (redirectHref != null) {
+    const redirectValue = pageReader.valueNode("redirect-to");
+    const redirectTarget = parseWebsiteLinkTarget(redirectValue, context);
+    if (redirectTarget != null) {
+      if (redirectValue?.href == null && redirectValue?.uuid != null) {
+        returnWebpage.properties.redirect = {
+          type: "page",
+          slug: redirectTarget,
+          uuid: redirectValue.uuid,
+        };
+      } else {
+        returnWebpage.properties.redirect = {
+          type: "url",
+          href: redirectTarget,
+          isExternal: redirectTarget.startsWith("http"),
+        };
+      }
+    } else if (redirectValue?.uuid != null) {
       returnWebpage.properties.redirect = {
-        href: redirectHref,
-        isExternal: redirectHref.startsWith("http"),
+        type: "item",
+        uuid: redirectValue.uuid,
+        pageType: "item",
       };
     }
   }
