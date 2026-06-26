@@ -1875,6 +1875,7 @@ function parseWebpage<T extends ReadonlyArray<string>>(
       isSidebarDisplayed: true,
       isDisplayedInNavbar: true,
       isNavbarSearchBarDisplayed: true,
+      redirect: null,
       backgroundImage: null,
       sidebar: null,
       cssStyles: { default: [], tablet: [], mobile: [] },
@@ -1979,6 +1980,17 @@ function parseWebpage<T extends ReadonlyArray<string>>(
     returnWebpage.properties.isNavbarSearchBarDisplayed = pageReader.valueOr<
       Webpage<T>["properties"]["isNavbarSearchBarDisplayed"]
     >("navbar-search-bar-displayed", true);
+
+    const redirectHref = parseWebsiteLinkTarget(
+      pageReader.valueNode("redirect-to"),
+      context,
+    );
+    if (redirectHref != null) {
+      returnWebpage.properties.redirect = {
+        href: redirectHref,
+        isExternal: redirectHref.startsWith("http"),
+      };
+    }
   }
 
   if (imageLink != null) {

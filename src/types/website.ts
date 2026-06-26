@@ -232,6 +232,7 @@ export type Webpage<T extends LanguageCodes = LanguageCodes> = {
     isSidebarDisplayed: boolean;
     isDisplayedInNavbar: boolean;
     isNavbarSearchBarDisplayed: boolean;
+    redirect: { href: string; isExternal: boolean } | null;
     backgroundImage: WebImage<T> | null;
     sidebar: WebSidebar<T> | null;
     cssStyles: {
