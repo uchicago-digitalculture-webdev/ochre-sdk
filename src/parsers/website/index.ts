@@ -69,7 +69,18 @@ type WebsiteLinkCategory = Extract<
 type WebsiteParseContext<T extends ReadonlyArray<string>> = Pick<
   Website<T>,
   "belongsTo" | "metadata"
-> & { pageSlugsByUuid?: ReadonlyMap<string, string> };
+> & {
+  pageSlugsByUuid?: ReadonlyMap<string, string>;
+  /**
+   * The resolved properties and license of the nearest enclosing Website or
+   * WebsiteSegment. Segments inherit these so that anything they do not
+   * explicitly define cascades down from their parent, while anything they do
+   * define overrides it. This keeps inheritance a parsing-time concern so
+   * consumers can read a segment's properties naively.
+   */
+  parentProperties?: Website<T>["properties"];
+  parentLicense?: Website<T>["license"];
+};
 
 function isWebsiteLink<
   U extends WebsiteLinkCategory,
@@ -2500,6 +2511,7 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
   websiteTree: XMLWebsiteTree,
   sidebar: WebSidebar<T> | null,
   options: ParserOptions<T>,
+  parent: Website<T>["properties"] | null,
 ): Website<T>["properties"] {
   const mainProperties = parseSimplifiedProperties(
     { property: properties },
@@ -2510,21 +2522,21 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
 
   const type = websiteReader.valueOr<Website<T>["properties"]["type"]>(
     "webUI",
-    "traditional",
+    parent?.type ?? "traditional",
   );
 
   const status = websiteReader.valueOr<Website<T>["properties"]["status"]>(
     "status",
-    "development",
+    parent?.status ?? "development",
   );
 
   const versionLabel = websiteReader.valueOr<
     Website<T>["properties"]["versionLabel"]
-  >("version-label", "release");
+  >("version-label", parent?.versionLabel ?? "release");
 
   const privacy = websiteReader.valueOr<Website<T>["properties"]["privacy"]>(
     "privacy",
-    "public",
+    parent?.privacy ?? "public",
   );
 
   const returnProperties: Website<T>["properties"] = {
@@ -2532,7 +2544,7 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
     status,
     versionLabel,
     privacy,
-    contact: null,
+    contact: parent?.contact ?? null,
     loadingVariant: "spinner",
     theme: { isThemeToggleDisplayed: true, defaultTheme: "system" },
     icon: { logoUuid: null, faviconUuid: null, appleTouchIconUuid: null },
@@ -2542,29 +2554,35 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
       alignment: "start",
       isProjectDisplayed: true,
       searchBarBoundElementUuid: null,
-      items: null,
+      items: parent?.navbar.items ?? null,
     },
-    footer: { isDisplayed: true, logoUuid: null, items: null },
-    sidebar,
+    footer: {
+      isDisplayed: true,
+      logoUuid: null,
+      items: parent?.footer.items ?? null,
+    },
+    sidebar: sidebar ?? parent?.sidebar ?? null,
     itemPage: {
-      isMainContentDisplayed: true,
-      isDescriptionDisplayed: true,
-      isDocumentDisplayed: true,
-      isNotesDisplayed: true,
-      isEventsDisplayed: true,
-      isPeriodsDisplayed: true,
-      isPropertiesDisplayed: true,
-      isBibliographyDisplayed: true,
-      isPropertyValuesGrouped: true,
-      isPublicationDateTimeDisplayed: true,
-      isPersistentIdentifierDisplayed: true,
-      iiifViewer: "universal-viewer",
+      isMainContentDisplayed: parent?.itemPage.isMainContentDisplayed ?? true,
+      isDescriptionDisplayed: parent?.itemPage.isDescriptionDisplayed ?? true,
+      isDocumentDisplayed: parent?.itemPage.isDocumentDisplayed ?? true,
+      isNotesDisplayed: parent?.itemPage.isNotesDisplayed ?? true,
+      isEventsDisplayed: parent?.itemPage.isEventsDisplayed ?? true,
+      isPeriodsDisplayed: parent?.itemPage.isPeriodsDisplayed ?? true,
+      isPropertiesDisplayed: parent?.itemPage.isPropertiesDisplayed ?? true,
+      isBibliographyDisplayed: parent?.itemPage.isBibliographyDisplayed ?? true,
+      isPropertyValuesGrouped: parent?.itemPage.isPropertyValuesGrouped ?? true,
+      isPublicationDateTimeDisplayed:
+        parent?.itemPage.isPublicationDateTimeDisplayed ?? true,
+      isPersistentIdentifierDisplayed:
+        parent?.itemPage.isPersistentIdentifierDisplayed ?? true,
+      iiifViewer: parent?.itemPage.iiifViewer ?? "universal-viewer",
     },
     options: {
-      contextTree: null,
-      scopes: null,
-      labels: { title: null },
-      stylesheets: { properties: [] },
+      contextTree: parent?.options.contextTree ?? null,
+      scopes: parent?.options.scopes ?? null,
+      labels: { title: parent?.options.labels.title ?? null },
+      stylesheets: { properties: parent?.options.stylesheets.properties ?? [] },
     },
   };
 
@@ -2587,112 +2605,160 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
 
   returnProperties.loadingVariant = websiteReader.valueOr<
     Website<T>["properties"]["loadingVariant"]
-  >("loading-variant", "spinner");
+  >("loading-variant", parent?.loadingVariant ?? "spinner");
 
   returnProperties.theme.isThemeToggleDisplayed = websiteReader.valueOr<
     Website<T>["properties"]["theme"]["isThemeToggleDisplayed"]
-  >("supports-theme-toggle", true);
+  >("supports-theme-toggle", parent?.theme.isThemeToggleDisplayed ?? true);
 
   returnProperties.theme.defaultTheme = websiteReader.valueOr<
     Website<T>["properties"]["theme"]["defaultTheme"]
-  >("default-theme", "system");
+  >("default-theme", parent?.theme.defaultTheme ?? "system");
 
-  returnProperties.icon.logoUuid = websiteReader.uuid("navbar-logo");
+  returnProperties.icon.logoUuid =
+    websiteReader.uuid("navbar-logo") ?? parent?.icon.logoUuid ?? null;
 
-  returnProperties.icon.faviconUuid = websiteReader.uuid("favicon-ico");
+  returnProperties.icon.faviconUuid =
+    websiteReader.uuid("favicon-ico") ?? parent?.icon.faviconUuid ?? null;
 
-  returnProperties.icon.appleTouchIconUuid = websiteReader.uuid("favicon-img");
+  returnProperties.icon.appleTouchIconUuid =
+    websiteReader.uuid("favicon-img") ??
+    parent?.icon.appleTouchIconUuid ??
+    null;
 
   returnProperties.navbar.isDisplayed = websiteReader.valueOr<
     Website<T>["properties"]["navbar"]["isDisplayed"]
-  >("navbar-displayed", true);
+  >("navbar-displayed", parent?.navbar.isDisplayed ?? true);
 
   returnProperties.navbar.variant = websiteReader.valueOr<
     Website<T>["properties"]["navbar"]["variant"]
-  >("navbar-variant", "default");
+  >("navbar-variant", parent?.navbar.variant ?? "default");
 
   returnProperties.navbar.alignment = websiteReader.valueOr<
     Website<T>["properties"]["navbar"]["alignment"]
-  >("navbar-alignment", "start");
+  >("navbar-alignment", parent?.navbar.alignment ?? "start");
 
   returnProperties.navbar.isProjectDisplayed = websiteReader.valueOr<
     Website<T>["properties"]["navbar"]["isProjectDisplayed"]
-  >("navbar-project-displayed", true);
+  >("navbar-project-displayed", parent?.navbar.isProjectDisplayed ?? true);
 
-  returnProperties.navbar.searchBarBoundElementUuid = websiteReader.uuid(
-    "bound-element-navbar-search-bar",
-  );
+  returnProperties.navbar.searchBarBoundElementUuid =
+    websiteReader.uuid("bound-element-navbar-search-bar") ??
+    parent?.navbar.searchBarBoundElementUuid ??
+    null;
 
   returnProperties.footer.isDisplayed = websiteReader.valueOr<
     Website<T>["properties"]["footer"]["isDisplayed"]
-  >("footer-displayed", true);
+  >("footer-displayed", parent?.footer.isDisplayed ?? true);
 
-  returnProperties.footer.logoUuid = websiteReader.uuid("footer-logo");
+  returnProperties.footer.logoUuid =
+    websiteReader.uuid("footer-logo") ?? parent?.footer.logoUuid ?? null;
 
   const itemPageReader = websiteReader.nestedByValue("page-type", "item-page");
   if (itemPageReader.size > 0) {
     returnProperties.itemPage.isMainContentDisplayed = itemPageReader.valueOr<
       Website<T>["properties"]["itemPage"]["isMainContentDisplayed"]
-    >("item-page-main-content-displayed", true);
+    >(
+      "item-page-main-content-displayed",
+      returnProperties.itemPage.isMainContentDisplayed,
+    );
 
     returnProperties.itemPage.isDescriptionDisplayed = itemPageReader.valueOr<
       Website<T>["properties"]["itemPage"]["isDescriptionDisplayed"]
-    >("item-page-description-displayed", true);
+    >(
+      "item-page-description-displayed",
+      returnProperties.itemPage.isDescriptionDisplayed,
+    );
 
     returnProperties.itemPage.isDocumentDisplayed = itemPageReader.valueOr<
       Website<T>["properties"]["itemPage"]["isDocumentDisplayed"]
-    >("item-page-document-displayed", true);
+    >(
+      "item-page-document-displayed",
+      returnProperties.itemPage.isDocumentDisplayed,
+    );
 
     returnProperties.itemPage.isNotesDisplayed = itemPageReader.valueOr<
       Website<T>["properties"]["itemPage"]["isNotesDisplayed"]
-    >("item-page-notes-displayed", true);
+    >("item-page-notes-displayed", returnProperties.itemPage.isNotesDisplayed);
 
     returnProperties.itemPage.isEventsDisplayed = itemPageReader.valueOr<
       Website<T>["properties"]["itemPage"]["isEventsDisplayed"]
-    >("item-page-events-displayed", true);
+    >(
+      "item-page-events-displayed",
+      returnProperties.itemPage.isEventsDisplayed,
+    );
 
     returnProperties.itemPage.isPeriodsDisplayed = itemPageReader.valueOr<
       Website<T>["properties"]["itemPage"]["isPeriodsDisplayed"]
-    >("item-page-periods-displayed", true);
+    >(
+      "item-page-periods-displayed",
+      returnProperties.itemPage.isPeriodsDisplayed,
+    );
 
     returnProperties.itemPage.isPropertiesDisplayed = itemPageReader.valueOr<
       Website<T>["properties"]["itemPage"]["isPropertiesDisplayed"]
-    >("item-page-properties-displayed", true);
+    >(
+      "item-page-properties-displayed",
+      returnProperties.itemPage.isPropertiesDisplayed,
+    );
 
     returnProperties.itemPage.isBibliographyDisplayed = itemPageReader.valueOr<
       Website<T>["properties"]["itemPage"]["isBibliographyDisplayed"]
-    >("item-page-bibliography-displayed", true);
+    >(
+      "item-page-bibliography-displayed",
+      returnProperties.itemPage.isBibliographyDisplayed,
+    );
 
     returnProperties.itemPage.isPropertyValuesGrouped = itemPageReader.valueOr<
       Website<T>["properties"]["itemPage"]["isPropertyValuesGrouped"]
-    >("item-page-property-values-grouped", true);
+    >(
+      "item-page-property-values-grouped",
+      returnProperties.itemPage.isPropertyValuesGrouped,
+    );
 
     returnProperties.itemPage.isPublicationDateTimeDisplayed =
       itemPageReader.valueOr<
         Website<T>["properties"]["itemPage"]["isPublicationDateTimeDisplayed"]
-      >("item-page-publication-date-time-displayed", true);
+      >(
+        "item-page-publication-date-time-displayed",
+        returnProperties.itemPage.isPublicationDateTimeDisplayed,
+      );
 
     returnProperties.itemPage.isPersistentIdentifierDisplayed =
       itemPageReader.valueOr<
         Website<T>["properties"]["itemPage"]["isPersistentIdentifierDisplayed"]
-      >("item-page-persistent-identifier-displayed", true);
+      >(
+        "item-page-persistent-identifier-displayed",
+        returnProperties.itemPage.isPersistentIdentifierDisplayed,
+      );
 
     returnProperties.itemPage.iiifViewer = itemPageReader.valueOr<
       Website<T>["properties"]["itemPage"]["iiifViewer"]
-    >("item-page-iiif-viewer", "universal-viewer");
+    >("item-page-iiif-viewer", returnProperties.itemPage.iiifViewer);
   }
 
   if (websiteTree.options != null) {
     const parsedOptions = parseWebsiteOptions(websiteTree.options, options);
-    returnProperties.options.scopes = parsedOptions.scopes;
-    returnProperties.options.contextTree = parsedOptions.contextTree;
-    returnProperties.options.labels = parsedOptions.labels;
+    returnProperties.options.scopes = (
+      parsedOptions.scopes != null && parsedOptions.scopes.length > 0
+        ? parsedOptions
+        : returnProperties.options
+    ).scopes;
+    returnProperties.options.contextTree =
+      parsedOptions.contextTree ?? returnProperties.options.contextTree;
+    returnProperties.options.labels = {
+      title:
+        parsedOptions.labels.title ?? returnProperties.options.labels.title,
+    };
   }
 
   if ("styleOptions" in websiteTree && websiteTree.styleOptions != null) {
-    returnProperties.options.stylesheets.properties = parseStylesheets(
+    const stylesheetProperties = parseStylesheets(
       websiteTree.styleOptions.style,
     );
+    if (stylesheetProperties.length > 0) {
+      returnProperties.options.stylesheets.properties = stylesheetProperties;
+    }
   }
 
   return returnProperties;
@@ -2855,7 +2921,11 @@ function parseWebsiteTree<
     websiteTree,
     sidebar,
     options,
+    context.parentProperties ?? null,
   );
+
+  const license =
+    parseLicense(websiteTree.availability) ?? context.parentLicense ?? null;
 
   return {
     uuid: websiteTree.uuid,
@@ -2867,8 +2937,13 @@ function parseWebsiteTree<
     creators: websiteTree.creators
       ? parsePersonList(websiteTree.creators.creator, options)
       : [],
-    license: parseLicense(websiteTree.availability),
-    items: parseWebpages(resources, options, treeContext, slugPrefix),
+    license,
+    items: parseWebpages(
+      resources,
+      options,
+      { ...treeContext, parentProperties: properties, parentLicense: license },
+      slugPrefix,
+    ),
     properties,
   };
 }
