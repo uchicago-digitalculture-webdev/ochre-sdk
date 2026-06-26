@@ -885,7 +885,11 @@ function expectSetItemMatchesRaw(
         "concept",
         typeof TEST_LANGUAGES
       >;
-      expect(Object.hasOwn(parsedConcept, "interpretations")).toBe(false);
+      expect(parsedConcept.interpretations).toHaveLength(
+        rawConcept.interpretations?.interpretation.length ??
+          rawConcept.interpretation?.length ??
+          0,
+      );
       expect(parsedConcept.coordinates).toHaveLength(
         rawConcept.coordinates?.coord.length ?? 0,
       );
@@ -897,7 +901,11 @@ function expectSetItemMatchesRaw(
         "spatialUnit",
         typeof TEST_LANGUAGES
       >;
-      expect(Object.hasOwn(parsedSpatialUnit, "observations")).toBe(false);
+      expect(parsedSpatialUnit.observations).toHaveLength(
+        rawSpatialUnit.observations?.observation.length ??
+          rawSpatialUnit.observation?.length ??
+          0,
+      );
       expect(parsedSpatialUnit.coordinates).toHaveLength(
         rawSpatialUnit.coordinates?.coord.length ?? 0,
       );

@@ -405,6 +405,7 @@ export type XMLConcept = XMLBaseItem & {
   status?: "live";
   image?: XMLImage;
   interpretations?: { interpretation: Array<XMLInterpretation> };
+  interpretation?: Array<XMLInterpretation>;
   coordinates?: XMLCoordinates;
   properties?: { property: Array<XMLProperty> };
   concept?: Array<XMLConcept>;
@@ -427,6 +428,7 @@ export type XMLSpatialUnit = XMLBaseItem & {
   coordinates?: XMLCoordinates;
   mapData?: { geoJSON: { multiPolygon: { payload: string }; EPSG: XMLNumber } };
   observations?: { observation: Array<XMLObservation> };
+  observation?: Array<XMLObservation>;
   properties?: { property: Array<XMLProperty> };
   bibliographies?: { bibliography: Array<XMLBibliography> };
   spatialUnit?: Array<XMLSpatialUnit>;

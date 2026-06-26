@@ -1432,6 +1432,7 @@ const XMLConcept: v.GenericSchema<unknown, XMLConceptType> = v.object(
     interpretations: v.optional(
       v.object({ interpretation: v.array(XMLInterpretation) }),
     ),
+    interpretation: v.optional(v.array(XMLInterpretation)),
     coordinates: v.optional(XMLCoordinates),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     concept: v.optional(v.array(v.lazy(() => XMLConcept))),
@@ -1489,6 +1490,7 @@ const XMLSpatialUnit: v.GenericSchema<unknown, XMLSpatialUnitType> = v.object(
     observations: v.optional(
       v.object({ observation: v.array(XMLObservation) }),
     ),
+    observation: v.optional(v.array(XMLObservation)),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     bibliographies: v.optional(
       v.object({ bibliography: v.array(XMLBibliography) }),

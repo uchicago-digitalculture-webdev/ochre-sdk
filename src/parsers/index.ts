@@ -1977,6 +1977,12 @@ function parseSetConcept<T extends ReadonlyArray<string>>(
   return {
     ...parseBaseItem("concept", rawConcept, options),
     image: parseImage(rawConcept.image, options),
+    interpretations: Array.from(
+      rawConcept.interpretations?.interpretation ??
+        rawConcept.interpretation ??
+        [],
+      (interpretation) => parseInterpretation(interpretation, options),
+    ),
     coordinates: parseCoordinates(rawConcept.coordinates, options),
     properties: parseSetItemProperties(rawConcept.properties, options),
   };
@@ -2006,6 +2012,12 @@ function parseSetSpatialUnit<T extends ReadonlyArray<string>>(
     image: parseImage(rawSpatialUnit.image, options),
     coordinates: parseCoordinates(rawSpatialUnit.coordinates, options),
     mapData: parseSpatialUnitMapData(rawSpatialUnit.mapData),
+    observations: Array.from(
+      rawSpatialUnit.observations?.observation ??
+        rawSpatialUnit.observation ??
+        [],
+      (observation) => parseObservation(observation, options),
+    ),
     properties: parseSetItemProperties(rawSpatialUnit.properties, options),
     bibliographies: parseBibliographyList(
       rawSpatialUnit.bibliographies,
@@ -2138,7 +2150,9 @@ function parseConcept<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
 ): Concept<T, "embedded"> {
   const interpretations: Array<Interpretation<T>> = Array.from(
-    rawConcept.interpretations?.interpretation ?? [],
+    rawConcept.interpretations?.interpretation ??
+      rawConcept.interpretation ??
+      [],
     (interpretation) => parseInterpretation(interpretation, options),
   );
 
@@ -2161,7 +2175,9 @@ function parseSpatialUnit<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
 ): SpatialUnit<T, "embedded"> {
   const observations: Array<Observation<T>> = Array.from(
-    rawSpatialUnit.observations?.observation ?? [],
+    rawSpatialUnit.observations?.observation ??
+      rawSpatialUnit.observation ??
+      [],
     (observation) => parseObservation(observation, options),
   );
 

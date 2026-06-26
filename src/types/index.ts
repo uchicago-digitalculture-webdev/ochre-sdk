@@ -777,13 +777,13 @@ export type SetBibliography<T extends LanguageCodes = LanguageCodes> =
     : never;
 
 export type SetConcept<T extends LanguageCodes = LanguageCodes> = Prettify<
-  Omit<Concept<T, "embedded">, "interpretations" | "items"> & {
+  Omit<Concept<T, "embedded">, "items"> & {
     properties: Array<SetItemProperty<T>>;
   }
 >;
 
 export type SetSpatialUnit<T extends LanguageCodes = LanguageCodes> = Prettify<
-  Omit<SpatialUnit<T, "embedded">, "observations" | "items"> & {
+  Omit<SpatialUnit<T, "embedded">, "items"> & {
     properties: Array<SetItemProperty<T>>;
   }
 >;
