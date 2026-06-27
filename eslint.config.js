@@ -52,6 +52,7 @@ export default antfu({
       "unicorn/no-non-function-verb-prefix": "off",
       "unicorn/no-null": "off",
       "unicorn/no-negated-condition": "off",
+      "unicorn/no-top-level-side-effects": "off",
       "unicorn/no-thenable": "off",
       "unicorn/prevent-abbreviations": "off",
       "unicorn/prefer-ternary": "off",
