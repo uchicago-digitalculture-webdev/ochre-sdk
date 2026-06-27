@@ -47,6 +47,7 @@ export default antfu({
         { case: "kebabCase", ignore: ["README.md", "CHANGELOG.md", "LICENSE"] },
       ],
       "unicorn/max-nested-calls": "off",
+      "unicorn/name-replacements": "off",
       "unicorn/no-break-in-nested-loop": "off",
       "unicorn/no-nested-ternary": "off",
       "unicorn/no-non-function-verb-prefix": "off",
