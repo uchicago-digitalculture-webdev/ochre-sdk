@@ -995,7 +995,7 @@ function parsePropertyValueContent<T extends ReadonlyArray<string>>(
     uuid: value.uuid == null || value.uuid === "" ? null : value.uuid,
     publicationDateTime: value.publicationDateTime ?? null,
     unit: value.unit ?? null,
-    href: parseHref(value.href),
+    href: value.href ?? null,
     height: value.height ?? null,
     width: value.width ?? null,
     fileSize: value.fileSize ?? null,
