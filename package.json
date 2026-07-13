@@ -57,20 +57,20 @@
   },
   "dependencies": {
     "date-fns": "^4.4.0",
-    "fast-equals": "^6.0.0",
-    "fast-xml-parser": "^5.9.3",
+    "fast-equals": "^6.0.2",
+    "fast-xml-parser": "^5.10.0",
     "valibot": "^1.4.2"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^9.1.0",
-    "@types/node": "^24.13.2",
+    "@types/node": "^24.13.3",
     "bumpp": "^11.1.0",
-    "eslint": "^10.6.0",
-    "knip": "^6.23.0",
-    "oxfmt": "^0.56.0",
-    "tsdown": "^0.22.3",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
+    "eslint": "^10.7.0",
+    "knip": "^6.26.0",
+    "oxfmt": "^0.58.0",
+    "tsdown": "^0.22.5",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   },
-  "packageManager": "pnpm@11.9.0"
+  "packageManager": "pnpm@11.12.0"
 }
