@@ -162,7 +162,7 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
       | "staging"
       | "pre-release"
       | "release";
-    privacy: "public" | "password" | "private";
+    privacy: "public" | "password" | "password-ochre";
     contact: { name: string; email: string | null } | null;
     loadingVariant: "spinner" | "skeleton" | "animation" | "none";
     theme: {
