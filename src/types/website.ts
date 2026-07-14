@@ -568,3 +568,11 @@ export type WebsiteMetadata<T extends LanguageCodes = LanguageCodes> = {
     icon: { faviconUuid: string | null; appleTouchIconUuid: string | null };
   };
 };
+
+export type ProtectedWebsite<T extends LanguageCodes = LanguageCodes> = {
+  uuid: string;
+  identification: Identification<T>;
+  properties: {
+    privacy: "password" | "password-ochre";
+  };
+};

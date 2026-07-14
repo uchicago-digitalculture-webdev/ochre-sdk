@@ -231,10 +231,8 @@ function websiteData() {
   };
 }
 
-function minimalWebsiteXML(): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<result>
-  <ochre uuid="${UUID.ochre}" belongsTo="TEST" uuidBelongsTo="${UUID.project}" publicationDateTime="${PUBLICATION_DATE}">
+function minimalMetadataXML(): string {
+  return `
     <metadata>
       <dataset>Dataset</dataset>
       <description>Description</description>
@@ -246,7 +244,14 @@ function minimalWebsiteXML(): string {
           <label><content lang="eng"><string>Website</string></content></label>
         </identification>
       </item>
-    </metadata>
+    </metadata>`;
+}
+
+function minimalWebsiteXML(): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<result>
+  <ochre uuid="${UUID.ochre}" belongsTo="TEST" uuidBelongsTo="${UUID.project}" publicationDateTime="${PUBLICATION_DATE}">
+    ${minimalMetadataXML()}
     <tree uuid="${UUID.website}" publicationDateTime="${PUBLICATION_DATE}">
       <identification>
         <label><content lang="eng"><string>Website</string></content></label>
@@ -273,6 +278,67 @@ function minimalWebsiteXML(): string {
     </tree>
   </ochre>
 </result>`;
+}
+
+function protectedWebsiteXML(privacy: "password" | "password-ochre"): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<result>
+  <ochre uuid="${UUID.ochre}" belongsTo="TEST" uuidBelongsTo="${UUID.project}" publicationDateTime="${PUBLICATION_DATE}">
+    ${minimalMetadataXML()}
+    <tree uuid="${UUID.website}" publicationDateTime="${PUBLICATION_DATE}">
+      <identification>
+        <label><content lang="eng"><string>Protected Site</string></content></label>
+      </identification>
+      <properties simplify="true">
+        <property>
+          <label uuid="${UUID.presentation}">presentation</label>
+          <value dataType="string">website</value>
+          <property>
+            <label uuid="${UUID.presentation}">privacy</label>
+            <value dataType="string">${privacy}</value>
+          </property>
+        </property>
+      </properties>
+      <items>
+        <resource uuid="${UUID.page}" slug="" publicationDateTime="${PUBLICATION_DATE}">
+          <identification>
+            <label><content lang="eng"><string>Home</string></content></label>
+          </identification>
+          <properties simplify="true">
+            <property>
+              <label uuid="${UUID.presentation}">presentation</label>
+              <value dataType="string">page</value>
+            </property>
+          </properties>
+        </resource>
+      </items>
+    </tree>
+  </ochre>
+</result>`;
+}
+
+function makeFetchMock(
+  websiteXml: string,
+  securityStatus = 200,
+): {
+  fetch: (
+    input: string | URL | Request,
+    init?: RequestInit,
+  ) => Promise<Response>;
+  calls: Array<{ url: string; init?: RequestInit }>;
+} {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  return {
+    calls,
+    fetch: async (input, init) => {
+      const url = input.toString();
+      calls.push({ url, init });
+      if (url.includes("xquery")) {
+        return new Response(websiteXml);
+      }
+      return new Response(null, { status: securityStatus });
+    },
+  };
 }
 
 describe("parseWebsite", () => {
@@ -354,5 +420,101 @@ describe("fetchWebsite", () => {
     expect(requestedUrl).toContain("xsl=none");
     expect(result.website.uuid).toBe(UUID.website);
     expect(result.website.items[0]?.type).toBe("page");
+    expect(result.protectedWebsite).toBeNull();
+  });
+
+  it("returns protectedWebsite with minimal info for a password-protected site when no credentials are given", async () => {
+    const mock = makeFetchMock(protectedWebsiteXML("password"));
+    const result = await fetchWebsite("test-website", { fetch: mock.fetch });
+
+    expect(result.error).toBeNull();
+    expect(result.website).toBeNull();
+    expect(result.protectedWebsite).not.toBeNull();
+    expect(result.protectedWebsite?.uuid).toBe(UUID.website);
+    expect(result.protectedWebsite?.properties.privacy).toBe("password");
+    expect(result.protectedWebsite?.identification.label.getText()).toBe(
+      "Protected Site",
+    );
+    expect(mock.calls).toHaveLength(1);
+  });
+
+  it("returns protectedWebsite with minimal info for an OCHRE-credentials-protected site when no credentials are given", async () => {
+    const mock = makeFetchMock(protectedWebsiteXML("password-ochre"));
+    const result = await fetchWebsite("test-website", { fetch: mock.fetch });
+
+    expect(result.error).toBeNull();
+    expect(result.website).toBeNull();
+    expect(result.protectedWebsite?.properties.privacy).toBe("password-ochre");
+    expect(mock.calls).toHaveLength(1);
+  });
+
+  it("validates a shared password and returns the full website on success", async () => {
+    const mock = makeFetchMock(protectedWebsiteXML("password"), 200);
+    const result = await fetchWebsite("test-website", {
+      fetch: mock.fetch,
+      credentials: "correct-password",
+    });
+
+    expect(result.error).toBeNull();
+    expect(result.protectedWebsite).toBeNull();
+    expect(result.website?.uuid).toBe(UUID.website);
+    expect(result.website?.properties.privacy).toBe("password");
+
+    expect(mock.calls).toHaveLength(2);
+    const securityCall = mock.calls[1]!;
+    expect(securityCall.init?.method).toBe("POST");
+    expect(securityCall.init?.headers).toMatchObject({
+      "Content-Type": "application/json",
+    });
+
+    const body = JSON.parse(securityCall.init?.body as string) as unknown;
+    expect(body).toMatchObject({
+      uuid: UUID.website,
+      data: { security: { validate: "correct-password" } },
+    });
+  });
+
+  it("validates OCHRE credentials and sends both validate and userOCHRE in the security request", async () => {
+    const mock = makeFetchMock(protectedWebsiteXML("password-ochre"), 200);
+    const result = await fetchWebsite("test-website", {
+      fetch: mock.fetch,
+      credentials: { username: "john", password: "secret" },
+    });
+
+    expect(result.error).toBeNull();
+    expect(result.website?.uuid).toBe(UUID.website);
+
+    const body = JSON.parse(mock.calls[1]!.init?.body as string) as unknown;
+    expect(body).toMatchObject({
+      uuid: UUID.website,
+      data: { security: { validate: "secret", userOCHRE: "john" } },
+    });
+  });
+
+  it("returns an error when credentials are invalid (403 from security endpoint)", async () => {
+    const mock = makeFetchMock(protectedWebsiteXML("password"), 403);
+    const result = await fetchWebsite("test-website", {
+      fetch: mock.fetch,
+      credentials: "wrong-password",
+    });
+
+    expect(result.website).toBeNull();
+    expect(result.protectedWebsite).toBeNull();
+    expect(result.error).not.toBeNull();
+    expect(mock.calls).toHaveLength(2);
+  });
+
+  it("returns an error when the initial fetch fails", async () => {
+    const result = await fetchWebsite("test-website", {
+      fetch: async () =>
+        new Response(null, {
+          status: 500,
+          statusText: "Internal Server Error",
+        }),
+    });
+
+    expect(result.website).toBeNull();
+    expect(result.protectedWebsite).toBeNull();
+    expect(result.error).not.toBeNull();
   });
 });
