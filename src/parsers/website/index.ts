@@ -2579,10 +2579,14 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
       isMainContentDisplayed: parent?.itemPage.isMainContentDisplayed ?? true,
       isDescriptionDisplayed: parent?.itemPage.isDescriptionDisplayed ?? true,
       isDocumentDisplayed: parent?.itemPage.isDocumentDisplayed ?? true,
-      isNotesDisplayed: parent?.itemPage.isNotesDisplayed ?? true,
-      notesDisplayVariant: parent?.itemPage.notesDisplayVariant ?? "discrete",
-      isEventsDisplayed: parent?.itemPage.isEventsDisplayed ?? true,
-      eventsDisplayVariant: parent?.itemPage.eventsDisplayVariant ?? "tabular",
+      notes: {
+        isDisplayed: parent?.itemPage.notes.isDisplayed ?? true,
+        variant: parent?.itemPage.notes.variant ?? "discrete",
+      },
+      events: {
+        isDisplayed: parent?.itemPage.events.isDisplayed ?? true,
+        variant: parent?.itemPage.events.variant ?? "tabular",
+      },
       isPeriodsDisplayed: parent?.itemPage.isPeriodsDisplayed ?? true,
       isPropertiesDisplayed: parent?.itemPage.isPropertiesDisplayed ?? true,
       isBibliographyDisplayed: parent?.itemPage.isBibliographyDisplayed ?? true,
@@ -2692,29 +2696,29 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
       returnProperties.itemPage.isDocumentDisplayed,
     );
 
-    returnProperties.itemPage.isNotesDisplayed = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["isNotesDisplayed"]
-    >("item-page-notes-displayed", returnProperties.itemPage.isNotesDisplayed);
+    returnProperties.itemPage.notes.isDisplayed = itemPageReader.valueOr<
+      Website<T>["properties"]["itemPage"]["notes"]["isDisplayed"]
+    >("item-page-notes-displayed", returnProperties.itemPage.notes.isDisplayed);
 
-    returnProperties.itemPage.notesDisplayVariant = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["notesDisplayVariant"]
+    returnProperties.itemPage.notes.variant = itemPageReader.valueOr<
+      Website<T>["properties"]["itemPage"]["notes"]["variant"]
     >(
       "item-page-notes-display-variant",
-      returnProperties.itemPage.notesDisplayVariant,
+      returnProperties.itemPage.notes.variant,
     );
 
-    returnProperties.itemPage.isEventsDisplayed = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["isEventsDisplayed"]
+    returnProperties.itemPage.events.isDisplayed = itemPageReader.valueOr<
+      Website<T>["properties"]["itemPage"]["events"]["isDisplayed"]
     >(
       "item-page-events-displayed",
-      returnProperties.itemPage.isEventsDisplayed,
+      returnProperties.itemPage.events.isDisplayed,
     );
 
-    returnProperties.itemPage.eventsDisplayVariant = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["eventsDisplayVariant"]
+    returnProperties.itemPage.events.variant = itemPageReader.valueOr<
+      Website<T>["properties"]["itemPage"]["events"]["variant"]
     >(
       "item-page-events-display-variant",
-      returnProperties.itemPage.eventsDisplayVariant,
+      returnProperties.itemPage.events.variant,
     );
 
     returnProperties.itemPage.isPeriodsDisplayed = itemPageReader.valueOr<
