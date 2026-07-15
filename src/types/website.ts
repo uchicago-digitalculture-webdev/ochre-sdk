@@ -572,7 +572,5 @@ export type WebsiteMetadata<T extends LanguageCodes = LanguageCodes> = {
 export type ProtectedWebsite<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   identification: Identification<T>;
-  properties: {
-    privacy: "password" | "password-ochre";
-  };
+  properties: { privacy: "password" | "password-ochre" };
 };
