@@ -193,7 +193,17 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
       isDescriptionDisplayed: boolean;
       isDocumentDisplayed: boolean;
       isNotesDisplayed: boolean;
+      notesDisplayVariant:
+        | "discrete"
+        | "tabs-horizontal"
+        | "tabs-vertical"
+        | "tabular";
       isEventsDisplayed: boolean;
+      eventsDisplayVariant:
+        | "discrete"
+        | "tabs-horizontal"
+        | "tabs-vertical"
+        | "tabular";
       isPeriodsDisplayed: boolean;
       isPropertiesDisplayed: boolean;
       isBibliographyDisplayed: boolean;
