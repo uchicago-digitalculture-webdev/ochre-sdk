@@ -1,3 +1,6 @@
+minimumReleaseAgeExclude:
+  - pnpm
+
 # Overrides for packages that have vulnerability alerts raised by Dependabot
 overrides:
   minimatch: 10.2.5

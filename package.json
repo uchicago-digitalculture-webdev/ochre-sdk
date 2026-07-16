@@ -68,9 +68,9 @@
     "eslint": "^10.7.0",
     "knip": "^6.26.0",
     "oxfmt": "^0.59.0",
-    "tsdown": "^0.22.7",
+    "tsdown": "^0.22.8",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   },
-  "packageManager": "pnpm@11.13.0"
+  "packageManager": "pnpm@11.13.1"
 }
