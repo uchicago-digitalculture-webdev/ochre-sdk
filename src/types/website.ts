@@ -571,6 +571,7 @@ export type WebsiteMetadata<T extends LanguageCodes = LanguageCodes> = {
   description: string;
   webpageTitle: MultilingualString<T> | null;
   properties: {
+    privacy: "public" | "password" | "credentials-ochre";
     icon: { faviconUuid: string | null; appleTouchIconUuid: string | null };
   };
 };

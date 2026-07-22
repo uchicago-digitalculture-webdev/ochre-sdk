@@ -68,6 +68,10 @@ function parseWebsiteMetadata<T extends ReadonlyArray<string>>(
           : websiteName,
     webpageTitle,
     properties: {
+      privacy: reader.valueOr<WebsiteMetadata<T>["properties"]["privacy"]>(
+        "privacy",
+        "public",
+      ),
       icon: {
         faviconUuid: reader.uuid("favicon-ico"),
         appleTouchIconUuid: reader.uuid("favicon-img"),
@@ -147,12 +151,12 @@ declare function local:matching-pages($resources, $target-slug, $slug-prefix) {
 
 declare function local:metadata-tree($tree, $target-slug, $slug-prefix) {
   let $resources := local:resource-items($tree/items/resource)
-  let $icon-properties := $tree/properties/property[label/string() = "presentation"][value/string() = "website"]/property[label/string() = ("favicon-ico", "favicon-img")]
+  let $presentation-properties := $tree/properties/property[label/string() = "presentation"][value/string() = "website"]/property[label/string() = ("favicon-ico", "favicon-img", "privacy")]
   return
     element tree {
       attribute uuid { string($tree/@uuid) },
       $tree/identification,
-      if (empty($icon-properties)) then () else element properties { $icon-properties },
+      if (empty($presentation-properties)) then () else element properties { $presentation-properties },
       element items {
         local:matching-pages(
           $resources[local:presentation(.) = "page"],
