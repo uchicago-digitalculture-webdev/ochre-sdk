@@ -162,7 +162,7 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
       | "staging"
       | "pre-release"
       | "release";
-    privacy: "public" | "password" | "password-ochre";
+    privacy: "public" | "password" | "credentials-ochre";
     contact: { name: string; email: string | null } | null;
     loadingVariant: "spinner" | "skeleton" | "animation" | "none";
     theme: {
@@ -578,5 +578,5 @@ export type WebsiteMetadata<T extends LanguageCodes = LanguageCodes> = {
 export type ProtectedWebsite<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   identification: Identification<T>;
-  properties: { privacy: "password" | "password-ochre" };
+  properties: { privacy: "password" | "credentials-ochre" };
 };

@@ -280,7 +280,9 @@ function minimalWebsiteXML(): string {
 </result>`;
 }
 
-function protectedWebsiteXML(privacy: "password" | "password-ochre"): string {
+function protectedWebsiteXML(
+  privacy: "password" | "credentials-ochre",
+): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <result>
   <ochre uuid="${UUID.ochre}" belongsTo="TEST" uuidBelongsTo="${UUID.project}" publicationDateTime="${PUBLICATION_DATE}">
@@ -439,12 +441,14 @@ describe("fetchWebsite", () => {
   });
 
   it("returns protectedWebsite with minimal info for an OCHRE-credentials-protected site when no credentials are given", async () => {
-    const mock = makeFetchMock(protectedWebsiteXML("password-ochre"));
+    const mock = makeFetchMock(protectedWebsiteXML("credentials-ochre"));
     const result = await fetchWebsite("test-website", { fetch: mock.fetch });
 
     expect(result.error).toBeNull();
     expect(result.website).toBeNull();
-    expect(result.protectedWebsite?.properties.privacy).toBe("password-ochre");
+    expect(result.protectedWebsite?.properties.privacy).toBe(
+      "credentials-ochre",
+    );
     expect(mock.calls).toHaveLength(1);
   });
 
@@ -475,7 +479,7 @@ describe("fetchWebsite", () => {
   });
 
   it("validates OCHRE credentials and sends both validate and userOCHRE in the security request", async () => {
-    const mock = makeFetchMock(protectedWebsiteXML("password-ochre"), 200);
+    const mock = makeFetchMock(protectedWebsiteXML("credentials-ochre"), 200);
     const result = await fetchWebsite("test-website", {
       fetch: mock.fetch,
       credentials: { username: "john", password: "secret" },
