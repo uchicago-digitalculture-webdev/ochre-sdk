@@ -62,7 +62,7 @@ function getLabelContentLanguages(
 function parsePropertyValueLabelText(
   text: string | null | undefined,
 ): string | null {
-  if (text == null || text === "") {
+  if (text === "" || text == null) {
     return null;
   }
 
@@ -91,7 +91,7 @@ function parsePropertyValueLabel(
 function parsePropertyValueBooleanContent(
   rawValue: string | null | undefined,
 ): boolean | null {
-  if (rawValue == null || rawValue === "") {
+  if (rawValue === "" || rawValue == null) {
     return null;
   }
 

@@ -338,7 +338,7 @@ function createMDXStringAttribute(
   name: string,
   value: string | undefined,
 ): string {
-  if (value == null || value === "") {
+  if (value === "" || value == null) {
     return "";
   }
 
@@ -833,9 +833,7 @@ function getXMLRichTextLinks(item: XMLRichTextItem): Array<XMLRichTextLink> {
     }
 
     for (const rawLink of rawLinks) {
-      if (
-        !(isXMLRichTextLink(rawLink) && !isTextAnnotationMarkerLink(rawLink))
-      ) {
+      if (!isXMLRichTextLink(rawLink) || isTextAnnotationMarkerLink(rawLink)) {
         continue;
       }
 
@@ -847,7 +845,7 @@ function getXMLRichTextLinks(item: XMLRichTextItem): Array<XMLRichTextLink> {
   links.sort((left, right) => {
     const leftIndex = getXMLSourceIndex(left.link);
     const rightIndex = getXMLSourceIndex(right.link);
-    if (leftIndex != null && rightIndex != null && leftIndex !== rightIndex) {
+    if (leftIndex !== rightIndex && leftIndex != null && rightIndex != null) {
       return leftIndex - rightIndex;
     }
 

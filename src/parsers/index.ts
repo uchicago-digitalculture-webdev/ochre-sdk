@@ -559,7 +559,7 @@ function isResourceWrapper(
 function sourceOrderSort(left: HierarchyEntry, right: HierarchyEntry): number {
   const leftIndex = getXMLSourceIndex(left.item);
   const rightIndex = getXMLSourceIndex(right.item);
-  if (leftIndex != null && rightIndex != null && leftIndex !== rightIndex) {
+  if (leftIndex !== rightIndex && leftIndex != null && rightIndex != null) {
     return leftIndex - rightIndex;
   }
 
@@ -663,8 +663,8 @@ function normalizeTreeItemCategory(
     | undefined,
 ): TreeItemCategory | undefined {
   if (
-    containedItemCategory != null &&
-    typeof containedItemCategory !== "string"
+    typeof containedItemCategory !== "string" &&
+    containedItemCategory != null
   ) {
     throw new Error("Tree containedItemCategory must be a single category", {
       cause: containedItemCategory,
@@ -700,9 +700,9 @@ function resolveTreeItemCategory<U extends TreeItemCategory>(
   }
 
   if (
+    containedItemCategory !== inferredCategory &&
     containedItemCategory != null &&
-    inferredCategory != null &&
-    containedItemCategory !== inferredCategory
+    inferredCategory != null
   ) {
     throw new Error(
       `Tree containedItemCategory "${containedItemCategory}" does not match XML items category "${inferredCategory}"`,
@@ -951,7 +951,7 @@ export function parseNotes<T extends ReadonlyArray<string>>(
 }
 
 function parsePropertyDataType(dataType: string | undefined): PropertyDataType {
-  if (dataType == null || dataType === "") {
+  if (dataType === "" || dataType == null) {
     return "string";
   }
 
@@ -1305,7 +1305,7 @@ function normalizeTreeLinkItemsCategory(
   type: string | undefined,
 ): TreeItemCategory | null {
   const category = normalizeCategory(type);
-  if (category == null || category === "tree") {
+  if (category === "tree" || category == null) {
     return null;
   }
 

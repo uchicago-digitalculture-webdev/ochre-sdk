@@ -105,7 +105,7 @@ function parseOptionalXMLNumber(
   value: string | XMLStringType,
 ): XMLNumberType | undefined {
   const payload = getXMLStringPayload(value);
-  return payload == null || payload === "" ? undefined : Number(payload);
+  return payload === "" || payload == null ? undefined : Number(payload);
 }
 
 const ITEM_CATEGORIES = [

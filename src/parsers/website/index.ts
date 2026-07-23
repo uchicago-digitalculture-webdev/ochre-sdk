@@ -165,7 +165,7 @@ function cleanWebsitePageSlug(slug: string | undefined): string | null {
 }
 
 function prefixSlug(slug: string, slugPrefix: string | undefined): string {
-  if (slugPrefix == null || slugPrefix === "") {
+  if (slugPrefix === "" || slugPrefix == null) {
     return slug;
   }
 
@@ -366,7 +366,7 @@ function parseResponsiveCssStyles(
 export function parseBounds(
   bounds: string,
 ): [[number, number], [number, number]] {
-  const coordinates = bounds.trim().startsWith("[")
+  const coordinates = bounds.trimStart().startsWith("[")
     ? parseJsonBounds(bounds)
     : bounds
         .split(";")
@@ -2805,7 +2805,7 @@ function parseContextItem<T extends ReadonlyArray<string>>(
   const levels: Array<ContextTreeLevelItem> = [];
   const levelsToParse = contextItemToParse.levels?.level ?? [];
   for (const level of levelsToParse) {
-    const [rawVariableUuid = "", rawValueUuid] = level.payload.split(",");
+    const [rawVariableUuid = "", rawValueUuid] = level.payload.split(",", 2);
     const valueUuid =
       rawValueUuid == null || rawValueUuid.trim() === "null"
         ? null

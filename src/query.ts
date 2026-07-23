@@ -208,7 +208,7 @@ function buildWordQueryOptionsExpression(parameters: {
       isWildcarded ? "wildcarded" : "unwildcarded",
     );
 
-    if (isStemmed && language != null && language !== "") {
+    if (isStemmed && language !== "" && language != null) {
       options.push(`lang=${language}`);
     }
   }
