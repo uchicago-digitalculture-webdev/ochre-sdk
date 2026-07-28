@@ -588,8 +588,6 @@ const COLLECTION_PROPERTY_DEFAULTS = {
   variant: "slide",
   paginationVariant: "default",
   loadingVariant: "skeleton",
-  imageLayout: "start",
-  isImagePlaceholderDisplayed: true,
   minimumColumnCount: null,
   maximumColumnCount: null,
   expectedItemCount: null,
@@ -600,20 +598,39 @@ const COLLECTION_PROPERTY_DEFAULTS = {
   Extract<WebElementComponent, { component: "collection" }>
 >;
 
+/**
+ * Default values for a collection's image display properties, merged separately
+ * from {@link COLLECTION_PROPERTY_DEFAULTS} because overrides of the nested
+ * "image" object are themselves partial.
+ */
+const COLLECTION_IMAGE_DEFAULTS = {
+  layout: "start",
+  fit: "fill",
+  alignment: "center",
+  isPlaceholderDisplayed: true,
+} as const satisfies Extract<
+  WebElementComponent,
+  { component: "collection" }
+>["image"];
+
 type CollectionPropertyKey = keyof typeof COLLECTION_PROPERTY_DEFAULTS;
 
 /**
  * Reads the collection display properties explicitly set on a reader, omitting
  * any that are unset. The "collection" component merges these over
- * {@link COLLECTION_PROPERTY_DEFAULTS}, while the "query" component uses them as
- * partial overrides for its embedded collection.
+ * {@link COLLECTION_PROPERTY_DEFAULTS} and {@link COLLECTION_IMAGE_DEFAULTS},
+ * while the "query" component uses them as partial overrides for its embedded
+ * collection.
  */
 function parseCollectionPropertyOverrides<T extends ReadonlyArray<string>>(
   reader: WebsitePresentationReader<T>,
-): Partial<Pick<CollectionComponent<T>, CollectionPropertyKey>> {
+): Partial<Pick<CollectionComponent<T>, CollectionPropertyKey>> & {
+  image?: Partial<CollectionComponent<T>["image"]>;
+} {
   const overrides: Partial<
     Pick<CollectionComponent<T>, CollectionPropertyKey>
   > = {};
+  const imageOverrides: Partial<CollectionComponent<T>["image"]> = {};
 
   function read<K extends CollectionPropertyKey>(key: K, label: string): void {
     const value = reader.value<CollectionComponent<T>[K]>(label);
@@ -622,11 +639,19 @@ function parseCollectionPropertyOverrides<T extends ReadonlyArray<string>>(
     }
   }
 
+  function readImage<K extends keyof CollectionComponent<T>["image"]>(
+    key: K,
+    label: string,
+  ): void {
+    const value = reader.value<CollectionComponent<T>["image"][K]>(label);
+    if (value != null) {
+      imageOverrides[key] = value;
+    }
+  }
+
   read("variant", "variant");
   read("paginationVariant", "pagination-variant");
   read("loadingVariant", "loading-variant");
-  read("imageLayout", "image-layout");
-  read("isImagePlaceholderDisplayed", "image-placeholder-displayed");
   read("minimumColumnCount", "minimum-column-count");
   read("maximumColumnCount", "maximum-column-count");
   read("expectedItemCount", "item-count");
@@ -634,7 +659,14 @@ function parseCollectionPropertyOverrides<T extends ReadonlyArray<string>>(
   read("isUsingQueryParams", "is-using-query-params");
   read("isInteractive", "is-interactive");
 
-  return overrides;
+  readImage("layout", "image-layout");
+  readImage("fit", "image-fit");
+  readImage("alignment", "image-alignment");
+  readImage("isPlaceholderDisplayed", "image-placeholder-displayed");
+
+  return Object.keys(imageOverrides).length > 0
+    ? { ...overrides, image: imageOverrides }
+    : overrides;
 }
 
 /**
@@ -1026,13 +1058,17 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         options,
       );
 
+      const propertyOverrides =
+        parseCollectionPropertyOverrides(componentReader);
+
       properties = {
         component: "collection",
         linkUuids: setLinks.map((link) => link.uuid),
         displayedProperties:
           parseCollectionDisplayedProperties(componentReader),
         ...COLLECTION_PROPERTY_DEFAULTS,
-        ...parseCollectionPropertyOverrides(componentReader),
+        ...propertyOverrides,
+        image: { ...COLLECTION_IMAGE_DEFAULTS, ...propertyOverrides.image },
         filter: {
           isSidebarDisplayed: isFilterSidebarDisplayed,
           isResultsBarDisplayed: isFilterResultsBarDisplayed,

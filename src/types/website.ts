@@ -351,8 +351,12 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       variant: "slide" | "table" | "card" | "tile" | "showcase";
       paginationVariant: "default" | "numeric";
       loadingVariant: "spinner" | "skeleton" | "animation" | "none";
-      imageLayout: "top" | "bottom" | "start" | "end" | null;
-      isImagePlaceholderDisplayed: boolean;
+      image: {
+        layout: "top" | "bottom" | "start" | "end" | null;
+        fit: "fill" | "fit";
+        alignment: "top" | "center" | "bottom";
+        isPlaceholderDisplayed: boolean;
+      };
       minimumColumnCount: number | null;
       maximumColumnCount: number | null;
       expectedItemCount: number | null;
@@ -440,8 +444,15 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
         Partial<
           Omit<
             Extract<WebElementComponent<T>, { component: "collection" }>,
-            "component" | "linkUuids" | "options"
-          >
+            "component" | "linkUuids" | "options" | "image"
+          > & {
+            image: Partial<
+              Extract<
+                WebElementComponent<T>,
+                { component: "collection" }
+              >["image"]
+            >;
+          }
         >
       >;
     }
