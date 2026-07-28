@@ -2612,11 +2612,7 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
     },
     sidebar: sidebar ?? parent?.sidebar ?? null,
     itemPage: {
-      mainContent: {
-        isDisplayed: parent?.itemPage.mainContent.isDisplayed ?? true,
-        isHeaderDisplayed:
-          parent?.itemPage.mainContent.isHeaderDisplayed ?? true,
-      },
+      isMainContentDisplayed: parent?.itemPage.isMainContentDisplayed ?? true,
       description: {
         isDisplayed: parent?.itemPage.description.isDisplayed ?? true,
         isHeaderDisplayed:
@@ -2640,11 +2636,7 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
         isDisplayed: parent?.itemPage.periods.isDisplayed ?? true,
         isHeaderDisplayed: parent?.itemPage.periods.isHeaderDisplayed ?? true,
       },
-      properties: {
-        isDisplayed: parent?.itemPage.properties.isDisplayed ?? true,
-        isHeaderDisplayed:
-          parent?.itemPage.properties.isHeaderDisplayed ?? true,
-      },
+      isPropertiesDisplayed: parent?.itemPage.isPropertiesDisplayed ?? true,
       bibliography: {
         isDisplayed: parent?.itemPage.bibliography.isDisplayed ?? true,
         isHeaderDisplayed:
@@ -2736,13 +2728,11 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
   const itemPageReader = websiteReader.nestedByValue("page-type", "item-page");
   if (itemPageReader.size > 0) {
     const itemPageSections = [
-      ["mainContent", "main-content"],
       ["description", "description"],
       ["document", "document"],
       ["notes", "notes"],
       ["events", "events"],
       ["periods", "periods"],
-      ["properties", "properties"],
       ["bibliography", "bibliography"],
     ] as const;
 
