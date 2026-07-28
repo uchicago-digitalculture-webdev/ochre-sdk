@@ -354,7 +354,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       image: {
         layout: "top" | "bottom" | "start" | "end" | null;
         fit: "fill" | "fit";
-        alignment: "top" | "center" | "bottom";
+        alignment: "top" | "center" | "bottom" | null;
         isPlaceholderDisplayed: boolean;
       };
       minimumColumnCount: number | null;

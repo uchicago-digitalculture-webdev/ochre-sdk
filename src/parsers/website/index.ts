@@ -605,8 +605,8 @@ const COLLECTION_PROPERTY_DEFAULTS = {
  */
 const COLLECTION_IMAGE_DEFAULTS = {
   layout: "start",
-  fit: "fill",
-  alignment: "center",
+  fit: "fit",
+  alignment: null,
   isPlaceholderDisplayed: true,
 } as const satisfies Extract<
   WebElementComponent,
