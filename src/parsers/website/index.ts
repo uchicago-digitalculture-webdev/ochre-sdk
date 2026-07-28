@@ -2612,20 +2612,44 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
     },
     sidebar: sidebar ?? parent?.sidebar ?? null,
     itemPage: {
-      isMainContentDisplayed: parent?.itemPage.isMainContentDisplayed ?? true,
-      isDescriptionDisplayed: parent?.itemPage.isDescriptionDisplayed ?? true,
-      isDocumentDisplayed: parent?.itemPage.isDocumentDisplayed ?? true,
+      mainContent: {
+        isDisplayed: parent?.itemPage.mainContent.isDisplayed ?? true,
+        isHeaderDisplayed:
+          parent?.itemPage.mainContent.isHeaderDisplayed ?? true,
+      },
+      description: {
+        isDisplayed: parent?.itemPage.description.isDisplayed ?? true,
+        isHeaderDisplayed:
+          parent?.itemPage.description.isHeaderDisplayed ?? true,
+      },
+      document: {
+        isDisplayed: parent?.itemPage.document.isDisplayed ?? true,
+        isHeaderDisplayed: parent?.itemPage.document.isHeaderDisplayed ?? true,
+      },
       notes: {
         isDisplayed: parent?.itemPage.notes.isDisplayed ?? true,
+        isHeaderDisplayed: parent?.itemPage.notes.isHeaderDisplayed ?? true,
         variant: parent?.itemPage.notes.variant ?? "discrete",
       },
       events: {
         isDisplayed: parent?.itemPage.events.isDisplayed ?? true,
+        isHeaderDisplayed: parent?.itemPage.events.isHeaderDisplayed ?? true,
         variant: parent?.itemPage.events.variant ?? "tabular",
       },
-      isPeriodsDisplayed: parent?.itemPage.isPeriodsDisplayed ?? true,
-      isPropertiesDisplayed: parent?.itemPage.isPropertiesDisplayed ?? true,
-      isBibliographyDisplayed: parent?.itemPage.isBibliographyDisplayed ?? true,
+      periods: {
+        isDisplayed: parent?.itemPage.periods.isDisplayed ?? true,
+        isHeaderDisplayed: parent?.itemPage.periods.isHeaderDisplayed ?? true,
+      },
+      properties: {
+        isDisplayed: parent?.itemPage.properties.isDisplayed ?? true,
+        isHeaderDisplayed:
+          parent?.itemPage.properties.isHeaderDisplayed ?? true,
+      },
+      bibliography: {
+        isDisplayed: parent?.itemPage.bibliography.isDisplayed ?? true,
+        isHeaderDisplayed:
+          parent?.itemPage.bibliography.isHeaderDisplayed ?? true,
+      },
       isPropertyValuesGrouped: parent?.itemPage.isPropertyValuesGrouped ?? true,
       isPublicationDateTimeDisplayed:
         parent?.itemPage.isPublicationDateTimeDisplayed ?? true,
@@ -2711,30 +2735,31 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
 
   const itemPageReader = websiteReader.nestedByValue("page-type", "item-page");
   if (itemPageReader.size > 0) {
-    returnProperties.itemPage.isMainContentDisplayed = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["isMainContentDisplayed"]
-    >(
-      "item-page-main-content-displayed",
-      returnProperties.itemPage.isMainContentDisplayed,
-    );
+    const itemPageSections = [
+      ["mainContent", "main-content"],
+      ["description", "description"],
+      ["document", "document"],
+      ["notes", "notes"],
+      ["events", "events"],
+      ["periods", "periods"],
+      ["properties", "properties"],
+      ["bibliography", "bibliography"],
+    ] as const;
 
-    returnProperties.itemPage.isDescriptionDisplayed = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["isDescriptionDisplayed"]
-    >(
-      "item-page-description-displayed",
-      returnProperties.itemPage.isDescriptionDisplayed,
-    );
+    for (const [key, slug] of itemPageSections) {
+      const section: { isDisplayed: boolean; isHeaderDisplayed: boolean } =
+        returnProperties.itemPage[key];
 
-    returnProperties.itemPage.isDocumentDisplayed = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["isDocumentDisplayed"]
-    >(
-      "item-page-document-displayed",
-      returnProperties.itemPage.isDocumentDisplayed,
-    );
+      section.isDisplayed = itemPageReader.valueOr<boolean>(
+        `item-page-${slug}-displayed`,
+        section.isDisplayed,
+      );
 
-    returnProperties.itemPage.notes.isDisplayed = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["notes"]["isDisplayed"]
-    >("item-page-notes-displayed", returnProperties.itemPage.notes.isDisplayed);
+      section.isHeaderDisplayed = itemPageReader.valueOr<boolean>(
+        `item-page-${slug}-header-displayed`,
+        section.isHeaderDisplayed,
+      );
+    }
 
     returnProperties.itemPage.notes.variant = itemPageReader.valueOr<
       Website<T>["properties"]["itemPage"]["notes"]["variant"]
@@ -2743,39 +2768,11 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
       returnProperties.itemPage.notes.variant,
     );
 
-    returnProperties.itemPage.events.isDisplayed = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["events"]["isDisplayed"]
-    >(
-      "item-page-events-displayed",
-      returnProperties.itemPage.events.isDisplayed,
-    );
-
     returnProperties.itemPage.events.variant = itemPageReader.valueOr<
       Website<T>["properties"]["itemPage"]["events"]["variant"]
     >(
       "item-page-events-display-variant",
       returnProperties.itemPage.events.variant,
-    );
-
-    returnProperties.itemPage.isPeriodsDisplayed = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["isPeriodsDisplayed"]
-    >(
-      "item-page-periods-displayed",
-      returnProperties.itemPage.isPeriodsDisplayed,
-    );
-
-    returnProperties.itemPage.isPropertiesDisplayed = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["isPropertiesDisplayed"]
-    >(
-      "item-page-properties-displayed",
-      returnProperties.itemPage.isPropertiesDisplayed,
-    );
-
-    returnProperties.itemPage.isBibliographyDisplayed = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["isBibliographyDisplayed"]
-    >(
-      "item-page-bibliography-displayed",
-      returnProperties.itemPage.isBibliographyDisplayed,
     );
 
     returnProperties.itemPage.isPropertyValuesGrouped = itemPageReader.valueOr<

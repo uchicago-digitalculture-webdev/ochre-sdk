@@ -189,20 +189,22 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
     };
     sidebar: WebSidebar<T> | null;
     itemPage: {
-      isMainContentDisplayed: boolean;
-      isDescriptionDisplayed: boolean;
-      isDocumentDisplayed: boolean;
+      mainContent: { isDisplayed: boolean; isHeaderDisplayed: boolean };
+      description: { isDisplayed: boolean; isHeaderDisplayed: boolean };
+      document: { isDisplayed: boolean; isHeaderDisplayed: boolean };
       notes: {
         isDisplayed: boolean;
+        isHeaderDisplayed: boolean;
         variant: "discrete" | "tabs-horizontal" | "tabs-vertical" | "tabular";
       };
       events: {
         isDisplayed: boolean;
+        isHeaderDisplayed: boolean;
         variant: "discrete" | "tabs-horizontal" | "tabs-vertical" | "tabular";
       };
-      isPeriodsDisplayed: boolean;
-      isPropertiesDisplayed: boolean;
-      isBibliographyDisplayed: boolean;
+      periods: { isDisplayed: boolean; isHeaderDisplayed: boolean };
+      properties: { isDisplayed: boolean; isHeaderDisplayed: boolean };
+      bibliography: { isDisplayed: boolean; isHeaderDisplayed: boolean };
       isPropertyValuesGrouped: boolean;
       isPublicationDateTimeDisplayed: boolean;
       isPersistentIdentifierDisplayed: boolean;
