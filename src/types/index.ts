@@ -364,6 +364,20 @@ export type OcrPage = {
 };
 
 /**
+ *  A run of adjacent OCR words matching a search value in OCHRE
+ *
+ *  `uuid` is the requested resource, while `resourceUuid` is the resource that
+ *  owns the OCR page — they differ when the OCR lives on a child page resource.
+ */
+export type OcrMatch = {
+  uuid: string;
+  resourceUuid: string | null;
+  page: Omit<OcrPage, "blocks">;
+  content: string;
+  words: Array<OcrWord>;
+};
+
+/**
  *  Note in OCHRE
  */
 export type Note<T extends LanguageCodes = LanguageCodes> = {
@@ -1256,6 +1270,13 @@ export type SetItemsSort =
 
 /**
  * Represents a leaf query for Set items
+ *
+ * The `ocr` target matches the OCR text layer of resources. Because OCR is not
+ * carried by Set item projections, it is resolved by a document join rather
+ * than a CTS term, which means `ocr` leaves compose with `and` and `isNegated`
+ * but cannot be nested inside an `or` group. Both match modes are adjacency
+ * based: `includes` allows stemming and wildcards, `exact` requires whole OCR
+ * words. OCR carries no language, so `ocr` leaves take no `language`.
  */
 export type QueryLeaf =
   | {
@@ -1327,6 +1348,13 @@ export type QueryLeaf =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
+      isNegated?: boolean;
+    }
+  | {
+      target: "ocr";
+      value: string;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
       isNegated?: boolean;
     }
   | {

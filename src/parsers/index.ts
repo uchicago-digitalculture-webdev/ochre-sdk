@@ -35,6 +35,7 @@ import type {
   Metadata,
   Note,
   Observation,
+  OcrMatch,
   OcrPage,
   OcrPoint,
   OcrTextBlock,
@@ -103,7 +104,9 @@ import type {
   XMLNote,
   XMLObservation,
   XMLOcr,
+  XMLOcrMatchItem,
   XMLOcrPage,
+  XMLOcrString,
   XMLPeriod,
   XMLPerson,
   XMLProperty,
@@ -909,27 +912,31 @@ function parseOcrVertices(rawVertices: string | undefined): Array<OcrPoint> {
   return vertices;
 }
 
+function parseOcrWords(
+  rawWords: Array<XMLOcrString> | undefined,
+): Array<OcrWord> {
+  return Array.from(rawWords ?? [], (rawWord) => ({
+    content: rawWord.CONTENT,
+    x: rawWord.HPOS,
+    y: rawWord.VPOS,
+    width: rawWord.WIDTH,
+    height: rawWord.HEIGHT,
+    vertices: parseOcrVertices(rawWord.VERTICES),
+  }));
+}
+
+function joinOcrWordContents(words: Array<OcrWord>): string {
+  return Array.from(words, (word) => word.content).join(" ");
+}
+
 function parseOcrPage(rawPage: XMLOcrPage): OcrPage {
   const blocks: Array<OcrTextBlock> = Array.from(
     rawPage.TextBlock ?? [],
     (rawBlock) => ({
       lines: Array.from(rawBlock.TextLine ?? [], (rawLine) => {
-        const words: Array<OcrWord> = Array.from(
-          rawLine.string ?? [],
-          (rawWord) => ({
-            content: rawWord.CONTENT,
-            x: rawWord.HPOS,
-            y: rawWord.VPOS,
-            width: rawWord.WIDTH,
-            height: rawWord.HEIGHT,
-            vertices: parseOcrVertices(rawWord.VERTICES),
-          }),
-        );
+        const words = parseOcrWords(rawLine.string);
 
-        return {
-          content: Array.from(words, (word) => word.content).join(" "),
-          words,
-        };
+        return { content: joinOcrWordContents(words), words };
       }),
     }),
   );
@@ -945,6 +952,41 @@ function parseOcrPage(rawPage: XMLOcrPage): OcrPage {
 
 function parseOcr(rawOcr: XMLOcr | undefined): Array<OcrPage> {
   return Array.from(rawOcr?.Page ?? [], (rawPage) => parseOcrPage(rawPage));
+}
+
+/**
+ * Parse OCR matches returned by the OCHRE API
+ * @param rawOcrItems - The raw OCR match items
+ * @returns The parsed OCR matches, in request order
+ * @internal
+ */
+export function parseOcrMatches(
+  rawOcrItems: Array<XMLOcrMatchItem>,
+): Array<OcrMatch> {
+  const matches: Array<OcrMatch> = [];
+
+  for (const rawOcrItem of rawOcrItems) {
+    const rawMatches = rawOcrItem.ocrMatch ?? [];
+
+    for (const rawMatch of rawMatches) {
+      const words = parseOcrWords(rawMatch.string);
+
+      matches.push({
+        uuid: rawOcrItem.uuid,
+        resourceUuid: rawMatch.resourceUuid ?? null,
+        page: {
+          number: rawMatch.n ?? null,
+          fileName: rawMatch.fileName ?? null,
+          width: rawMatch.WIDTH ?? null,
+          height: rawMatch.HEIGHT ?? null,
+        },
+        content: joinOcrWordContents(words),
+        words,
+      });
+    }
+  }
+
+  return matches;
 }
 
 function parseNote<T extends ReadonlyArray<string>>(

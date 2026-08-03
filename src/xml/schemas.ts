@@ -43,6 +43,9 @@ import type {
   XMLNote as XMLNoteType,
   XMLNumber as XMLNumberType,
   XMLObservation as XMLObservationType,
+  XMLOcrMatchesData as XMLOcrMatchesDataType,
+  XMLOcrMatchItem as XMLOcrMatchItemType,
+  XMLOcrMatch as XMLOcrMatchType,
   XMLOcrPage as XMLOcrPageType,
   XMLOcrString as XMLOcrStringType,
   XMLOcrTextBlock as XMLOcrTextBlockType,
@@ -706,6 +709,65 @@ const XMLOcr: v.GenericSchema<unknown, XMLOcrType> = v.object(
     ),
   },
   "XMLOcr: Shape error",
+);
+
+const XMLOcrMatch: v.GenericSchema<unknown, XMLOcrMatchType> = v.object(
+  {
+    resourceUuid: v.optional(
+      v.string("XMLOcrMatch: resourceUuid is string and optional"),
+    ),
+    n: XMLOptionalNumber,
+    fileName: v.optional(
+      v.string("XMLOcrMatch: fileName is string and optional"),
+    ),
+    WIDTH: XMLOptionalNumber,
+    HEIGHT: XMLOptionalNumber,
+    string: v.optional(
+      v.array(XMLOcrString, "XMLOcrMatch: string is array of XMLOcrString"),
+    ),
+  },
+  "XMLOcrMatch: Shape error",
+);
+
+const XMLOcrMatchItem: v.GenericSchema<unknown, XMLOcrMatchItemType> = v.object(
+  {
+    uuid: v.pipe(
+      v.string("XMLOcrMatchItem: uuid is string and required"),
+      v.check(isPseudoUuid, "XMLOcrMatchItem: uuid is not a valid pseudo-UUID"),
+    ),
+    matchCount: XMLNumber,
+    ocrMatch: v.optional(
+      v.array(XMLOcrMatch, "XMLOcrMatchItem: ocrMatch is array of XMLOcrMatch"),
+    ),
+  },
+  "XMLOcrMatchItem: Shape error",
+);
+
+/**
+ * Schema for validating OCR matches fetched from the OCHRE API
+ * @internal
+ */
+export const XMLOcrMatchesData: v.GenericSchema<
+  unknown,
+  XMLOcrMatchesDataType
+> = v.object(
+  {
+    result: v.object({
+      ochre: v.object({
+        ocrMatches: v.optional(
+          v.object({
+            ocrItem: v.optional(
+              v.array(
+                XMLOcrMatchItem,
+                "XMLOcrMatchesData: ocrItem is array of XMLOcrMatchItem",
+              ),
+            ),
+          }),
+        ),
+      }),
+    }),
+  },
+  "XMLOcrMatchesData: Shape error",
 );
 
 const XMLNote: v.GenericSchema<unknown, XMLNoteType> = v.object(

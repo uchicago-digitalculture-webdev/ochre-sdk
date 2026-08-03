@@ -210,6 +210,21 @@ export type XMLOcrPage = {
 
 export type XMLOcr = { Page?: Array<XMLOcrPage> };
 
+export type XMLOcrMatch = Omit<XMLOcrPage, "TextBlock"> & {
+  resourceUuid?: string;
+  string?: Array<XMLOcrString>;
+};
+
+export type XMLOcrMatchItem = {
+  uuid: string;
+  matchCount: XMLNumber;
+  ocrMatch?: Array<XMLOcrMatch>;
+};
+
+export type XMLOcrMatchesData = {
+  result: { ochre: { ocrMatches?: { ocrItem?: Array<XMLOcrMatchItem> } } };
+};
+
 export type XMLNote = Partial<XMLContent> &
   XMLString & {
     noteNo?: XMLNumber;

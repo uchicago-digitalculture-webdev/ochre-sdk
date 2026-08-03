@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import type { Query } from "#/types/index.js";
 import { fetchSetItems } from "#/fetchers/set/items.js";
 
 const UCHICAGO_NODE_SET_SCOPE_UUIDS = [
@@ -252,4 +253,149 @@ it("should fetch uchicago-node Set items for stemmed query: 'train'", async () =
   });
 
   expect(totalCount).toBe(8);
+});
+
+const OCR_SET_SCOPE_UUIDS = [
+  "96551f43-4905-49c3-8493-4d7c3bf0234e",
+  "9ae7119e-de20-4221-a3d5-eb185f863002",
+] as const;
+const OCR_ITEM_UUIDS = [
+  "518be69e-0a3d-4f2c-993e-3b352b2dfc11",
+  "b350600d-e0f6-4a67-bb62-199849b6aad3",
+];
+
+async function fetchOcrItemUuids(
+  query: Omit<Extract<Query, { target: "ocr" }>, "target">,
+): Promise<{ totalCount: number | null; uuids: Array<string> }> {
+  const { totalCount, items } = await fetchSetItems({
+    setScopeUuids: [...OCR_SET_SCOPE_UUIDS],
+    queries: { target: "ocr", ...query },
+    page: 1,
+    pageSize: 48,
+  });
+
+  return {
+    totalCount,
+    uuids: Array.from(items ?? [], (item) => item.uuid).toSorted((a, b) =>
+      a.localeCompare(b),
+    ),
+  };
+}
+
+it("should fetch Set items whose OCR text contains an adjacent phrase", async () => {
+  const { totalCount, uuids } = await fetchOcrItemUuids({
+    value: "magna cum laude",
+    matchMode: "includes",
+    isCaseSensitive: false,
+  });
+
+  expect(totalCount).toBe(2);
+  expect(uuids).toStrictEqual(OCR_ITEM_UUIDS);
+});
+
+it("should not match OCR phrases whose words are not adjacent", async () => {
+  const { totalCount } = await fetchOcrItemUuids({
+    value: "the laude",
+    matchMode: "includes",
+    isCaseSensitive: false,
+  });
+
+  expect(totalCount).toBe(0);
+});
+
+it("should match OCR words with stemming and wildcards, but not partial words", async () => {
+  const stemmed = await fetchOcrItemUuids({
+    value: "colleges",
+    matchMode: "includes",
+    isCaseSensitive: false,
+  });
+  const wildcarded = await fetchOcrItemUuids({
+    value: "CAPPAER*",
+    matchMode: "includes",
+    isCaseSensitive: false,
+  });
+  const partial = await fetchOcrItemUuids({
+    value: "laud",
+    matchMode: "exact",
+    isCaseSensitive: false,
+  });
+
+  expect(stemmed.uuids).toStrictEqual(OCR_ITEM_UUIDS);
+  expect(wildcarded.uuids).toStrictEqual(OCR_ITEM_UUIDS);
+  expect(partial.totalCount).toBe(0);
+});
+
+it("should exclude OCR matches when the OCR query is negated", async () => {
+  const { totalCount: matchedCount } = await fetchOcrItemUuids({
+    value: "magna cum laude",
+    matchMode: "includes",
+    isCaseSensitive: false,
+  });
+  const { totalCount: excludedCount, uuids } = await fetchOcrItemUuids({
+    value: "magna cum laude",
+    matchMode: "includes",
+    isCaseSensitive: false,
+    isNegated: true,
+  });
+  const { totalCount: unfilteredCount } = await fetchSetItems({
+    setScopeUuids: [...OCR_SET_SCOPE_UUIDS],
+    queries: null,
+    page: 1,
+    pageSize: 48,
+  });
+
+  expect(excludedCount).toBe(unfilteredCount! - matchedCount!);
+  for (const uuid of OCR_ITEM_UUIDS) {
+    expect(uuids).not.toContain(uuid);
+  }
+});
+
+it("should narrow OCR matches when AND-ed with another target", async () => {
+  const { totalCount: matchingTitle } = await fetchSetItems({
+    setScopeUuids: [...OCR_SET_SCOPE_UUIDS],
+    queries: {
+      and: [
+        {
+          target: "ocr",
+          value: "magna cum laude",
+          matchMode: "includes",
+          isCaseSensitive: false,
+        },
+        {
+          target: "title",
+          value: "Convocation",
+          matchMode: "includes",
+          isCaseSensitive: false,
+          language: "eng",
+        },
+      ],
+    },
+    page: 1,
+    pageSize: 48,
+  });
+  const { totalCount: missingTitle } = await fetchSetItems({
+    setScopeUuids: [...OCR_SET_SCOPE_UUIDS],
+    queries: {
+      and: [
+        {
+          target: "ocr",
+          value: "magna cum laude",
+          matchMode: "includes",
+          isCaseSensitive: false,
+        },
+        {
+          target: "title",
+          value: "Zzzznotpresent",
+          matchMode: "includes",
+          isCaseSensitive: false,
+          language: "eng",
+        },
+      ],
+    },
+    page: 1,
+    pageSize: 48,
+  });
+
+  expect(matchingTitle).toBe(2);
+  expect(missingTitle).toBe(0);
 });

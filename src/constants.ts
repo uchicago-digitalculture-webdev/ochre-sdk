@@ -34,6 +34,8 @@ export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
   "Page",
   "TextBlock",
   "TextLine",
+  "ocrItem",
+  "ocrMatch",
   "footnote",
   "language",
   "section",
