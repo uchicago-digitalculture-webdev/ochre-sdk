@@ -326,6 +326,44 @@ export type ImageMap = {
 };
 
 /**
+ *  Vertex of an OCR word's bounding polygon in OCHRE
+ */
+export type OcrPoint = { x: number; y: number };
+
+/**
+ *  Word recognized within an OCR text line in OCHRE
+ */
+export type OcrWord = {
+  content: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  vertices: Array<OcrPoint>;
+};
+
+/**
+ *  Text line of an OCR text block in OCHRE
+ */
+export type OcrTextLine = { content: string; words: Array<OcrWord> };
+
+/**
+ *  Text block of an OCR page in OCHRE
+ */
+export type OcrTextBlock = { lines: Array<OcrTextLine> };
+
+/**
+ *  OCR page of a resource in OCHRE
+ */
+export type OcrPage = {
+  number: number | null;
+  fileName: string | null;
+  width: number | null;
+  height: number | null;
+  blocks: Array<OcrTextBlock>;
+};
+
+/**
  *  Note in OCHRE
  */
 export type Note<T extends LanguageCodes = LanguageCodes> = {
@@ -1034,6 +1072,7 @@ export type Resource<
     image: Image<T> | null;
     document: MultilingualString<T> | null;
     imageMap: ImageMap | null;
+    ocr: Array<OcrPage>;
     coordinates: Array<Coordinates<T>>;
     periods: Array<Period<T, "embedded">>;
     links: ItemLinks<T>;

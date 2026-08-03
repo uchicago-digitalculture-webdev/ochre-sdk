@@ -35,6 +35,10 @@ import type {
   Metadata,
   Note,
   Observation,
+  OcrPage,
+  OcrPoint,
+  OcrTextBlock,
+  OcrWord,
   Period,
   Person,
   Property,
@@ -98,6 +102,8 @@ import type {
   XMLMetadata,
   XMLNote,
   XMLObservation,
+  XMLOcr,
+  XMLOcrPage,
   XMLPeriod,
   XMLPerson,
   XMLProperty,
@@ -884,6 +890,61 @@ function parseImageMap(rawImageMap: XMLImageMap | undefined): ImageMap | null {
   );
 
   return { areas, width: rawImageMap.width, height: rawImageMap.height };
+}
+
+function parseOcrVertices(rawVertices: string | undefined): Array<OcrPoint> {
+  const vertices: Array<OcrPoint> = [];
+  if (rawVertices == null) {
+    return vertices;
+  }
+
+  for (const match of rawVertices.matchAll(
+    /\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\)/g,
+  )) {
+    const x = Number(match[1]);
+    const y = Number(match[2]);
+    vertices.push({ x: Number.isNaN(x) ? 0 : x, y: Number.isNaN(y) ? 0 : y });
+  }
+
+  return vertices;
+}
+
+function parseOcrPage(rawPage: XMLOcrPage): OcrPage {
+  const blocks: Array<OcrTextBlock> = Array.from(
+    rawPage.TextBlock ?? [],
+    (rawBlock) => ({
+      lines: Array.from(rawBlock.TextLine ?? [], (rawLine) => {
+        const words: Array<OcrWord> = Array.from(
+          rawLine.string ?? [],
+          (rawWord) => ({
+            content: rawWord.CONTENT,
+            x: rawWord.HPOS,
+            y: rawWord.VPOS,
+            width: rawWord.WIDTH,
+            height: rawWord.HEIGHT,
+            vertices: parseOcrVertices(rawWord.VERTICES),
+          }),
+        );
+
+        return {
+          content: Array.from(words, (word) => word.content).join(" "),
+          words,
+        };
+      }),
+    }),
+  );
+
+  return {
+    number: rawPage.n ?? null,
+    fileName: rawPage.fileName ?? null,
+    width: rawPage.WIDTH ?? null,
+    height: rawPage.HEIGHT ?? null,
+    blocks,
+  };
+}
+
+function parseOcr(rawOcr: XMLOcr | undefined): Array<OcrPage> {
+  return Array.from(rawOcr?.Page ?? [], (rawPage) => parseOcrPage(rawPage));
 }
 
 function parseNote<T extends ReadonlyArray<string>>(
@@ -2311,6 +2372,7 @@ function parseResource<T extends ReadonlyArray<string>>(
     image: parseImage(rawResource.image, options),
     document: parseContentLike(rawResource.document, options),
     imageMap: parseImageMap(rawResource.imagemap),
+    ocr: parseOcr(rawResource.ocr),
     coordinates: parseCoordinates(rawResource.coordinates, options),
     periods: parsePeriodList(rawResource.periods, options),
     links: parseLinks(rawResource.links, options),

@@ -43,6 +43,11 @@ import type {
   XMLNote as XMLNoteType,
   XMLNumber as XMLNumberType,
   XMLObservation as XMLObservationType,
+  XMLOcrPage as XMLOcrPageType,
+  XMLOcrString as XMLOcrStringType,
+  XMLOcrTextBlock as XMLOcrTextBlockType,
+  XMLOcrTextLine as XMLOcrTextLineType,
+  XMLOcr as XMLOcrType,
   XMLPeriod as XMLPeriodType,
   XMLPerson as XMLPersonType,
   XMLPropertyRelation as XMLPropertyRelationType,
@@ -639,6 +644,68 @@ const XMLImageMap: v.GenericSchema<unknown, XMLImageMapType> = v.object(
     height: XMLNumber,
   },
   "XMLImageMap: Shape error",
+);
+
+const XMLOcrString: v.GenericSchema<unknown, XMLOcrStringType> = v.object(
+  {
+    HPOS: XMLNumber,
+    VPOS: XMLNumber,
+    WIDTH: XMLNumber,
+    HEIGHT: XMLNumber,
+    CONTENT: v.string("XMLOcrString: CONTENT is string and required"),
+    VERTICES: v.optional(
+      v.string("XMLOcrString: VERTICES is string and optional"),
+    ),
+  },
+  "XMLOcrString: Shape error",
+);
+
+const XMLOcrTextLine: v.GenericSchema<unknown, XMLOcrTextLineType> = v.object(
+  {
+    string: v.optional(
+      v.array(XMLOcrString, "XMLOcrTextLine: string is array of XMLOcrString"),
+    ),
+  },
+  "XMLOcrTextLine: Shape error",
+);
+
+const XMLOcrTextBlock: v.GenericSchema<unknown, XMLOcrTextBlockType> = v.object(
+  {
+    TextLine: v.optional(
+      v.array(
+        XMLOcrTextLine,
+        "XMLOcrTextBlock: TextLine is array of XMLOcrTextLine",
+      ),
+    ),
+  },
+  "XMLOcrTextBlock: Shape error",
+);
+
+const XMLOcrPage: v.GenericSchema<unknown, XMLOcrPageType> = v.object(
+  {
+    n: XMLOptionalNumber,
+    fileName: v.optional(
+      v.string("XMLOcrPage: fileName is string and optional"),
+    ),
+    WIDTH: XMLOptionalNumber,
+    HEIGHT: XMLOptionalNumber,
+    TextBlock: v.optional(
+      v.array(
+        XMLOcrTextBlock,
+        "XMLOcrPage: TextBlock is array of XMLOcrTextBlock",
+      ),
+    ),
+  },
+  "XMLOcrPage: Shape error",
+);
+
+const XMLOcr: v.GenericSchema<unknown, XMLOcrType> = v.object(
+  {
+    Page: v.optional(
+      v.array(XMLOcrPage, "XMLOcr: Page is array of XMLOcrPage"),
+    ),
+  },
+  "XMLOcr: Shape error",
 );
 
 const XMLNote: v.GenericSchema<unknown, XMLNoteType> = v.object(
@@ -1650,6 +1717,7 @@ const XMLResource: v.GenericSchema<unknown, XMLResourceType> = v.object(
     width: XMLOptionalNumber,
     image: v.optional(XMLImage),
     imagemap: v.optional(XMLImageMap),
+    ocr: v.optional(XMLOcr),
     document: v.optional(XMLContent),
     coordinates: v.optional(XMLCoordinates),
     periods: v.optional(v.object({ period: v.array(XMLPeriod) })),
@@ -2014,6 +2082,7 @@ const XMLWebsiteResource: v.GenericSchema<unknown, XMLWebsiteResourceType> =
         width: XMLOptionalNumber,
         image: v.optional(XMLImage),
         imagemap: v.optional(XMLImageMap),
+        ocr: v.optional(XMLOcr),
         document: v.optional(XMLContent),
         coordinates: v.optional(XMLCoordinates),
         periods: v.optional(v.object({ period: v.array(XMLPeriod) })),
