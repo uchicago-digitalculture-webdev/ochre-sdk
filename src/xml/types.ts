@@ -23,18 +23,32 @@ export type XMLRecursiveItemCategory = Exclude<
   "tree" | "person" | "propertyVariable" | "propertyValue" | "set"
 >;
 
-export type XMLString = {
-  payload?: string;
-  rend?: string;
-  whitespace?: string;
+/**
+ * Rich text envelope shared by `<string>` and `<content>` nodes, carrying the
+ * inline links, presentation properties and annotation identifier that turn a
+ * span of text into an annotation.
+ */
+export type XMLRichTextEnvelope = {
   links?: XMLLink;
   properties?: { property: Array<XMLProperty> };
   annotation?: string;
+};
+
+export type XMLString = XMLRichTextEnvelope & {
+  payload?: string;
+  rend?: string;
+  whitespace?: string;
   string?: Array<XMLString>;
 };
 
 export type XMLContent = {
-  content: Array<{ string: Array<XMLString>; lang: string; title?: string }>;
+  content: Array<
+    XMLRichTextEnvelope & {
+      string: Array<XMLString>;
+      lang: string;
+      title?: string;
+    }
+  >;
 };
 
 export type XMLNumber = number;

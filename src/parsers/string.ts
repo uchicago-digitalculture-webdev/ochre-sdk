@@ -1062,11 +1062,17 @@ function parseXMLContentItem<V extends ReadonlyArray<string>>(
   options: { languages: V },
 ): MultilingualStringText {
   const rawMDXBlocks: Array<string> = [];
-  const richText = parseNestedStringItems(contentItem.string, contentItem, {
-    ...options,
-    rendering: "rich",
-    rawMDXBlocks,
-  });
+  const nestedRichText = parseNestedStringItems(
+    contentItem.string,
+    contentItem,
+    { ...options, rendering: "rich", rawMDXBlocks },
+  );
+  const richText = hasRichTextEnvelope(contentItem)
+    ? renderRichTextItem(contentItem, nestedRichText, contentItem, {
+        ...options,
+        rendering: "rich",
+      })
+    : nestedRichText;
   let serializedRichText = serializeMDXContent(richText);
   for (const [index, rawMDXBlock] of rawMDXBlocks.entries()) {
     serializedRichText = serializedRichText.replaceAll(

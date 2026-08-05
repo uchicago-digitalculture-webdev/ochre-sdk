@@ -134,6 +134,21 @@ const ITEM_CATEGORIES = [
 
 const XMLItemCategory = v.picklist(ITEM_CATEGORIES);
 
+const XMLRichTextEnvelope = {
+  links: v.optional(v.lazy(() => XMLLink)),
+  properties: v.optional(
+    v.object({
+      property: v.array(
+        v.lazy(() => XMLProperty),
+        "XMLRichTextEnvelope: properties is array of XMLProperty",
+      ),
+    }),
+  ),
+  annotation: v.optional(
+    v.string("XMLRichTextEnvelope: annotation is string and optional"),
+  ),
+};
+
 const XMLString: v.GenericSchema<unknown, XMLStringType> = v.lazy(() =>
   v.object(
     {
@@ -144,18 +159,7 @@ const XMLString: v.GenericSchema<unknown, XMLStringType> = v.lazy(() =>
       whitespace: v.optional(
         v.string("XMLString: whitespace is string and optional"),
       ),
-      links: v.optional(v.lazy(() => XMLLink)),
-      properties: v.optional(
-        v.object({
-          property: v.array(
-            v.lazy(() => XMLProperty),
-            "XMLString: properties is array of XMLProperty",
-          ),
-        }),
-      ),
-      annotation: v.optional(
-        v.string("XMLString: annotation is string and optional"),
-      ),
+      ...XMLRichTextEnvelope,
       string: v.optional(
         v.array(XMLString, "XMLString: string is array of XMLString"),
       ),
@@ -171,6 +175,7 @@ const XMLContent = v.object(
         string: v.array(XMLString),
         title: v.optional(v.string("XMLContent: title is string and optional")),
         lang: v.string("XMLContent: lang is string and required"),
+        ...XMLRichTextEnvelope,
       }),
       "XMLContent: content is array of object with string, title, and lang",
     ),
