@@ -338,18 +338,16 @@ const attributeValueQueryItemSchema = v.pipe(
     content: v.optional(v.string()),
     payload: v.optional(v.string()),
   }),
-  v.transform(
-    (value): ParsedAttributeValueItem => ({
-      attributeType: value.attributeType,
-      count: value.count,
-      content:
-        value.content != null && value.content !== ""
-          ? value.content
-          : value.payload != null && value.payload !== ""
-            ? value.payload
-            : null,
-    }),
-  ),
+  v.transform((value): ParsedAttributeValueItem => ({
+    attributeType: value.attributeType,
+    count: value.count,
+    content:
+      value.content != null && value.content !== ""
+        ? value.content
+        : value.payload != null && value.payload !== ""
+          ? value.payload
+          : null,
+  })),
 );
 
 /**
