@@ -35,11 +35,6 @@ import type {
   Metadata,
   Note,
   Observation,
-  OcrMatch,
-  OcrPage,
-  OcrPoint,
-  OcrTextBlock,
-  OcrWord,
   Period,
   Person,
   Property,
@@ -103,10 +98,6 @@ import type {
   XMLMetadata,
   XMLNote,
   XMLObservation,
-  XMLOcr,
-  XMLOcrMatchItem,
-  XMLOcrPage,
-  XMLOcrString,
   XMLPeriod,
   XMLPerson,
   XMLProperty,
@@ -893,100 +884,6 @@ function parseImageMap(rawImageMap: XMLImageMap | undefined): ImageMap | null {
   );
 
   return { areas, width: rawImageMap.width, height: rawImageMap.height };
-}
-
-function parseOcrVertices(rawVertices: string | undefined): Array<OcrPoint> {
-  const vertices: Array<OcrPoint> = [];
-  if (rawVertices == null) {
-    return vertices;
-  }
-
-  for (const match of rawVertices.matchAll(
-    /\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\)/g,
-  )) {
-    const x = Number(match[1]);
-    const y = Number(match[2]);
-    vertices.push({ x: Number.isNaN(x) ? 0 : x, y: Number.isNaN(y) ? 0 : y });
-  }
-
-  return vertices;
-}
-
-function parseOcrWords(
-  rawWords: Array<XMLOcrString> | undefined,
-): Array<OcrWord> {
-  return Array.from(rawWords ?? [], (rawWord) => ({
-    content: rawWord.CONTENT,
-    x: rawWord.HPOS,
-    y: rawWord.VPOS,
-    width: rawWord.WIDTH,
-    height: rawWord.HEIGHT,
-    vertices: parseOcrVertices(rawWord.VERTICES),
-  }));
-}
-
-function joinOcrWordContents(words: Array<OcrWord>): string {
-  return Array.from(words, (word) => word.content).join(" ");
-}
-
-function parseOcrPage(rawPage: XMLOcrPage): OcrPage {
-  const blocks: Array<OcrTextBlock> = Array.from(
-    rawPage.TextBlock ?? [],
-    (rawBlock) => ({
-      lines: Array.from(rawBlock.TextLine ?? [], (rawLine) => {
-        const words = parseOcrWords(rawLine.string);
-
-        return { content: joinOcrWordContents(words), words };
-      }),
-    }),
-  );
-
-  return {
-    number: rawPage.n ?? null,
-    fileName: rawPage.fileName ?? null,
-    width: rawPage.WIDTH ?? null,
-    height: rawPage.HEIGHT ?? null,
-    blocks,
-  };
-}
-
-function parseOcr(rawOcr: XMLOcr | undefined): Array<OcrPage> {
-  return Array.from(rawOcr?.Page ?? [], (rawPage) => parseOcrPage(rawPage));
-}
-
-/**
- * Parse OCR matches returned by the OCHRE API
- * @param rawOcrItems - The raw OCR match items
- * @returns The parsed OCR matches, in request order
- * @internal
- */
-export function parseOcrMatches(
-  rawOcrItems: Array<XMLOcrMatchItem>,
-): Array<OcrMatch> {
-  const matches: Array<OcrMatch> = [];
-
-  for (const rawOcrItem of rawOcrItems) {
-    const rawMatches = rawOcrItem.ocrMatch ?? [];
-
-    for (const rawMatch of rawMatches) {
-      const words = parseOcrWords(rawMatch.string);
-
-      matches.push({
-        uuid: rawOcrItem.uuid,
-        resourceUuid: rawMatch.resourceUuid ?? null,
-        page: {
-          number: rawMatch.n ?? null,
-          fileName: rawMatch.fileName ?? null,
-          width: rawMatch.WIDTH ?? null,
-          height: rawMatch.HEIGHT ?? null,
-        },
-        content: joinOcrWordContents(words),
-        words,
-      });
-    }
-  }
-
-  return matches;
 }
 
 function parseNote<T extends ReadonlyArray<string>>(
@@ -2414,7 +2311,6 @@ function parseResource<T extends ReadonlyArray<string>>(
     image: parseImage(rawResource.image, options),
     document: parseContentLike(rawResource.document, options),
     imageMap: parseImageMap(rawResource.imagemap),
-    ocr: parseOcr(rawResource.ocr),
     coordinates: parseCoordinates(rawResource.coordinates, options),
     periods: parsePeriodList(rawResource.periods, options),
     links: parseLinks(rawResource.links, options),

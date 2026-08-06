@@ -7,9 +7,7 @@ import type {
   ItemCategory,
   ItemWithoutEmbeddedItems,
   Note,
-  OcrPage,
   Property,
-  Resource,
   SetItem,
   SetItemCategory,
   SetItemProperty,
@@ -306,7 +304,13 @@ function formatSchemaIssues(issues: Array<v.BaseIssue<unknown>>): string {
   return messages.join("\n");
 }
 
-function parseXMLData(xml: string): XMLData {
+async function fetchXMLData(uuid: string): Promise<XMLData> {
+  const response = await fetch(
+    `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${uuid}&xsl=none&lang="*"`,
+  );
+  expect(response.ok).toBe(true);
+
+  const xml = await response.text();
   const parsed = parser.parse(xml) as unknown;
   const result = v.safeParse(XMLDataSchema, parsed, { abortEarly: false });
   if (!result.success) {
@@ -314,15 +318,6 @@ function parseXMLData(xml: string): XMLData {
   }
 
   return result.output;
-}
-
-async function fetchXMLData(uuid: string): Promise<XMLData> {
-  const response = await fetch(
-    `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${uuid}&xsl=none&lang="*"`,
-  );
-  expect(response.ok).toBe(true);
-
-  return parseXMLData(await response.text());
 }
 
 function parseRawData(
@@ -1594,314 +1589,6 @@ describe("fetchItem", () => {
         expect(inferredItem.uuid).toBe(uuid);
         expect(inferredItem.category).toBe("resource");
         expect(inferredResult.item.metadata.item?.category).toBe("resource");
-      }
-    },
-    LIVE_TEST_TIMEOUT_MS,
-  );
-});
-
-describe("resource OCR parsing", () => {
-  const OCR_PARENT_UUID = "518be69e-0a3d-4f2c-993e-3b352b2dfc11";
-  const OCR_PAGE_UUID = "b350600d-e0f6-4a67-bb62-199849b6aad3";
-
-  function parseOcrResource(
-    itemContent: string,
-  ): Resource<typeof TEST_LANGUAGES> {
-    const item = parseRawData(
-      parseXMLData(
-        createFetchItemXML({
-          uuid: OCR_PARENT_UUID,
-          category: "resource",
-          itemContent,
-        }),
-      ),
-      "resource",
-    );
-    if (item.category !== "resource") {
-      throw new Error("Expected a resource item");
-    }
-
-    return item;
-  }
-
-  it("parses OCR pages, blocks, lines, and words on nested resources", () => {
-    const item = parseOcrResource(
-      `<resource uuid="${OCR_PAGE_UUID}" n="1" type="image">${createXMLIdentification("Page 128")}<ocr><Page n="1" fileName="firat.tif" WIDTH="2067" HEIGHT="3064">
-  <TextBlock>
-    <TextLine>
-<SP/>
-      <string HPOS="2095" VPOS="76" WIDTH="64" HEIGHT="18" CONTENT="THE" VERTICES="[(2095,76), (2159,76), (2159,94), (2095,94)]">THE</string>
-<SP/>
-      <string HPOS="2177" VPOS="76" WIDTH="149" HEIGHT="18" CONTENT="COLLEGE" VERTICES="[(2177,76), (2326,76), (2326,94), (2177,94)]">COLLEGE</string>
-<SP/>
-    </TextLine>
-    <TextLine>
-      <string HPOS="309" VPOS="237" WIDTH="68" HEIGHT="18" CONTENT="magna" VERTICES="[(309,237), (376,234), (377,252), (310,255)]">magna</string>
-<SP/>
-      <string HPOS="384" VPOS="234" WIDTH="42" HEIGHT="17" CONTENT="cum" VERTICES="[(384,234), (425,232), (426,249), (385,251)]">cum</string>
-<SP/>
-      <string HPOS="433" VPOS="231" WIDTH="57" HEIGHT="18" CONTENT="laude" VERTICES="[(433,231), (489,228), (490,246), (434,249)]">laude</string>
-    </TextLine>
-  </TextBlock>
-  <TextBlock>
-    <TextLine>
-      <string HPOS="2287" VPOS="3120" WIDTH="57" HEIGHT="20" CONTENT="121">121</string>
-    </TextLine>
-  </TextBlock>
-</Page>
-<Page>
-  <TextBlock>
-    <TextLine>
-      <string HPOS="10" VPOS="20" WIDTH="30" HEIGHT="40" CONTENT="Overleaf" VERTICES="not-a-polygon">Overleaf</string>
-    </TextLine>
-  </TextBlock>
-</Page></ocr></resource>`,
-    );
-
-    expect(item.ocr).toStrictEqual([]);
-    expect(item.items).toHaveLength(1);
-
-    const page = item.items[0]!;
-    expectTypeOf(page.ocr).toEqualTypeOf<Array<OcrPage>>();
-    expect(page.ocr).toStrictEqual([
-      {
-        number: 1,
-        fileName: "firat.tif",
-        width: 2067,
-        height: 3064,
-        blocks: [
-          {
-            lines: [
-              {
-                content: "THE COLLEGE",
-                words: [
-                  {
-                    content: "THE",
-                    x: 2095,
-                    y: 76,
-                    width: 64,
-                    height: 18,
-                    vertices: [
-                      { x: 2095, y: 76 },
-                      { x: 2159, y: 76 },
-                      { x: 2159, y: 94 },
-                      { x: 2095, y: 94 },
-                    ],
-                  },
-                  {
-                    content: "COLLEGE",
-                    x: 2177,
-                    y: 76,
-                    width: 149,
-                    height: 18,
-                    vertices: [
-                      { x: 2177, y: 76 },
-                      { x: 2326, y: 76 },
-                      { x: 2326, y: 94 },
-                      { x: 2177, y: 94 },
-                    ],
-                  },
-                ],
-              },
-              {
-                content: "magna cum laude",
-                words: [
-                  {
-                    content: "magna",
-                    x: 309,
-                    y: 237,
-                    width: 68,
-                    height: 18,
-                    vertices: [
-                      { x: 309, y: 237 },
-                      { x: 376, y: 234 },
-                      { x: 377, y: 252 },
-                      { x: 310, y: 255 },
-                    ],
-                  },
-                  {
-                    content: "cum",
-                    x: 384,
-                    y: 234,
-                    width: 42,
-                    height: 17,
-                    vertices: [
-                      { x: 384, y: 234 },
-                      { x: 425, y: 232 },
-                      { x: 426, y: 249 },
-                      { x: 385, y: 251 },
-                    ],
-                  },
-                  {
-                    content: "laude",
-                    x: 433,
-                    y: 231,
-                    width: 57,
-                    height: 18,
-                    vertices: [
-                      { x: 433, y: 231 },
-                      { x: 489, y: 228 },
-                      { x: 490, y: 246 },
-                      { x: 434, y: 249 },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            lines: [
-              {
-                content: "121",
-                words: [
-                  {
-                    content: "121",
-                    x: 2287,
-                    y: 3120,
-                    width: 57,
-                    height: 20,
-                    vertices: [],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-      {
-        number: null,
-        fileName: null,
-        width: null,
-        height: null,
-        blocks: [
-          {
-            lines: [
-              {
-                content: "Overleaf",
-                words: [
-                  {
-                    content: "Overleaf",
-                    x: 10,
-                    y: 20,
-                    width: 30,
-                    height: 40,
-                    vertices: [],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    ]);
-  });
-
-  it("parses a single OCR page, block, and line without array wrappers", () => {
-    const item = parseOcrResource(
-      `<ocr><Page n="7"><TextBlock><TextLine><string HPOS="1" VPOS="2" WIDTH="3" HEIGHT="4" CONTENT="Solo">Solo</string></TextLine></TextBlock></Page></ocr>`,
-    );
-
-    expect(item.ocr).toStrictEqual([
-      {
-        number: 7,
-        fileName: null,
-        width: null,
-        height: null,
-        blocks: [
-          {
-            lines: [
-              {
-                content: "Solo",
-                words: [
-                  {
-                    content: "Solo",
-                    x: 1,
-                    y: 2,
-                    width: 3,
-                    height: 4,
-                    vertices: [],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    ]);
-  });
-
-  it("tolerates empty OCR containers and resources without an ocr node", () => {
-    expect(
-      parseOcrResource(`<ocr><Page n="1"><TextBlock /></Page></ocr>`).ocr,
-    ).toStrictEqual([
-      {
-        number: 1,
-        fileName: null,
-        width: null,
-        height: null,
-        blocks: [{ lines: [] }],
-      },
-    ]);
-    expect(parseOcrResource("<ocr />").ocr).toStrictEqual([]);
-    expect(parseOcrResource("").ocr).toStrictEqual([]);
-  });
-
-  it("rejects OCR words missing required geometry or content", () => {
-    expect(() =>
-      parseOcrResource(
-        `<ocr><Page><TextBlock><TextLine><string HPOS="1" VPOS="2" WIDTH="3" CONTENT="NoHeight">NoHeight</string></TextLine></TextBlock></Page></ocr>`,
-      ),
-    ).toThrow();
-    expect(() =>
-      parseOcrResource(
-        `<ocr><Page><TextBlock><TextLine><string HPOS="1" VPOS="2" WIDTH="3" HEIGHT="4">NoContent</string></TextLine></TextBlock></Page></ocr>`,
-      ),
-    ).toThrow();
-  });
-
-  it(
-    "parses the OCR layer of a live IIIF resource",
-    async () => {
-      const item = parseRawData(
-        await fetchXMLData(OCR_PARENT_UUID),
-        "resource",
-      );
-      if (item.category !== "resource") {
-        throw new Error("Expected a resource item");
-      }
-
-      const page = item.items.find((child) => child.uuid === OCR_PAGE_UUID);
-      expect(page?.ocr).toHaveLength(1);
-
-      const ocrPage = page!.ocr[0]!;
-      expect(ocrPage.number).toBe(1);
-      expect(ocrPage.fileName).toBe("firat.tif");
-      expect(ocrPage.width).toBe(2067);
-      expect(ocrPage.height).toBe(3064);
-      expect(ocrPage.blocks).toHaveLength(1);
-
-      const line = ocrPage.blocks[0]!.lines[0]!;
-      expect(line.words.length).toBeGreaterThan(100);
-      expect(
-        line.content.startsWith("THE COLLEGE CLAIRE ISABELLA CAPPAERT"),
-      ).toBe(true);
-      expect(line.words[0]).toStrictEqual({
-        content: "THE",
-        x: 2095,
-        y: 76,
-        width: 64,
-        height: 18,
-        vertices: [
-          { x: 2095, y: 76 },
-          { x: 2159, y: 76 },
-          { x: 2159, y: 94 },
-          { x: 2095, y: 94 },
-        ],
-      });
-
-      for (const word of line.words) {
-        expect(word.content).not.toBe("");
-        expect(word.vertices).toHaveLength(4);
       }
     },
     LIVE_TEST_TIMEOUT_MS,

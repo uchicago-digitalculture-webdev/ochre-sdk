@@ -405,12 +405,10 @@ function buildXQuery(parameters: {
 
   const setScopeValues = setScopeUuids.map((uuid) => stringLiteral(uuid));
   const setScopeDeclaration = `declare variable $setScopeUuids := (${setScopeValues.join(", ")});`;
+  const baseItemsExpression = "doc()/ochre/set[@uuid = $setScopeUuids]/items/*";
   const compiledQueryPlan = buildQueryPlan({
     queries: getItemFilterQueriesFromPropertyValueQueries(queries),
   });
-  // The searchable path has to stay inline in `cts:search`: binding it to a
-  // variable first makes every query XDMP-UNSEARCHABLE.
-  const baseItemsExpression = `doc()/ochre/set[@uuid = $setScopeUuids]/items/*${compiledQueryPlan.itemPredicates}`;
   const itemsQueryExpressions: Array<string> = [];
   const belongsToCollectionQueryExpression =
     buildBelongsToCollectionQueryExpression(
@@ -651,21 +649,11 @@ let $period-values :=
     returnedSequences.push("$period-values");
   }
 
-  const letClauses: Array<string> = Array.from(
-    compiledQueryPlan.ocrBindings,
-    (binding) => `let ${binding.name} := ${binding.expression}`,
-  );
-
-  if (itemsQueryExpression == null) {
-    letClauses.push(`let $items := ${baseItemsExpression}`);
-  } else {
-    letClauses.push(
-      `let $query := ${itemsQueryExpression}`,
-      `let $items := cts:search(${baseItemsExpression}, $query)`,
-    );
-  }
-
-  const itemsClause = letClauses.join("\n  ");
+  const itemsClause =
+    itemsQueryExpression == null
+      ? `let $items := ${baseItemsExpression}`
+      : `let $query := ${itemsQueryExpression}
+  let $items := cts:search(${baseItemsExpression}, $query)`;
 
   const xquery = `${xqueryDeclarations.join("\n\n")}
 

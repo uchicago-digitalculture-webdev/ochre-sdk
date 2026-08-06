@@ -19,13 +19,6 @@ const CTS_INCLUDES_TOKEN_WORD_REGEX = /^\p{L}+$/u;
 const CTS_INCLUDES_TOKEN_REGEX = /[\p{L}\p{N}*?]+/gu;
 const CTS_EXACT_TEXT_TOKEN_REGEX = /[\p{L}\p{N}]+/gu;
 
-/**
- * Error message for OCR queries nested inside an OR group
- * @internal
- */
-export const OCR_DISJUNCTION_ERROR_MESSAGE =
-  "OCR queries cannot be nested inside an OR group because they are resolved by a document join instead of a CTS query";
-
 type QueryMatchMode = "includes" | "exact";
 type CtsQueryFamily = "text" | "raw";
 type TextTargetQuery = Extract<
@@ -43,19 +36,11 @@ type TextTargetQuery = Extract<
 type ContentTextTarget = Exclude<TextTargetQuery["target"], "notes">;
 type PropertyQuery = Extract<QueryLeaf, { target: "property" }>;
 type AllPropertyQuery = Extract<PropertyQuery, { dataType: "all" }>;
-type OcrQuery = Extract<QueryLeaf, { target: "ocr" }>;
-type CtsQueryLeaf = Exclude<QueryLeaf, OcrQuery>;
-
-type OcrUuidBinding = { name: string; expression: string };
 
 type QueryCompilerContext = {
   nextHelperSerial: number;
   helperNamesByKey: Map<string, string>;
   helperDeclarations: Array<string>;
-  nextOcrSerial: number;
-  ocrVariableNamesByKey: Map<string, string>;
-  ocrBindings: Array<OcrUuidBinding>;
-  itemPredicates: Array<string>;
 };
 
 type QueryHelperRegistration = { name: string; callExpression: string };
@@ -400,13 +385,6 @@ function buildNestedElementQuery(
 
 function buildNotCtsQueryExpression(queryExpression: string): string {
   return `cts:not-query(${queryExpression})`;
-}
-
-// OCR words are separate elements, so a phrase never matches a single word or
-// phrase query. `cts:near-query` distance is the span across all members, which
-// makes `terms.length - 1` the exact-adjacency window.
-function buildCtsNearQueryExpression(queryExpressions: Array<string>): string {
-  return `cts:near-query((${queryExpressions.join(", ")}), ${queryExpressions.length - 1}, ("ordered"))`;
 }
 
 function buildAndCtsQueryExpressionInternal(
@@ -921,115 +899,7 @@ function buildItemStringQueryExpression(parameters: {
   ]);
 }
 
-// OCR phrases are matched by word adjacency, so stop words have to be kept:
-// dropping them would silently shrink the `cts:near-query` distance and make
-// "state of the art" match a non-adjacent "state ... art".
-function tokenizeOcrSearchValue(parameters: {
-  value: string;
-  matchMode: QueryMatchMode;
-  isCaseSensitive: boolean;
-}): Array<string> {
-  const { value, matchMode, isCaseSensitive } = parameters;
-  const tokenSource = isCaseSensitive ? value : value.toLowerCase();
-  const rawTerms =
-    tokenSource.match(
-      matchMode === "exact"
-        ? CTS_EXACT_TEXT_TOKEN_REGEX
-        : CTS_INCLUDES_TOKEN_REGEX,
-    ) ?? [];
-  const terms: Array<string> = [];
-
-  for (const term of rawTerms) {
-    if (getWildcardStrippedValue(term) !== "") {
-      terms.push(term);
-    }
-  }
-
-  return terms;
-}
-
-/**
- * Compile one CTS query expression per OCR search term, in word order
- *
- * Highlighting matches each OCR word against these same per-term expressions,
- * so hit locations always agree with what the filter matched.
- * @internal
- */
-export function buildOcrTermQueryExpressions(parameters: {
-  value: string;
-  matchMode: "includes" | "exact";
-  isCaseSensitive: boolean;
-}): Array<string> {
-  const { value, matchMode, isCaseSensitive } = parameters;
-  const terms = tokenizeOcrSearchValue({ value, matchMode, isCaseSensitive });
-  const isWholeWordEquality = matchMode === "exact" && terms.length === 1;
-
-  return Array.from(terms, (term) =>
-    isWholeWordEquality
-      ? buildCtsElementValueQueryExpression({
-          elementName: "string",
-          value: term,
-          isCaseSensitive,
-        })
-      : buildCtsWordQueryExpression({
-          value: term,
-          matchMode,
-          isCaseSensitive,
-          queryFamily: "text",
-        }),
-  );
-}
-
-function buildOcrQueryExpression(query: OcrQuery): string {
-  const termQueryExpressions = buildOcrTermQueryExpressions(query);
-
-  if (termQueryExpressions.length === 0) {
-    return "cts:false-query()";
-  }
-
-  return buildNestedElementQuery(
-    ["ocr"],
-    termQueryExpressions.length > 1
-      ? buildCtsNearQueryExpression(termQueryExpressions)
-      : (termQueryExpressions[0] ?? "cts:false-query()"),
-  );
-}
-
-function registerOcrItemPredicate(
-  context: QueryCompilerContext,
-  query: OcrQuery,
-): void {
-  const bindingKey = [
-    query.value,
-    query.matchMode,
-    query.isCaseSensitive ? "case-sensitive" : "case-insensitive",
-  ].join("|");
-  let variableName = context.ocrVariableNamesByKey.get(bindingKey);
-
-  if (variableName == null) {
-    variableName = `$ocrUuids${context.nextOcrSerial}`;
-    context.nextOcrSerial += 1;
-    context.ocrVariableNamesByKey.set(bindingKey, variableName);
-    // `cts:uris` resolves from indexes only, which reports false positives for
-    // the positional `cts:near-query` phrases. A filtered `cts:search` is the
-    // only accurate way to resolve the matching document URIs.
-    context.ocrBindings.push({
-      name: variableName,
-      expression: `for $ocrDocument in cts:search(doc(), ${buildOcrQueryExpression(query)})\n    return document-uri($ocrDocument)`,
-    });
-  }
-
-  const itemPredicate =
-    query.isNegated === true
-      ? `[not(@uuid = ${variableName})]`
-      : `[@uuid = ${variableName}]`;
-
-  if (!context.itemPredicates.includes(itemPredicate)) {
-    context.itemPredicates.push(itemPredicate);
-  }
-}
-
-function getLeafSearchValue(query: CtsQueryLeaf): string | null {
+function getLeafSearchValue(query: QueryLeaf): string | null {
   switch (query.target) {
     case "string":
     case "title":
@@ -1047,7 +917,7 @@ function getLeafSearchValue(query: CtsQueryLeaf): string | null {
 }
 
 function buildLeafValueQueryExpression(parameters: {
-  query: CtsQueryLeaf;
+  query: QueryLeaf;
   value: string;
   matchMode: QueryMatchMode;
 }): string {
@@ -1138,10 +1008,6 @@ function createQueryCompilerContext(): QueryCompilerContext {
     nextHelperSerial: 1,
     helperNamesByKey: new Map(),
     helperDeclarations: [],
-    nextOcrSerial: 1,
-    ocrVariableNamesByKey: new Map(),
-    ocrBindings: [],
-    itemPredicates: [],
   };
 }
 
@@ -1207,7 +1073,7 @@ function registerParameterizedHelper(parameters: {
 }
 
 function getLeafHelperKey(parameters: {
-  query: CtsQueryLeaf;
+  query: QueryLeaf;
   matchMode: QueryMatchMode;
   value: string;
 }): string {
@@ -1248,7 +1114,7 @@ function getLeafHelperKey(parameters: {
 
 function registerLeafHelper(parameters: {
   context: QueryCompilerContext;
-  query: CtsQueryLeaf;
+  query: QueryLeaf;
   matchMode: QueryMatchMode;
   value: string;
 }): QueryHelperRegistration {
@@ -1262,7 +1128,7 @@ function registerLeafHelper(parameters: {
 }
 
 function getIncludesLeafHelperKey(parameters: {
-  query: CtsQueryLeaf;
+  query: QueryLeaf;
   value: string;
 }): string {
   const { query, value } = parameters;
@@ -1304,7 +1170,7 @@ function getIncludesLeafHelperKey(parameters: {
 
 function registerIncludesLeafHelper(parameters: {
   context: QueryCompilerContext;
-  query: CtsQueryLeaf;
+  query: QueryLeaf;
   sampleValue: string;
 }): ParameterizedQueryHelperRegistration {
   const { context, query, sampleValue } = parameters;
@@ -1326,7 +1192,7 @@ function registerIncludesLeafHelper(parameters: {
 
 function buildLeafQueryExpression(
   context: QueryCompilerContext,
-  query: CtsQueryLeaf,
+  query: QueryLeaf,
 ): string {
   if (
     query.target === "property" &&
@@ -1412,7 +1278,7 @@ function buildLeafQueryExpression(
   ]);
 }
 
-function getGroupableIncludesValue(query: CtsQueryLeaf): string | null {
+function getGroupableIncludesValue(query: QueryLeaf): string | null {
   if (query.matchMode !== "includes" || query.isNegated === true) {
     return null;
   }
@@ -1453,47 +1319,17 @@ function getQueryGroupOperator(query: QueryGroup): "and" | "or" {
   return "and" in query ? "and" : "or";
 }
 
-// A single-child `or` group compiles to its child, so it is not a real
-// disjunction and must not reject an OCR leaf.
-function isDisjunctiveQueryGroup(query: QueryGroup): boolean {
-  return "or" in query && query.or.length > 1;
-}
-
-/**
- * Whether a query tree nests an OCR leaf inside an OR group
- * @internal
- */
-export function hasOcrQueryInDisjunction(
-  query: Query,
-  isInDisjunction = false,
-): boolean {
-  if (isQueryLeaf(query)) {
-    return query.target === "ocr" && isInDisjunction;
-  }
-
-  const isChildInDisjunction =
-    isInDisjunction || isDisjunctiveQueryGroup(query);
-
-  for (const childQuery of getQueryGroupChildren(query)) {
-    if (hasOcrQueryInDisjunction(childQuery, isChildInDisjunction)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 function getCompatibleIncludesGroupLeaves(
   query: QueryGroup,
-): Array<CtsQueryLeaf> | null {
+): Array<QueryLeaf> | null {
   if (!("or" in query) || query.or.length <= 1) {
     return null;
   }
 
-  const leafQueries: Array<CtsQueryLeaf> = [];
+  const leafQueries: Array<QueryLeaf> = [];
 
   for (const childQuery of query.or) {
-    if (!isQueryLeaf(childQuery) || childQuery.target === "ocr") {
+    if (!isQueryLeaf(childQuery)) {
       return null;
     }
 
@@ -1527,7 +1363,7 @@ function getCompatibleIncludesGroupLeaves(
 
 function buildIncludesGroupQueryExpression(
   context: QueryCompilerContext,
-  queries: Array<CtsQueryLeaf>,
+  queries: Array<QueryLeaf>,
 ): string {
   const firstQuery = queries[0];
 
@@ -1615,22 +1451,8 @@ function buildIncludesGroupQueryExpression(
   ]);
 }
 
-function buildQueryNode(
-  context: QueryCompilerContext,
-  query: Query,
-  isInDisjunction: boolean,
-): string {
+function buildQueryNode(context: QueryCompilerContext, query: Query): string {
   if (isQueryLeaf(query)) {
-    if (query.target === "ocr") {
-      if (isInDisjunction) {
-        throw new Error(OCR_DISJUNCTION_ERROR_MESSAGE, { cause: query });
-      }
-
-      registerOcrItemPredicate(context, query);
-
-      return "cts:true-query()";
-    }
-
     const queryExpression = buildLeafQueryExpression(context, query);
 
     return query.isNegated === true
@@ -1647,11 +1469,9 @@ function buildQueryNode(
     );
   }
 
-  const isChildInDisjunction =
-    isInDisjunction || isDisjunctiveQueryGroup(query);
   const childQueryExpressions: Array<string> = Array.from(
     getQueryGroupChildren(query),
-    (childQuery) => buildQueryNode(context, childQuery, isChildInDisjunction),
+    (childQuery) => buildQueryNode(context, childQuery),
   );
 
   const buildCtsQueryExpression =
@@ -1691,27 +1511,15 @@ export function buildBelongsToCollectionQueryExpression(
 export function buildQueryPlan(parameters: { queries: Query | null }): {
   prolog: string;
   queryExpression: string | null;
-  ocrBindings: Array<OcrUuidBinding>;
-  itemPredicates: string;
 } {
   const { queries } = parameters;
 
   if (queries == null) {
-    return {
-      prolog: "",
-      queryExpression: null,
-      ocrBindings: [],
-      itemPredicates: "",
-    };
+    return { prolog: "", queryExpression: null };
   }
 
   const context = createQueryCompilerContext();
-  const queryExpression = buildQueryNode(context, queries, false);
+  const queryExpression = buildQueryNode(context, queries);
 
-  return {
-    prolog: context.helperDeclarations.join("\n\n"),
-    queryExpression,
-    ocrBindings: context.ocrBindings,
-    itemPredicates: context.itemPredicates.join(""),
-  };
+  return { prolog: context.helperDeclarations.join("\n\n"), queryExpression };
 }

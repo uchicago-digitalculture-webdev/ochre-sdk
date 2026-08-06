@@ -326,58 +326,6 @@ export type ImageMap = {
 };
 
 /**
- *  Vertex of an OCR word's bounding polygon in OCHRE
- */
-export type OcrPoint = { x: number; y: number };
-
-/**
- *  Word recognized within an OCR text line in OCHRE
- */
-export type OcrWord = {
-  content: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  vertices: Array<OcrPoint>;
-};
-
-/**
- *  Text line of an OCR text block in OCHRE
- */
-export type OcrTextLine = { content: string; words: Array<OcrWord> };
-
-/**
- *  Text block of an OCR page in OCHRE
- */
-export type OcrTextBlock = { lines: Array<OcrTextLine> };
-
-/**
- *  OCR page of a resource in OCHRE
- */
-export type OcrPage = {
-  number: number | null;
-  fileName: string | null;
-  width: number | null;
-  height: number | null;
-  blocks: Array<OcrTextBlock>;
-};
-
-/**
- *  A run of adjacent OCR words matching a search value in OCHRE
- *
- *  `uuid` is the requested resource, while `resourceUuid` is the resource that
- *  owns the OCR page — they differ when the OCR lives on a child page resource.
- */
-export type OcrMatch = {
-  uuid: string;
-  resourceUuid: string | null;
-  page: Omit<OcrPage, "blocks">;
-  content: string;
-  words: Array<OcrWord>;
-};
-
-/**
  *  Note in OCHRE
  */
 export type Note<T extends LanguageCodes = LanguageCodes> = {
@@ -1086,7 +1034,6 @@ export type Resource<
     image: Image<T> | null;
     document: MultilingualString<T> | null;
     imageMap: ImageMap | null;
-    ocr: Array<OcrPage>;
     coordinates: Array<Coordinates<T>>;
     periods: Array<Period<T, "embedded">>;
     links: ItemLinks<T>;
@@ -1270,13 +1217,6 @@ export type SetItemsSort =
 
 /**
  * Represents a leaf query for Set items
- *
- * The `ocr` target matches the OCR text layer of resources. Because OCR is not
- * carried by Set item projections, it is resolved by a document join rather
- * than a CTS term, which means `ocr` leaves compose with `and` and `isNegated`
- * but cannot be nested inside an `or` group. Both match modes are adjacency
- * based: `includes` allows stemming and wildcards, `exact` requires whole OCR
- * words. OCR carries no language, so `ocr` leaves take no `language`.
  */
 export type QueryLeaf =
   | {
@@ -1348,13 +1288,6 @@ export type QueryLeaf =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
-      isNegated?: boolean;
-    }
-  | {
-      target: "ocr";
-      value: string;
-      matchMode: "includes" | "exact";
-      isCaseSensitive: boolean;
       isNegated?: boolean;
     }
   | {

@@ -199,46 +199,6 @@ export type XMLImageMap = {
   height: XMLNumber;
 };
 
-export type XMLOcrString = {
-  HPOS: XMLNumber;
-  VPOS: XMLNumber;
-  WIDTH: XMLNumber;
-  HEIGHT: XMLNumber;
-  CONTENT: string;
-  VERTICES?: string;
-};
-
-// `<SP/>` separators are intentionally unmodeled: they carry no attributes, and
-// the XML parser does not preserve their interleaving with `<string>` siblings.
-export type XMLOcrTextLine = { string?: Array<XMLOcrString> };
-
-export type XMLOcrTextBlock = { TextLine?: Array<XMLOcrTextLine> };
-
-export type XMLOcrPage = {
-  n?: XMLNumber;
-  fileName?: string;
-  WIDTH?: XMLNumber;
-  HEIGHT?: XMLNumber;
-  TextBlock?: Array<XMLOcrTextBlock>;
-};
-
-export type XMLOcr = { Page?: Array<XMLOcrPage> };
-
-export type XMLOcrMatch = Omit<XMLOcrPage, "TextBlock"> & {
-  resourceUuid?: string;
-  string?: Array<XMLOcrString>;
-};
-
-export type XMLOcrMatchItem = {
-  uuid: string;
-  matchCount: XMLNumber;
-  ocrMatch?: Array<XMLOcrMatch>;
-};
-
-export type XMLOcrMatchesData = {
-  result: { ochre: { ocrMatches?: { ocrItem?: Array<XMLOcrMatchItem> } } };
-};
-
 export type XMLNote = Partial<XMLContent> &
   XMLString & {
     noteNo?: XMLNumber;
@@ -548,7 +508,6 @@ export type XMLResource = XMLBaseItem & {
   width?: XMLNumber;
   image?: XMLImage;
   imagemap?: XMLImageMap;
-  ocr?: XMLOcr;
   document?: XMLContent;
   coordinates?: XMLCoordinates;
   periods?: { period: Array<XMLPeriod> };

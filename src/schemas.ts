@@ -7,14 +7,7 @@ import type {
   SetItemsSort,
 } from "#/types/index.js";
 import type { WebElementComponent } from "#/types/website.js";
-import {
-  DEFAULT_MAX_OCR_MATCHES_PER_ITEM,
-  DEFAULT_PAGE_SIZE,
-} from "#/helpers.js";
-import {
-  hasOcrQueryInDisjunction,
-  OCR_DISJUNCTION_ERROR_MESSAGE,
-} from "#/query.js";
+import { DEFAULT_PAGE_SIZE } from "#/helpers.js";
 import { isPseudoUuid } from "#/utilities.js";
 
 const positiveNumber = (message: string): v.GenericSchema<unknown, number> =>
@@ -206,13 +199,6 @@ const setQueryLeafSchema = v.union([
     ...standardQueryFields,
   }),
   v.strictObject({
-    target: v.literal("ocr"),
-    value: v.string(),
-    matchMode: standardQueryFields.matchMode,
-    isCaseSensitive: standardQueryFields.isCaseSensitive,
-    isNegated: standardQueryFields.isNegated,
-  }),
-  v.strictObject({
     target: v.picklist([
       "title",
       "description",
@@ -252,18 +238,7 @@ const setQuerySchema: v.GenericSchema<unknown, Query> = v.lazy(() =>
  * Schema for validating Set queries
  * @internal
  */
-const setQueriesSchema = v.optional(
-  v.nullable(
-    v.pipe(
-      setQuerySchema,
-      v.check(
-        (query) => !hasOcrQueryInDisjunction(query),
-        OCR_DISJUNCTION_ERROR_MESSAGE,
-      ),
-    ),
-  ),
-  null,
-);
+const setQueriesSchema = v.optional(v.nullable(setQuerySchema), null);
 
 /**
  * Schema for validating Set items sort
@@ -316,24 +291,6 @@ export const setPropertyValuesParametersSchema = v.object({
     { bibliographies: false, periods: false },
   ),
   isLimitedToLeafPropertyValues: defaultBoolean(false),
-});
-
-/**
- * Schema for validating OCR matches parameters
- * @internal
- */
-export const ocrMatchesParametersSchema = v.object({
-  uuids: v.pipe(
-    v.array(uuidSchema),
-    v.minLength(1, "At least one UUID is required"),
-  ),
-  value: v.pipe(v.string(), v.minLength(1, "A search value is required")),
-  matchMode: v.optional(v.picklist(["includes", "exact"]), "includes"),
-  isCaseSensitive: defaultBoolean(false),
-  maxMatchesPerItem: v.optional(
-    positiveNumber("Max matches per item must be positive"),
-    DEFAULT_MAX_OCR_MATCHES_PER_ITEM,
-  ),
 });
 
 /**

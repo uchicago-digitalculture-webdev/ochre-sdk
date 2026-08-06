@@ -35,11 +35,6 @@ type BibliographyPropertySource<T extends LanguageCodes> = {
 export const DEFAULT_PAGE_SIZE = 48;
 
 /**
- * The default cap on OCR matches returned per requested item
- */
-export const DEFAULT_MAX_OCR_MATCHES_PER_ITEM = 50;
-
-/**
  * Flatten the properties of an item
  * @param item - The item whose properties to flatten
  * @returns The item with the properties flattened
