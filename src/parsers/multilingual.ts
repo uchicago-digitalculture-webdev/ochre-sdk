@@ -36,11 +36,17 @@ export type MultilingualStringEntries<
  * Options for creating and working with multilingual strings
  */
 export type MultilingualOptions = {
-  /** Default language to use for fallbacks */
+  /**
+  Default language to use for fallbacks
+  */
   defaultLanguage?: string;
-  /** Available languages for this string */
+  /**
+  Available languages for this string
+  */
   availableLanguages?: ReadonlyArray<string>;
-  /** Alias values carried by OCHRE as zxx content */
+  /**
+  Alias values carried by OCHRE as zxx content
+  */
   aliases?: ReadonlyArray<string>;
 };
 
@@ -408,7 +414,9 @@ export class MultilingualString<
   /**
    * Create a new multilingual string from an object of language codes to text.
    */
-  /** @internal */
+  /**
+  @internal
+  */
   constructor(init: MultilingualStringInternalInit<T>);
   constructor(
     content: MultilingualStringObject<T>,

@@ -15,7 +15,7 @@ import {
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
 
-async function validateWebsiteCredentials(
+async function areWebsiteCredentialsValid(
   uuid: string,
   credentials: string | { username: string; password: string },
   fetcher: FetchFunction,
@@ -135,7 +135,7 @@ export async function fetchWebsite<
         };
       }
 
-      const isValid = await validateWebsiteCredentials(
+      const isValid = await areWebsiteCredentialsValid(
         website.uuid,
         options.credentials,
         fetcher,

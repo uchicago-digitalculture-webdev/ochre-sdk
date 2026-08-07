@@ -2237,7 +2237,7 @@ function parseSidebar<T extends ReadonlyArray<string>>(
     }
   }
 
-  if (items.length > 0 && title != null) {
+  if (title != null && items.length > 0) {
     returnSidebar = {
       isDisplayed: true,
       items,

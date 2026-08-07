@@ -13,9 +13,13 @@ import type {
  * Options for property search operations.
  */
 export type PropertyOptions = {
-  /** Whether to recursively search through nested properties. */
+  /**
+  Whether to recursively search through nested properties.
+  */
   includeNestedProperties?: boolean;
-  /** Whether to limit property values to leaf values. */
+  /**
+  Whether to limit property values to leaf values.
+  */
   limitToLeafPropertyValues?: boolean;
 };
 
