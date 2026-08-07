@@ -406,17 +406,28 @@ function buildXQuery(parameters: {
 
   const setScopeValues = setScopeUuids.map((uuid) => stringLiteral(uuid));
   const setScopeDeclaration = `declare variable $setScopeUuids := (${setScopeValues.join(", ")});`;
+  const baseItemsExpression = "doc()/ochre/set[@uuid = $setScopeUuids]/items/*";
   const compiledQueryPlan = buildQueryPlan({
     queries: getItemFilterQueriesFromPropertyValueQueries(queries),
   });
-  // The searchable path has to stay inline in `cts:search`: binding it to a
-  // variable first makes every query XDMP-UNSEARCHABLE.
-  const baseItemsExpression = "doc()/ochre/set[@uuid = $setScopeUuids]/items/*";
+  const itemsQueryExpressions: Array<string> = [];
   const belongsToCollectionQueryExpression =
     buildBelongsToCollectionQueryExpression(
       belongsToCollectionScopeUuids,
       BELONGS_TO_COLLECTION_UUID,
     );
+
+  if (compiledQueryPlan.queryExpression != null) {
+    itemsQueryExpressions.push(compiledQueryPlan.queryExpression);
+  }
+
+  if (belongsToCollectionQueryExpression != null) {
+    itemsQueryExpressions.push(belongsToCollectionQueryExpression);
+  }
+
+  const itemsQueryExpression = buildAndCtsQueryExpression(
+    itemsQueryExpressions,
+  );
   const valueFilter = isLimitedToLeafPropertyValues ? "[not(@i)]" : "";
   const queryBlocks: Array<string> = [];
   const returnedSequences: Array<string> = [];
@@ -639,46 +650,11 @@ let $period-values :=
     returnedSequences.push("$period-values");
   }
 
-  const letClauses: Array<string> = Array.from(
-    compiledQueryPlan.ocrTextBindings,
-    (binding) => `let ${binding.name} := ${binding.expression}`,
-  );
-  const branchExpressions: Array<string> = [];
-
-  for (const [index, branch] of compiledQueryPlan.branches.entries()) {
-    const branchQueryExpressions: Array<string> = [];
-
-    if (branch.queryExpression != null) {
-      branchQueryExpressions.push(branch.queryExpression);
-    }
-
-    if (belongsToCollectionQueryExpression != null) {
-      branchQueryExpressions.push(belongsToCollectionQueryExpression);
-    }
-
-    const branchQueryExpression = buildAndCtsQueryExpression(
-      branchQueryExpressions,
-    );
-    const branchItemsExpression = `${baseItemsExpression}${branch.itemPredicates}`;
-
-    if (branchQueryExpression == null) {
-      branchExpressions.push(branchItemsExpression);
-      continue;
-    }
-
-    const queryVariableName =
-      compiledQueryPlan.branches.length === 1 ? "$query" : `$query${index + 1}`;
-    letClauses.push(`let ${queryVariableName} := ${branchQueryExpression}`);
-    branchExpressions.push(
-      `cts:search(${branchItemsExpression}, ${queryVariableName})`,
-    );
-  }
-
-  letClauses.push(
-    `let $items := ${branchExpressions.length === 1 ? branchExpressions[0] : `(${branchExpressions.join(" | ")})`}`,
-  );
-
-  const itemsClause = letClauses.join("\n  ");
+  const itemsClause =
+    itemsQueryExpression == null
+      ? `let $items := ${baseItemsExpression}`
+      : `let $query := ${itemsQueryExpression}
+  let $items := cts:search(${baseItemsExpression}, $query)`;
 
   const xquery = `${xqueryDeclarations.join("\n\n")}
 

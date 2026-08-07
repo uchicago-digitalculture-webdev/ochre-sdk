@@ -16,8 +16,7 @@ const LOCUS_6082_UUID = "c7c11ce1-9927-41c2-97e4-22243e54f277";
 const COLLECTION_PROPERTY_UUID = "30054cb2-909a-4f34-8db9-8fe7369d691d";
 
 function compiledQueryText(queries: Query | null): string {
-  const { prolog, branches } = buildQueryPlan({ queries });
-  const queryExpression = branches[0]?.queryExpression ?? null;
+  const { prolog, queryExpression } = buildQueryPlan({ queries });
 
   return `${prolog}\n${queryExpression ?? ""}`;
 }
@@ -84,8 +83,7 @@ async function captureSetPropertyValuesQuery(parameters: {
 
 describe("query helpers", () => {
   it("returns no compiled query for a null query tree", () => {
-    const { prolog, branches } = buildQueryPlan({ queries: null });
-    const queryExpression = branches[0]?.queryExpression ?? null;
+    const { prolog, queryExpression } = buildQueryPlan({ queries: null });
 
     expect(prolog).toBe("");
     expect(queryExpression).toBeNull();
@@ -199,7 +197,7 @@ describe("content target queries", () => {
   });
 
   it("returns a false query when an includes search only has stop words", () => {
-    const { branches } = buildQueryPlan({
+    const { queryExpression } = buildQueryPlan({
       queries: {
         target: "title",
         value: "of the",
@@ -208,13 +206,12 @@ describe("content target queries", () => {
         language: "eng",
       },
     });
-    const queryExpression = branches[0]?.queryExpression ?? null;
 
     expect(queryExpression).toBe("cts:false-query()");
   });
 
   it("uses the exact fallback for includes values with punctuation", () => {
-    const { branches } = buildQueryPlan({
+    const { queryExpression } = buildQueryPlan({
       queries: {
         target: "title",
         value: "north-south road",
@@ -223,7 +220,6 @@ describe("content target queries", () => {
         language: "eng",
       },
     });
-    const queryExpression = branches[0]?.queryExpression ?? null;
 
     expectContainsAll(queryExpression ?? "", [
       "cts:or-query((",
@@ -279,7 +275,7 @@ describe("string target queries", () => {
 
 describe("property target queries", () => {
   it("compiles property-variable presence queries", () => {
-    const { prolog, branches } = buildQueryPlan({
+    const { prolog, queryExpression } = buildQueryPlan({
       queries: {
         target: "property",
         propertyVariable: MEDIA_TYPE_UUID,
@@ -289,7 +285,6 @@ describe("property target queries", () => {
         language: "eng",
       },
     });
-    const queryExpression = branches[0]?.queryExpression ?? null;
 
     expect(prolog).toBe("");
     expectContainsAll(queryExpression ?? "", [
@@ -301,7 +296,7 @@ describe("property target queries", () => {
   });
 
   it("compiles relation-only property presence queries", () => {
-    const { prolog, branches } = buildQueryPlan({
+    const { prolog, queryExpression } = buildQueryPlan({
       queries: {
         target: "property",
         propertyRelation: "related",
@@ -311,7 +306,6 @@ describe("property target queries", () => {
         language: "eng",
       },
     });
-    const queryExpression = branches[0]?.queryExpression ?? null;
 
     expect(prolog).toBe("");
     expectContainsAll(queryExpression ?? "", [
@@ -476,7 +470,7 @@ describe("property target queries", () => {
   });
 
   it("compiles date range property queries with from and to bounds", () => {
-    const { prolog, branches } = buildQueryPlan({
+    const { prolog, queryExpression } = buildQueryPlan({
       queries: {
         target: "property",
         propertyVariable: MEDIA_TYPE_UUID,
@@ -489,7 +483,6 @@ describe("property target queries", () => {
         language: "eng",
       },
     });
-    const queryExpression = branches[0]?.queryExpression ?? null;
 
     expect(prolog).toBe("");
     expectContainsAll(queryExpression ?? "", [
@@ -541,7 +534,7 @@ describe("property target queries", () => {
 
 describe("query groups", () => {
   it("compiles AND groups", () => {
-    const { branches } = buildQueryPlan({
+    const { queryExpression } = buildQueryPlan({
       queries: {
         and: [
           {
@@ -561,7 +554,6 @@ describe("query groups", () => {
         ],
       },
     });
-    const queryExpression = branches[0]?.queryExpression ?? null;
 
     expect(queryExpression).toBe(
       "cts:and-query((local:queryHelper1(), local:queryHelper2()))",
@@ -569,7 +561,7 @@ describe("query groups", () => {
   });
 
   it("compiles OR groups", () => {
-    const { branches } = buildQueryPlan({
+    const { queryExpression } = buildQueryPlan({
       queries: {
         or: [
           {
@@ -589,7 +581,6 @@ describe("query groups", () => {
         ],
       },
     });
-    const queryExpression = branches[0]?.queryExpression ?? null;
 
     expect(queryExpression).toBe(
       "cts:or-query((local:queryHelper1(), local:queryHelper2()))",
@@ -597,7 +588,7 @@ describe("query groups", () => {
   });
 
   it("wraps negated leaves in cts:not-query", () => {
-    const { branches } = buildQueryPlan({
+    const { queryExpression } = buildQueryPlan({
       queries: {
         target: "title",
         value: "Hippos",
@@ -607,13 +598,12 @@ describe("query groups", () => {
         isNegated: true,
       },
     });
-    const queryExpression = branches[0]?.queryExpression ?? null;
 
     expect(queryExpression).toBe("cts:not-query(local:queryHelper1())");
   });
 
   it("optimizes compatible OR groups of includes leaves with the same value", () => {
-    const { prolog, branches } = buildQueryPlan({
+    const { prolog, queryExpression } = buildQueryPlan({
       queries: {
         or: [
           {
@@ -641,7 +631,6 @@ describe("query groups", () => {
         ],
       },
     });
-    const queryExpression = branches[0]?.queryExpression ?? null;
 
     expect(prolog).toContain("cts:or-query");
     expectContainsAll(queryExpression ?? "", [
@@ -652,7 +641,7 @@ describe("query groups", () => {
   });
 
   it("does not optimize OR includes groups with mismatched languages", () => {
-    const { branches } = buildQueryPlan({
+    const { queryExpression } = buildQueryPlan({
       queries: {
         or: [
           {
@@ -672,7 +661,6 @@ describe("query groups", () => {
         ],
       },
     });
-    const queryExpression = branches[0]?.queryExpression ?? null;
 
     expect(queryExpression).toBe(
       'cts:or-query((local:queryHelper2("fortification"), local:queryHelper4("fortification")))',

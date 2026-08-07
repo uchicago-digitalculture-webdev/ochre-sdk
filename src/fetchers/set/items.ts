@@ -307,15 +307,26 @@ function buildXQuery(parameters: {
   const startPosition = (page - 1) * pageSize + 1;
   const setScopeValues = setScopeUuids.map((uuid) => stringLiteral(uuid));
   const setScopeDeclaration = `declare variable $setScopeUuids := (${setScopeValues.join(", ")});`;
-  const compiledQueryPlan = buildQueryPlan({ queries });
-  // The searchable path has to stay inline in `cts:search`: binding it to a
-  // variable first makes every query XDMP-UNSEARCHABLE.
   const baseItemsExpression = "doc()/ochre/set[@uuid = $setScopeUuids]/items/*";
+  const compiledQueryPlan = buildQueryPlan({ queries });
+  const itemsQueryExpressions: Array<string> = [];
   const belongsToCollectionQueryExpression =
     buildBelongsToCollectionQueryExpression(
       belongsToCollectionScopeUuids,
       BELONGS_TO_COLLECTION_UUID,
     );
+
+  if (compiledQueryPlan.queryExpression != null) {
+    itemsQueryExpressions.push(compiledQueryPlan.queryExpression);
+  }
+
+  if (belongsToCollectionQueryExpression != null) {
+    itemsQueryExpressions.push(belongsToCollectionQueryExpression);
+  }
+
+  const itemsQueryExpression = buildAndCtsQueryExpression(
+    itemsQueryExpressions,
+  );
   const orderedItemsClause = buildOrderedItemsClause(sort);
   const xqueryDeclarations = [
     'xquery version "1.0-ml";',
@@ -327,46 +338,11 @@ function buildXQuery(parameters: {
     xqueryDeclarations.push(compiledQueryPlan.prolog);
   }
 
-  const letClauses: Array<string> = Array.from(
-    compiledQueryPlan.ocrTextBindings,
-    (binding) => `let ${binding.name} := ${binding.expression}`,
-  );
-  const branchExpressions: Array<string> = [];
-
-  for (const [index, branch] of compiledQueryPlan.branches.entries()) {
-    const branchQueryExpressions: Array<string> = [];
-
-    if (branch.queryExpression != null) {
-      branchQueryExpressions.push(branch.queryExpression);
-    }
-
-    if (belongsToCollectionQueryExpression != null) {
-      branchQueryExpressions.push(belongsToCollectionQueryExpression);
-    }
-
-    const branchQueryExpression = buildAndCtsQueryExpression(
-      branchQueryExpressions,
-    );
-    const branchItemsExpression = `${baseItemsExpression}${branch.itemPredicates}`;
-
-    if (branchQueryExpression == null) {
-      branchExpressions.push(branchItemsExpression);
-      continue;
-    }
-
-    const queryVariableName =
-      compiledQueryPlan.branches.length === 1 ? "$query" : `$query${index + 1}`;
-    letClauses.push(`let ${queryVariableName} := ${branchQueryExpression}`);
-    branchExpressions.push(
-      `cts:search(${branchItemsExpression}, ${queryVariableName})`,
-    );
-  }
-
-  letClauses.push(
-    `let $items := ${branchExpressions.length === 1 ? branchExpressions[0] : `(${branchExpressions.join(" | ")})`}`,
-  );
-
-  const itemsClause = letClauses.join("\n  ");
+  const itemsClause =
+    itemsQueryExpression == null
+      ? `let $items := ${baseItemsExpression}`
+      : `let $query := ${itemsQueryExpression}
+  let $items := cts:search(${baseItemsExpression}, $query)`;
 
   const xquery = `${xqueryDeclarations.join("\n\n")}
 
