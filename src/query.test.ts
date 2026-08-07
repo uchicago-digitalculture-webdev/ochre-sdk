@@ -3,10 +3,13 @@ import type { Query, SetItemsSort } from "#/types/index.js";
 import { fetchSetItems } from "#/fetchers/set/items.js";
 import { fetchSetPropertyValues } from "#/fetchers/set/property-values.js";
 import {
-  buildAndCtsQueryExpression,
   buildBelongsToCollectionQueryExpression,
   buildQueryPlan,
 } from "#/query.js";
+
+const BASE_ITEMS_EXPRESSION = "doc()/ochre/set[@uuid = $setScopeUuids]/items/*";
+const ITEMS_BINDING = "\n  let $items := ";
+const QUERY_BINDING = "let $query := ";
 
 const SET_UUID = "41f855f5-202e-4ec9-95d6-a87b793a9dcb";
 const COLLECTION_UUID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -15,8 +18,37 @@ const LOCI_VERTICAL_RELATION_UUID = "7657d3a8-fbe7-4f22-aea1-f2f20c68db7e";
 const LOCUS_6082_UUID = "c7c11ce1-9927-41c2-97e4-22243e54f277";
 const COLLECTION_PROPERTY_UUID = "30054cb2-909a-4f34-8db9-8fe7369d691d";
 
+function compiledItemsClause(queries: Query | null): string {
+  return buildQueryPlan({ queries, baseItemsExpression: BASE_ITEMS_EXPRESSION })
+    .itemsClause;
+}
+
+/**
+ * Compile a query tree and read back the single CTS query it binds to `$query`,
+ * which is null when the plan resolves without one
+ */
+function compiledQueryPlan(parameters: { queries: Query | null }): {
+  prolog: string;
+  queryExpression: string | null;
+} {
+  const { prolog, itemsClause } = buildQueryPlan({
+    queries: parameters.queries,
+    baseItemsExpression: BASE_ITEMS_EXPRESSION,
+  });
+  const startIndex = itemsClause.indexOf(QUERY_BINDING);
+  const endIndex = itemsClause.lastIndexOf(ITEMS_BINDING);
+
+  return {
+    prolog,
+    queryExpression:
+      startIndex === -1 || endIndex === -1
+        ? null
+        : itemsClause.slice(startIndex + QUERY_BINDING.length, endIndex),
+  };
+}
+
 function compiledQueryText(queries: Query | null): string {
-  const { prolog, queryExpression } = buildQueryPlan({ queries });
+  const { prolog, queryExpression } = compiledQueryPlan({ queries });
 
   return `${prolog}\n${queryExpression ?? ""}`;
 }
@@ -82,21 +114,14 @@ async function captureSetPropertyValuesQuery(parameters: {
 }
 
 describe("query helpers", () => {
-  it("returns no compiled query for a null query tree", () => {
-    const { prolog, queryExpression } = buildQueryPlan({ queries: null });
+  it("searches the base items expression directly for a null query tree", () => {
+    const { prolog, queryExpression } = compiledQueryPlan({ queries: null });
 
     expect(prolog).toBe("");
     expect(queryExpression).toBeNull();
-  });
-
-  it("builds nullable AND query expressions", () => {
-    expect(buildAndCtsQueryExpression([])).toBeNull();
-    expect(buildAndCtsQueryExpression(["cts:true-query()"])).toBe(
-      "cts:true-query()",
+    expect(compiledItemsClause(null)).toBe(
+      `let $items := ${BASE_ITEMS_EXPRESSION}`,
     );
-    expect(
-      buildAndCtsQueryExpression(["cts:true-query()", "cts:false-query()"]),
-    ).toBe("cts:and-query((cts:true-query(), cts:false-query()))");
   });
 
   it("builds collection membership queries through the property scope", () => {
@@ -197,7 +222,7 @@ describe("content target queries", () => {
   });
 
   it("returns a false query when an includes search only has stop words", () => {
-    const { queryExpression } = buildQueryPlan({
+    const { queryExpression } = compiledQueryPlan({
       queries: {
         target: "title",
         value: "of the",
@@ -211,7 +236,7 @@ describe("content target queries", () => {
   });
 
   it("uses the exact fallback for includes values with punctuation", () => {
-    const { queryExpression } = buildQueryPlan({
+    const { queryExpression } = compiledQueryPlan({
       queries: {
         target: "title",
         value: "north-south road",
@@ -273,9 +298,122 @@ describe("string target queries", () => {
   });
 });
 
+describe("ocr target queries", () => {
+  const ocrQuery = {
+    target: "ocr",
+    value: "Cappaert",
+    matchMode: "includes",
+    isCaseSensitive: false,
+  } as const;
+  const titleQuery = {
+    target: "title",
+    value: "Convocation",
+    matchMode: "includes",
+    isCaseSensitive: false,
+    language: "eng",
+  } as const;
+
+  it("resolves includes searches through a Resource document join", () => {
+    const itemsClause = compiledItemsClause(ocrQuery);
+
+    expectContainsAll(itemsClause, [
+      'let $ocrItemUuids1 := cts:search(/ochre/resource, cts:element-query(xs:QName("ocr"), cts:element-word-query(xs:QName("string"), "cappaert"',
+      ")/@uuid/string()",
+      `let $items := ${BASE_ITEMS_EXPRESSION}[@uuid = $ocrItemUuids1]`,
+    ]);
+    expectContainsNone(itemsClause, [QUERY_BINDING, '"unstemmed"']);
+  });
+
+  it("compiles exact searches as an ordered run of whole string values", () => {
+    const itemsClause = compiledItemsClause({
+      ...ocrQuery,
+      value: "THE COLLEGE",
+      matchMode: "exact",
+    });
+
+    expectContainsAll(itemsClause, [
+      'cts:near-query((cts:element-value-query(xs:QName("string"), "THE"',
+      'cts:element-value-query(xs:QName("string"), "COLLEGE"',
+      '), 1, ("ordered"))',
+    ]);
+  });
+
+  it("binds an empty sequence instead of searching for an unmatchable value", () => {
+    expect(compiledItemsClause({ ...ocrQuery, value: "of the" })).toBe(
+      `let $ocrItemUuids1 := ()\n  let $items := ${BASE_ITEMS_EXPRESSION}[@uuid = $ocrItemUuids1]`,
+    );
+  });
+
+  it("negates through the item predicate rather than a CTS query", () => {
+    expect(compiledItemsClause({ ...ocrQuery, isNegated: true })).toContain(
+      `let $items := ${BASE_ITEMS_EXPRESSION}[not(@uuid = $ocrItemUuids1)]`,
+    );
+  });
+
+  it("reuses one binding for repeated OCR searches in the same tree", () => {
+    const itemsClause = compiledItemsClause({
+      and: [ocrQuery, titleQuery, ocrQuery],
+    });
+
+    expect(countOccurrences(itemsClause, "let $ocrItemUuids1 :=")).toBe(1);
+    expect(itemsClause).toContain(
+      `let $items := cts:search(${BASE_ITEMS_EXPRESSION}[@uuid = $ocrItemUuids1], $query)`,
+    );
+  });
+
+  it("unions OCR arms of an OR group, keeping the CTS arms in one search", () => {
+    const itemsClause = compiledItemsClause({
+      or: [ocrQuery, titleQuery, { ...titleQuery, target: "notes" }],
+    });
+
+    expect(countOccurrences(itemsClause, "cts:search(doc()")).toBe(1);
+    expectContainsAll(itemsClause, [
+      "let $query := cts:or-query((",
+      `let $items := (cts:search(${BASE_ITEMS_EXPRESSION}, $query) | ${BASE_ITEMS_EXPRESSION}[@uuid = $ocrItemUuids1])`,
+    ]);
+  });
+
+  it("intersects when an OCR union sits under an AND group", () => {
+    const itemsClause = compiledItemsClause({
+      and: [titleQuery, { or: [ocrQuery, { ...titleQuery, value: "2025" }] }],
+    });
+
+    expectContainsAll(itemsClause, [
+      "let $query1 :=",
+      "let $query2 :=",
+      ` intersect (cts:search(${BASE_ITEMS_EXPRESSION}, $query2) | ${BASE_ITEMS_EXPRESSION}[@uuid = $ocrItemUuids1])`,
+    ]);
+  });
+
+  it("keeps OCR filters when compiling property value facets", async () => {
+    const postedBody = await captureSetPropertyValuesQuery({
+      setScopeUuids: [SET_UUID],
+      queries: {
+        and: [
+          ocrQuery,
+          {
+            target: "property",
+            propertyVariable: MEDIA_TYPE_UUID,
+            dataType: "string",
+            matchMode: "includes",
+            isCaseSensitive: false,
+            language: "eng",
+          },
+        ],
+      },
+    });
+
+    expectContainsAll(postedBody, [
+      "let $ocrItemUuids1 := cts:search(/ochre/resource,",
+      `let $items := ${BASE_ITEMS_EXPRESSION}[@uuid = $ocrItemUuids1]`,
+      `label/@uuid = "${MEDIA_TYPE_UUID}"`,
+    ]);
+  });
+});
+
 describe("property target queries", () => {
   it("compiles property-variable presence queries", () => {
-    const { prolog, queryExpression } = buildQueryPlan({
+    const { prolog, queryExpression } = compiledQueryPlan({
       queries: {
         target: "property",
         propertyVariable: MEDIA_TYPE_UUID,
@@ -296,7 +434,7 @@ describe("property target queries", () => {
   });
 
   it("compiles relation-only property presence queries", () => {
-    const { prolog, queryExpression } = buildQueryPlan({
+    const { prolog, queryExpression } = compiledQueryPlan({
       queries: {
         target: "property",
         propertyRelation: "related",
@@ -470,7 +608,7 @@ describe("property target queries", () => {
   });
 
   it("compiles date range property queries with from and to bounds", () => {
-    const { prolog, queryExpression } = buildQueryPlan({
+    const { prolog, queryExpression } = compiledQueryPlan({
       queries: {
         target: "property",
         propertyVariable: MEDIA_TYPE_UUID,
@@ -534,7 +672,7 @@ describe("property target queries", () => {
 
 describe("query groups", () => {
   it("compiles AND groups", () => {
-    const { queryExpression } = buildQueryPlan({
+    const { queryExpression } = compiledQueryPlan({
       queries: {
         and: [
           {
@@ -561,7 +699,7 @@ describe("query groups", () => {
   });
 
   it("compiles OR groups", () => {
-    const { queryExpression } = buildQueryPlan({
+    const { queryExpression } = compiledQueryPlan({
       queries: {
         or: [
           {
@@ -588,7 +726,7 @@ describe("query groups", () => {
   });
 
   it("wraps negated leaves in cts:not-query", () => {
-    const { queryExpression } = buildQueryPlan({
+    const { queryExpression } = compiledQueryPlan({
       queries: {
         target: "title",
         value: "Hippos",
@@ -603,7 +741,7 @@ describe("query groups", () => {
   });
 
   it("optimizes compatible OR groups of includes leaves with the same value", () => {
-    const { prolog, queryExpression } = buildQueryPlan({
+    const { prolog, queryExpression } = compiledQueryPlan({
       queries: {
         or: [
           {
@@ -641,7 +779,7 @@ describe("query groups", () => {
   });
 
   it("does not optimize OR includes groups with mismatched languages", () => {
-    const { queryExpression } = buildQueryPlan({
+    const { queryExpression } = compiledQueryPlan({
       queries: {
         or: [
           {

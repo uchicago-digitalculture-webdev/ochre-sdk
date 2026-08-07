@@ -1240,6 +1240,14 @@ export type SetItemsSort =
 
 /**
  * Represents a leaf query for Set items
+ *
+ * The `ocr` target matches the OCR text layer of Resource items. Set item
+ * projections do not carry `<ocr>`, so it is resolved by a document join rather
+ * than by a CTS term, and it composes with `and`, `or`, and `isNegated` at the
+ * cost of one extra search per distinct OCR value. Each `<string>` in that
+ * layer holds a single OCR word, so `includes` matches every search term as its
+ * own word and `exact` matches the terms as an adjacent run of whole words. OCR
+ * text carries no language, so `ocr` leaves take no `language`.
  */
 export type QueryLeaf =
   | {
@@ -1311,6 +1319,13 @@ export type QueryLeaf =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
+      isNegated?: boolean;
+    }
+  | {
+      target: "ocr";
+      value: string;
+      matchMode: "includes" | "exact";
+      isCaseSensitive: boolean;
       isNegated?: boolean;
     }
   | {

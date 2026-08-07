@@ -36,11 +36,32 @@ type TextTargetQuery = Extract<
 type ContentTextTarget = Exclude<TextTargetQuery["target"], "notes">;
 type PropertyQuery = Extract<QueryLeaf, { target: "property" }>;
 type AllPropertyQuery = Extract<PropertyQuery, { dataType: "all" }>;
+type OcrQuery = Extract<QueryLeaf, { target: "ocr" }>;
+type CtsQueryLeaf = Exclude<QueryLeaf, OcrQuery>;
+
+type OcrBinding = { name: string; expression: string };
+
+/**
+ * A search over the Set items, optionally narrowed by item path predicates.
+ * Predicates carry the OCR joins, which only ever AND, so anything a predicate
+ * cannot express becomes a `union`/`intersect` of plans instead.
+ */
+type ItemsSearchPlan = {
+  kind: "search";
+  itemPredicates: Array<string>;
+  queryExpressions: Array<string>;
+};
+
+type ItemsPlan =
+  | ItemsSearchPlan
+  | { kind: "union" | "intersect"; children: Array<ItemsPlan> };
 
 type QueryCompilerContext = {
   nextHelperSerial: number;
   helperNamesByKey: Map<string, string>;
   helperDeclarations: Array<string>;
+  ocrBindingNamesByKey: Map<string, string>;
+  ocrBindings: Array<OcrBinding>;
 };
 
 type QueryHelperRegistration = { name: string; callExpression: string };
@@ -415,7 +436,7 @@ function buildOrCtsQueryExpressionInternal(
   return `cts:or-query((${queryExpressions.join(", ")}))`;
 }
 
-export function buildAndCtsQueryExpression(
+function buildAndCtsQueryExpression(
   queryExpressions: Array<string>,
 ): string | null {
   if (queryExpressions.length === 0) {
@@ -899,7 +920,132 @@ function buildItemStringQueryExpression(parameters: {
   ]);
 }
 
-function getLeafSearchValue(query: QueryLeaf): string | null {
+function tokenizeOcrPhraseValue(value: string): Array<string> {
+  const terms: Array<string> = [];
+
+  for (const term of value.split(/\s+/u)) {
+    if (term !== "") {
+      terms.push(term);
+    }
+  }
+
+  return terms;
+}
+
+/**
+ * Word queries against the OCR layer cannot carry a stemming option: the OCHRE
+ * database has unstemmed word searches turned off, and asking an element word
+ * query for `unstemmed` fails with `XDMP-WORDSEARCH`. Omitting the option
+ * altogether resolves the term against the database default instead.
+ */
+function buildOcrWordQueryExpression(parameters: {
+  value: string;
+  isCaseSensitive: boolean;
+}): string {
+  const { value, isCaseSensitive } = parameters;
+  const options: Array<string> = [
+    isCaseSensitive ? "case-sensitive" : "case-insensitive",
+    "diacritic-insensitive",
+    "punctuation-insensitive",
+    "whitespace-insensitive",
+  ];
+
+  if (hasWildcardCharacters(value)) {
+    options.push("wildcarded");
+  }
+
+  return `cts:element-word-query(xs:QName("string"), ${stringLiteral(value)}, (${options.map((option) => stringLiteral(option)).join(", ")}))`;
+}
+
+/**
+ * Compile an OCR text search into a query over the `<ocr>` layer of a Resource
+ * document
+ *
+ * Every `<string>` node in that layer holds a single OCR word, so `includes`
+ * matches each search term as its own word anywhere in the layer, and `exact`
+ * matches the terms as a run of adjacent whole string values. A phrase cannot
+ * be a word query here: word positions do not carry across the `<string>`
+ * boundaries, which makes `cts:near-query` the only phrase mechanism, and its
+ * distance is a total span rather than a pairwise gap.
+ */
+function buildOcrQueryExpression(query: OcrQuery): string {
+  const { value, matchMode, isCaseSensitive } = query;
+
+  if (matchMode === "exact") {
+    const terms = tokenizeOcrPhraseValue(value);
+
+    if (terms.length === 0) {
+      return "cts:false-query()";
+    }
+
+    const termQueryExpressions = Array.from(terms, (term) =>
+      buildCtsElementValueQueryExpression({
+        elementName: "string",
+        value: term,
+        isCaseSensitive,
+      }),
+    );
+    const phraseQueryExpression =
+      termQueryExpressions.length === 1
+        ? (termQueryExpressions[0] ?? "cts:false-query()")
+        : `cts:near-query((${termQueryExpressions.join(", ")}), ${termQueryExpressions.length - 1}, ("ordered"))`;
+
+    return buildNestedElementQuery(["ocr"], phraseQueryExpression);
+  }
+
+  const terms = tokenizeIncludesSearchValue({ value, isCaseSensitive });
+
+  if (terms.length === 0) {
+    return "cts:false-query()";
+  }
+
+  return buildNestedElementQuery(
+    ["ocr"],
+    buildAndCtsQueryExpressionInternal(
+      Array.from(terms, (term) =>
+        buildOcrWordQueryExpression({ value: term, isCaseSensitive }),
+      ),
+    ),
+  );
+}
+
+/**
+ * Bind the UUIDs of the Resource documents whose OCR layer matches a query,
+ * reusing the binding when the same search is requested more than once
+ */
+function registerOcrBinding(
+  context: QueryCompilerContext,
+  query: OcrQuery,
+): string {
+  const key = [
+    query.value,
+    query.matchMode,
+    query.isCaseSensitive ? "case-sensitive" : "case-insensitive",
+  ].join("|");
+  const existingName = context.ocrBindingNamesByKey.get(key);
+
+  if (existingName != null) {
+    return existingName;
+  }
+
+  const name = `$ocrItemUuids${context.ocrBindings.length + 1}`;
+  const queryExpression = buildOcrQueryExpression(query);
+  context.ocrBindingNamesByKey.set(key, name);
+  context.ocrBindings.push({
+    name,
+    // Document URIs are bare item UUIDs and the OCR layer is only ever carried
+    // by a Resource, so searching the Resource roots resolves the join with one
+    // index-only search, whatever Set the items are later filtered against.
+    expression:
+      queryExpression === "cts:false-query()"
+        ? "()"
+        : `cts:search(/ochre/resource, ${queryExpression})/@uuid/string()`,
+  });
+
+  return name;
+}
+
+function getLeafSearchValue(query: CtsQueryLeaf): string | null {
   switch (query.target) {
     case "string":
     case "title":
@@ -917,7 +1063,7 @@ function getLeafSearchValue(query: QueryLeaf): string | null {
 }
 
 function buildLeafValueQueryExpression(parameters: {
-  query: QueryLeaf;
+  query: CtsQueryLeaf;
   value: string;
   matchMode: QueryMatchMode;
 }): string {
@@ -1008,6 +1154,8 @@ function createQueryCompilerContext(): QueryCompilerContext {
     nextHelperSerial: 1,
     helperNamesByKey: new Map(),
     helperDeclarations: [],
+    ocrBindingNamesByKey: new Map(),
+    ocrBindings: [],
   };
 }
 
@@ -1073,7 +1221,7 @@ function registerParameterizedHelper(parameters: {
 }
 
 function getLeafHelperKey(parameters: {
-  query: QueryLeaf;
+  query: CtsQueryLeaf;
   matchMode: QueryMatchMode;
   value: string;
 }): string {
@@ -1114,7 +1262,7 @@ function getLeafHelperKey(parameters: {
 
 function registerLeafHelper(parameters: {
   context: QueryCompilerContext;
-  query: QueryLeaf;
+  query: CtsQueryLeaf;
   matchMode: QueryMatchMode;
   value: string;
 }): QueryHelperRegistration {
@@ -1128,7 +1276,7 @@ function registerLeafHelper(parameters: {
 }
 
 function getIncludesLeafHelperKey(parameters: {
-  query: QueryLeaf;
+  query: CtsQueryLeaf;
   value: string;
 }): string {
   const { query, value } = parameters;
@@ -1170,7 +1318,7 @@ function getIncludesLeafHelperKey(parameters: {
 
 function registerIncludesLeafHelper(parameters: {
   context: QueryCompilerContext;
-  query: QueryLeaf;
+  query: CtsQueryLeaf;
   sampleValue: string;
 }): ParameterizedQueryHelperRegistration {
   const { context, query, sampleValue } = parameters;
@@ -1192,7 +1340,7 @@ function registerIncludesLeafHelper(parameters: {
 
 function buildLeafQueryExpression(
   context: QueryCompilerContext,
-  query: QueryLeaf,
+  query: CtsQueryLeaf,
 ): string {
   if (
     query.target === "property" &&
@@ -1278,7 +1426,7 @@ function buildLeafQueryExpression(
   ]);
 }
 
-function getGroupableIncludesValue(query: QueryLeaf): string | null {
+function getGroupableIncludesValue(query: CtsQueryLeaf): string | null {
   if (query.matchMode !== "includes" || query.isNegated === true) {
     return null;
   }
@@ -1321,15 +1469,15 @@ function getQueryGroupOperator(query: QueryGroup): "and" | "or" {
 
 function getCompatibleIncludesGroupLeaves(
   query: QueryGroup,
-): Array<QueryLeaf> | null {
+): Array<CtsQueryLeaf> | null {
   if (!("or" in query) || query.or.length <= 1) {
     return null;
   }
 
-  const leafQueries: Array<QueryLeaf> = [];
+  const leafQueries: Array<CtsQueryLeaf> = [];
 
   for (const childQuery of query.or) {
-    if (!isQueryLeaf(childQuery)) {
+    if (!isQueryLeaf(childQuery) || childQuery.target === "ocr") {
       return null;
     }
 
@@ -1363,7 +1511,7 @@ function getCompatibleIncludesGroupLeaves(
 
 function buildIncludesGroupQueryExpression(
   context: QueryCompilerContext,
-  queries: Array<QueryLeaf>,
+  queries: Array<CtsQueryLeaf>,
 ): string {
   const firstQuery = queries[0];
 
@@ -1451,34 +1599,206 @@ function buildIncludesGroupQueryExpression(
   ]);
 }
 
-function buildQueryNode(context: QueryCompilerContext, query: Query): string {
+function buildCtsItemsPlan(queryExpression: string): ItemsSearchPlan {
+  return {
+    kind: "search",
+    itemPredicates: [],
+    queryExpressions: [queryExpression],
+  };
+}
+
+/**
+ * Splice the children of same-kind child plans into their parent, so that a
+ * nested group of the same operator does not cost an extra search
+ */
+function flattenItemsPlans(
+  childPlans: Array<ItemsPlan>,
+  kind: "union" | "intersect",
+): Array<ItemsPlan> {
+  const flattenedPlans: Array<ItemsPlan> = [];
+
+  for (const childPlan of childPlans) {
+    if (childPlan.kind === kind) {
+      flattenedPlans.push(...childPlan.children);
+      continue;
+    }
+
+    flattenedPlans.push(childPlan);
+  }
+
+  return flattenedPlans;
+}
+
+/**
+ * Fold the children of an `and` group into one plan
+ *
+ * Conjunction is the direction the item path predicates already run in, so
+ * every child that is a plain search collapses into a single search, and only
+ * the children that resolved to a union stay separate.
+ */
+function buildAndItemsPlan(childPlans: Array<ItemsPlan>): ItemsPlan {
+  const mergedPlan: ItemsSearchPlan = {
+    kind: "search",
+    itemPredicates: [],
+    queryExpressions: [],
+  };
+  const unfoldablePlans: Array<ItemsPlan> = [];
+
+  for (const childPlan of flattenItemsPlans(childPlans, "intersect")) {
+    if (childPlan.kind !== "search") {
+      unfoldablePlans.push(childPlan);
+      continue;
+    }
+
+    for (const itemPredicate of childPlan.itemPredicates) {
+      if (!mergedPlan.itemPredicates.includes(itemPredicate)) {
+        mergedPlan.itemPredicates.push(itemPredicate);
+      }
+    }
+
+    mergedPlan.queryExpressions.push(...childPlan.queryExpressions);
+  }
+
+  if (unfoldablePlans.length === 0) {
+    return mergedPlan;
+  }
+
+  const intersectedPlans =
+    mergedPlan.itemPredicates.length === 0 &&
+    mergedPlan.queryExpressions.length === 0
+      ? unfoldablePlans
+      : [mergedPlan, ...unfoldablePlans];
+
+  return intersectedPlans.length === 1
+    ? (intersectedPlans[0] ?? mergedPlan)
+    : { kind: "intersect", children: intersectedPlans };
+}
+
+/**
+ * Fold the children of an `or` group into one plan
+ *
+ * Item path predicates cannot be disjoined, so a child carrying one becomes its
+ * own arm of a node union. Everything else is still a single CTS query.
+ */
+function buildOrItemsPlan(childPlans: Array<ItemsPlan>): ItemsPlan {
+  const mergedQueryExpressions: Array<string> = [];
+  const unionedPlans: Array<ItemsPlan> = [];
+
+  for (const childPlan of flattenItemsPlans(childPlans, "union")) {
+    if (childPlan.kind === "search" && childPlan.itemPredicates.length === 0) {
+      mergedQueryExpressions.push(
+        buildAndCtsQueryExpressionInternal(childPlan.queryExpressions),
+      );
+      continue;
+    }
+
+    unionedPlans.push(childPlan);
+  }
+
+  if (mergedQueryExpressions.length > 0) {
+    unionedPlans.unshift({
+      kind: "search",
+      itemPredicates: [],
+      queryExpressions: [
+        buildOrCtsQueryExpressionInternal(mergedQueryExpressions),
+      ],
+    });
+  }
+
+  if (unionedPlans.length === 0) {
+    return buildCtsItemsPlan("cts:false-query()");
+  }
+
+  return unionedPlans.length === 1
+    ? (unionedPlans[0] ?? buildCtsItemsPlan("cts:false-query()"))
+    : { kind: "union", children: unionedPlans };
+}
+
+function buildItemsPlan(
+  context: QueryCompilerContext,
+  query: Query,
+): ItemsPlan {
   if (isQueryLeaf(query)) {
+    if (query.target === "ocr") {
+      const bindingName = registerOcrBinding(context, query);
+
+      return {
+        kind: "search",
+        itemPredicates: [
+          query.isNegated === true
+            ? `[not(@uuid = ${bindingName})]`
+            : `[@uuid = ${bindingName}]`,
+        ],
+        queryExpressions: [],
+      };
+    }
+
     const queryExpression = buildLeafQueryExpression(context, query);
 
-    return query.isNegated === true
-      ? buildNotCtsQueryExpression(queryExpression)
-      : queryExpression;
+    return buildCtsItemsPlan(
+      query.isNegated === true
+        ? buildNotCtsQueryExpression(queryExpression)
+        : queryExpression,
+    );
   }
 
   const optimizedIncludesGroupQueries = getCompatibleIncludesGroupLeaves(query);
 
   if (optimizedIncludesGroupQueries != null) {
-    return buildIncludesGroupQueryExpression(
-      context,
-      optimizedIncludesGroupQueries,
+    return buildCtsItemsPlan(
+      buildIncludesGroupQueryExpression(context, optimizedIncludesGroupQueries),
     );
   }
 
-  const childQueryExpressions: Array<string> = Array.from(
+  const childPlans: Array<ItemsPlan> = Array.from(
     getQueryGroupChildren(query),
-    (childQuery) => buildQueryNode(context, childQuery),
+    (childQuery) => buildItemsPlan(context, childQuery),
   );
 
-  const buildCtsQueryExpression =
-    getQueryGroupOperator(query) === "and"
-      ? buildAndCtsQueryExpressionInternal
-      : buildOrCtsQueryExpressionInternal;
-  return buildCtsQueryExpression(childQueryExpressions);
+  return getQueryGroupOperator(query) === "and"
+    ? buildAndItemsPlan(childPlans)
+    : buildOrItemsPlan(childPlans);
+}
+
+function collectItemsSearchPlans(
+  plan: ItemsPlan,
+  searchPlans: Array<ItemsSearchPlan>,
+): void {
+  if (plan.kind === "search") {
+    searchPlans.push(plan);
+    return;
+  }
+
+  for (const childPlan of plan.children) {
+    collectItemsSearchPlans(childPlan, searchPlans);
+  }
+}
+
+function buildItemsPlanExpression(parameters: {
+  plan: ItemsPlan;
+  baseItemsExpression: string;
+  queryNamesByPlan: Map<ItemsSearchPlan, string>;
+}): string {
+  const { plan, baseItemsExpression, queryNamesByPlan } = parameters;
+
+  if (plan.kind === "search") {
+    const itemsExpression = `${baseItemsExpression}${plan.itemPredicates.join("")}`;
+    const queryName = queryNamesByPlan.get(plan);
+
+    return queryName == null
+      ? itemsExpression
+      : `cts:search(${itemsExpression}, ${queryName})`;
+  }
+
+  const childExpressions = Array.from(plan.children, (childPlan) =>
+    buildItemsPlanExpression({
+      plan: childPlan,
+      baseItemsExpression,
+      queryNamesByPlan,
+    }),
+  );
+
+  return `(${childExpressions.join(plan.kind === "union" ? " | " : " intersect ")})`;
 }
 
 export function buildBelongsToCollectionQueryExpression(
@@ -1508,18 +1828,76 @@ export function buildBelongsToCollectionQueryExpression(
   });
 }
 
-export function buildQueryPlan(parameters: { queries: Query | null }): {
-  prolog: string;
-  queryExpression: string | null;
-} {
-  const { queries } = parameters;
-
-  if (queries == null) {
-    return { prolog: "", queryExpression: null };
-  }
+/**
+ * Compile a query tree into the XQuery `let` clauses that bind `$items` to the
+ * matching Set items
+ *
+ * Most queries compile to a single `cts:search` over the Set item projections.
+ * An `ocr` leaf cannot: the projections drop the `<ocr>` layer, so it resolves
+ * to a search over the Resource documents whose matching UUIDs are joined back
+ * in as an item path predicate. Path predicates only ever AND, so an `ocr` leaf
+ * that sits under an `or` becomes its own arm of a node union instead, and one
+ * that sits under an `and` alongside a union becomes an intersection.
+ *
+ * The searchable path has to stay inline in `cts:search`: binding it to a
+ * variable first makes every query XDMP-UNSEARCHABLE.
+ * @param parameters - The parameters for the compilation
+ * @param parameters.queries - Recursive query tree to compile, if any
+ * @param parameters.baseItemsExpression - The inline XQuery path selecting the items to search
+ * @param parameters.scopeQueryExpression - An optional CTS query ANDed into every compiled search
+ * @returns The prolog declaring the query helpers, and the `let` clauses binding `$items`
+ */
+export function buildQueryPlan(parameters: {
+  queries: Query | null;
+  baseItemsExpression: string;
+  scopeQueryExpression?: string | null;
+}): { prolog: string; itemsClause: string } {
+  const { queries, baseItemsExpression, scopeQueryExpression } = parameters;
 
   const context = createQueryCompilerContext();
-  const queryExpression = buildQueryNode(context, queries);
+  const plan: ItemsPlan =
+    queries == null
+      ? { kind: "search", itemPredicates: [], queryExpressions: [] }
+      : buildItemsPlan(context, queries);
+  const searchPlans: Array<ItemsSearchPlan> = [];
+  collectItemsSearchPlans(plan, searchPlans);
 
-  return { prolog: context.helperDeclarations.join("\n\n"), queryExpression };
+  const boundSearchPlans: Array<{
+    plan: ItemsSearchPlan;
+    queryExpression: string;
+  }> = [];
+
+  for (const searchPlan of searchPlans) {
+    const queryExpression = buildAndCtsQueryExpression([
+      ...searchPlan.queryExpressions,
+      ...(scopeQueryExpression == null ? [] : [scopeQueryExpression]),
+    ]);
+
+    if (queryExpression != null) {
+      boundSearchPlans.push({ plan: searchPlan, queryExpression });
+    }
+  }
+
+  const queryNamesByPlan = new Map<ItemsSearchPlan, string>();
+  const letClauses: Array<string> = Array.from(
+    context.ocrBindings,
+    (binding) => `let ${binding.name} := ${binding.expression}`,
+  );
+
+  for (const [index, boundSearchPlan] of boundSearchPlans.entries()) {
+    const queryName =
+      boundSearchPlans.length === 1 ? "$query" : `$query${index + 1}`;
+
+    queryNamesByPlan.set(boundSearchPlan.plan, queryName);
+    letClauses.push(`let ${queryName} := ${boundSearchPlan.queryExpression}`);
+  }
+
+  letClauses.push(
+    `let $items := ${buildItemsPlanExpression({ plan, baseItemsExpression, queryNamesByPlan })}`,
+  );
+
+  return {
+    prolog: context.helperDeclarations.join("\n\n"),
+    itemsClause: letClauses.join("\n  "),
+  };
 }

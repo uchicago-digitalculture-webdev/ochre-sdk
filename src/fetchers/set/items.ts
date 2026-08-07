@@ -20,7 +20,6 @@ import {
 } from "#/constants.js";
 import { parseSetItems } from "#/parsers/index.js";
 import {
-  buildAndCtsQueryExpression,
   buildBelongsToCollectionQueryExpression,
   buildQueryPlan,
 } from "#/query.js";
@@ -307,26 +306,14 @@ function buildXQuery(parameters: {
   const startPosition = (page - 1) * pageSize + 1;
   const setScopeValues = setScopeUuids.map((uuid) => stringLiteral(uuid));
   const setScopeDeclaration = `declare variable $setScopeUuids := (${setScopeValues.join(", ")});`;
-  const baseItemsExpression = "doc()/ochre/set[@uuid = $setScopeUuids]/items/*";
-  const compiledQueryPlan = buildQueryPlan({ queries });
-  const itemsQueryExpressions: Array<string> = [];
-  const belongsToCollectionQueryExpression =
-    buildBelongsToCollectionQueryExpression(
+  const compiledQueryPlan = buildQueryPlan({
+    queries,
+    baseItemsExpression: "doc()/ochre/set[@uuid = $setScopeUuids]/items/*",
+    scopeQueryExpression: buildBelongsToCollectionQueryExpression(
       belongsToCollectionScopeUuids,
       BELONGS_TO_COLLECTION_UUID,
-    );
-
-  if (compiledQueryPlan.queryExpression != null) {
-    itemsQueryExpressions.push(compiledQueryPlan.queryExpression);
-  }
-
-  if (belongsToCollectionQueryExpression != null) {
-    itemsQueryExpressions.push(belongsToCollectionQueryExpression);
-  }
-
-  const itemsQueryExpression = buildAndCtsQueryExpression(
-    itemsQueryExpressions,
-  );
+    ),
+  });
   const orderedItemsClause = buildOrderedItemsClause(sort);
   const xqueryDeclarations = [
     'xquery version "1.0-ml";',
@@ -338,16 +325,10 @@ function buildXQuery(parameters: {
     xqueryDeclarations.push(compiledQueryPlan.prolog);
   }
 
-  const itemsClause =
-    itemsQueryExpression == null
-      ? `let $items := ${baseItemsExpression}`
-      : `let $query := ${itemsQueryExpression}
-  let $items := cts:search(${baseItemsExpression}, $query)`;
-
   const xquery = `${xqueryDeclarations.join("\n\n")}
 
 <ochre>{
-${itemsClause}
+${compiledQueryPlan.itemsClause}
   let $totalCount := count($items)
   ${orderedItemsClause}
   let $pagedItems := subsequence($orderedItems, ${startPosition}, ${pageSize})

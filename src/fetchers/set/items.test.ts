@@ -10,6 +10,8 @@ const UCHICAGO_NODE_SET_SCOPE_UUIDS = [
   "606c62dd-80ad-41db-ae1d-7a8b2ff7ef27",
 ] as const;
 
+const CONVOCATION_PROGRAMS_SET_UUID = "a121516f-1f82-41b3-8529-c1f5c3364958";
+
 function buildInputValueQueries(value: string) {
   return {
     or: [
@@ -252,4 +254,92 @@ it("should fetch uchicago-node Set items for stemmed query: 'train'", async () =
   });
 
   expect(totalCount).toBe(8);
+});
+
+it("should fetch convocation-programs Set items for OCR query: 'Cappaert'", async () => {
+  const { totalCount } = await fetchSetItems({
+    setScopeUuids: [CONVOCATION_PROGRAMS_SET_UUID],
+    queries: {
+      target: "ocr",
+      value: "Cappaert",
+      matchMode: "includes",
+      isCaseSensitive: false,
+    },
+    page: 1,
+    pageSize: 48,
+  });
+
+  expect(totalCount).toBe(1);
+});
+
+it("should fetch convocation-programs Set items for OCR phrase query: 'THE COLLEGE'", async () => {
+  const { totalCount: phraseCount } = await fetchSetItems({
+    setScopeUuids: [CONVOCATION_PROGRAMS_SET_UUID],
+    queries: {
+      target: "ocr",
+      value: "THE COLLEGE",
+      matchMode: "exact",
+      isCaseSensitive: false,
+    },
+    page: 1,
+    pageSize: 48,
+  });
+  const { totalCount: reversedPhraseCount } = await fetchSetItems({
+    setScopeUuids: [CONVOCATION_PROGRAMS_SET_UUID],
+    queries: {
+      target: "ocr",
+      value: "COLLEGE THE",
+      matchMode: "exact",
+      isCaseSensitive: false,
+    },
+    page: 1,
+    pageSize: 48,
+  });
+
+  expect(phraseCount).toBe(1);
+  expect(reversedPhraseCount).toBe(0);
+});
+
+it("should fetch convocation-programs Set items for a negated OCR query", async () => {
+  const { totalCount } = await fetchSetItems({
+    setScopeUuids: [CONVOCATION_PROGRAMS_SET_UUID],
+    queries: {
+      target: "ocr",
+      value: "Cappaert",
+      matchMode: "includes",
+      isCaseSensitive: false,
+      isNegated: true,
+    },
+    page: 1,
+    pageSize: 48,
+  });
+
+  expect(totalCount).toBe(3);
+});
+
+it("should fetch convocation-programs Set items for an OCR query OR-ed with a title query", async () => {
+  const { totalCount } = await fetchSetItems({
+    setScopeUuids: [CONVOCATION_PROGRAMS_SET_UUID],
+    queries: {
+      or: [
+        {
+          target: "ocr",
+          value: "Cappaert",
+          matchMode: "includes",
+          isCaseSensitive: false,
+        },
+        {
+          target: "title",
+          value: "2025",
+          matchMode: "includes",
+          isCaseSensitive: false,
+          language: "eng",
+        },
+      ],
+    },
+    page: 1,
+    pageSize: 48,
+  });
+
+  expect(totalCount).toBe(2);
 });

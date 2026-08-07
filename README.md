@@ -121,6 +121,34 @@ const result = await fetchSetItems(
 Use `fetchSetPropertyValues` with the same query shape when you need facet data
 for a filtered result set.
 
+### OCR Text Queries
+
+The `ocr` target searches the OCR text layer of the Resource items in a Set. It takes no `language`, because OCR text carries none.
+
+```ts
+const queries: Query = {
+  and: [
+    {
+      target: "ocr",
+      value: "Cappaert",
+      matchMode: "includes",
+      isCaseSensitive: false,
+    },
+    {
+      target: "title",
+      value: "Convocation",
+      matchMode: "includes",
+      isCaseSensitive: false,
+      language: "eng",
+    },
+  ],
+};
+```
+
+Every `<string>` node in that layer holds a single OCR word, so `includes` matches each search term as its own word anywhere in the layer, in any order, with `*` and `?` wildcards supported. `exact` instead matches the terms as a run of adjacent whole words, so `"THE COLLEGE"` matches a page carrying that phrase but not one where the two words merely appear apart. An item matches when the OCR layer of the item itself or of any of its child Resources matches.
+
+Set item projections do not carry the OCR layer, so an `ocr` leaf is resolved by an extra index-only search over the Resource documents whose matching UUIDs are then joined back onto the Set items. It still composes with `and`, `or`, and `isNegated` like any other leaf, and repeating the same OCR search inside one tree only costs one search.
+
 ## OCR Data
 
 A Resource may carry an `<ocr>` layer holding the positioned output of an OCR run. The node hierarchy inside that layer is irregular and is not parsed, but any `<string>` node within it, at any depth, is read as one positioned OCR string.

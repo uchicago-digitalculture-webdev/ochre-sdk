@@ -17,7 +17,6 @@ import {
 import { MultilingualString } from "#/parsers/multilingual.js";
 import { parseXMLContent } from "#/parsers/string.js";
 import {
-  buildAndCtsQueryExpression,
   buildBelongsToCollectionQueryExpression,
   buildQueryPlan,
 } from "#/query.js";
@@ -406,28 +405,14 @@ function buildXQuery(parameters: {
 
   const setScopeValues = setScopeUuids.map((uuid) => stringLiteral(uuid));
   const setScopeDeclaration = `declare variable $setScopeUuids := (${setScopeValues.join(", ")});`;
-  const baseItemsExpression = "doc()/ochre/set[@uuid = $setScopeUuids]/items/*";
   const compiledQueryPlan = buildQueryPlan({
     queries: getItemFilterQueriesFromPropertyValueQueries(queries),
-  });
-  const itemsQueryExpressions: Array<string> = [];
-  const belongsToCollectionQueryExpression =
-    buildBelongsToCollectionQueryExpression(
+    baseItemsExpression: "doc()/ochre/set[@uuid = $setScopeUuids]/items/*",
+    scopeQueryExpression: buildBelongsToCollectionQueryExpression(
       belongsToCollectionScopeUuids,
       BELONGS_TO_COLLECTION_UUID,
-    );
-
-  if (compiledQueryPlan.queryExpression != null) {
-    itemsQueryExpressions.push(compiledQueryPlan.queryExpression);
-  }
-
-  if (belongsToCollectionQueryExpression != null) {
-    itemsQueryExpressions.push(belongsToCollectionQueryExpression);
-  }
-
-  const itemsQueryExpression = buildAndCtsQueryExpression(
-    itemsQueryExpressions,
-  );
+    ),
+  });
   const valueFilter = isLimitedToLeafPropertyValues ? "[not(@i)]" : "";
   const queryBlocks: Array<string> = [];
   const returnedSequences: Array<string> = [];
@@ -650,16 +635,10 @@ let $period-values :=
     returnedSequences.push("$period-values");
   }
 
-  const itemsClause =
-    itemsQueryExpression == null
-      ? `let $items := ${baseItemsExpression}`
-      : `let $query := ${itemsQueryExpression}
-  let $items := cts:search(${baseItemsExpression}, $query)`;
-
   const xquery = `${xqueryDeclarations.join("\n\n")}
 
 <ochre>{
-${itemsClause}
+${compiledQueryPlan.itemsClause}
 ${queryBlocks.join("\n\n")}
 
 return (${returnedSequences.join(", ")})
