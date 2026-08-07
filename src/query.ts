@@ -920,7 +920,13 @@ function buildItemStringQueryExpression(parameters: {
   ]);
 }
 
-function tokenizeOcrPhraseValue(value: string): Array<string> {
+// OCHRE serves OCR word elements under more than one element name, so every
+// query over the layer carries all of them. The namespace is an identifier
+// matched verbatim, not an address, so it stays on http.
+// eslint-disable-next-line unicorn/prefer-https -- XML namespace identifier, not a URL
+const OCR_STRING_QNAMES = `(xs:QName("String"), fn:QName("http://www.loc.gov/standards/alto/ns-v2#", "string"))`;
+
+function tokenizeOcrExactValue(value: string): Array<string> {
   const terms: Array<string> = [];
 
   for (const term of value.split(/\s+/u)) {
@@ -934,9 +940,9 @@ function tokenizeOcrPhraseValue(value: string): Array<string> {
 
 /**
  * Word queries against the OCR layer cannot carry a stemming option: the OCHRE
- * database has unstemmed word searches turned off, and asking an element word
- * query for `unstemmed` fails with `XDMP-WORDSEARCH`. Omitting the option
- * altogether resolves the term against the database default instead.
+ * database has unstemmed word searches turned off, and asking a word query for
+ * `unstemmed` fails with `XDMP-WORDSEARCH`. Omitting the option altogether
+ * resolves the term against the database default instead.
  */
 function buildOcrWordQueryExpression(parameters: {
   value: string;
@@ -954,43 +960,51 @@ function buildOcrWordQueryExpression(parameters: {
     options.push("wildcarded");
   }
 
-  return `cts:element-word-query(xs:QName("string"), ${stringLiteral(value)}, (${options.map((option) => stringLiteral(option)).join(", ")}))`;
+  return `cts:element-attribute-word-query(${OCR_STRING_QNAMES}, xs:QName("CONTENT"), ${stringLiteral(value)}, (${options.map((option) => stringLiteral(option)).join(", ")}))`;
+}
+
+function buildOcrValueQueryExpression(parameters: {
+  value: string;
+  isCaseSensitive: boolean;
+}): string {
+  const { value, isCaseSensitive } = parameters;
+
+  return `cts:element-attribute-value-query(${OCR_STRING_QNAMES}, xs:QName("CONTENT"), ${stringLiteral(value)}, ${buildWordQueryOptionsExpression({ matchMode: "exact", isCaseSensitive })})`;
 }
 
 /**
  * Compile an OCR text search into a query over the `<ocr>` layer of a Resource
  * document
  *
- * Every `<string>` node in that layer holds a single OCR word, so `includes`
- * matches each search term as its own word anywhere in the layer, and `exact`
- * matches the terms as a run of adjacent whole string values. A phrase cannot
- * be a word query here: word positions do not carry across the `<string>`
- * boundaries, which makes `cts:near-query` the only phrase mechanism, and its
- * distance is a total span rather than a pairwise gap.
+ * Each word node in that layer holds a single OCR word in its `CONTENT`
+ * attribute, so `includes` matches every search term as a word inside that
+ * attribute anywhere in the layer, and `exact` requires every term to equal a
+ * whole `CONTENT` value.
+ *
+ * The conjunction is only an index narrowing for `exact`. Attribute values
+ * carry no word positions, so `cts:near-query` over them silently degenerates
+ * into a conjunction and cannot express a phrase at all. Word order and
+ * adjacency are instead enforced by {@link registerOcrPhraseHelper} over the
+ * documents this narrowing returns.
  */
 function buildOcrQueryExpression(query: OcrQuery): string {
   const { value, matchMode, isCaseSensitive } = query;
 
   if (matchMode === "exact") {
-    const terms = tokenizeOcrPhraseValue(value);
+    const terms = tokenizeOcrExactValue(value);
 
     if (terms.length === 0) {
       return "cts:false-query()";
     }
 
-    const termQueryExpressions = Array.from(terms, (term) =>
-      buildCtsElementValueQueryExpression({
-        elementName: "string",
-        value: term,
-        isCaseSensitive,
-      }),
+    return buildNestedElementQuery(
+      ["ocr"],
+      buildAndCtsQueryExpressionInternal(
+        Array.from(terms, (term) =>
+          buildOcrValueQueryExpression({ value: term, isCaseSensitive }),
+        ),
+      ),
     );
-    const phraseQueryExpression =
-      termQueryExpressions.length === 1
-        ? (termQueryExpressions[0] ?? "cts:false-query()")
-        : `cts:near-query((${termQueryExpressions.join(", ")}), ${termQueryExpressions.length - 1}, ("ordered"))`;
-
-    return buildNestedElementQuery(["ocr"], phraseQueryExpression);
   }
 
   const terms = tokenizeIncludesSearchValue({ value, isCaseSensitive });
@@ -1007,6 +1021,39 @@ function buildOcrQueryExpression(query: OcrQuery): string {
       ),
     ),
   );
+}
+
+/**
+ * Declare the filter that holds an `exact` multi-term search to a run of
+ * adjacent OCR words, which no CTS query over the layer can express
+ */
+function registerOcrPhraseHelper(context: QueryCompilerContext): string {
+  const helperName = "local:ocrHasPhrase";
+
+  if (context.helperNamesByKey.has(helperName)) {
+    return helperName;
+  }
+
+  context.helperNamesByKey.set(helperName, helperName);
+  context.helperDeclarations.push(
+    `declare function ${helperName}($resource as node(), $terms as xs:string*, $isCaseSensitive as xs:boolean) as xs:boolean {
+  let $contents :=
+    for $word in $resource//*[lower-case(local-name(.)) = "ocr"]//*[lower-case(local-name(.)) = "string"][@CONTENT]
+    return if ($isCaseSensitive) then string($word/@CONTENT) else lower-case(string($word/@CONTENT))
+  let $needles :=
+    for $term in $terms
+    return if ($isCaseSensitive) then $term else lower-case($term)
+  let $length := count($needles)
+  return
+    some $start in (1 to (count($contents) - $length + 1))
+    satisfies (
+      every $offset in (1 to $length)
+      satisfies $contents[$start + $offset - 1] = $needles[$offset]
+    )
+};`,
+  );
+
+  return helperName;
 }
 
 /**
@@ -1030,16 +1077,25 @@ function registerOcrBinding(
 
   const name = `$ocrItemUuids${context.ocrBindings.length + 1}`;
   const queryExpression = buildOcrQueryExpression(query);
+  const phraseTerms =
+    query.matchMode === "exact" ? tokenizeOcrExactValue(query.value) : [];
   context.ocrBindingNamesByKey.set(key, name);
+  // Document URIs are bare item UUIDs and the OCR layer is only ever carried by
+  // a Resource, so searching the Resource roots resolves the join with one
+  // index-only search, whatever Set the items are later filtered against.
+  const searchExpression = `cts:search(/ochre/resource, ${queryExpression})`;
+  const phraseHelperName =
+    phraseTerms.length > 1 ? registerOcrPhraseHelper(context) : null;
   context.ocrBindings.push({
     name,
-    // Document URIs are bare item UUIDs and the OCR layer is only ever carried
-    // by a Resource, so searching the Resource roots resolves the join with one
-    // index-only search, whatever Set the items are later filtered against.
     expression:
       queryExpression === "cts:false-query()"
         ? "()"
-        : `cts:search(/ochre/resource, ${queryExpression})/@uuid/string()`,
+        : phraseHelperName == null
+          ? `${searchExpression}/@uuid/string()`
+          : `for $ocrResource in ${searchExpression}
+    where ${phraseHelperName}($ocrResource, (${phraseTerms.map((term) => stringLiteral(term)).join(", ")}), ${query.isCaseSensitive ? "true()" : "false()"})
+    return string($ocrResource/@uuid)`,
   });
 
   return name;

@@ -329,11 +329,15 @@ export type ImageMap = {
  *  Positioned OCR string in OCHRE
  *
  *  OCHRE gives no guarantee about the node hierarchy inside a Resource's
- *  `<ocr>` layer, so only `<string>` nodes are parsed, at whatever depth they
- *  occur. `x` and `y` come from `HPOS` and `VPOS` and locate the top-left
- *  corner of the string's box, while `vertices` is its full bounding polygon,
- *  which is not necessarily rectangular. Every geometry attribute is optional
- *  in the source, so each one is null when absent or unparseable.
+ *  `<ocr>` layer, so only its word nodes are parsed, at whatever depth they
+ *  occur. A word node is any element named `string` in any casing and any
+ *  namespace, and its text is read from the `CONTENT` attribute.
+ *
+ *  `x` and `y` come from `HPOS` and `VPOS` and locate the top-left corner of
+ *  the word's box, while `vertices` comes from `VERTICES` and is its full
+ *  bounding polygon, which is not necessarily rectangular. Every geometry
+ *  attribute is optional in the source, so each one is null when absent or
+ *  unparseable, and `vertices` is then empty.
  *
  *  `resourceUuid` is the Resource that owns the OCR layer, which differs from
  *  the requested item when the OCR lives on a child Resource.

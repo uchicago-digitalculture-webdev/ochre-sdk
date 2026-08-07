@@ -317,14 +317,15 @@ describe("ocr target queries", () => {
     const itemsClause = compiledItemsClause(ocrQuery);
 
     expectContainsAll(itemsClause, [
-      'let $ocrItemUuids1 := cts:search(/ochre/resource, cts:element-query(xs:QName("ocr"), cts:element-word-query(xs:QName("string"), "cappaert"',
+      'let $ocrItemUuids1 := cts:search(/ochre/resource, cts:element-query(xs:QName("ocr"), cts:element-attribute-word-query(',
+      'xs:QName("CONTENT"), "cappaert"',
       ")/@uuid/string()",
       `let $items := ${BASE_ITEMS_EXPRESSION}[@uuid = $ocrItemUuids1]`,
     ]);
     expectContainsNone(itemsClause, [QUERY_BINDING, '"unstemmed"']);
   });
 
-  it("compiles exact searches as an ordered run of whole string values", () => {
+  it("compiles exact searches as an ordered run of whole content values", () => {
     const itemsClause = compiledItemsClause({
       ...ocrQuery,
       value: "THE COLLEGE",
@@ -332,9 +333,10 @@ describe("ocr target queries", () => {
     });
 
     expectContainsAll(itemsClause, [
-      'cts:near-query((cts:element-value-query(xs:QName("string"), "THE"',
-      'cts:element-value-query(xs:QName("string"), "COLLEGE"',
-      '), 1, ("ordered"))',
+      "cts:and-query((cts:element-attribute-value-query(",
+      'xs:QName("CONTENT"), "THE"',
+      'xs:QName("CONTENT"), "COLLEGE"',
+      'where local:ocrHasPhrase($ocrResource, ("THE", "COLLEGE"), false())',
     ]);
   });
 

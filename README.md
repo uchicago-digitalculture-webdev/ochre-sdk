@@ -145,13 +145,13 @@ const queries: Query = {
 };
 ```
 
-Every `<string>` node in that layer holds a single OCR word, so `includes` matches each search term as its own word anywhere in the layer, in any order, with `*` and `?` wildcards supported. `exact` instead matches the terms as a run of adjacent whole words, so `"THE COLLEGE"` matches a page carrying that phrase but not one where the two words merely appear apart. An item matches when the OCR layer of the item itself or of any of its child Resources matches.
+Every word node in that layer holds a single OCR word in its `CONTENT` attribute, so `includes` matches each search term as its own word anywhere in the layer, in any order, with `*` and `?` wildcards supported. `exact` instead matches the terms as a run of adjacent whole words, so `"THE COLLEGE"` matches a page carrying that phrase but not one where the two words merely appear apart. An item matches when the OCR layer of the item itself or of any of its child Resources matches.
 
 Set item projections do not carry the OCR layer, so an `ocr` leaf is resolved by an extra index-only search over the Resource documents whose matching UUIDs are then joined back onto the Set items. It still composes with `and`, `or`, and `isNegated` like any other leaf, and repeating the same OCR search inside one tree only costs one search.
 
 ## OCR Data
 
-A Resource may carry an `<ocr>` layer holding the positioned output of an OCR run. The node hierarchy inside that layer is irregular and is not parsed, but any `<string>` node within it, at any depth, is read as one positioned OCR string.
+A Resource may carry an `<ocr>` layer holding the positioned output of an OCR run. The node hierarchy inside that layer is irregular and is not parsed, but any word node within it, at any depth, is read as one positioned OCR string. A word node is any element named `string` in any casing and any namespace, and its text comes from the `CONTENT` attribute rather than from the element's text content.
 
 ```ts
 import { fetchItemOcrData } from "ochre-sdk";
@@ -165,7 +165,7 @@ for (const ocrString of result.ocrStrings ?? []) {
 }
 ```
 
-`x` and `y` come from `HPOS` and `VPOS` and give the top-left corner of the box, `width` and `height` its size, and `vertices` its full bounding polygon, which is not always rectangular. Each geometry field is null when the source attribute is absent or unparseable. `resourceUuid` names the Resource that owns the OCR layer, which differs from the requested item when the OCR lives on a child Resource.
+`x` and `y` come from `HPOS` and `VPOS` and give the top-left corner of the box, `width` and `height` its size, and `vertices` comes from `VERTICES` and is its full bounding polygon, which is not always rectangular. Each geometry field is null when the source attribute is absent or unparseable, and `vertices` is then empty. `resourceUuid` names the Resource that owns the OCR layer, which differs from the requested item when the OCR lives on a child Resource.
 
 Matching defaults to case-insensitive `includes` and runs against each string's `CONTENT`. Because a `<string>` holds a single OCR word, a multi-word search value is split on whitespace and a string is returned when it matches any one term. Requesting an item that does not exist is an error; an item with no OCR layer, or no matches, returns an empty array.
 

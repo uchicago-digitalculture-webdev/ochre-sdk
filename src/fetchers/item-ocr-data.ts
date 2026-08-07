@@ -91,9 +91,14 @@ function parseOcrStringVertices(
  * Build an XQuery string to fetch matching OCR strings from the OCHRE API
  *
  * The `<ocr>` layer is marked supplemental, so it is deliberately read without
- * the supplemental stripping the other fetchers apply. Only the `<string>`
- * nodes are projected, at any depth, because OCHRE does not guarantee the shape
- * of the surrounding hierarchy.
+ * the supplemental stripping the other fetchers apply. Word nodes are projected
+ * at any depth, because OCHRE does not guarantee the shape of the surrounding
+ * hierarchy.
+ *
+ * Both the container and the word nodes are matched on a case-folded
+ * `local-name()` rather than a name test, because OCHRE varies the casing of
+ * these elements and may serve them in a namespace. A plain `//ocr//string`
+ * name test silently matches nothing in either of those cases.
  *
  * The matches are wrapped in an `<ocrStrings>` element rather than returned
  * directly under `<ochre>`: the API collapses an `<ochre>` element that has no
@@ -129,10 +134,10 @@ declare variable $terms := (${termValues.join(", ")});
 
 let $ochre := doc(${stringLiteral(uuid)})/ochre
 let $ocrStrings :=
-  for $string in $ochre//ocr//string[@CONTENT]
+  for $string in $ochre//*[lower-case(local-name(.)) = "ocr"]//*[lower-case(local-name(.)) = "string"][@CONTENT]
   where (some $term in $terms satisfies ${matchExpression})
   return <ocrString
-    resourceUuid="{string($string/ancestor::resource[1]/@uuid)}"
+    resourceUuid="{string($string/ancestor::*[local-name(.) = "resource"][1]/@uuid)}"
     content="{string($string/@CONTENT)}"
     x="{string($string/@HPOS)}"
     y="{string($string/@VPOS)}"
@@ -147,12 +152,15 @@ return <ochre><ocrStrings found="{exists($ochre)}">{$ocrStrings}</ocrStrings></o
  * Fetches and parses the OCR strings of an OCHRE item that match a search value
  *
  * Resources may carry an `<ocr>` layer whose internal hierarchy is irregular
- * and therefore not parsed. Only its `<string>` nodes are returned, wherever
- * they occur in that subtree, in document order. Matching runs per string, and
- * each `<string>` holds a single OCR word, so a multi-word search value is
- * split on whitespace and a string is returned when it matches any one term.
- * Nested child Resources are searched too, with `resourceUuid` naming the
- * Resource each match belongs to.
+ * and therefore not parsed. Only its word nodes are returned, wherever they
+ * occur in that subtree, in document order. A word node is any element whose
+ * name is `string` in any casing and any namespace, and matching reads its
+ * `CONTENT` attribute rather than its text content.
+ *
+ * Each word node holds a single OCR word, so a multi-word search value is split
+ * on whitespace and a node is returned when it matches any one term. Nested
+ * child Resources are searched too, with `resourceUuid` naming the Resource
+ * each match belongs to.
  *
  * @param uuid - The UUID of the OCHRE item to read the OCR layer of
  * @param value - The search value to match against each OCR string's content
