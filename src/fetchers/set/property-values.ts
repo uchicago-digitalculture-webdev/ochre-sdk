@@ -25,6 +25,7 @@ import { setPropertyValuesParametersSchema } from "#/schemas.js";
 import {
   createSchemaValidationError,
   getErrorOutput,
+  NOT_SUPPLEMENTAL_PREDICATE,
   stringLiteral,
 } from "#/utilities.js";
 
@@ -573,9 +574,9 @@ let $_property-aggregation := xdmp:eager(
   let $global-seen := map:map()
   let $variable-seen := map:map()
   return
-    for $p in $item/properties/property[${facetPropertyPredicate}]
+    for $p in $item/properties/property[${facetPropertyPredicate}]${NOT_SUPPLEMENTAL_PREDICATE}
     let $variable-uuid := string($p/label/@uuid)
-    for $v in $p/value${valueFilter}
+    for $v in $p/value${valueFilter}${NOT_SUPPLEMENTAL_PREDICATE}
     let $value-uuid := string($v/@uuid)
     let $raw-value := string($v/@rawValue)
     let $data-type := string($v/@dataType)
@@ -613,7 +614,7 @@ let $_bibliography-aggregation := xdmp:eager(
   for $item in $items
   let $seen := map:map()
   return
-    for $bibliography in $item/bibliographies/bibliography
+    for $bibliography in $item/bibliographies/bibliography${NOT_SUPPLEMENTAL_PREDICATE}
     let $label := string-join($bibliography/identification/label/content[@xml:lang="eng"]//text(), "")
     where string-length($label) gt 0
     return local:add-attribute-facet($bibliography-counts, $seen, $label)
@@ -634,7 +635,7 @@ let $_period-aggregation := xdmp:eager(
   for $item in $items
   let $seen := map:map()
   return
-    for $period in $item/periods/period
+    for $period in $item/periods/period${NOT_SUPPLEMENTAL_PREDICATE}
     let $label := string-join($period/identification/label/content[@xml:lang="eng"]//text(), "")
     where string-length($label) gt 0
     return local:add-attribute-facet($period-counts, $seen, $label)

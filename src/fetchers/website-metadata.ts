@@ -20,7 +20,9 @@ import { iso639_3Schema } from "#/schemas.js";
 import {
   createSchemaValidationError,
   getErrorOutput,
+  omitSupplemental,
   stringLiteral,
+  SUPPLEMENTAL_XQUERY_PROLOG,
 } from "#/utilities.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
@@ -85,6 +87,8 @@ function buildXQuery(parameters: {
   slug: string;
 }): string {
   return String.raw`xquery version "1.0-ml";
+
+${SUPPLEMENTAL_XQUERY_PROLOG}
 
 declare function local:resource-items($resources) {
   for $resource in $resources
@@ -178,8 +182,10 @@ return
     $website/@belongsTo,
     $website/@publicationDateTime,
     $website/@languages,
-    $website/metadata,
-    local:metadata-tree($website/tree[1], $target-slug, "")
+    ${omitSupplemental(`(
+      $website/metadata,
+      local:metadata-tree($website/tree[1], $target-slug, "")
+    )`)}
   }</ochre>`;
 }
 

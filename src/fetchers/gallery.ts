@@ -14,7 +14,9 @@ import { gallerySchema, iso639_3Schema } from "#/schemas.js";
 import {
   createSchemaValidationError,
   getErrorOutput,
+  omitSupplemental,
   stringLiteral,
+  SUPPLEMENTAL_XQUERY_PROLOG,
 } from "#/utilities.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLGalleryData as XMLGalleryDataSchema } from "#/xml/schemas.js";
@@ -88,7 +90,11 @@ function buildXQuery(parameters: {
   const start = (page - 1) * perPage + 1;
   const filterLiteral = stringLiteral(filter?.trim() ?? "");
 
-  return `<ochre>{
+  return `xquery version "1.0-ml";
+
+${SUPPLEMENTAL_XQUERY_PROLOG}
+
+<ochre>{
   for $q in doc()/ochre[@uuid=${stringLiteral(uuid)}]
   let $filter := ${filterLiteral}
   let $resources := $q//items/resource
@@ -98,9 +104,11 @@ function buildXQuery(parameters: {
     else $resources[contains(lower-case(string-join(identification/label//text(), "")), lower-case($filter))]
   let $maxLength := count($filtered)
   return <gallery maxLength="{$maxLength}">{
-    $q/metadata/project,
-    $q/metadata/item,
-    subsequence($filtered, ${start}, ${perPage})
+    ${omitSupplemental(`(
+      $q/metadata/project,
+      $q/metadata/item,
+      subsequence($filtered, ${start}, ${perPage})
+    )`)}
   }</gallery>
 }</ochre>`;
 }

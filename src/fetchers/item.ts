@@ -20,7 +20,9 @@ import { iso639_3Schema, uuidSchema } from "#/schemas.js";
 import {
   createSchemaValidationError,
   getErrorOutput,
+  omitSupplemental,
   stringLiteral,
+  SUPPLEMENTAL_XQUERY_PROLOG,
 } from "#/utilities.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
@@ -81,49 +83,30 @@ function assertItemCategoryAllowed(
   );
 }
 
-function buildOmitEmbeddedItemsXQuery(
-  uuid: string,
-  category:
-    | ItemCategoryWithEmbeddedItems
-    | ReadonlyArray<ItemCategoryWithEmbeddedItems>
-    | undefined,
-): string {
-  const collectionCategories: Array<ItemCategoryWithEmbeddedItems> = [];
-  const categories: ReadonlyArray<ItemCategoryWithEmbeddedItems> =
-    category == null
-      ? [
-          "tree",
-          "bibliography",
-          "concept",
-          "spatialUnit",
-          "period",
-          "resource",
-          "set",
-        ]
-      : typeof category === "string"
-        ? [category]
-        : category;
+/**
+ * Build an XQuery string to fetch a single OCHRE item document by UUID.
+ *
+ * Nodes marked `supplemental="true"` are always dropped. `$item` only ever
+ * binds the item categories that carry embedded items, so the omission branch
+ * is a no-op for every other category.
+ *
+ * @param parameters - The parameters for the fetch
+ * @param parameters.uuid - The UUID of the OCHRE item to fetch
+ * @param parameters.shouldOmitEmbeddedItems - Whether to drop the embedded item hierarchy
+ * @returns An XQuery string
+ */
+function buildXQuery(parameters: {
+  uuid: string;
+  shouldOmitEmbeddedItems: boolean;
+}): string {
+  const { uuid, shouldOmitEmbeddedItems } = parameters;
 
-  for (const possibleCategory of categories) {
-    if (!collectionCategories.includes(possibleCategory)) {
-      collectionCategories.push(possibleCategory);
-    }
-  }
+  const letClauses = [`let $ochre := doc(${stringLiteral(uuid)})/ochre`];
+  let itemNodesExpression = "$ochre/node()";
 
-  const collectionQueries: Array<string> = Array.from(
-    collectionCategories,
-    (collectionCategory) =>
-      `cts:search(fn:collection("ochre/${collectionCategory}")/ochre, $uuid-query)`,
-  );
-
-  return `xquery version "1.0-ml";
-
-let $uuid := ${stringLiteral(uuid)}
-let $uuid-query := cts:element-attribute-value-query(xs:QName("ochre"), xs:QName("uuid"), $uuid, "exact")
-let $ochre := (
-  ${collectionQueries.join(",\n  ")}
-)[1]
-let $item := (
+  if (shouldOmitEmbeddedItems) {
+    letClauses.push(
+      `let $item := (
   $ochre/tree,
   $ochre/bibliography,
   $ochre/concept,
@@ -131,17 +114,28 @@ let $item := (
   $ochre/period,
   $ochre/resource,
   $ochre/set
-)[1]
-let $embedded-child-name := if (local-name($item) = ("tree", "set")) then "items" else local-name($item)
+)[1]`,
+      `let $embedded-child-name := if (local-name($item) = ("tree", "set")) then "items" else local-name($item)`,
+    );
+    itemNodesExpression = `(
+      for $node in $ochre/node()
+      return
+        if ($node is $item)
+        then element { node-name($item) } { $item/@*, $item/node()[not(self::*[local-name() = $embedded-child-name])] }
+        else $node
+    )`;
+  }
+
+  return `xquery version "1.0-ml";
+
+${SUPPLEMENTAL_XQUERY_PROLOG}
+
+${letClauses.join("\n")}
 return
-  if (empty($ochre) or empty($item)) then ()
+  if (empty($ochre)) then ()
   else element ochre {
     $ochre/@*,
-    for $node in $ochre/node()
-    return
-      if ($node is $item)
-      then element { node-name($item) } { $item/@*, $item/node()[not(self::*[local-name() = $embedded-child-name])] }
-      else $node
+    ${omitSupplemental(itemNodesExpression)}
   }`;
 }
 
@@ -346,48 +340,17 @@ export async function fetchItem(
       options?.containedItemCategory,
     );
     const shouldOmitEmbeddedItems = options?.shouldOmitEmbeddedItems === true;
-    let shouldFetchOmittedEmbeddedItems = shouldOmitEmbeddedItems;
-    let omitEmbeddedItemsCategory:
-      | ItemCategoryWithEmbeddedItems
-      | ReadonlyArray<ItemCategoryWithEmbeddedItems>
-      | undefined;
-    if (options?.category != null) {
-      if (typeof options.category === "string") {
-        if (isItemCategoryWithEmbeddedItems(options.category)) {
-          omitEmbeddedItemsCategory = options.category;
-        } else {
-          shouldFetchOmittedEmbeddedItems = false;
-        }
-      } else {
-        const categories: Array<ItemCategoryWithEmbeddedItems> = [];
-        for (const possibleCategory of options.category) {
-          if (isItemCategoryWithEmbeddedItems(possibleCategory)) {
-            categories.push(possibleCategory);
-          }
-        }
-        omitEmbeddedItemsCategory = categories;
-        shouldFetchOmittedEmbeddedItems =
-          shouldOmitEmbeddedItems && categories.length > 0;
-      }
-    }
     const languages: ReadonlyArray<string> =
       options?.languages == null ? [] : parseLanguages(options.languages);
 
-    const fetcher = options?.fetch ?? fetch;
-    const regularItemUrl = `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${parsedUuid}&xsl=none&lang="*"`;
-    let response = shouldFetchOmittedEmbeddedItems
-      ? await fetcher(
-          'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
-          {
-            method: "POST",
-            body: buildOmitEmbeddedItemsXQuery(
-              parsedUuid,
-              omitEmbeddedItemsCategory,
-            ),
-            headers: { "Content-Type": "application/xquery" },
-          },
-        )
-      : await fetcher(regularItemUrl);
+    const response = await (options?.fetch ?? fetch)(
+      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
+      {
+        method: "POST",
+        body: buildXQuery({ uuid: parsedUuid, shouldOmitEmbeddedItems }),
+        headers: { "Content-Type": "application/xquery" },
+      },
+    );
     if (!response.ok) {
       throw new Error("Failed to fetch OCHRE data", {
         cause: response.statusText,
@@ -397,33 +360,13 @@ export async function fetchItem(
     const dataRaw = await response.text();
 
     const parser = new XMLParser(XML_PARSER_OPTIONS);
-    let data = parser.parse(dataRaw) as unknown;
-    if (
-      shouldFetchOmittedEmbeddedItems &&
-      typeof data === "object" &&
-      data != null &&
-      "result" in data
-    ) {
-      const result = data.result;
-      if (typeof result === "object" && result != null && "ochre" in result) {
-        const ochre = result.ochre;
-        if (
-          typeof ochre === "object" &&
-          ochre != null &&
-          (Object.keys(ochre).length === 0 ||
-            ("payload" in ochre &&
-              ochre.payload === "" &&
-              Object.keys(ochre).length === 1))
-        ) {
-          response = await fetcher(regularItemUrl);
-          if (!response.ok) {
-            throw new Error("Failed to fetch OCHRE data", {
-              cause: response.statusText,
-            });
-          }
-          data = parser.parse(await response.text()) as unknown;
-        }
-      }
+    const data = parser.parse(dataRaw) as {
+      result?: { ochre?: { uuid?: string } };
+    };
+    if (data.result?.ochre?.uuid == null) {
+      throw new Error(`No OCHRE item found for UUID "${parsedUuid}"`, {
+        cause: dataRaw,
+      });
     }
 
     const { success, issues, output } = v.safeParse(XMLDataSchema, data);

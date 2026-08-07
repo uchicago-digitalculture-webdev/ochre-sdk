@@ -1424,12 +1424,10 @@ describe("fetchItem", () => {
       error: "Failed to fetch OCHRE data",
       detailedError: "Error\nMessage: Failed to fetch OCHRE data",
     });
-    expect(omittedTextFetchCalls).toStrictEqual([
-      {
-        input: `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${TEXT_UUIDS[0]!}&xsl=none&lang="*"`,
-        init: undefined,
-      },
-    ]);
+    expect(omittedTextFetchCalls).toHaveLength(1);
+    expect(omittedTextFetchCalls[0]?.input).toBe(
+      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
+    );
   });
 
   for (const category of ["tree", "resource", "set"] as const) {
@@ -1469,10 +1467,9 @@ describe("fetchItem", () => {
       const body = fetchCalls[0]?.init?.body;
       expect(typeof body).toBe("string");
       if (typeof body === "string") {
-        expect(body).toContain(
-          'cts:element-attribute-value-query(xs:QName("ochre"), xs:QName("uuid"), $uuid, "exact")',
-        );
-        expect(body).toContain(`fn:collection("ochre/${category}")/ochre`);
+        expect(body).toContain(`let $ochre := doc("${uuid}")/ochre`);
+        expect(body).toContain('empty($node//@supplemental[. = "true"])');
+        expect(body).toContain("local:omit-supplemental(");
         expect(body).toContain(
           'if (local-name($item) = ("tree", "set")) then "items" else local-name($item)',
         );
@@ -1524,12 +1521,12 @@ describe("fetchItem", () => {
       },
     });
 
-    expect(fetchCalls).toStrictEqual([
-      {
-        input: `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${uuid}&xsl=none&lang="*"`,
-        init: undefined,
-      },
-    ]);
+    expect(fetchCalls).toHaveLength(1);
+    expect(fetchCalls[0]?.input).toBe(
+      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
+    );
+    expect(fetchCalls[0]?.init?.body).toContain("$ochre/node()");
+    expect(fetchCalls[0]?.init?.body).not.toContain("$embedded-child-name");
     expect(result.error).toBeNull();
     if (result.error !== null) {
       throw new Error(result.detailedError);

@@ -5,7 +5,13 @@ import type { LanguageCodes } from "#/types/index.js";
 import type { ProtectedWebsite, Website } from "#/types/website.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseWebsite } from "#/parsers/website/index.js";
-import { createSchemaValidationError, getErrorOutput } from "#/utilities.js";
+import {
+  createSchemaValidationError,
+  getErrorOutput,
+  omitSupplemental,
+  stringLiteral,
+  SUPPLEMENTAL_XQUERY_PROLOG,
+} from "#/utilities.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
 
@@ -29,6 +35,21 @@ async function validateWebsiteCredentials(
   );
 
   return response.ok;
+}
+
+/**
+ * Build an XQuery string to fetch a website tree document by abbreviation.
+ *
+ * @param abbreviation - The lowercased website abbreviation to match
+ * @returns An XQuery string
+ */
+function buildXQuery(abbreviation: string): string {
+  return `xquery version "1.0-ml";
+
+${SUPPLEMENTAL_XQUERY_PROLOG}
+
+for $ochre in collection("ochre/tree")/ochre[tree/identification/abbreviation/content/string = ${stringLiteral(abbreviation)}]
+return element ochre { $ochre/@*, ${omitSupplemental("$ochre/node()")} }`;
 }
 
 /**
@@ -74,7 +95,12 @@ export async function fetchWebsite<
     const cleanAbbreviation = abbreviation.trim().toLocaleLowerCase("en-US");
 
     const response = await fetcher(
-      `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery=${encodeURIComponent(`collection('ochre/tree')/ochre[tree/identification/abbreviation/content/string='${cleanAbbreviation}']`)}&xsl=none&lang="*"`,
+      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
+      {
+        method: "POST",
+        body: buildXQuery(cleanAbbreviation),
+        headers: { "Content-Type": "application/xquery" },
+      },
     );
     if (!response.ok) {
       throw new Error("Failed to fetch website", {

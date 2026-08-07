@@ -12,7 +12,13 @@ import type { XMLItemLinksData } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
 import { parseLinkedItems } from "#/parsers/index.js";
 import { iso639_3Schema, uuidSchema } from "#/schemas.js";
-import { createSchemaValidationError, getErrorOutput } from "#/utilities.js";
+import {
+  createSchemaValidationError,
+  getErrorOutput,
+  omitSupplemental,
+  stringLiteral,
+  SUPPLEMENTAL_XQUERY_PROLOG,
+} from "#/utilities.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
 
@@ -82,7 +88,25 @@ function resolveItemLinksLanguages(
  * @returns An XQuery string
  */
 function buildXQuery(uuid: string): string {
-  const xquery = `let $item-uuid := "${uuid}"
+  const linkedItems = `for $link at $position in $link-nodes
+      let $uuid := $link/@uuid/string()
+      let $category := name($link)
+      where $uuid ne "" and not($uuid = $link-nodes[position() lt $position]/@uuid/string())
+      return
+        if ($category = "resource") then fn:collection("ochre/resource")/ochre/resource[@uuid = $uuid]
+        else if ($category = "bibliography") then fn:collection("ochre/bibliography")/ochre/bibliography[@uuid = $uuid]
+        else if ($category = "period") then fn:collection("ochre/period")/ochre/period[@uuid = $uuid]
+        else if ($category = "person") then fn:collection("ochre/person")/ochre/person[@uuid = $uuid]
+        else if ($category = "propertyVariable" or $category = "variable") then fn:collection("ochre/propertyVariable")/ochre/propertyVariable[@uuid = $uuid]
+        else if ($category = "propertyValue" or $category = "value") then fn:collection("ochre/propertyValue")/ochre/propertyValue[@uuid = $uuid]
+        else if ($category = "text") then fn:collection("ochre/text")/ochre/text[@uuid = $uuid]
+        else if ($category = "tree") then fn:collection("ochre/tree")/ochre/tree[@uuid = $uuid]
+        else if ($category = "set") then fn:collection("ochre/set")/ochre/set[@uuid = $uuid]
+        else if ($category = "spatialUnit") then fn:collection("ochre/spatialUnit")/ochre/spatialUnit[@uuid = $uuid]
+        else if ($category = "concept") then fn:collection("ochre/concept")/ochre/concept[@uuid = $uuid]
+        else ()`;
+
+  const xquery = `let $item-uuid := ${stringLiteral(uuid)}
 
 let $source-items := (
   fn:collection("ochre/resource")/ochre[@uuid = $item-uuid]/resource,
@@ -106,26 +130,14 @@ let $link-nodes := (
 
 return
     <items>{
-      for $link at $position in $link-nodes
-      let $uuid := $link/@uuid/string()
-      let $category := name($link)
-      where $uuid ne "" and not($uuid = $link-nodes[position() lt $position]/@uuid/string())
-      return
-        if ($category = "resource") then fn:collection("ochre/resource")/ochre/resource[@uuid = $uuid]
-        else if ($category = "bibliography") then fn:collection("ochre/bibliography")/ochre/bibliography[@uuid = $uuid]
-        else if ($category = "period") then fn:collection("ochre/period")/ochre/period[@uuid = $uuid]
-        else if ($category = "person") then fn:collection("ochre/person")/ochre/person[@uuid = $uuid]
-        else if ($category = "propertyVariable" or $category = "variable") then fn:collection("ochre/propertyVariable")/ochre/propertyVariable[@uuid = $uuid]
-        else if ($category = "propertyValue" or $category = "value") then fn:collection("ochre/propertyValue")/ochre/propertyValue[@uuid = $uuid]
-        else if ($category = "text") then fn:collection("ochre/text")/ochre/text[@uuid = $uuid]
-        else if ($category = "tree") then fn:collection("ochre/tree")/ochre/tree[@uuid = $uuid]
-        else if ($category = "set") then fn:collection("ochre/set")/ochre/set[@uuid = $uuid]
-        else if ($category = "spatialUnit") then fn:collection("ochre/spatialUnit")/ochre/spatialUnit[@uuid = $uuid]
-        else if ($category = "concept") then fn:collection("ochre/concept")/ochre/concept[@uuid = $uuid]
-        else ()
+      ${omitSupplemental(linkedItems)}
     }</items>`;
 
-  return `<ochre>{${xquery}}</ochre>`;
+  return `xquery version "1.0-ml";
+
+${SUPPLEMENTAL_XQUERY_PROLOG}
+
+<ochre>{${xquery}}</ochre>`;
 }
 
 /**

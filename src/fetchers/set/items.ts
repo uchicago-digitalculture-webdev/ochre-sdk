@@ -28,7 +28,9 @@ import { iso639_3Schema, setItemsParametersSchema } from "#/schemas.js";
 import {
   createSchemaValidationError,
   getErrorOutput,
+  omitSupplemental,
   stringLiteral,
+  SUPPLEMENTAL_XQUERY_PROLOG,
 } from "#/utilities.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLSetItemsData as XMLSetItemsDataSchema } from "#/xml/schemas.js";
@@ -326,7 +328,11 @@ function buildXQuery(parameters: {
     itemsQueryExpressions,
   );
   const orderedItemsClause = buildOrderedItemsClause(sort);
-  const xqueryDeclarations = ['xquery version "1.0-ml";', setScopeDeclaration];
+  const xqueryDeclarations = [
+    'xquery version "1.0-ml";',
+    setScopeDeclaration,
+    SUPPLEMENTAL_XQUERY_PROLOG,
+  ];
 
   if (compiledQueryPlan.prolog !== "") {
     xqueryDeclarations.push(compiledQueryPlan.prolog);
@@ -347,7 +353,7 @@ ${itemsClause}
   let $pagedItems := subsequence($orderedItems, ${startPosition}, ${pageSize})
 
   return <items totalCount="{$totalCount}" page="${page}" pageSize="${pageSize}">{
-    $pagedItems
+    ${omitSupplemental("$pagedItems")}
   }</items>
 }</ochre>`;
 

@@ -1,4 +1,3 @@
-/* eslint-disable unicorn/no-incorrect-template-string-interpolation */
 import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type { FetchBaseOptions, FetchLanguages } from "#/parsers/helpers.js";
@@ -20,7 +19,9 @@ import { iso639_3Schema, uuidSchema } from "#/schemas.js";
 import {
   createSchemaValidationError,
   getErrorOutput,
+  omitSupplemental,
   stringLiteral,
+  SUPPLEMENTAL_XQUERY_PROLOG,
 } from "#/utilities.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
@@ -141,6 +142,8 @@ function buildXQuery(
 
   return `xquery version "1.0-ml";
 
+${SUPPLEMENTAL_XQUERY_PROLOG}
+
 declare function local:item-children($nodes as node()*) as node()* {
   for $node in $nodes
   return
@@ -179,7 +182,7 @@ let $children :=
   else ()
 return
   <ochre>
-    <items>{$children}</items>
+    <items>{${omitSupplemental("$children")}}</items>
   </ochre>`;
 }
 

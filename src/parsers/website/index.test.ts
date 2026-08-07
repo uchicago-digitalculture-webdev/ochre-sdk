@@ -405,10 +405,12 @@ describe("parseWebsite", () => {
 describe("fetchWebsite", () => {
   it("fetches Website XML by normalized abbreviation and parses it", async () => {
     let requestedUrl = "";
+    let requestedBody = "";
 
     const result = await fetchWebsite(" TEST-WEBSITE ", {
-      fetch: async (input) => {
+      fetch: async (input, init) => {
         requestedUrl = input.toString();
+        requestedBody = String(init?.body ?? "");
         return new Response(minimalWebsiteXML());
       },
     });
@@ -418,7 +420,8 @@ describe("fetchWebsite", () => {
       throw new Error("Expected fetchWebsite to parse the XML response");
     }
 
-    expect(decodeURIComponent(requestedUrl)).toContain("test-website");
+    expect(requestedBody).toContain('"test-website"');
+    expect(requestedBody).toContain("local:omit-supplemental(");
     expect(requestedUrl).toContain("xsl=none");
     expect(result.website.uuid).toBe(UUID.website);
     expect(result.website.items[0]?.type).toBe("page");
