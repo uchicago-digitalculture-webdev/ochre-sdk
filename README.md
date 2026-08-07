@@ -139,7 +139,7 @@ for (const ocrString of result.ocrStrings ?? []) {
 
 `x` and `y` come from `HPOS` and `VPOS` and give the top-left corner of the box, `width` and `height` its size, and `vertices` its full bounding polygon, which is not always rectangular. Each geometry field is null when the source attribute is absent or unparseable. `resourceUuid` names the Resource that owns the OCR layer, which differs from the requested item when the OCR lives on a child Resource.
 
-Matching defaults to case-insensitive `includes` and runs against each string's `CONTENT`. Because a `<string>` holds a single OCR word, a multi-word search value is split on whitespace and a string is returned when it matches any one term, which pairs with how the `ocrText` query target tokenizes. Requesting an item that does not exist is an error; an item with no OCR layer, or no matches, returns an empty array.
+Matching defaults to case-insensitive `includes` and runs against each string's `CONTENT`. Because a `<string>` holds a single OCR word, a multi-word search value is split on whitespace and a string is returned when it matches any one term. Requesting an item that does not exist is an error; an item with no OCR layer, or no matches, returns an empty array.
 
 ## Helpers And Types
 
