@@ -19,6 +19,10 @@ const CTS_INCLUDES_TOKEN_WORD_REGEX = /^\p{L}+$/u;
 const CTS_INCLUDES_TOKEN_REGEX = /[\p{L}\p{N}*?]+/gu;
 const CTS_EXACT_TEXT_TOKEN_REGEX = /[\p{L}\p{N}]+/gu;
 
+// Each distinct OCR text search doubles the number of compiled search branches,
+// so the ceiling keeps a pathological query from fanning out without bound.
+const MAX_OCR_TEXT_CONDITIONS = 4;
+
 type QueryMatchMode = "includes" | "exact";
 type CtsQueryFamily = "text" | "raw";
 type TextTargetQuery = Extract<
@@ -36,11 +40,17 @@ type TextTargetQuery = Extract<
 type ContentTextTarget = Exclude<TextTargetQuery["target"], "notes">;
 type PropertyQuery = Extract<QueryLeaf, { target: "property" }>;
 type AllPropertyQuery = Extract<PropertyQuery, { dataType: "all" }>;
+type OcrTextQuery = Extract<QueryLeaf, { target: "ocrText" }>;
+type CtsQueryLeaf = Exclude<QueryLeaf, OcrTextQuery>;
+
+type OcrTextCondition = { variableName: string; bindingExpression: string };
 
 type QueryCompilerContext = {
   nextHelperSerial: number;
   helperNamesByKey: Map<string, string>;
   helperDeclarations: Array<string>;
+  ocrTextConditions: Array<OcrTextCondition>;
+  ocrTextConditionIndexesByKey: Map<string, number>;
 };
 
 type QueryHelperRegistration = { name: string; callExpression: string };
@@ -263,7 +273,6 @@ function buildRichTextPhraseQueryExpression(parameters: {
 function buildRichTextExactQueryExpression(parameters: {
   value: string;
   isCaseSensitive: boolean;
-  language: string;
 }): string {
   const { value, isCaseSensitive } = parameters;
   const phraseQuery = buildRichTextPhraseQueryExpression({
@@ -462,7 +471,7 @@ function buildRichTextContentQueryExpression(parameters: {
   return buildAndCtsQueryExpressionInternal([
     buildContentLanguageQuery(language),
     matchMode === "exact"
-      ? buildRichTextExactQueryExpression({ value, isCaseSensitive, language })
+      ? buildRichTextExactQueryExpression({ value, isCaseSensitive })
       : buildCtsWordQueryExpression({
           value,
           matchMode,
@@ -899,7 +908,180 @@ function buildItemStringQueryExpression(parameters: {
   ]);
 }
 
-function getLeafSearchValue(query: QueryLeaf): string | null {
+// OCR text is a single flat text node, so a phrase is never split across
+// element boundaries the way rich text runs are. That makes the token-AND
+// fallback of `buildRichTextExactQueryExpression` both unnecessary and wrong
+// here: it would let an exact query match the words in any order.
+function buildOcrTextQueryExpression(query: OcrTextQuery): string {
+  const { value, matchMode, isCaseSensitive } = query;
+  const phraseQueryExpression = buildRichTextPhraseQueryExpression({
+    value,
+    isCaseSensitive,
+  });
+
+  if (matchMode === "exact") {
+    return buildNestedElementQuery(["ocrText"], phraseQueryExpression);
+  }
+
+  const terms = tokenizeIncludesSearchValue({ value, isCaseSensitive });
+
+  if (terms.length === 0) {
+    return "cts:false-query()";
+  }
+
+  const tokenizedQueryExpression = buildAndCtsQueryExpressionInternal(
+    Array.from(terms, (term) =>
+      buildCtsWordQueryExpression({
+        value: term,
+        matchMode,
+        isCaseSensitive,
+        queryFamily: "text",
+      }),
+    ),
+  );
+  const valueQueryExpression = shouldUseFullValueFallbackForIncludes({
+    value,
+    isCaseSensitive,
+    terms,
+  })
+    ? buildOrCtsQueryExpressionInternal([
+        phraseQueryExpression,
+        tokenizedQueryExpression,
+      ])
+    : tokenizedQueryExpression;
+
+  return buildNestedElementQuery(["ocrText"], valueQueryExpression);
+}
+
+function getOcrTextConditionKey(query: OcrTextQuery): string {
+  return [
+    query.value,
+    query.matchMode,
+    query.isCaseSensitive ? "case-sensitive" : "case-insensitive",
+  ].join("|");
+}
+
+function registerOcrTextCondition(
+  context: QueryCompilerContext,
+  query: OcrTextQuery,
+): void {
+  const key = getOcrTextConditionKey(query);
+
+  if (context.ocrTextConditionIndexesByKey.has(key)) {
+    return;
+  }
+
+  context.ocrTextConditionIndexesByKey.set(
+    key,
+    context.ocrTextConditions.length,
+  );
+  context.ocrTextConditions.push({
+    variableName: `$ocrTextUuids${context.ocrTextConditions.length + 1}`,
+    // `cts:uris` resolves from indexes only, which reports false positives for
+    // phrase and wildcard matches. A filtered `cts:search` is the only accurate
+    // way to resolve the matching document URIs.
+    bindingExpression: `for $ocrTextDocument in cts:search(doc(), ${buildOcrTextQueryExpression(query)})\n    return document-uri($ocrTextDocument)`,
+  });
+}
+
+function collectOcrTextConditions(
+  context: QueryCompilerContext,
+  query: Query,
+): void {
+  if (isQueryLeaf(query)) {
+    if (query.target === "ocrText") {
+      registerOcrTextCondition(context, query);
+    }
+
+    return;
+  }
+
+  for (const childQuery of getQueryGroupChildren(query)) {
+    collectOcrTextConditions(context, childQuery);
+  }
+}
+
+function isOcrTextLeafMatched(
+  context: QueryCompilerContext,
+  query: OcrTextQuery,
+  ocrTextValues: ReadonlyArray<boolean>,
+): boolean {
+  const conditionIndex = context.ocrTextConditionIndexesByKey.get(
+    getOcrTextConditionKey(query),
+  );
+  const isMatched =
+    conditionIndex != null && ocrTextValues[conditionIndex] === true;
+
+  return query.isNegated === true ? !isMatched : isMatched;
+}
+
+/**
+ * Enumerate every assignment of "this item is in the OCR text match set" across
+ * the compiled conditions, least significant position first
+ */
+function getOcrTextValueCombinations(count: number): Array<Array<boolean>> {
+  return Array.from({ length: 2 ** count }, (_, index) =>
+    Array.from(
+      { length: count },
+      (_, position) => ((index >> position) & 1) === 1,
+    ),
+  );
+}
+
+/**
+ * Resolve a query tree against one OCR text assignment, treating every CTS leaf
+ * as unknown. Only a definite `false` is actionable: it means the branch cannot
+ * match anything and can be dropped before it costs a `cts:search`.
+ */
+function evaluateOcrTextBranch(
+  context: QueryCompilerContext,
+  query: Query,
+  ocrTextValues: ReadonlyArray<boolean>,
+): boolean | null {
+  if (isQueryLeaf(query)) {
+    return query.target === "ocrText"
+      ? isOcrTextLeafMatched(context, query, ocrTextValues)
+      : null;
+  }
+
+  const isAndGroup = "and" in query;
+  let result: boolean | null = isAndGroup;
+
+  for (const childQuery of getQueryGroupChildren(query)) {
+    const childResult = evaluateOcrTextBranch(
+      context,
+      childQuery,
+      ocrTextValues,
+    );
+
+    if (childResult === !isAndGroup) {
+      return !isAndGroup;
+    }
+
+    if (childResult == null) {
+      result = null;
+    }
+  }
+
+  return result;
+}
+
+function buildOcrTextItemPredicates(
+  context: QueryCompilerContext,
+  ocrTextValues: ReadonlyArray<boolean>,
+): string {
+  const itemPredicates: Array<string> = Array.from(
+    context.ocrTextConditions,
+    (condition, index) =>
+      ocrTextValues[index] === true
+        ? `[@uuid = ${condition.variableName}]`
+        : `[not(@uuid = ${condition.variableName})]`,
+  );
+
+  return itemPredicates.join("");
+}
+
+function getLeafSearchValue(query: CtsQueryLeaf): string | null {
   switch (query.target) {
     case "string":
     case "title":
@@ -917,7 +1099,7 @@ function getLeafSearchValue(query: QueryLeaf): string | null {
 }
 
 function buildLeafValueQueryExpression(parameters: {
-  query: QueryLeaf;
+  query: CtsQueryLeaf;
   value: string;
   matchMode: QueryMatchMode;
 }): string {
@@ -1008,6 +1190,8 @@ function createQueryCompilerContext(): QueryCompilerContext {
     nextHelperSerial: 1,
     helperNamesByKey: new Map(),
     helperDeclarations: [],
+    ocrTextConditions: [],
+    ocrTextConditionIndexesByKey: new Map(),
   };
 }
 
@@ -1073,7 +1257,7 @@ function registerParameterizedHelper(parameters: {
 }
 
 function getLeafHelperKey(parameters: {
-  query: QueryLeaf;
+  query: CtsQueryLeaf;
   matchMode: QueryMatchMode;
   value: string;
 }): string {
@@ -1114,7 +1298,7 @@ function getLeafHelperKey(parameters: {
 
 function registerLeafHelper(parameters: {
   context: QueryCompilerContext;
-  query: QueryLeaf;
+  query: CtsQueryLeaf;
   matchMode: QueryMatchMode;
   value: string;
 }): QueryHelperRegistration {
@@ -1128,7 +1312,7 @@ function registerLeafHelper(parameters: {
 }
 
 function getIncludesLeafHelperKey(parameters: {
-  query: QueryLeaf;
+  query: CtsQueryLeaf;
   value: string;
 }): string {
   const { query, value } = parameters;
@@ -1170,7 +1354,7 @@ function getIncludesLeafHelperKey(parameters: {
 
 function registerIncludesLeafHelper(parameters: {
   context: QueryCompilerContext;
-  query: QueryLeaf;
+  query: CtsQueryLeaf;
   sampleValue: string;
 }): ParameterizedQueryHelperRegistration {
   const { context, query, sampleValue } = parameters;
@@ -1192,7 +1376,7 @@ function registerIncludesLeafHelper(parameters: {
 
 function buildLeafQueryExpression(
   context: QueryCompilerContext,
-  query: QueryLeaf,
+  query: CtsQueryLeaf,
 ): string {
   if (
     query.target === "property" &&
@@ -1278,7 +1462,7 @@ function buildLeafQueryExpression(
   ]);
 }
 
-function getGroupableIncludesValue(query: QueryLeaf): string | null {
+function getGroupableIncludesValue(query: CtsQueryLeaf): string | null {
   if (query.matchMode !== "includes" || query.isNegated === true) {
     return null;
   }
@@ -1321,15 +1505,15 @@ function getQueryGroupOperator(query: QueryGroup): "and" | "or" {
 
 function getCompatibleIncludesGroupLeaves(
   query: QueryGroup,
-): Array<QueryLeaf> | null {
+): Array<CtsQueryLeaf> | null {
   if (!("or" in query) || query.or.length <= 1) {
     return null;
   }
 
-  const leafQueries: Array<QueryLeaf> = [];
+  const leafQueries: Array<CtsQueryLeaf> = [];
 
   for (const childQuery of query.or) {
-    if (!isQueryLeaf(childQuery)) {
+    if (!isQueryLeaf(childQuery) || childQuery.target === "ocrText") {
       return null;
     }
 
@@ -1363,7 +1547,7 @@ function getCompatibleIncludesGroupLeaves(
 
 function buildIncludesGroupQueryExpression(
   context: QueryCompilerContext,
-  queries: Array<QueryLeaf>,
+  queries: Array<CtsQueryLeaf>,
 ): string {
   const firstQuery = queries[0];
 
@@ -1451,8 +1635,18 @@ function buildIncludesGroupQueryExpression(
   ]);
 }
 
-function buildQueryNode(context: QueryCompilerContext, query: Query): string {
+function buildQueryNode(
+  context: QueryCompilerContext,
+  query: Query,
+  ocrTextValues: ReadonlyArray<boolean>,
+): string {
   if (isQueryLeaf(query)) {
+    if (query.target === "ocrText") {
+      return isOcrTextLeafMatched(context, query, ocrTextValues)
+        ? "cts:true-query()"
+        : "cts:false-query()";
+    }
+
     const queryExpression = buildLeafQueryExpression(context, query);
 
     return query.isNegated === true
@@ -1471,7 +1665,7 @@ function buildQueryNode(context: QueryCompilerContext, query: Query): string {
 
   const childQueryExpressions: Array<string> = Array.from(
     getQueryGroupChildren(query),
-    (childQuery) => buildQueryNode(context, childQuery),
+    (childQuery) => buildQueryNode(context, childQuery, ocrTextValues),
   );
 
   const buildCtsQueryExpression =
@@ -1508,18 +1702,67 @@ export function buildBelongsToCollectionQueryExpression(
   });
 }
 
+/**
+ * Compile a query tree into the CTS searches that resolve it
+ *
+ * OCR text is not carried by Set item projections, so an `ocrText` leaf cannot
+ * be a CTS term: it resolves to a document join whose UUID list can only be
+ * applied as an item path predicate, and path predicates only ever AND. To keep
+ * `ocrText` composable with `or` anyway, the tree is split on each distinct OCR
+ * text condition, one branch per assignment of "this item is in that match
+ * set". Every branch is a plain CTS search, and their union is the result.
+ * Branches that the assignment already rules out are dropped, so a query whose
+ * OCR text leaves are all conjunctive still compiles to a single search.
+ */
 export function buildQueryPlan(parameters: { queries: Query | null }): {
   prolog: string;
-  queryExpression: string | null;
+  ocrTextBindings: Array<{ name: string; expression: string }>;
+  branches: Array<{ itemPredicates: string; queryExpression: string | null }>;
 } {
   const { queries } = parameters;
 
   if (queries == null) {
-    return { prolog: "", queryExpression: null };
+    return {
+      prolog: "",
+      ocrTextBindings: [],
+      branches: [{ itemPredicates: "", queryExpression: null }],
+    };
   }
 
   const context = createQueryCompilerContext();
-  const queryExpression = buildQueryNode(context, queries);
+  collectOcrTextConditions(context, queries);
 
-  return { prolog: context.helperDeclarations.join("\n\n"), queryExpression };
+  if (context.ocrTextConditions.length > MAX_OCR_TEXT_CONDITIONS) {
+    throw new Error(
+      `A query cannot contain more than ${MAX_OCR_TEXT_CONDITIONS} distinct OCR text searches`,
+      { cause: context.ocrTextConditions.length },
+    );
+  }
+
+  const branches: Array<{
+    itemPredicates: string;
+    queryExpression: string | null;
+  }> = [];
+
+  for (const ocrTextValues of getOcrTextValueCombinations(
+    context.ocrTextConditions.length,
+  )) {
+    if (evaluateOcrTextBranch(context, queries, ocrTextValues) === false) {
+      continue;
+    }
+
+    branches.push({
+      itemPredicates: buildOcrTextItemPredicates(context, ocrTextValues),
+      queryExpression: buildQueryNode(context, queries, ocrTextValues),
+    });
+  }
+
+  return {
+    prolog: context.helperDeclarations.join("\n\n"),
+    ocrTextBindings: Array.from(context.ocrTextConditions, (condition) => ({
+      name: condition.variableName,
+      expression: condition.bindingExpression,
+    })),
+    branches,
+  };
 }

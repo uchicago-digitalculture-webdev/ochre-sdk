@@ -199,6 +199,13 @@ const setQueryLeafSchema = v.union([
     ...standardQueryFields,
   }),
   v.strictObject({
+    target: v.literal("ocrText"),
+    value: v.string(),
+    matchMode: standardQueryFields.matchMode,
+    isCaseSensitive: standardQueryFields.isCaseSensitive,
+    isNegated: standardQueryFields.isNegated,
+  }),
+  v.strictObject({
     target: v.picklist([
       "title",
       "description",
