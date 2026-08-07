@@ -6,6 +6,7 @@ export default antfu({
   markdown: false,
   typescript: {
     tsconfigPath: "tsconfig.json",
+    erasableOnly: true,
     overrides: {
       "ts/array-type": ["error", { default: "generic" }],
       "ts/consistent-indexed-object-style": ["error", "record"],
