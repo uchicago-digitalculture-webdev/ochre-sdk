@@ -301,6 +301,20 @@ export const setPropertyValuesParametersSchema = v.object({
 });
 
 /**
+ * Schema for validating the parameters for the item OCR data fetching function
+ * @internal
+ */
+export const itemOcrDataParametersSchema = v.object({
+  uuid: uuidSchema,
+  value: v.pipe(
+    v.string(),
+    v.check((value) => value.trim() !== "", "A search value is required"),
+  ),
+  matchMode: v.optional(v.picklist(["includes", "exact"]), "includes"),
+  isCaseSensitive: defaultBoolean(false),
+});
+
+/**
  * Schema for validating Set items parameters
  * @internal
  */

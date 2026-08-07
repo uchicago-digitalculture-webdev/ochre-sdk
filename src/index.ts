@@ -1,6 +1,7 @@
 export * from "#/fetchers/gallery.js";
 export * from "#/fetchers/item-children.js";
 export * from "#/fetchers/item-links.js";
+export * from "#/fetchers/item-ocr-data.js";
 export * from "#/fetchers/item.js";
 export * from "#/fetchers/set/items.js";
 export * from "#/fetchers/set/property-values.js";

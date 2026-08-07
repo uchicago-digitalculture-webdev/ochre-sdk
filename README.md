@@ -57,6 +57,8 @@ present and `error` is `null`; on failure, the parsed value is `null` and
   `category` lets the XQuery search only the matching OCHRE collection.
 - `fetchItemLinks(uuid, options)` fetches items linked from a source item and
   parses them as embedded OCHRE items.
+- `fetchItemOcrData(uuid, value, options)` fetches the positioned OCR strings of
+  an item that match a search value, for drawing hit boxes over a scanned page.
 - `fetchGallery(params, options)` fetches paginated resource galleries with an
   optional label filter.
 - `fetchWebsite(abbreviation, options)` fetches an OCHRE website presentation
@@ -118,6 +120,26 @@ const result = await fetchSetItems(
 
 Use `fetchSetPropertyValues` with the same query shape when you need facet data
 for a filtered result set.
+
+## OCR Data
+
+A Resource may carry an `<ocr>` layer holding the positioned output of an OCR run. The node hierarchy inside that layer is irregular and is not parsed, but any `<string>` node within it, at any depth, is read as one positioned OCR string.
+
+```ts
+import { fetchItemOcrData } from "ochre-sdk";
+
+const result = await fetchItemOcrData("<item-uuid>", "Artifact", {
+  matchMode: "exact",
+});
+
+for (const ocrString of result.ocrStrings ?? []) {
+  console.log(ocrString.content, ocrString.x, ocrString.y, ocrString.vertices);
+}
+```
+
+`x` and `y` come from `HPOS` and `VPOS` and give the top-left corner of the box, `width` and `height` its size, and `vertices` its full bounding polygon, which is not always rectangular. Each geometry field is null when the source attribute is absent or unparseable. `resourceUuid` names the Resource that owns the OCR layer, which differs from the requested item when the OCR lives on a child Resource.
+
+Matching defaults to case-insensitive `includes` and runs against each string's `CONTENT`. Because a `<string>` holds a single OCR word, a multi-word search value is split on whitespace and a string is returned when it matches any one term, which pairs with how the `ocrText` query target tokenizes. Requesting an item that does not exist is an error; an item with no OCR layer, or no matches, returns an empty array.
 
 ## Helpers And Types
 
