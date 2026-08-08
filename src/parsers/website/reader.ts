@@ -16,9 +16,11 @@ type WebsitePropertyContent<T extends LanguageCodes> =
   PropertyValueContent<T>["content"];
 
 export class WebsitePresentationReader<T extends LanguageCodes> {
-  constructor(
-    private readonly sourceProperties: ReadonlyArray<SimplifiedProperty<T>>,
-  ) {}
+  private readonly sourceProperties: ReadonlyArray<SimplifiedProperty<T>>;
+
+  constructor(sourceProperties: ReadonlyArray<SimplifiedProperty<T>>) {
+    this.sourceProperties = sourceProperties;
+  }
 
   property(label: string): SimplifiedProperty<T> | null {
     return getPropertyByVariableLabel(this.sourceProperties, label);
