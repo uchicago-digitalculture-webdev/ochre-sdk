@@ -21,6 +21,7 @@ import type {
   WebElement,
   WebElementComponent,
   WebImage,
+  WebOptions,
   Webpage,
   WebSidebar,
   Website,
@@ -466,25 +467,22 @@ function parseAllOptionContexts<T extends ReadonlyArray<string>>(
   };
 }
 
-type ParsedWebsiteOptions<T extends ReadonlyArray<string>> = Extract<
-  WebElementComponent<T>,
-  { component: "collection" }
->["options"];
-
 function parseWebsiteScopes<T extends ReadonlyArray<string>>(
   scopes: XMLWebsiteOptions["scopes"] | undefined,
   options: ParserOptions<T>,
-): ParsedWebsiteOptions<T>["scopes"] {
+): WebOptions<T>["scopes"] {
   if (scopes == null) {
     return null;
   }
 
-  const parsedScopes: NonNullable<ParsedWebsiteOptions<T>["scopes"]> =
-    Array.from(scopes.scope, (scope) => ({
+  const parsedScopes: NonNullable<WebOptions<T>["scopes"]> = Array.from(
+    scopes.scope,
+    (scope) => ({
       uuid: scope.uuid.payload,
       type: scope.uuid.type,
       identification: parseIdentification(scope.identification, options),
-    }));
+    }),
+  );
 
   return parsedScopes;
 }
@@ -492,8 +490,8 @@ function parseWebsiteScopes<T extends ReadonlyArray<string>>(
 function parseWebsiteOptions<T extends ReadonlyArray<string>>(
   rawOptions: XMLWebsiteOptions | undefined,
   options: ParserOptions<T>,
-): ParsedWebsiteOptions<T> {
-  const parsedOptions: ParsedWebsiteOptions<T> = {
+): WebOptions<T> {
+  const parsedOptions: WebOptions<T> = {
     scopes: parseWebsiteScopes(rawOptions?.scopes, options),
     contextTree:
       rawOptions == null ? null : parseAllOptionContexts(rawOptions, options),
@@ -775,6 +773,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
         component: "advanced-search",
         boundElementUuid: boundElementPropertyUuid,
         href,
+        options: parseWebsiteOptions(elementResource.options, options),
       };
       break;
     }

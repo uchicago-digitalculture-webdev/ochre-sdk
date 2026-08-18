@@ -64,6 +64,16 @@ export type Scope<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
+ * Represents the parsed OCHRE "options" block shared by the website itself and
+ * by every web element component that supports it
+ */
+export type WebOptions<T extends LanguageCodes = LanguageCodes> = {
+  scopes: Array<Scope<T>> | null;
+  contextTree: ContextTree<T> | null;
+  labels: { title: MultilingualString<T> | null };
+};
+
+/**
  * Represents a stylesheet item with its UUID and category
  */
 export type StylesheetCategory = Extract<
@@ -210,12 +220,9 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
       isPersistentIdentifierDisplayed: boolean;
       iiifViewer: "universal-viewer" | "clover";
     };
-    options: {
-      contextTree: ContextTree<T> | null;
-      scopes: Array<Scope<T>> | null;
-      labels: { title: MultilingualString<T> | null };
-      stylesheets: { properties: Array<StylesheetItem> };
-    };
+    options: Prettify<
+      WebOptions<T> & { stylesheets: { properties: Array<StylesheetItem> } }
+    >;
   };
 };
 
@@ -301,6 +308,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       component: "advanced-search";
       boundElementUuid: string | null;
       href: string | null;
+      options: WebOptions<T>;
     }
   | { component: "annotated-document"; linkUuid: string }
   | {
@@ -373,11 +381,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
         isLimitedToLeafPropertyValues: boolean;
         sidebarSort: "default" | "alphabetical";
       };
-      options: {
-        scopes: Array<Scope<T>> | null;
-        contextTree: ContextTree<T> | null;
-        labels: { title: MultilingualString<T> | null };
-      };
+      options: WebOptions<T>;
     }
   | { component: "empty-space"; height: string | null; width: string | null }
   | {
@@ -437,11 +441,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
         startIcon: string | null;
         endIcon: string | null;
       }>;
-      options: {
-        scopes: Array<Scope<T>> | null;
-        contextTree: ContextTree<T> | null;
-        labels: { title: MultilingualString<T> | null };
-      };
+      options: WebOptions<T>;
       collectionProperties: Prettify<
         Partial<
           Omit<
