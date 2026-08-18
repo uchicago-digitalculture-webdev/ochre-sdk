@@ -58,7 +58,7 @@
   "dependencies": {
     "date-fns": "^4.4.0",
     "fast-equals": "^6.0.2",
-    "fast-xml-parser": "^5.10.1",
+    "fast-xml-parser": "^5.11.0",
     "valibot": "^1.4.2"
   },
   "devDependencies": {
@@ -73,5 +73,5 @@
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   },
-  "packageManager": "pnpm@11.21.0"
+  "packageManager": "pnpm@11.22.0"
 }
