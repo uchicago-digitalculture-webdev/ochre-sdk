@@ -1847,6 +1847,12 @@ const XMLWebsiteFilterContextItem: v.GenericSchema<
         "XMLWebsiteFilterContextItem: filterOption is invalid",
       ),
     ),
+    filterVariant: v.optional(
+      v.picklist(
+        ["checkbox", "chip", "range", "tile", "toggle"],
+        "XMLWebsiteFilterContextItem: filterVariant is invalid",
+      ),
+    ),
   },
   "XMLWebsiteFilterContextItem: Shape error",
 );

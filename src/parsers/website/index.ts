@@ -2932,6 +2932,7 @@ function parseFilterContexts<T extends ReadonlyArray<string>>(
       filterContextTreeLevels.push({
         ...parseContextItem(contextItemToParse, options),
         filterType: contextItemToParse.filterType ?? "property",
+        filterVariant: contextItemToParse.filterVariant ?? null,
         ...parseFilterContextDisplay(contextItemToParse.filterOption),
       });
     }

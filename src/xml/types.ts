@@ -608,6 +608,7 @@ export type XMLWebsiteFilterContextItem = XMLWebsiteContextItem & {
     | "sidebar-displayed-closed"
     | "sidebar-displayed-open"
     | "inline-sidebar-hidden";
+  filterVariant?: "checkbox" | "chip" | "range" | "tile" | "toggle";
 };
 
 export type XMLWebsiteContext = { context: Array<XMLWebsiteContextItem> };

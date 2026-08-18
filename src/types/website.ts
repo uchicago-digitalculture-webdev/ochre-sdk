@@ -28,6 +28,16 @@ export type ContextTreeLevel<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
+ * Represents the input control a filter context level is rendered with
+ */
+export type ContextTreeFilterVariant =
+  | "checkbox"
+  | "chip"
+  | "range"
+  | "tile"
+  | "toggle";
+
+/**
  * Represents a filter context tree level with a context item
  */
 export type ContextTreeFilterLevel<T extends LanguageCodes = LanguageCodes> = {
@@ -35,6 +45,7 @@ export type ContextTreeFilterLevel<T extends LanguageCodes = LanguageCodes> = {
   identification: Identification<T>;
   type: string;
   filterType: "property" | "coordinates" | "bibliography" | "period";
+  filterVariant: ContextTreeFilterVariant | null;
   isInlineDisplayed: boolean;
   isSidebarDisplayed: boolean;
   isSidebarOpen: boolean;
