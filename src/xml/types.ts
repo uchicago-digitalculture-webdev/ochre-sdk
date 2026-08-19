@@ -596,6 +596,7 @@ export type XMLWebsiteContextLevel = XMLString & {
 
 export type XMLWebsiteContextItem = {
   identification: XMLIdentification;
+  description?: XMLContent;
   levels?: { level: Array<XMLWebsiteContextLevel> };
 };
 

@@ -1800,19 +1800,22 @@ const XMLWebsiteContextLevel: v.GenericSchema<
   ),
 ]);
 
+const XMLWebsiteContextItemEntries = {
+  identification: XMLIdentification,
+  description: v.optional(XMLContent),
+  levels: v.optional(
+    v.object(
+      { level: v.array(XMLWebsiteContextLevel) },
+      "XMLWebsiteContextItem: levels is object with level",
+    ),
+  ),
+};
+
 const XMLWebsiteContextItem: v.GenericSchema<
   unknown,
   XMLWebsiteContextItemType
 > = v.object(
-  {
-    identification: XMLIdentification,
-    levels: v.optional(
-      v.object(
-        { level: v.array(XMLWebsiteContextLevel) },
-        "XMLWebsiteContextItem: levels is object with level",
-      ),
-    ),
-  },
+  XMLWebsiteContextItemEntries,
   "XMLWebsiteContextItem: Shape error",
 );
 
@@ -1821,13 +1824,7 @@ const XMLWebsiteFilterContextItem: v.GenericSchema<
   XMLWebsiteFilterContextItemType
 > = v.object(
   {
-    identification: XMLIdentification,
-    levels: v.optional(
-      v.object(
-        { level: v.array(XMLWebsiteContextLevel) },
-        "XMLWebsiteFilterContextItem: levels is object with level",
-      ),
-    ),
+    ...XMLWebsiteContextItemEntries,
     filterType: v.optional(
       v.picklist(
         ["property", "coordinates", "bibliography", "period"],

@@ -24,6 +24,7 @@ export type ContextTreeLevelItem = {
 export type ContextTreeLevel<T extends LanguageCodes = LanguageCodes> = {
   context: Array<ContextTreeLevelItem>;
   identification: Identification<T>;
+  description: MultilingualString<T> | null;
   type: string;
 };
 
@@ -40,16 +41,16 @@ export type ContextTreeFilterVariant =
 /**
  * Represents a filter context tree level with a context item
  */
-export type ContextTreeFilterLevel<T extends LanguageCodes = LanguageCodes> = {
-  context: Array<ContextTreeLevelItem>;
-  identification: Identification<T>;
-  type: string;
-  filterType: "property" | "coordinates" | "bibliography" | "period";
-  filterVariant: ContextTreeFilterVariant | null;
-  isInlineDisplayed: boolean;
-  isSidebarDisplayed: boolean;
-  isSidebarOpen: boolean;
-};
+export type ContextTreeFilterLevel<T extends LanguageCodes = LanguageCodes> =
+  Prettify<
+    ContextTreeLevel<T> & {
+      filterType: "property" | "coordinates" | "bibliography" | "period";
+      filterVariant: ContextTreeFilterVariant | null;
+      isInlineDisplayed: boolean;
+      isSidebarDisplayed: boolean;
+      isSidebarOpen: boolean;
+    }
+  >;
 
 /**
  * Represents a context tree with levels grouped by behavior

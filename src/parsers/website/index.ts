@@ -43,6 +43,7 @@ import type {
 } from "#/xml/types.js";
 import {
   cleanObject,
+  parseContentLike,
   parseLicense,
   parseStringContent,
 } from "#/parsers/helpers.js";
@@ -2844,6 +2845,7 @@ function parseContextItem<T extends ReadonlyArray<string>>(
       contextItemToParse.identification,
       options,
     ),
+    description: parseContentLike(contextItemToParse.description, options),
   };
 }
 
