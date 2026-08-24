@@ -1,5 +1,4 @@
 /* eslint-disable ts/no-use-before-define */
-import { isValid, parseISO } from "date-fns";
 import * as v from "valibot";
 import type {
   XMLBibliography as XMLBibliographyType,
@@ -74,17 +73,18 @@ import type {
   XMLWebsiteTree as XMLWebsiteTreeType,
 } from "#/xml/types.js";
 import { isPseudoUuid } from "#/utilities.js";
+import { parseDateTime } from "#/xml/dates.js";
 
 function getXMLStringPayload(value: string | XMLStringType): string | null {
   return typeof value === "string" ? value : (value.payload ?? null);
 }
 
 function parseXMLDate(value: string | XMLStringType): Date {
-  return parseISO(getXMLStringPayload(value)?.replace(" ", "T") ?? "");
+  return parseDateTime(getXMLStringPayload(value) ?? "");
 }
 
 function isXMLDate(value: string | XMLStringType): boolean {
-  return isValid(parseXMLDate(value));
+  return !Number.isNaN(parseXMLDate(value).getTime());
 }
 
 function isXMLNumber(value: string | XMLStringType): boolean {

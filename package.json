@@ -56,7 +56,6 @@
     "release": "bumpp"
   },
   "dependencies": {
-    "date-fns": "^4.4.0",
     "fast-equals": "^6.0.2",
     "fast-xml-parser": "^5.11.0",
     "valibot": "^1.4.2"
