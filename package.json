@@ -64,13 +64,13 @@
     "@antfu/eslint-config": "^9.3.0",
     "@types/node": "^24.13.3",
     "bumpp": "^12.2.1",
-    "eslint": "^10.8.1",
-    "eslint-plugin-erasable-syntax-only": "^0.4.2",
+    "eslint": "^10.9.0",
+    "eslint-plugin-erasable-syntax-only": "^0.7.1",
     "knip": "^6.32.2",
     "oxfmt": "^0.64.0",
     "tsdown": "^0.22.14",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"
   },
-  "packageManager": "pnpm@11.22.0"
+  "packageManager": "pnpm@11.23.0"
 }
