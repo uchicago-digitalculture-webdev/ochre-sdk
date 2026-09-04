@@ -271,7 +271,6 @@ function createMDXComponent(
   },
 ): string {
   const { uuid, href, height, width, content, text } = properties;
-  const tooltipContent = getDistinctTooltipContent(content, text);
   let returnString = "";
 
   switch (variant) {
@@ -289,9 +288,6 @@ function createMDXComponent(
       returnString = `<InternalLink${createMDXStringAttribute(
         "uuid",
         uuid ?? "null",
-      )}${createMDXStringAttribute(
-        "content",
-        tooltipContent,
       )}>${text}</InternalLink>`;
       break;
     }
@@ -299,9 +295,6 @@ function createMDXComponent(
       returnString = `<ExternalLink${createMDXStringAttribute(
         "href",
         href == null ? "#" : transformPermanentIdentificationUrl(href),
-      )}${createMDXStringAttribute(
-        "content",
-        tooltipContent,
       )}>${text}</ExternalLink>`;
       break;
     }
@@ -309,9 +302,6 @@ function createMDXComponent(
       returnString = `<ExternalLink${createMDXStringAttribute(
         "href",
         `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${uuid}&load`,
-      )}${createMDXStringAttribute(
-        "content",
-        tooltipContent,
       )}>${text}</ExternalLink>`;
       break;
     }
@@ -325,13 +315,6 @@ function createMDXComponent(
   }
 
   return returnString;
-}
-
-function getDistinctTooltipContent(
-  content: string | undefined,
-  textContent: string,
-): string | undefined {
-  return content === textContent ? undefined : content;
 }
 
 function createMDXStringAttribute(
@@ -831,7 +814,6 @@ function wrapWithTextStyling(
 function createInternalLinkComponent(properties: {
   uuid: string | null;
   text: string;
-  content?: string;
   annotationMetadata: AnnotationMetadata;
   propertyMetadata?: PropertyMetadata | null;
 }): string {
@@ -873,10 +855,7 @@ function createInternalLinkComponent(properties: {
               properties.propertyMetadata.valueUuid ?? undefined,
             )}`
           : ""
-      }${createMDXStringAttribute(
-        "content",
-        getDistinctTooltipContent(properties.content, properties.text),
-      )}>${innerContent}</InternalLink>`;
+      }>${innerContent}</InternalLink>`;
     }
   }
 }
@@ -928,7 +907,6 @@ function renderLinkOrTooltip(
     ? createInternalLinkComponent({
         uuid: getLinkStringProperty(link, "uuid"),
         text: linkString,
-        content: contentText,
         annotationMetadata,
       })
     : createMDXComponent("tooltipSpan", {
@@ -983,7 +961,6 @@ function renderRichTextLink(
       return createInternalLinkComponent({
         uuid: getLinkStringProperty(link, "uuid"),
         text: linkString,
-        content: contentText,
         annotationMetadata,
         propertyMetadata: getFirstPropertyMetadata(item),
       });
@@ -1003,7 +980,6 @@ function renderRichTextLink(
         uuid: getLinkStringProperty(link, "uuid"),
         href: getLinkStringProperty(link, "href") ?? "#",
         text: linkString,
-        content: contentText,
       });
     }
     default: {

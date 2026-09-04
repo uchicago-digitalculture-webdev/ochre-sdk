@@ -397,7 +397,7 @@ describe("parseWebsite", () => {
 
     expect(element.variant).toStrictEqual({ name: "banner" });
     expect(element.content.getRichText()).toContain(
-      '<ExternalLink href="https://example.com/resource" content="Linked resource">Linked callout</ExternalLink>',
+      '<ExternalLink href="https://example.com/resource">Linked callout</ExternalLink>',
     );
   });
 });

@@ -628,7 +628,7 @@ describe("string parser integration", () => {
     );
 
     expect(parsedContent.getExactRichText("eng")).toBe(
-      'Before <ExternalLink href="https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=c0000000-0000-4000-8000-000000000000" content="Website">linked site</ExternalLink> after',
+      'Before <ExternalLink href="https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=c0000000-0000-4000-8000-000000000000">linked site</ExternalLink> after',
     );
   });
 
@@ -870,7 +870,7 @@ describe("string parser integration", () => {
     );
 
     expect(parsedContent.getExactRichText("eng")).toBe(
-      '<>\n<br />\n<Annotation type="text-styling" variant="paragraph" size="md">Featured image:</Annotation>{" "}<ExternalLink href="https://ark.lib.uchicago.edu/ark:61001/b23w8rj3328d" content="Snyder\'s 1885 map">Snyder\'s map of Hyde Park, Illinois, 1885</ExternalLink>. <Annotation type="text-styling" variant="paragraph" size="md">From the</Annotation>{" "}<ExternalLink href="https://node.uchicago.edu/collection/mapping-chicagoland">Mapping Chicagoland</ExternalLink> collection. Holding institution: Chicago History Museum. \n</>',
+      '<>\n<br />\n<Annotation type="text-styling" variant="paragraph" size="md">Featured image:</Annotation>{" "}<ExternalLink href="https://ark.lib.uchicago.edu/ark:61001/b23w8rj3328d">Snyder\'s map of Hyde Park, Illinois, 1885</ExternalLink>. <Annotation type="text-styling" variant="paragraph" size="md">From the</Annotation>{" "}<ExternalLink href="https://node.uchicago.edu/collection/mapping-chicagoland">Mapping Chicagoland</ExternalLink> collection. Holding institution: Chicago History Museum. \n</>',
     );
   });
 
@@ -949,7 +949,7 @@ describe("string parser integration", () => {
     );
 
     expect(parsedContent.getExactRichText("eng")).toBe(
-      '<>\n<InternalLink uuid="f0000000-0000-4000-8000-000000000000" properties="f1000000-0000-4000-8000-000000000000" value="f2000000-0000-4000-8000-000000000000" content="Doc">doc</InternalLink><TooltipSpan content="Draft">draft</TooltipSpan><InlineImage uuid="f4000000-0000-4000-8000-000000000000" content="Image" height={120} width={90} />\n</>',
+      '<>\n<InternalLink uuid="f0000000-0000-4000-8000-000000000000" properties="f1000000-0000-4000-8000-000000000000" value="f2000000-0000-4000-8000-000000000000">doc</InternalLink><TooltipSpan content="Draft">draft</TooltipSpan><InlineImage uuid="f4000000-0000-4000-8000-000000000000" content="Image" height={120} width={90} />\n</>',
     );
   });
 });
