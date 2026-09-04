@@ -727,19 +727,38 @@ describe("query groups", () => {
     );
   });
 
-  it("wraps negated leaves in cts:not-query", () => {
-    const { queryExpression } = compiledQueryPlan({
-      queries: {
-        target: "title",
-        value: "Hippos",
-        matchMode: "exact",
-        isCaseSensitive: true,
-        language: "eng",
-        isNegated: true,
-      },
-    });
+  it("negates leaves through the item predicate rather than a CTS query", () => {
+    const negatedQuery: Query = {
+      target: "title",
+      value: "Hippos",
+      matchMode: "exact",
+      isCaseSensitive: true,
+      language: "eng",
+      isNegated: true,
+    };
 
-    expect(queryExpression).toBe("cts:not-query(local:queryHelper1())");
+    expect(compiledQueryPlan({ queries: negatedQuery }).queryExpression).toBe(
+      null,
+    );
+    expect(compiledItemsClause(negatedQuery)).toBe(
+      `let $items := ${BASE_ITEMS_EXPRESSION}[not(cts:contains(., local:queryHelper1()))]`,
+    );
+    expect(
+      compiledItemsClause({
+        and: [
+          negatedQuery,
+          {
+            target: "description",
+            value: "fortification",
+            matchMode: "exact",
+            isCaseSensitive: true,
+            language: "eng",
+          },
+        ],
+      }),
+    ).toContain(
+      `let $items := cts:search(${BASE_ITEMS_EXPRESSION}[not(cts:contains(., local:queryHelper1()))], $query)`,
+    );
   });
 
   it("optimizes compatible OR groups of includes leaves with the same value", () => {

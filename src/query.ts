@@ -1664,6 +1664,24 @@ function buildCtsItemsPlan(queryExpression: string): ItemsSearchPlan {
 }
 
 /**
+ * Plan a negated leaf as an item path predicate
+ *
+ * A Set holds every one of its items in one fragment, and CTS resolves
+ * `cts:not-query` from the fragment indexes without filtering the match down to
+ * the node it came from. Negating inside the search query would therefore drop
+ * every item of a Set as soon as one of them matched, and keep every item of a
+ * Set that held no match at all. `cts:contains` evaluates the leaf against one
+ * item projection instead, which is the scope the negation is asking about.
+ */
+function buildNegatedItemsPlan(queryExpression: string): ItemsSearchPlan {
+  return {
+    kind: "search",
+    itemPredicates: [`[not(cts:contains(., ${queryExpression}))]`],
+    queryExpressions: [],
+  };
+}
+
+/**
  * Splice the children of same-kind child plans into their parent, so that a
  * nested group of the same operator does not cost an extra search
  */
@@ -1791,11 +1809,9 @@ function buildItemsPlan(
 
     const queryExpression = buildLeafQueryExpression(context, query);
 
-    return buildCtsItemsPlan(
-      query.isNegated === true
-        ? buildNotCtsQueryExpression(queryExpression)
-        : queryExpression,
-    );
+    return query.isNegated === true
+      ? buildNegatedItemsPlan(queryExpression)
+      : buildCtsItemsPlan(queryExpression);
   }
 
   const optimizedIncludesGroupQueries = getCompatibleIncludesGroupLeaves(query);
@@ -1891,9 +1907,12 @@ export function buildBelongsToCollectionQueryExpression(
  * Most queries compile to a single `cts:search` over the Set item projections.
  * An `ocr` leaf cannot: the projections drop the `<ocr>` layer, so it resolves
  * to a search over the Resource documents whose matching UUIDs are joined back
- * in as an item path predicate. Path predicates only ever AND, so an `ocr` leaf
- * that sits under an `or` becomes its own arm of a node union instead, and one
- * that sits under an `and` alongside a union becomes an intersection.
+ * in as an item path predicate. A negated leaf cannot either, because CTS
+ * answers a negation for the whole fragment rather than for the item that
+ * matched, so it is filtered per item instead. Path predicates only ever AND,
+ * so such a leaf that sits under an `or` becomes its own arm of a node union
+ * instead, and one that sits under an `and` alongside a union becomes an
+ * intersection.
  *
  * The searchable path has to stay inline in `cts:search`: binding it to a
  * variable first makes every query XDMP-UNSEARCHABLE.
