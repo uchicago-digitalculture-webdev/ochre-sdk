@@ -68,11 +68,11 @@ const ITEM_COLLECTION_CATEGORIES = [
 function parseLanguages<const T extends ReadonlyArray<string>>(
   languages: T,
 ): T {
-  const parsedLanguages: Array<string> = Array.from(languages, (language) =>
-    v.parse(iso639_3Schema, language),
-  );
+  for (const language of languages) {
+    v.parse(iso639_3Schema, language);
+  }
 
-  return parsedLanguages as unknown as T;
+  return languages;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

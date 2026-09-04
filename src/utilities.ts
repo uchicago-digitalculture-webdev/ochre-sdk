@@ -118,6 +118,33 @@ function appendSchemaValidationIssues(
   }
 }
 
+function formatCauseArray(value: ReadonlyArray<unknown>): string | null {
+  const values: Array<string> = [];
+  for (const item of value) {
+    const formattedItem =
+      typeof item === "string" && item.length > 0
+        ? item
+        : formatPrimitiveValue(item);
+    if (formattedItem != null && formattedItem.length > 0) {
+      values.push(formattedItem);
+    }
+  }
+
+  return values.length > 0 ? values.join(", ") : null;
+}
+
+function formatCauseRecord(value: Record<string, unknown>): string | null {
+  const values: Array<string> = [];
+  for (const [key, entryValue] of Object.entries(value)) {
+    const formattedEntryValue = formatPrimitiveValue(entryValue);
+    if (formattedEntryValue != null) {
+      values.push(`${key}: ${formattedEntryValue}`);
+    }
+  }
+
+  return values.length > 0 ? values.join("; ") : null;
+}
+
 function formatCauseValue(value: unknown): string | null {
   if (typeof value === "string") {
     return value.length > 0 ? value : null;
@@ -129,33 +156,36 @@ function formatCauseValue(value: unknown): string | null {
   }
 
   if (Array.isArray(value)) {
-    const values: Array<string> = [];
-    for (const item of value) {
-      const formattedItem =
-        typeof item === "string" && item.length > 0
-          ? item
-          : formatPrimitiveValue(item);
-      if (formattedItem != null && formattedItem.length > 0) {
-        values.push(formattedItem);
-      }
-    }
-
-    return values.length > 0 ? values.join(", ") : null;
+    return formatCauseArray(value);
   }
 
   if (isRecord(value)) {
-    const values: Array<string> = [];
-    for (const [key, entryValue] of Object.entries(value)) {
-      const formattedEntryValue = formatPrimitiveValue(entryValue);
-      if (formattedEntryValue != null) {
-        values.push(`${key}: ${formattedEntryValue}`);
-      }
-    }
-
-    return values.length > 0 ? values.join("; ") : null;
+    return formatCauseRecord(value);
   }
 
   return null;
+}
+
+function appendContainedErrors(
+  lines: Array<string>,
+  containedErrors: ReadonlyArray<unknown>,
+  indent: string,
+  depth: number,
+  seenErrors: Set<unknown>,
+): void {
+  lines.push("", `${indent}Contained errors`);
+  let index = 0;
+  for (const containedError of containedErrors) {
+    index += 1;
+    lines.push(`${indent}${index}.`);
+    appendDetailedError(
+      lines,
+      containedError,
+      "Unknown error",
+      depth + 1,
+      seenErrors,
+    );
+  }
 }
 
 function appendDetailedError(
@@ -181,19 +211,7 @@ function appendDetailedError(
     lines.push(`${indent}Message: ${error.message}`);
 
     if (error instanceof AggregateError && error.errors.length > 0) {
-      lines.push("", `${indent}Contained errors`);
-      let index = 0;
-      for (const containedError of error.errors) {
-        index += 1;
-        lines.push(`${indent}${index}.`);
-        appendDetailedError(
-          lines,
-          containedError,
-          "Unknown error",
-          depth + 1,
-          seenErrors,
-        );
-      }
+      appendContainedErrors(lines, error.errors, indent, depth, seenErrors);
     }
 
     if (error.cause != null) {

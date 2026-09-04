@@ -4,6 +4,20 @@
 const DATE_TIME_REGEX =
   /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?(?:T(\d{2})(?::(\d{2})(?::(\d{2})(?:[.,](\d+))?)?)?(Z|[+-]\d{2}(?::?\d{2})?)?)?$/;
 
+function applyTimezoneOffset(date: Date, timezone: string): Date {
+  const offsetSign = timezone.startsWith("+") ? -1 : 1;
+  const offsetHours = Number(timezone.slice(1, 3));
+  const offsetMinutes = Number(timezone.slice(3).replace(":", "") || "0");
+  if (offsetMinutes > 59) {
+    return new Date(NaN);
+  }
+
+  return new Date(
+    date.getTime() +
+      offsetSign * (offsetHours * 3_600_000 + offsetMinutes * 60_000),
+  );
+}
+
 /**
  * Parses ISO date/time strings and OCHRE's "YYYY-MM-DD HH:mm:ss" format.
  * Like date-fns parseISO: strings without a timezone offset (including
@@ -55,15 +69,5 @@ export function parseDateTime(value: string): Date {
     return date;
   }
 
-  const offsetSign = timezone.startsWith("+") ? -1 : 1;
-  const offsetHours = Number(timezone.slice(1, 3));
-  const offsetMinutes = Number(timezone.slice(3).replace(":", "") || "0");
-  if (offsetMinutes > 59) {
-    return new Date(NaN);
-  }
-
-  return new Date(
-    date.getTime() +
-      offsetSign * (offsetHours * 3_600_000 + offsetMinutes * 60_000),
-  );
+  return applyTimezoneOffset(date, timezone);
 }

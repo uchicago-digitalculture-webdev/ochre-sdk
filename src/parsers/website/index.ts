@@ -178,6 +178,59 @@ function prefixSlug(slug: string, slugPrefix: string | undefined): string {
   return `${slugPrefix}/${slug}`;
 }
 
+function collectSegmentPageSlugs<T extends ReadonlyArray<string>>(
+  trees: ReadonlyArray<XMLWebsiteTree>,
+  options: ParserOptions<T>,
+  pageSlugsByUuid: Map<string, string>,
+  segmentSlugPrefix?: string,
+): void {
+  for (const tree of trees) {
+    const segmentSlug =
+      tree.identification.abbreviation == null
+        ? null
+        : parseStringContent(tree.identification.abbreviation, options);
+    if (segmentSlug == null) {
+      throw new Error(
+        `Slug not found for segment website (website uuid “${tree.uuid}”)`,
+        { cause: tree },
+      );
+    }
+
+    collectWebsitePageSlugs(
+      tree.items?.resource,
+      options,
+      prefixSlug(segmentSlug, segmentSlugPrefix),
+      pageSlugsByUuid,
+    );
+  }
+}
+
+function collectResourcePageSlug<T extends ReadonlyArray<string>>(
+  resource: XMLWebsiteResource,
+  options: ParserOptions<T>,
+  pageSlugsByUuid: Map<string, string>,
+  slugPrefix?: string,
+): void {
+  const slug = cleanWebsitePageSlug(resource.slug);
+  if (slug == null) {
+    throw new Error(
+      `Slug not found for page (${formatXMLWebsiteResourceMetadata(resource)})`,
+      { cause: resource },
+    );
+  }
+
+  const pageSlug = prefixSlug(slug, slugPrefix);
+  pageSlugsByUuid.set(resource.uuid, pageSlug);
+
+  collectWebsitePageSlugs(
+    resource.resource,
+    options,
+    slugPrefix == null ? undefined : pageSlug,
+    pageSlugsByUuid,
+    pageSlug,
+  );
+}
+
 function collectWebsitePageSlugs<T extends ReadonlyArray<string>>(
   resources: Array<XMLWebsiteResourceItem> | undefined,
   options: ParserOptions<T>,
@@ -188,26 +241,12 @@ function collectWebsitePageSlugs<T extends ReadonlyArray<string>>(
   const slugResources = resources ?? [];
   for (const resource of slugResources) {
     if ("segments" in resource) {
-      for (const tree of resource.segments.tree) {
-        const segmentSlug =
-          tree.identification.abbreviation == null
-            ? null
-            : parseStringContent(tree.identification.abbreviation, options);
-        if (segmentSlug == null) {
-          throw new Error(
-            `Slug not found for segment website (website uuid “${tree.uuid}”)`,
-            { cause: tree },
-          );
-        }
-
-        collectWebsitePageSlugs(
-          tree.items?.resource,
-          options,
-          prefixSlug(segmentSlug, segmentSlugPrefix),
-          pageSlugsByUuid,
-        );
-      }
-
+      collectSegmentPageSlugs(
+        resource.segments.tree,
+        options,
+        pageSlugsByUuid,
+        segmentSlugPrefix,
+      );
       continue;
     }
 
@@ -222,34 +261,17 @@ function collectWebsitePageSlugs<T extends ReadonlyArray<string>>(
       continue;
     }
 
-    const resourceProperties =
-      resource.properties != null
-        ? parseSimplifiedProperties(resource.properties, options)
-        : [];
+    const resourceProperties = parseSimplifiedProperties(
+      resource.properties,
+      options,
+    );
     const resourceType =
       websitePresentationReader(resourceProperties).value<string>(
         "presentation",
       );
 
     if (resourceType === "page") {
-      const slug = cleanWebsitePageSlug(resource.slug);
-      if (slug == null) {
-        throw new Error(
-          `Slug not found for page (${formatXMLWebsiteResourceMetadata(resource)})`,
-          { cause: resource },
-        );
-      }
-
-      const pageSlug = prefixSlug(slug, slugPrefix);
-      pageSlugsByUuid.set(resource.uuid, pageSlug);
-
-      collectWebsitePageSlugs(
-        resource.resource,
-        options,
-        slugPrefix == null ? undefined : pageSlug,
-        pageSlugsByUuid,
-        pageSlug,
-      );
+      collectResourcePageSlug(resource, options, pageSlugsByUuid, slugPrefix);
       continue;
     }
 
@@ -685,6 +707,1125 @@ function parseCollectionDisplayedProperties<T extends ReadonlyArray<string>>(
     .map((value) => ({ uuid: value.uuid!, label: value.label }));
 }
 
+function readStringOrNumber<T extends ReadonlyArray<string>>(
+  reader: WebsitePresentationReader<T>,
+  label: string,
+): string | null {
+  const value = reader.value<string | number>(label);
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    return value.toString();
+  }
+
+  return null;
+}
+
+type WebElementComponentParameters<T extends ReadonlyArray<string>> = {
+  componentProperty: SimplifiedProperty<T>;
+  componentReader: WebsitePresentationReader<T>;
+  elementResource: XMLWebsiteResource;
+  websiteLinks: ItemLinks<T>;
+  options: ParserOptions<T>;
+  context: WebsiteParseContext<T>;
+};
+
+function parse3dViewerComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentProperty, componentReader, elementResource, websiteLinks } =
+    parameters;
+
+  type ThreeDViewerComponent = Extract<
+    WebElementComponent<T>,
+    { component: "3d-viewer" }
+  >;
+  const resourceLink = findWebsiteLink(
+    websiteLinks,
+    "resource",
+    (link) => link.fileFormat === "model/obj",
+  );
+  if (resourceLink == null) {
+    throw new Error(
+      formatComponentError(
+        "Resource link not found",
+        "3d-viewer",
+        elementResource,
+      ),
+      { cause: componentProperty },
+    );
+  }
+
+  const isInteractive = componentReader.valueOr<
+    ThreeDViewerComponent["isInteractive"]
+  >("is-interactive", true);
+  const isControlsDisplayed = componentReader.valueOr<
+    ThreeDViewerComponent["isControlsDisplayed"]
+  >("controls-displayed", true);
+
+  return {
+    component: "3d-viewer",
+    linkUuid: resourceLink.uuid,
+    fileSize: resourceLink.fileSize,
+    isInteractive,
+    isControlsDisplayed,
+  };
+}
+
+function parseAdvancedSearchComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const {
+    componentProperty,
+    componentReader,
+    elementResource,
+    options,
+    context,
+  } = parameters;
+
+  const boundElementPropertyUuid = componentReader.uuid("bound-element");
+  const href = parseWebsiteLinkTarget(
+    componentReader.valueNode("link-to"),
+    context,
+  );
+
+  if (boundElementPropertyUuid == null && href == null) {
+    throw new Error(
+      formatComponentError(
+        "Bound element or href not found",
+        "advanced-search",
+        elementResource,
+      ),
+      { cause: componentProperty },
+    );
+  }
+
+  return {
+    component: "advanced-search",
+    boundElementUuid: boundElementPropertyUuid,
+    href,
+    options: parseWebsiteOptions(elementResource.options, options),
+  };
+}
+
+function parseAnnotatedDocumentComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentProperty, elementResource, websiteLinks } = parameters;
+
+  const documentLink = findWebsiteLink(
+    websiteLinks,
+    "resource",
+    (link) => link.type === "internalDocument",
+  );
+  if (documentLink == null) {
+    throw new Error(
+      formatComponentError(
+        "Document link not found",
+        "annotated-document",
+        elementResource,
+      ),
+      { cause: componentProperty },
+    );
+  }
+
+  return { component: "annotated-document", linkUuid: documentLink.uuid };
+}
+
+function parseAnnotatedImageComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentProperty, componentReader, elementResource, websiteLinks } =
+    parameters;
+
+  type AnnotatedImageComponent = Extract<
+    WebElementComponent<T>,
+    { component: "annotated-image" }
+  >;
+  const imageLinks = getWebsiteLinks(websiteLinks, "resource").filter(
+    (link) => link.type === "image" || link.type === "IIIF",
+  );
+
+  if (imageLinks.length === 0) {
+    throw new Error(
+      formatComponentError(
+        "Image link not found",
+        "annotated-image",
+        elementResource,
+      ),
+      { cause: componentProperty },
+    );
+  }
+
+  const isFilterInputDisplayed = componentReader.valueOr<
+    AnnotatedImageComponent["isFilterInputDisplayed"]
+  >("filter-input-displayed", true);
+  const isOptionsDisplayed = componentReader.valueOr<
+    AnnotatedImageComponent["isOptionsDisplayed"]
+  >("options-displayed", true);
+  const isAnnotationHighlightsDisplayed = componentReader.valueOr<
+    AnnotatedImageComponent["isAnnotationHighlightsDisplayed"]
+  >("annotation-highlights-displayed", true);
+  const isAnnotationTooltipsDisplayed = componentReader.valueOr<
+    AnnotatedImageComponent["isAnnotationTooltipsDisplayed"]
+  >("annotation-tooltips-displayed", true);
+
+  return {
+    component: "annotated-image",
+    linkUuid: imageLinks[0]!.uuid,
+    isFilterInputDisplayed,
+    isOptionsDisplayed,
+    isAnnotationHighlightsDisplayed,
+    isAnnotationTooltipsDisplayed,
+  };
+}
+
+function parseAudioPlayerComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentProperty, componentReader, elementResource, websiteLinks } =
+    parameters;
+
+  type AudioPlayerComponent = Extract<
+    WebElementComponent<T>,
+    { component: "audio-player" }
+  >;
+  const audioLink = findWebsiteLink(
+    websiteLinks,
+    "resource",
+    (link) => link.type === "audio",
+  );
+  if (audioLink == null) {
+    throw new Error(
+      formatComponentError(
+        "Audio link not found",
+        "audio-player",
+        elementResource,
+      ),
+      { cause: componentProperty },
+    );
+  }
+
+  const isSpeedControlsDisplayed = componentReader.valueOr<
+    AudioPlayerComponent["isSpeedControlsDisplayed"]
+  >("speed-controls-displayed", true);
+  const isVolumeControlsDisplayed = componentReader.valueOr<
+    AudioPlayerComponent["isVolumeControlsDisplayed"]
+  >("volume-controls-displayed", true);
+  const isSeekBarDisplayed = componentReader.valueOr<
+    AudioPlayerComponent["isSeekBarDisplayed"]
+  >("seek-bar-displayed", true);
+
+  return {
+    component: "audio-player",
+    linkUuid: audioLink.uuid,
+    isSpeedControlsDisplayed,
+    isVolumeControlsDisplayed,
+    isSeekBarDisplayed,
+  };
+}
+
+function parseBibliographyComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const {
+    componentProperty,
+    componentReader,
+    elementResource,
+    websiteLinks,
+    options,
+  } = parameters;
+
+  type BibliographyComponent = Extract<
+    WebElementComponent<T>,
+    { component: "bibliography" }
+  >;
+  const bibliographies = parseBibliographyList(
+    elementResource.bibliographies,
+    options,
+  );
+  if (websiteLinks.length === 0 && bibliographies.length === 0) {
+    throw new Error(
+      formatComponentError("No links found", "bibliography", elementResource),
+      { cause: componentProperty },
+    );
+  }
+
+  const layout = componentReader.valueOr<BibliographyComponent["layout"]>(
+    "layout",
+    "long",
+  );
+  const isSourceDocumentDisplayed = componentReader.valueOr<
+    BibliographyComponent["isSourceDocumentDisplayed"]
+  >("source-document-displayed", true);
+
+  return {
+    component: "bibliography",
+    linkUuids: websiteLinks.map((link) => link.uuid),
+    bibliographies,
+    layout,
+    isSourceDocumentDisplayed,
+  };
+}
+
+function parseButtonComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const {
+    componentProperty,
+    componentReader,
+    elementResource,
+    websiteLinks,
+    options,
+    context,
+  } = parameters;
+
+  type ButtonComponent = Extract<
+    WebElementComponent<T>,
+    { component: "button" }
+  >;
+  const variant = componentReader.valueOr<ButtonComponent["variant"]>(
+    "variant",
+    "default",
+  );
+
+  let isExternal = false;
+  let isRelative = false;
+  let href = parseWebsiteLinkTarget(
+    componentReader.valueNode("navigate-to"),
+    context,
+  );
+
+  if (href === null) {
+    href = parseWebsiteLinkTarget(
+      componentReader.valueNode("link-to"),
+      context,
+    );
+
+    if (href === null) {
+      throw new Error(
+        formatComponentError(
+          "Properties “navigate-to” or “link-to” not found",
+          "button",
+          elementResource,
+        ),
+        { cause: componentProperty },
+      );
+    }
+    isExternal = href.startsWith("http");
+    isRelative = !href.startsWith("/");
+  }
+
+  const startIcon =
+    componentReader.value<ButtonComponent["startIcon"]>("start-icon");
+  const endIcon = componentReader.value<ButtonComponent["endIcon"]>("end-icon");
+
+  let image: WebImage<T> | null = null;
+  const imageLink = findWebsiteLink(
+    websiteLinks,
+    "resource",
+    (link) => link.type === "image" || link.type === "IIIF",
+  );
+  if (imageLink != null) {
+    image = {
+      uuid: imageLink.uuid,
+      label: imageLink.identification.label,
+      width: imageLink.image?.width ?? 0,
+      height: imageLink.image?.height ?? 0,
+      description: imageLink.description,
+      quality: "high",
+    };
+  }
+
+  const childResources = normalizeWebsiteResources(elementResource.resource);
+  const elements: Array<WebElement<T>> = [];
+  for (const childResource of childResources) {
+    const childReader = websitePresentationReader(
+      parseSimplifiedProperties(childResource.properties, options),
+    );
+    if (childReader.value("presentation") !== "element") {
+      continue;
+    }
+    const childComponent = childReader
+      .nestedByValue("presentation", "element")
+      .value<string>("component");
+    if (childComponent === "button") {
+      continue;
+    }
+
+    elements.push(parseWebElement(childResource, options, context));
+  }
+
+  return {
+    component: "button",
+    variant,
+    href,
+    isExternal,
+    isRelative,
+    label:
+      elementResource.document && "content" in elementResource.document
+        ? parseXMLContent(elementResource.document, options)
+        : null,
+    startIcon,
+    endIcon,
+    image,
+    elements,
+  };
+}
+
+function parseCollectionComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const {
+    componentProperty,
+    componentReader,
+    elementResource,
+    websiteLinks,
+    options,
+  } = parameters;
+
+  const setLinks = getWebsiteLinks(websiteLinks, "set");
+  if (setLinks.length === 0) {
+    throw new Error(
+      formatComponentError(
+        "Set links not found",
+        "collection",
+        elementResource,
+      ),
+      { cause: componentProperty },
+    );
+  }
+
+  const isFilterResultsBarDisplayed = componentReader.valueOr<
+    CollectionComponent<T>["filter"]["isResultsBarDisplayed"]
+  >("filter-results-bar-displayed", false);
+  const isFilterInputDisplayed = componentReader.valueOr<
+    CollectionComponent<T>["filter"]["isInputDisplayed"]
+  >("filter-input-displayed", false);
+  const isFilterLimitedToInputFilter = componentReader.valueOr<
+    CollectionComponent<T>["filter"]["isLimitedToInputFilter"]
+  >("filter-limit-to-input-filter", false);
+  const isFilterLimitedToLeafPropertyValues = componentReader.valueOr<
+    CollectionComponent<T>["filter"]["isLimitedToLeafPropertyValues"]
+  >("filter-limit-to-leaf-property-values", false);
+  const isFilterSidebarDisplayed = componentReader.valueOr<
+    CollectionComponent<T>["filter"]["isSidebarDisplayed"]
+  >("filter-sidebar-displayed", false);
+  const filterSidebarSort = componentReader.valueOr<
+    CollectionComponent<T>["filter"]["sidebarSort"]
+  >("filter-sidebar-sort", "default");
+  const isFilterSidebarHelpTooltipsDisplayed = componentReader.valueOr<
+    CollectionComponent<T>["filter"]["isSidebarHelpTooltipsDisplayed"]
+  >("filter-sidebar-help-tooltips-displayed", false);
+
+  const componentOptions = parseWebsiteOptions(
+    elementResource.options,
+    options,
+  );
+
+  const propertyOverrides = parseCollectionPropertyOverrides(componentReader);
+
+  return {
+    component: "collection",
+    linkUuids: setLinks.map((link) => link.uuid),
+    displayedProperties: parseCollectionDisplayedProperties(componentReader),
+    ...COLLECTION_PROPERTY_DEFAULTS,
+    ...propertyOverrides,
+    image: { ...COLLECTION_IMAGE_DEFAULTS, ...propertyOverrides.image },
+    filter: {
+      isSidebarDisplayed: isFilterSidebarDisplayed,
+      isResultsBarDisplayed: isFilterResultsBarDisplayed,
+      isInputDisplayed: isFilterInputDisplayed,
+      isLimitedToInputFilter: isFilterLimitedToInputFilter,
+      isLimitedToLeafPropertyValues: isFilterLimitedToLeafPropertyValues,
+      sidebarSort: filterSidebarSort,
+      isSidebarHelpTooltipsDisplayed: isFilterSidebarHelpTooltipsDisplayed,
+    },
+    options: componentOptions,
+  };
+}
+
+function parseEmptySpaceComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentReader } = parameters;
+
+  return {
+    component: "empty-space",
+    height: componentReader.stringValue("height"),
+    width: componentReader.stringValue("width"),
+  };
+}
+
+function parseEntriesComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentProperty, componentReader, elementResource, websiteLinks } =
+    parameters;
+
+  type EntriesComponent = Extract<
+    WebElementComponent<T>,
+    { component: "entries" }
+  >;
+  const entriesLink = findWebsiteLinkByCategories(websiteLinks, [
+    "set",
+    "tree",
+  ]);
+  if (entriesLink == null) {
+    throw new Error(
+      formatComponentError(
+        "Entries link not found",
+        "entries",
+        elementResource,
+      ),
+      { cause: componentProperty },
+    );
+  }
+
+  const variant = componentReader.valueOr<EntriesComponent["variant"]>(
+    "variant",
+    "entry",
+  );
+  const isFilterInputDisplayed = componentReader.valueOr<
+    EntriesComponent["isFilterInputDisplayed"]
+  >("filter-input-displayed", false);
+
+  return {
+    component: "entries",
+    linkUuid: entriesLink.uuid,
+    variant,
+    isFilterInputDisplayed,
+  };
+}
+
+function parseIframeComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentProperty, componentReader, elementResource, websiteLinks } =
+    parameters;
+
+  const webpageLink = findWebsiteLink(
+    websiteLinks,
+    "resource",
+    (link) => link.type === "webpage",
+  );
+  if (webpageLink?.href == null) {
+    throw new Error(
+      formatComponentError("URL not found", "iframe", elementResource),
+      { cause: componentProperty },
+    );
+  }
+
+  return {
+    component: "iframe",
+    href: transformPermanentIdentificationUrlToItemLink(webpageLink.href),
+    height: componentReader.stringValue("height"),
+    width: componentReader.stringValue("width"),
+  };
+}
+
+function parseIiifViewerComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentProperty, componentReader, elementResource, websiteLinks } =
+    parameters;
+
+  type IIIFViewerComponent = Extract<
+    WebElementComponent<T>,
+    { component: "iiif-viewer" }
+  >;
+  const manifestLink = findWebsiteLink(
+    websiteLinks,
+    "resource",
+    (link) => link.type === "IIIF",
+  );
+  if (manifestLink == null) {
+    throw new Error(
+      formatComponentError(
+        "Manifest link not found",
+        "iiif-viewer",
+        elementResource,
+      ),
+      { cause: componentProperty },
+    );
+  }
+
+  const variant = componentReader.valueOr<IIIFViewerComponent["variant"]>(
+    "variant",
+    "universal-viewer",
+  );
+
+  return { component: "iiif-viewer", linkUuid: manifestLink.uuid, variant };
+}
+
+function parseImageComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentProperty, componentReader, elementResource, websiteLinks } =
+    parameters;
+
+  type ImageComponent = Extract<WebElementComponent<T>, { component: "image" }>;
+  if (websiteLinks.length === 0) {
+    throw new Error(
+      formatComponentError("No links found", "image", elementResource),
+      { cause: componentProperty },
+    );
+  }
+
+  const imageQuality = componentReader.valueOr<ImageComponent["imageQuality"]>(
+    "image-quality",
+    "high",
+  );
+
+  const images: Array<WebImage<T>> = Array.from(websiteLinks, (link) => ({
+    uuid: link.uuid,
+    label: link.identification.label,
+    width: "image" in link ? (link.image?.width ?? 0) : 0,
+    height: "image" in link ? (link.image?.height ?? 0) : 0,
+    description: link.description,
+    quality: imageQuality,
+  }));
+
+  const variant = componentReader.valueOr<ImageComponent["variant"]>(
+    "variant",
+    "default",
+  );
+  const captionLayout = componentReader.valueOr<
+    ImageComponent["captionLayout"]
+  >("layout-caption", "bottom");
+
+  const width = readStringOrNumber(componentReader, "width");
+  const height = readStringOrNumber(componentReader, "height");
+
+  const isFullWidth = componentReader.valueOr<ImageComponent["isFullWidth"]>(
+    "is-full-width",
+    true,
+  );
+  const isFullHeight = componentReader.valueOr<ImageComponent["isFullHeight"]>(
+    "is-full-height",
+    true,
+  );
+  const captionSource = componentReader.valueOr<
+    ImageComponent["captionSource"]
+  >("source-caption", "name");
+  const altTextSource = componentReader.valueOr<
+    ImageComponent["altTextSource"]
+  >("alt-text-source", "name");
+  const isTransparentBackground = componentReader.valueOr<
+    ImageComponent["isTransparentBackground"]
+  >("is-transparent", false);
+  const isCover = componentReader.valueOr<ImageComponent["isCover"]>(
+    "is-cover",
+    false,
+  );
+  const variantReader = componentReader.nested("variant");
+
+  let carouselOptions: ImageComponent["carouselOptions"] | null = null;
+  if (images.length > 1) {
+    const secondsPerImage =
+      variant === "carousel"
+        ? readStringOrNumber(variantReader, "seconds-per-image")
+        : null;
+
+    carouselOptions = { secondsPerImage: Number(secondsPerImage ?? 5) };
+  }
+
+  let heroOptions: ImageComponent["heroOptions"] = null;
+  if (variant === "hero") {
+    const isBackgroundImageDisplayed = variantReader.valueOr<
+      NonNullable<ImageComponent["heroOptions"]>["isBackgroundImageDisplayed"]
+    >("background-image-displayed", true);
+    const isDocumentDisplayed = variantReader.valueOr<
+      NonNullable<ImageComponent["heroOptions"]>["isDocumentDisplayed"]
+    >("document-displayed", true);
+
+    heroOptions = { isBackgroundImageDisplayed, isDocumentDisplayed };
+  }
+
+  return {
+    component: "image",
+    images,
+    variant,
+    width,
+    height,
+    isFullWidth,
+    isFullHeight,
+    imageQuality,
+    captionLayout,
+    captionSource,
+    altTextSource,
+    isTransparentBackground,
+    isCover,
+    carouselOptions,
+    heroOptions,
+  };
+}
+
+function parseImageGalleryComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentProperty, componentReader, elementResource, websiteLinks } =
+    parameters;
+
+  type ImageGalleryComponent = Extract<
+    WebElementComponent<T>,
+    { component: "image-gallery" }
+  >;
+  const galleryLink = findWebsiteLinkByCategories(websiteLinks, [
+    "set",
+    "tree",
+  ]);
+  if (galleryLink == null) {
+    throw new Error(
+      formatComponentError(
+        "Image gallery link not found",
+        "image-gallery",
+        elementResource,
+      ),
+      { cause: componentProperty },
+    );
+  }
+
+  const isFilterInputDisplayed = componentReader.valueOr<
+    ImageGalleryComponent["isFilterInputDisplayed"]
+  >("filter-input-displayed", true);
+
+  return {
+    component: "image-gallery",
+    linkUuid: galleryLink.uuid,
+    isFilterInputDisplayed,
+  };
+}
+
+function parseMapComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentProperty, componentReader, elementResource, websiteLinks } =
+    parameters;
+
+  type MapComponent = Extract<WebElementComponent<T>, { component: "map" }>;
+  const mapLink = findWebsiteLinkByCategories(websiteLinks, ["set", "tree"]);
+  if (mapLink == null) {
+    throw new Error(
+      formatComponentError("Map link not found", "map", elementResource),
+      { cause: componentProperty },
+    );
+  }
+
+  const isInteractive = componentReader.valueOr<MapComponent["isInteractive"]>(
+    "is-interactive",
+    true,
+  );
+  const isClustered = componentReader.valueOr<MapComponent["isClustered"]>(
+    "is-clustered",
+    false,
+  );
+  const isUsingPins = componentReader.valueOr<MapComponent["isUsingPins"]>(
+    "is-using-pins",
+    false,
+  );
+  const customBasemap =
+    componentReader.value<MapComponent["customBasemap"]>("custom-basemap");
+
+  let initialBounds: MapComponent["initialBounds"] | null = null;
+  const initialBoundsProperty = componentReader.value<string | number>(
+    "initial-bounds",
+  );
+  if (initialBoundsProperty !== null) {
+    initialBounds = parseBounds(String(initialBoundsProperty));
+  }
+
+  let maximumBounds: MapComponent["maximumBounds"] | null = null;
+  const maximumBoundsProperty = componentReader.value<string | number>(
+    "maximum-bounds",
+  );
+  if (maximumBoundsProperty !== null) {
+    maximumBounds = parseBounds(String(maximumBoundsProperty));
+  }
+
+  const isControlsDisplayed = componentReader.valueOr<
+    MapComponent["isControlsDisplayed"]
+  >("controls-displayed", false);
+  const isFullHeight = componentReader.valueOr<MapComponent["isFullHeight"]>(
+    "is-full-height",
+    false,
+  );
+
+  return {
+    component: "map",
+    linkUuid: mapLink.uuid,
+    customBasemap,
+    initialBounds,
+    maximumBounds,
+    isInteractive,
+    isClustered,
+    isUsingPins,
+    isControlsDisplayed,
+    isFullHeight,
+  };
+}
+
+type QueryComponentItems<T extends ReadonlyArray<string>> = Extract<
+  WebElementComponent<T>,
+  { component: "query" }
+>["items"];
+
+function parseQueryItemQueries<T extends ReadonlyArray<string>>(
+  propertyVariables: ReadonlyArray<PropertyValueContent<T>>,
+  queryLanguage: string,
+  elementResource: XMLWebsiteResource,
+): QueryComponentItems<T>[number]["queries"] {
+  const queries: QueryComponentItems<T>[number]["queries"] = [];
+  for (const propertyVariable of propertyVariables) {
+    if (propertyVariable.uuid === null) {
+      throw new Error(
+        formatComponentError(
+          "Property variable UUID not found",
+          "query",
+          elementResource,
+        ),
+        { cause: propertyVariable },
+      );
+    }
+
+    const dataType = propertyVariable.dataType;
+    if (dataType === "coordinate") {
+      throw new Error(
+        formatComponentError(
+          'Query prompts with data type "coordinate" are not supported',
+          "query",
+          elementResource,
+        ),
+        { cause: propertyVariable },
+      );
+    }
+
+    queries.push({
+      target: "property",
+      propertyVariable: propertyVariable.uuid,
+      dataType,
+      matchMode: "exact",
+      isCaseSensitive: true,
+      language: queryLanguage,
+    });
+  }
+
+  return queries;
+}
+
+function parseQueryComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const {
+    componentProperty,
+    componentReader,
+    elementResource,
+    websiteLinks,
+    options,
+  } = parameters;
+
+  type QueryComponent = Extract<WebElementComponent<T>, { component: "query" }>;
+  const setLinks = getWebsiteLinks(websiteLinks, "set");
+  if (setLinks.length === 0) {
+    throw new Error(
+      formatComponentError("Set links not found", "query", elementResource),
+      { cause: componentProperty },
+    );
+  }
+
+  if (componentProperty.properties.length === 0) {
+    throw new Error(
+      formatComponentError(
+        "Query properties not found",
+        "query",
+        elementResource,
+      ),
+      { cause: componentProperty },
+    );
+  }
+
+  const items: Array<QueryComponent["items"][number]> = [];
+  for (const queryItem of componentProperty.properties) {
+    const queryReader = websitePresentationReader(queryItem.properties);
+
+    const label = queryReader.multilingualValue("query-prompt", options);
+    if (label === null) {
+      continue;
+    }
+
+    const propertyVariables = queryReader
+      .values("use-property")
+      .filter((value) => value.uuid !== null);
+
+    const queryLanguage = options.languages[0];
+    if (queryLanguage == null) {
+      throw new Error(
+        formatComponentError(
+          "Query language not found",
+          "query",
+          elementResource,
+        ),
+      );
+    }
+
+    const queries = parseQueryItemQueries(
+      propertyVariables,
+      queryLanguage,
+      elementResource,
+    );
+
+    const startIcon =
+      queryReader.value<QueryComponent["items"][number]["startIcon"]>(
+        "start-icon",
+      );
+    const endIcon =
+      queryReader.value<QueryComponent["items"][number]["endIcon"]>("end-icon");
+
+    items.push({ label, queries, startIcon, endIcon });
+  }
+
+  if (items.length === 0) {
+    throw new Error(
+      formatComponentError("No queries found", "query", elementResource),
+      { cause: componentProperty },
+    );
+  }
+
+  const componentOptions = parseWebsiteOptions(
+    elementResource.options,
+    options,
+  );
+
+  const overrideReader = componentReader.nestedByValue(
+    "sub-component-override",
+    "collection",
+  );
+
+  const collectionProperties: QueryComponent["collectionProperties"] =
+    parseCollectionPropertyOverrides(overrideReader);
+
+  const displayedProperties =
+    parseCollectionDisplayedProperties(componentReader);
+  if (displayedProperties != null) {
+    collectionProperties.displayedProperties = displayedProperties;
+  }
+
+  return {
+    component: "query",
+    linkUuids: setLinks.map((link) => link.uuid),
+    items,
+    options: componentOptions,
+    collectionProperties,
+  };
+}
+
+function parseTableComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentProperty, elementResource, websiteLinks } = parameters;
+
+  const tableLink = findWebsiteLink(websiteLinks, "set");
+  if (tableLink == null) {
+    throw new Error(
+      formatComponentError("Table link not found", "table", elementResource),
+      { cause: componentProperty },
+    );
+  }
+
+  return { component: "table", linkUuid: tableLink.uuid };
+}
+
+function parseSearchBarComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const {
+    componentProperty,
+    componentReader,
+    elementResource,
+    options,
+    context,
+  } = parameters;
+
+  type SearchBarComponent = Extract<
+    WebElementComponent<T>,
+    { component: "search-bar" }
+  >;
+  const queryVariant = componentReader.valueOr<
+    SearchBarComponent["queryVariant"]
+  >("query-variant", "submit");
+  const boundElementUuid = componentReader.uuid("bound-element");
+  const href = parseWebsiteLinkTarget(
+    componentReader.valueNode("link-to"),
+    context,
+  );
+
+  if (boundElementUuid === null && href === null) {
+    throw new Error(
+      formatComponentError(
+        "Bound element or href not found",
+        "search-bar",
+        elementResource,
+      ),
+      { cause: componentProperty },
+    );
+  }
+
+  const placeholder = componentReader.multilingualValue(
+    "placeholder-text",
+    options,
+  );
+
+  const baseFilterQueries = componentReader.value<
+    SearchBarComponent["baseFilterQueries"]
+  >("base-filter-queries");
+
+  return {
+    component: "search-bar",
+    queryVariant,
+    placeholder,
+    baseFilterQueries:
+      baseFilterQueries
+        ?.replaceAll(String.raw`\{`, "{")
+        .replaceAll(String.raw`\}`, "}") ?? null,
+    boundElementUuid,
+    href,
+  };
+}
+
+function parseTextComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentProperty, componentReader, elementResource, options } =
+    parameters;
+
+  type TextComponent = Extract<WebElementComponent<T>, { component: "text" }>;
+  type TextVariantWithName<U extends TextComponent["variant"]["name"]> =
+    Extract<TextComponent["variant"], { name: U }>;
+  const content =
+    elementResource.document && "content" in elementResource.document
+      ? parseXMLContent(elementResource.document, options)
+      : null;
+  if (content == null) {
+    throw new Error(
+      formatComponentError("Content not found", "text", elementResource),
+      { cause: componentProperty },
+    );
+  }
+
+  let variantName: TextComponent["variant"]["name"] = "block";
+  let variant: TextComponent["variant"];
+
+  const variantProperty = componentReader.property("variant");
+  if (variantProperty !== null) {
+    const variantReader = websitePresentationReader(variantProperty.properties);
+    variantName = variantProperty.values[0]!
+      .content as TextComponent["variant"]["name"];
+
+    switch (variantName) {
+      case "paragraph": {
+        variant = {
+          name: variantName,
+          size: variantReader.valueOr<TextVariantWithName<"paragraph">["size"]>(
+            "size",
+            "md",
+          ),
+        };
+        break;
+      }
+      case "label": {
+        variant = {
+          name: variantName,
+          size: variantReader.valueOr<TextVariantWithName<"label">["size"]>(
+            "size",
+            "md",
+          ),
+        };
+        break;
+      }
+      case "heading": {
+        variant = {
+          name: variantName,
+          size: variantReader.valueOr<TextVariantWithName<"heading">["size"]>(
+            "size",
+            "md",
+          ),
+        };
+        break;
+      }
+      case "display": {
+        variant = {
+          name: variantName,
+          size: variantReader.valueOr<TextVariantWithName<"display">["size"]>(
+            "size",
+            "md",
+          ),
+        };
+        break;
+      }
+      default: {
+        variant = { name: variantName };
+      }
+    }
+  } else {
+    variant = { name: variantName };
+  }
+
+  const headingLevel =
+    componentReader.value<TextComponent["headingLevel"]>("heading-level");
+
+  return { component: "text", variant, headingLevel, content };
+}
+
+function parseTimelineComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentProperty, elementResource, websiteLinks } = parameters;
+
+  const timelineLink = findWebsiteLink(websiteLinks, "tree");
+  if (timelineLink == null) {
+    throw new Error(
+      formatComponentError(
+        "Timeline link not found",
+        "timeline",
+        elementResource,
+      ),
+      { cause: componentProperty },
+    );
+  }
+
+  return { component: "timeline", linkUuid: timelineLink.uuid };
+}
+
+function parseVideoComponent<T extends ReadonlyArray<string>>(
+  parameters: WebElementComponentParameters<T>,
+): WebElementComponent<T> {
+  const { componentProperty, componentReader, elementResource, websiteLinks } =
+    parameters;
+
+  const videoLink = findWebsiteLink(
+    websiteLinks,
+    "resource",
+    (link) => link.type === "video",
+  );
+  if (videoLink == null) {
+    throw new Error(
+      formatComponentError("Video link not found", "video", elementResource),
+      { cause: componentProperty },
+    );
+  }
+
+  const isChaptersDisplayed = componentReader.valueOr<
+    Extract<
+      WebElementComponent<T>,
+      { component: "video" }
+    >["isChaptersDisplayed"]
+  >("chapters-displayed", true);
+
+  return { component: "video", linkUuid: videoLink.uuid, isChaptersDisplayed };
+}
+
 /**
  * Parses raw web element properties into a standardized WebElementComponent structure
  *
@@ -707,1044 +1848,83 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
     ? componentNameResult.output
     : undefined;
 
-  let properties: WebElementComponent<T> | null = null;
-
   const websiteLinks = parseLinks(elementResource.links, options);
   const componentReader = websitePresentationReader(
     componentProperty.properties,
   );
 
+  const parameters: WebElementComponentParameters<T> = {
+    componentProperty,
+    componentReader,
+    elementResource,
+    websiteLinks,
+    options,
+    context,
+  };
+
   switch (componentName) {
     case "3d-viewer": {
-      type ThreeDViewerComponent = Extract<
-        WebElementComponent<T>,
-        { component: "3d-viewer" }
-      >;
-      const resourceLink = findWebsiteLink(
-        websiteLinks,
-        "resource",
-        (link) => link.fileFormat === "model/obj",
-      );
-      if (resourceLink == null) {
-        throw new Error(
-          formatComponentError(
-            "Resource link not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      const isInteractive = componentReader.valueOr<
-        ThreeDViewerComponent["isInteractive"]
-      >("is-interactive", true);
-      const isControlsDisplayed = componentReader.valueOr<
-        ThreeDViewerComponent["isControlsDisplayed"]
-      >("controls-displayed", true);
-
-      properties = {
-        component: "3d-viewer",
-        linkUuid: resourceLink.uuid,
-        fileSize: resourceLink.fileSize,
-        isInteractive,
-        isControlsDisplayed,
-      };
-      break;
+      return parse3dViewerComponent(parameters);
     }
     case "advanced-search": {
-      const boundElementPropertyUuid = componentReader.uuid("bound-element");
-      const href = parseWebsiteLinkTarget(
-        componentReader.valueNode("link-to"),
-        context,
-      );
-
-      if (boundElementPropertyUuid == null && href == null) {
-        throw new Error(
-          formatComponentError(
-            "Bound element or href not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      properties = {
-        component: "advanced-search",
-        boundElementUuid: boundElementPropertyUuid,
-        href,
-        options: parseWebsiteOptions(elementResource.options, options),
-      };
-      break;
+      return parseAdvancedSearchComponent(parameters);
     }
     case "annotated-document": {
-      const documentLink = findWebsiteLink(
-        websiteLinks,
-        "resource",
-        (link) => link.type === "internalDocument",
-      );
-      if (documentLink == null) {
-        throw new Error(
-          formatComponentError(
-            "Document link not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      properties = {
-        component: "annotated-document",
-        linkUuid: documentLink.uuid,
-      };
-      break;
+      return parseAnnotatedDocumentComponent(parameters);
     }
     case "annotated-image": {
-      type AnnotatedImageComponent = Extract<
-        WebElementComponent<T>,
-        { component: "annotated-image" }
-      >;
-      const imageLinks = getWebsiteLinks(websiteLinks, "resource").filter(
-        (link) => link.type === "image" || link.type === "IIIF",
-      );
-
-      if (imageLinks.length === 0) {
-        throw new Error(
-          formatComponentError(
-            "Image link not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      const isFilterInputDisplayed = componentReader.valueOr<
-        AnnotatedImageComponent["isFilterInputDisplayed"]
-      >("filter-input-displayed", true);
-      const isOptionsDisplayed = componentReader.valueOr<
-        AnnotatedImageComponent["isOptionsDisplayed"]
-      >("options-displayed", true);
-      const isAnnotationHighlightsDisplayed = componentReader.valueOr<
-        AnnotatedImageComponent["isAnnotationHighlightsDisplayed"]
-      >("annotation-highlights-displayed", true);
-      const isAnnotationTooltipsDisplayed = componentReader.valueOr<
-        AnnotatedImageComponent["isAnnotationTooltipsDisplayed"]
-      >("annotation-tooltips-displayed", true);
-
-      properties = {
-        component: "annotated-image",
-        linkUuid: imageLinks[0]!.uuid,
-        isFilterInputDisplayed,
-        isOptionsDisplayed,
-        isAnnotationHighlightsDisplayed,
-        isAnnotationTooltipsDisplayed,
-      };
-      break;
+      return parseAnnotatedImageComponent(parameters);
     }
     case "audio-player": {
-      type AudioPlayerComponent = Extract<
-        WebElementComponent<T>,
-        { component: "audio-player" }
-      >;
-      const audioLink = findWebsiteLink(
-        websiteLinks,
-        "resource",
-        (link) => link.type === "audio",
-      );
-      if (audioLink == null) {
-        throw new Error(
-          formatComponentError(
-            "Audio link not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      const isSpeedControlsDisplayed = componentReader.valueOr<
-        AudioPlayerComponent["isSpeedControlsDisplayed"]
-      >("speed-controls-displayed", true);
-      const isVolumeControlsDisplayed = componentReader.valueOr<
-        AudioPlayerComponent["isVolumeControlsDisplayed"]
-      >("volume-controls-displayed", true);
-      const isSeekBarDisplayed = componentReader.valueOr<
-        AudioPlayerComponent["isSeekBarDisplayed"]
-      >("seek-bar-displayed", true);
-
-      properties = {
-        component: "audio-player",
-        linkUuid: audioLink.uuid,
-        isSpeedControlsDisplayed,
-        isVolumeControlsDisplayed,
-        isSeekBarDisplayed,
-      };
-      break;
+      return parseAudioPlayerComponent(parameters);
     }
     case "bibliography": {
-      type BibliographyComponent = Extract<
-        WebElementComponent<T>,
-        { component: "bibliography" }
-      >;
-      const bibliographies = parseBibliographyList(
-        elementResource.bibliographies,
-        options,
-      );
-      if (websiteLinks.length === 0 && bibliographies.length === 0) {
-        throw new Error(
-          formatComponentError(
-            "No links found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      const layout = componentReader.valueOr<BibliographyComponent["layout"]>(
-        "layout",
-        "long",
-      );
-      const isSourceDocumentDisplayed = componentReader.valueOr<
-        BibliographyComponent["isSourceDocumentDisplayed"]
-      >("source-document-displayed", true);
-
-      properties = {
-        component: "bibliography",
-        linkUuids: websiteLinks.map((link) => link.uuid),
-        bibliographies,
-        layout,
-        isSourceDocumentDisplayed,
-      };
-      break;
+      return parseBibliographyComponent(parameters);
     }
     case "button": {
-      type ButtonComponent = Extract<
-        WebElementComponent<T>,
-        { component: "button" }
-      >;
-      const variant = componentReader.valueOr<ButtonComponent["variant"]>(
-        "variant",
-        "default",
-      );
-
-      let isExternal = false;
-      let isRelative = false;
-      let href = parseWebsiteLinkTarget(
-        componentReader.valueNode("navigate-to"),
-        context,
-      );
-
-      if (href === null) {
-        href = parseWebsiteLinkTarget(
-          componentReader.valueNode("link-to"),
-          context,
-        );
-
-        if (href === null) {
-          throw new Error(
-            formatComponentError(
-              "Properties “navigate-to” or “link-to” not found",
-              componentName,
-              elementResource,
-            ),
-            { cause: componentProperty },
-          );
-        }
-        isExternal = href.startsWith("http");
-        isRelative = !href.startsWith("/");
-      }
-
-      const startIcon =
-        componentReader.value<ButtonComponent["startIcon"]>("start-icon");
-      const endIcon =
-        componentReader.value<ButtonComponent["endIcon"]>("end-icon");
-
-      let image: WebImage<T> | null = null;
-      const imageLink = findWebsiteLink(
-        websiteLinks,
-        "resource",
-        (link) => link.type === "image" || link.type === "IIIF",
-      );
-      if (imageLink != null) {
-        image = {
-          uuid: imageLink.uuid,
-          label: imageLink.identification.label,
-          width: imageLink.image?.width ?? 0,
-          height: imageLink.image?.height ?? 0,
-          description: imageLink.description,
-          quality: "high",
-        };
-      }
-
-      const childResources = elementResource.resource
-        ? normalizeWebsiteResources(elementResource.resource)
-        : [];
-      const elements: Array<WebElement<T>> = [];
-      for (const childResource of childResources) {
-        const childReader = websitePresentationReader(
-          childResource.properties
-            ? parseSimplifiedProperties(childResource.properties, options)
-            : [],
-        );
-        if (childReader.value("presentation") !== "element") {
-          continue;
-        }
-        const childComponent = childReader
-          .nestedByValue("presentation", "element")
-          .value<string>("component");
-        if (childComponent === "button") {
-          continue;
-        }
-
-        elements.push(parseWebElement(childResource, options, context));
-      }
-
-      properties = {
-        component: "button",
-        variant,
-        href,
-        isExternal,
-        isRelative,
-        label:
-          elementResource.document && "content" in elementResource.document
-            ? parseXMLContent(elementResource.document, options)
-            : null,
-        startIcon,
-        endIcon,
-        image,
-        elements,
-      };
-
-      break;
+      return parseButtonComponent(parameters);
     }
     case "collection": {
-      const setLinks = getWebsiteLinks(websiteLinks, "set");
-      if (setLinks.length === 0) {
-        throw new Error(
-          formatComponentError(
-            "Set links not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      const isFilterResultsBarDisplayed = componentReader.valueOr<
-        CollectionComponent<T>["filter"]["isResultsBarDisplayed"]
-      >("filter-results-bar-displayed", false);
-      const isFilterInputDisplayed = componentReader.valueOr<
-        CollectionComponent<T>["filter"]["isInputDisplayed"]
-      >("filter-input-displayed", false);
-      const isFilterLimitedToInputFilter = componentReader.valueOr<
-        CollectionComponent<T>["filter"]["isLimitedToInputFilter"]
-      >("filter-limit-to-input-filter", false);
-      const isFilterLimitedToLeafPropertyValues = componentReader.valueOr<
-        CollectionComponent<T>["filter"]["isLimitedToLeafPropertyValues"]
-      >("filter-limit-to-leaf-property-values", false);
-      const isFilterSidebarDisplayed = componentReader.valueOr<
-        CollectionComponent<T>["filter"]["isSidebarDisplayed"]
-      >("filter-sidebar-displayed", false);
-      const filterSidebarSort = componentReader.valueOr<
-        CollectionComponent<T>["filter"]["sidebarSort"]
-      >("filter-sidebar-sort", "default");
-      const isFilterSidebarHelpTooltipsDisplayed = componentReader.valueOr<
-        CollectionComponent<T>["filter"]["isSidebarHelpTooltipsDisplayed"]
-      >("filter-sidebar-help-tooltips-displayed", false);
-
-      const componentOptions = parseWebsiteOptions(
-        elementResource.options,
-        options,
-      );
-
-      const propertyOverrides =
-        parseCollectionPropertyOverrides(componentReader);
-
-      properties = {
-        component: "collection",
-        linkUuids: setLinks.map((link) => link.uuid),
-        displayedProperties:
-          parseCollectionDisplayedProperties(componentReader),
-        ...COLLECTION_PROPERTY_DEFAULTS,
-        ...propertyOverrides,
-        image: { ...COLLECTION_IMAGE_DEFAULTS, ...propertyOverrides.image },
-        filter: {
-          isSidebarDisplayed: isFilterSidebarDisplayed,
-          isResultsBarDisplayed: isFilterResultsBarDisplayed,
-          isInputDisplayed: isFilterInputDisplayed,
-          isLimitedToInputFilter: isFilterLimitedToInputFilter,
-          isLimitedToLeafPropertyValues: isFilterLimitedToLeafPropertyValues,
-          sidebarSort: filterSidebarSort,
-          isSidebarHelpTooltipsDisplayed: isFilterSidebarHelpTooltipsDisplayed,
-        },
-        options: componentOptions,
-      };
-      break;
+      return parseCollectionComponent(parameters);
     }
     case "empty-space": {
-      properties = {
-        component: "empty-space",
-        height: componentReader.stringValue("height"),
-        width: componentReader.stringValue("width"),
-      };
-      break;
+      return parseEmptySpaceComponent(parameters);
     }
     case "entries": {
-      type EntriesComponent = Extract<
-        WebElementComponent<T>,
-        { component: "entries" }
-      >;
-      const entriesLink = findWebsiteLinkByCategories(websiteLinks, [
-        "set",
-        "tree",
-      ]);
-      if (entriesLink == null) {
-        throw new Error(
-          formatComponentError(
-            "Entries link not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      const variant = componentReader.valueOr<EntriesComponent["variant"]>(
-        "variant",
-        "entry",
-      );
-      const isFilterInputDisplayed = componentReader.valueOr<
-        EntriesComponent["isFilterInputDisplayed"]
-      >("filter-input-displayed", false);
-
-      properties = {
-        component: "entries",
-        linkUuid: entriesLink.uuid,
-        variant,
-        isFilterInputDisplayed,
-      };
-      break;
+      return parseEntriesComponent(parameters);
     }
     case "iframe": {
-      const webpageLink = findWebsiteLink(
-        websiteLinks,
-        "resource",
-        (link) => link.type === "webpage",
-      );
-      if (webpageLink?.href == null) {
-        throw new Error(
-          formatComponentError("URL not found", componentName, elementResource),
-          { cause: componentProperty },
-        );
-      }
-
-      properties = {
-        component: "iframe",
-        href: transformPermanentIdentificationUrlToItemLink(webpageLink.href),
-        height: componentReader.stringValue("height"),
-        width: componentReader.stringValue("width"),
-      };
-      break;
+      return parseIframeComponent(parameters);
     }
     case "iiif-viewer": {
-      type IIIFViewerComponent = Extract<
-        WebElementComponent<T>,
-        { component: "iiif-viewer" }
-      >;
-      const manifestLink = findWebsiteLink(
-        websiteLinks,
-        "resource",
-        (link) => link.type === "IIIF",
-      );
-      if (manifestLink == null) {
-        throw new Error(
-          formatComponentError(
-            "Manifest link not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      const variant = componentReader.valueOr<IIIFViewerComponent["variant"]>(
-        "variant",
-        "universal-viewer",
-      );
-
-      properties = {
-        component: "iiif-viewer",
-        linkUuid: manifestLink.uuid,
-        variant,
-      };
-      break;
+      return parseIiifViewerComponent(parameters);
     }
     case "image": {
-      type ImageComponent = Extract<
-        WebElementComponent<T>,
-        { component: "image" }
-      >;
-      if (websiteLinks.length === 0) {
-        throw new Error(
-          formatComponentError(
-            "No links found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      const imageQuality = componentReader.valueOr<
-        ImageComponent["imageQuality"]
-      >("image-quality", "high");
-
-      const images: Array<WebImage<T>> = Array.from(websiteLinks, (link) => ({
-        uuid: link.uuid,
-        label: link.identification.label,
-        width: "image" in link ? (link.image?.width ?? 0) : 0,
-        height: "image" in link ? (link.image?.height ?? 0) : 0,
-        description: link.description,
-        quality: imageQuality,
-      }));
-
-      const variant = componentReader.valueOr<ImageComponent["variant"]>(
-        "variant",
-        "default",
-      );
-      const captionLayout = componentReader.valueOr<
-        ImageComponent["captionLayout"]
-      >("layout-caption", "bottom");
-
-      let width: string | null = null;
-      const widthProperty = componentReader.value<string | number>("width");
-      if (widthProperty !== null) {
-        if (typeof widthProperty === "string") {
-          width = widthProperty;
-        } else if (typeof widthProperty === "number") {
-          width = widthProperty.toString();
-        }
-      }
-
-      let height: string | null = null;
-      const heightProperty = componentReader.value<string | number>("height");
-      if (heightProperty !== null) {
-        if (typeof heightProperty === "string") {
-          height = heightProperty;
-        } else if (typeof heightProperty === "number") {
-          height = heightProperty.toString();
-        }
-      }
-
-      const isFullWidth = componentReader.valueOr<
-        ImageComponent["isFullWidth"]
-      >("is-full-width", true);
-      const isFullHeight = componentReader.valueOr<
-        ImageComponent["isFullHeight"]
-      >("is-full-height", true);
-      const captionSource = componentReader.valueOr<
-        ImageComponent["captionSource"]
-      >("source-caption", "name");
-      const altTextSource = componentReader.valueOr<
-        ImageComponent["altTextSource"]
-      >("alt-text-source", "name");
-      const isTransparentBackground = componentReader.valueOr<
-        ImageComponent["isTransparentBackground"]
-      >("is-transparent", false);
-      const isCover = componentReader.valueOr<ImageComponent["isCover"]>(
-        "is-cover",
-        false,
-      );
-      const variantReader = componentReader.nested("variant");
-
-      let carouselOptions: ImageComponent["carouselOptions"] | null = null;
-      if (images.length > 1) {
-        let secondsPerImage = 5;
-
-        if (variant === "carousel") {
-          const secondsPerImageProperty = variantReader.value<string | number>(
-            "seconds-per-image",
-          );
-          if (secondsPerImageProperty !== null) {
-            if (typeof secondsPerImageProperty === "number") {
-              secondsPerImage = secondsPerImageProperty;
-            } else if (typeof secondsPerImageProperty === "string") {
-              secondsPerImage = Number(secondsPerImageProperty);
-            }
-          }
-        }
-
-        carouselOptions = { secondsPerImage };
-      }
-
-      let heroOptions: ImageComponent["heroOptions"] = null;
-      if (variant === "hero") {
-        const isBackgroundImageDisplayed = variantReader.valueOr<
-          NonNullable<
-            ImageComponent["heroOptions"]
-          >["isBackgroundImageDisplayed"]
-        >("background-image-displayed", true);
-        const isDocumentDisplayed = variantReader.valueOr<
-          NonNullable<ImageComponent["heroOptions"]>["isDocumentDisplayed"]
-        >("document-displayed", true);
-
-        heroOptions = { isBackgroundImageDisplayed, isDocumentDisplayed };
-      }
-
-      properties = {
-        component: "image",
-        images,
-        variant,
-        width,
-        height,
-        isFullWidth,
-        isFullHeight,
-        imageQuality,
-        captionLayout,
-        captionSource,
-        altTextSource,
-        isTransparentBackground,
-        isCover,
-        carouselOptions,
-        heroOptions,
-      };
-      break;
+      return parseImageComponent(parameters);
     }
     case "image-gallery": {
-      type ImageGalleryComponent = Extract<
-        WebElementComponent<T>,
-        { component: "image-gallery" }
-      >;
-      const galleryLink = findWebsiteLinkByCategories(websiteLinks, [
-        "set",
-        "tree",
-      ]);
-      if (galleryLink == null) {
-        throw new Error(
-          formatComponentError(
-            "Image gallery link not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      const isFilterInputDisplayed = componentReader.valueOr<
-        ImageGalleryComponent["isFilterInputDisplayed"]
-      >("filter-input-displayed", true);
-
-      properties = {
-        component: "image-gallery",
-        linkUuid: galleryLink.uuid,
-        isFilterInputDisplayed,
-      };
-      break;
+      return parseImageGalleryComponent(parameters);
     }
     case "map": {
-      type MapComponent = Extract<WebElementComponent<T>, { component: "map" }>;
-      const mapLink = findWebsiteLinkByCategories(websiteLinks, [
-        "set",
-        "tree",
-      ]);
-      if (mapLink == null) {
-        throw new Error(
-          formatComponentError(
-            "Map link not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      const isInteractive = componentReader.valueOr<
-        MapComponent["isInteractive"]
-      >("is-interactive", true);
-      const isClustered = componentReader.valueOr<MapComponent["isClustered"]>(
-        "is-clustered",
-        false,
-      );
-      const isUsingPins = componentReader.valueOr<MapComponent["isUsingPins"]>(
-        "is-using-pins",
-        false,
-      );
-      const customBasemap =
-        componentReader.value<MapComponent["customBasemap"]>("custom-basemap");
-
-      let initialBounds: MapComponent["initialBounds"] | null = null;
-      const initialBoundsProperty = componentReader.value<string | number>(
-        "initial-bounds",
-      );
-      if (initialBoundsProperty !== null) {
-        initialBounds = parseBounds(String(initialBoundsProperty));
-      }
-
-      let maximumBounds: MapComponent["maximumBounds"] | null = null;
-      const maximumBoundsProperty = componentReader.value<string | number>(
-        "maximum-bounds",
-      );
-      if (maximumBoundsProperty !== null) {
-        maximumBounds = parseBounds(String(maximumBoundsProperty));
-      }
-
-      const isControlsDisplayed = componentReader.valueOr<
-        MapComponent["isControlsDisplayed"]
-      >("controls-displayed", false);
-      const isFullHeight = componentReader.valueOr<
-        MapComponent["isFullHeight"]
-      >("is-full-height", false);
-
-      properties = {
-        component: "map",
-        linkUuid: mapLink.uuid,
-        customBasemap,
-        initialBounds,
-        maximumBounds,
-        isInteractive,
-        isClustered,
-        isUsingPins,
-        isControlsDisplayed,
-        isFullHeight,
-      };
-      break;
+      return parseMapComponent(parameters);
     }
     case "query": {
-      type QueryComponent = Extract<
-        WebElementComponent<T>,
-        { component: "query" }
-      >;
-      const setLinks = getWebsiteLinks(websiteLinks, "set");
-      if (setLinks.length === 0) {
-        throw new Error(
-          formatComponentError(
-            "Set links not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      if (componentProperty.properties.length === 0) {
-        throw new Error(
-          formatComponentError(
-            "Query properties not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      const items: Array<QueryComponent["items"][number]> = [];
-      for (const queryItem of componentProperty.properties) {
-        const queryReader = websitePresentationReader(queryItem.properties);
-
-        const label = queryReader.multilingualValue("query-prompt", options);
-        if (label === null) {
-          continue;
-        }
-
-        const propertyVariables = queryReader
-          .values("use-property")
-          .filter((value) => value.uuid !== null);
-
-        const queryLanguage = options.languages[0];
-        if (queryLanguage == null) {
-          throw new Error(
-            formatComponentError(
-              "Query language not found",
-              componentName,
-              elementResource,
-            ),
-          );
-        }
-
-        const queries: QueryComponent["items"][number]["queries"] = [];
-        for (const propertyVariable of propertyVariables) {
-          if (propertyVariable.uuid === null) {
-            throw new Error(
-              formatComponentError(
-                "Property variable UUID not found",
-                componentName,
-                elementResource,
-              ),
-              { cause: propertyVariable },
-            );
-          }
-
-          const dataType = propertyVariable.dataType;
-          if (dataType === "coordinate") {
-            throw new Error(
-              formatComponentError(
-                'Query prompts with data type "coordinate" are not supported',
-                componentName,
-                elementResource,
-              ),
-              { cause: propertyVariable },
-            );
-          }
-
-          queries.push({
-            target: "property",
-            propertyVariable: propertyVariable.uuid,
-            dataType,
-            matchMode: "exact",
-            isCaseSensitive: true,
-            language: queryLanguage,
-          });
-        }
-
-        const startIcon =
-          queryReader.value<QueryComponent["items"][number]["startIcon"]>(
-            "start-icon",
-          );
-        const endIcon =
-          queryReader.value<QueryComponent["items"][number]["endIcon"]>(
-            "end-icon",
-          );
-
-        items.push({ label, queries, startIcon, endIcon });
-      }
-
-      if (items.length === 0) {
-        throw new Error(
-          formatComponentError(
-            "No queries found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      const componentOptions = parseWebsiteOptions(
-        elementResource.options,
-        options,
-      );
-
-      const overrideReader = componentReader.nestedByValue(
-        "sub-component-override",
-        "collection",
-      );
-
-      const collectionProperties: QueryComponent["collectionProperties"] =
-        parseCollectionPropertyOverrides(overrideReader);
-
-      const displayedProperties =
-        parseCollectionDisplayedProperties(componentReader);
-      if (displayedProperties != null) {
-        collectionProperties.displayedProperties = displayedProperties;
-      }
-
-      properties = {
-        component: "query",
-        linkUuids: setLinks.map((link) => link.uuid),
-        items,
-        options: componentOptions,
-        collectionProperties,
-      };
-      break;
+      return parseQueryComponent(parameters);
     }
     case "table": {
-      const tableLink = findWebsiteLink(websiteLinks, "set");
-      if (tableLink == null) {
-        throw new Error(
-          formatComponentError(
-            "Table link not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      properties = { component: "table", linkUuid: tableLink.uuid };
-      break;
+      return parseTableComponent(parameters);
     }
     case "search-bar": {
-      type SearchBarComponent = Extract<
-        WebElementComponent<T>,
-        { component: "search-bar" }
-      >;
-      const queryVariant = componentReader.valueOr<
-        SearchBarComponent["queryVariant"]
-      >("query-variant", "submit");
-      const boundElementUuid = componentReader.uuid("bound-element");
-      const href = parseWebsiteLinkTarget(
-        componentReader.valueNode("link-to"),
-        context,
-      );
-
-      if (boundElementUuid === null && href === null) {
-        throw new Error(
-          formatComponentError(
-            "Bound element or href not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      const placeholder = componentReader.multilingualValue(
-        "placeholder-text",
-        options,
-      );
-
-      const baseFilterQueries = componentReader.value<
-        SearchBarComponent["baseFilterQueries"]
-      >("base-filter-queries");
-
-      properties = {
-        component: "search-bar",
-        queryVariant,
-        placeholder,
-        baseFilterQueries:
-          baseFilterQueries
-            ?.replaceAll(String.raw`\{`, "{")
-            .replaceAll(String.raw`\}`, "}") ?? null,
-        boundElementUuid,
-        href,
-      };
-      break;
+      return parseSearchBarComponent(parameters);
     }
     case "text": {
-      type TextComponent = Extract<
-        WebElementComponent<T>,
-        { component: "text" }
-      >;
-      type TextVariantWithName<U extends TextComponent["variant"]["name"]> =
-        Extract<TextComponent["variant"], { name: U }>;
-      const content =
-        elementResource.document && "content" in elementResource.document
-          ? parseXMLContent(elementResource.document, options)
-          : null;
-      if (content == null) {
-        throw new Error(
-          formatComponentError(
-            "Content not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      let variantName: TextComponent["variant"]["name"] = "block";
-      let variant: TextComponent["variant"];
-
-      const variantProperty = componentReader.property("variant");
-      if (variantProperty !== null) {
-        const variantReader = websitePresentationReader(
-          variantProperty.properties,
-        );
-        variantName = variantProperty.values[0]!
-          .content as TextComponent["variant"]["name"];
-
-        switch (variantName) {
-          case "paragraph": {
-            variant = {
-              name: variantName,
-              size: variantReader.valueOr<
-                TextVariantWithName<"paragraph">["size"]
-              >("size", "md"),
-            };
-            break;
-          }
-          case "label": {
-            variant = {
-              name: variantName,
-              size: variantReader.valueOr<TextVariantWithName<"label">["size"]>(
-                "size",
-                "md",
-              ),
-            };
-            break;
-          }
-          case "heading": {
-            variant = {
-              name: variantName,
-              size: variantReader.valueOr<
-                TextVariantWithName<"heading">["size"]
-              >("size", "md"),
-            };
-            break;
-          }
-          case "display": {
-            variant = {
-              name: variantName,
-              size: variantReader.valueOr<
-                TextVariantWithName<"display">["size"]
-              >("size", "md"),
-            };
-            break;
-          }
-          default: {
-            variant = { name: variantName };
-          }
-        }
-      } else {
-        variant = { name: variantName };
-      }
-
-      const headingLevel =
-        componentReader.value<TextComponent["headingLevel"]>("heading-level");
-
-      properties = { component: "text", variant, headingLevel, content };
-      break;
+      return parseTextComponent(parameters);
     }
     case "timeline": {
-      const timelineLink = findWebsiteLink(websiteLinks, "tree");
-      if (timelineLink == null) {
-        throw new Error(
-          formatComponentError(
-            "Timeline link not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      properties = { component: "timeline", linkUuid: timelineLink.uuid };
-      break;
+      return parseTimelineComponent(parameters);
     }
     case "video": {
-      const videoLink = findWebsiteLink(
-        websiteLinks,
-        "resource",
-        (link) => link.type === "video",
-      );
-      if (videoLink == null) {
-        throw new Error(
-          formatComponentError(
-            "Video link not found",
-            componentName,
-            elementResource,
-          ),
-          { cause: componentProperty },
-        );
-      }
-
-      const isChaptersDisplayed = componentReader.valueOr<
-        Extract<
-          WebElementComponent<T>,
-          { component: "video" }
-        >["isChaptersDisplayed"]
-      >("chapters-displayed", true);
-
-      properties = {
-        component: "video",
-        linkUuid: videoLink.uuid,
-        isChaptersDisplayed,
-      };
-      break;
+      return parseVideoComponent(parameters);
     }
     default: {
       throw new Error(
@@ -1755,8 +1935,6 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       );
     }
   }
-
-  return properties;
 }
 
 function parseWebTitle<T extends ReadonlyArray<string>>(
@@ -1826,9 +2004,10 @@ function parseWebElement<T extends ReadonlyArray<string>>(
     options,
   );
 
-  const elementProperties = elementResource.properties?.property
-    ? parseSimplifiedProperties(elementResource.properties, options)
-    : [];
+  const elementProperties = parseSimplifiedProperties(
+    elementResource.properties,
+    options,
+  );
   const elementReader = websitePresentationReader(elementProperties);
 
   const presentationProperty = elementReader.requiredProperty(
@@ -1875,6 +2054,85 @@ function parseWebElement<T extends ReadonlyArray<string>>(
   };
 }
 
+function isSidebarResource<T extends ReadonlyArray<string>>(
+  resource: XMLWebsiteResource,
+  options: ParserOptions<T>,
+): boolean {
+  const resourceProperties = parseSimplifiedProperties(
+    resource.properties,
+    options,
+  );
+  const resourceReader = websitePresentationReader(resourceProperties);
+
+  return (
+    resourceReader.value("presentation") === "element" &&
+    resourceReader
+      .nestedByValue("presentation", "element")
+      .value("component") === "sidebar"
+  );
+}
+
+function parseWebBlockItems<T extends ReadonlyArray<string>>(
+  resources: Array<XMLWebsiteResource>,
+  options: ParserOptions<T>,
+  context: WebsiteParseContext<T>,
+): Array<WebBlockItem<T>> {
+  const items: Array<WebBlockItem<T>> = [];
+  for (const resource of resources) {
+    const resourceProperties = parseSimplifiedProperties(
+      resource.properties,
+      options,
+    );
+
+    const resourceType = websitePresentationReader(resourceProperties).value<
+      "element" | "block"
+    >("presentation");
+    if (resourceType === null) {
+      continue;
+    }
+
+    switch (resourceType) {
+      case "element": {
+        items.push(parseWebElement(resource, options, context));
+        break;
+      }
+      case "block": {
+        const block = parseWebBlock(resource, options, context);
+        if (block) {
+          items.push(block);
+        }
+        break;
+      }
+    }
+  }
+
+  return items;
+}
+
+function parseWebpageRedirect<T extends ReadonlyArray<string>>(
+  redirectValue: PropertyValueContent<T> | null,
+  context: WebsiteParseContext<T>,
+): Webpage<T>["properties"]["redirect"] {
+  const redirectTarget = parseWebsiteLinkTarget(redirectValue, context);
+  if (redirectTarget != null) {
+    if (redirectValue?.href == null && redirectValue?.uuid != null) {
+      return { type: "page", slug: redirectTarget, uuid: redirectValue.uuid };
+    }
+
+    return {
+      type: "url",
+      href: redirectTarget,
+      isExternal: redirectTarget.startsWith("http"),
+    };
+  }
+
+  if (redirectValue?.uuid != null) {
+    return { type: "item", uuid: redirectValue.uuid, pageType: "item" };
+  }
+
+  return null;
+}
+
 /**
  * Parses raw webpage data into a standardized Webpage structure
  *
@@ -1887,9 +2145,10 @@ function parseWebpage<T extends ReadonlyArray<string>>(
   context: WebsiteParseContext<T>,
   slugPrefix?: string,
 ): Webpage<T> | null {
-  const webpageProperties = webpageResource.properties
-    ? parseSimplifiedProperties(webpageResource.properties, options)
-    : [];
+  const webpageProperties = parseSimplifiedProperties(
+    webpageResource.properties,
+    options,
+  );
   const webpageReader = websitePresentationReader(webpageProperties);
 
   if (webpageReader.value("presentation") !== "page") {
@@ -1941,50 +2200,15 @@ function parseWebpage<T extends ReadonlyArray<string>>(
     (link) => link.type === "image" || link.type === "IIIF",
   );
 
-  const webpageResources =
-    webpageResource.resource != null
-      ? normalizeWebsiteResources(webpageResource.resource)
-      : [];
+  const webpageResources = normalizeWebsiteResources(webpageResource.resource);
 
-  const items: Array<WebElement<T> | WebBlock<T>> = [];
-  for (const resource of webpageResources) {
-    const resourceProperties =
-      resource.properties != null
-        ? parseSimplifiedProperties(resource.properties, options)
-        : [];
-
-    const resourceType = websitePresentationReader(resourceProperties).value<
-      "element" | "block"
-    >("presentation");
-    if (resourceType === null) {
-      continue;
-    }
-
-    switch (resourceType) {
-      case "element": {
-        const componentName = websitePresentationReader(resourceProperties)
-          .nestedByValue("presentation", "element")
-          .value<string>("component");
-
-        if (componentName === "sidebar") {
-          continue;
-        }
-
-        const element = parseWebElement(resource, options, context);
-        items.push(element);
-        break;
-      }
-      case "block": {
-        const block = parseWebBlock(resource, options, context);
-        if (block) {
-          items.push(block);
-        }
-        break;
-      }
-    }
-  }
-
-  returnWebpage.items = items;
+  returnWebpage.items = parseWebBlockItems(
+    webpageResources.filter(
+      (resource) => !isSidebarResource(resource, options),
+    ),
+    options,
+    context,
+  );
 
   returnWebpage.webpages = parseWebpages(
     webpageResources,
@@ -2032,29 +2256,10 @@ function parseWebpage<T extends ReadonlyArray<string>>(
       Webpage<T>["properties"]["isNavbarSearchBarDisplayed"]
     >("navbar-search-bar-displayed", true);
 
-    const redirectValue = pageReader.valueNode("redirect-to");
-    const redirectTarget = parseWebsiteLinkTarget(redirectValue, context);
-    if (redirectTarget != null) {
-      if (redirectValue?.href == null && redirectValue?.uuid != null) {
-        returnWebpage.properties.redirect = {
-          type: "page",
-          slug: redirectTarget,
-          uuid: redirectValue.uuid,
-        };
-      } else {
-        returnWebpage.properties.redirect = {
-          type: "url",
-          href: redirectTarget,
-          isExternal: redirectTarget.startsWith("http"),
-        };
-      }
-    } else if (redirectValue?.uuid != null) {
-      returnWebpage.properties.redirect = {
-        type: "item",
-        uuid: redirectValue.uuid,
-        pageType: "item",
-      };
-    }
+    returnWebpage.properties.redirect = parseWebpageRedirect(
+      pageReader.valueNode("redirect-to"),
+      context,
+    );
   }
 
   if (imageLink != null) {
@@ -2158,101 +2363,41 @@ function parseSidebar<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
   context: WebsiteParseContext<T>,
 ): WebSidebar<T> | null {
-  let returnSidebar: WebSidebar<T> | null = null;
+  const sidebarResource = resources.find((resource) =>
+    isSidebarResource(resource, options),
+  );
+  if (sidebarResource == null) {
+    return null;
+  }
 
-  const items: WebSidebar<T>["items"] = [];
-  let title: WebTitle<T> | null = null;
-  let layout: "start" | "end" = "start";
-  let mobileLayout: "default" | "inline" = "default";
-  const cssStyles: WebSidebar<T>["cssStyles"] = {
-    default: [],
-    tablet: [],
-    mobile: [],
-  };
+  const sidebarBaseProperties = parseSimplifiedProperties(
+    sidebarResource.properties,
+    options,
+  );
+  const sidebarResources = normalizeWebsiteResources(sidebarResource.resource);
+  const items = parseWebBlockItems(sidebarResources, options, context);
+  if (items.length === 0) {
+    return null;
+  }
 
-  const sidebarResource = resources.find((resource) => {
-    const resourceProperties = resource.properties
-      ? parseSimplifiedProperties(resource.properties, options)
-      : [];
-    const resourceReader = websitePresentationReader(resourceProperties);
+  const sidebarReader = websitePresentationReader(sidebarBaseProperties)
+    .nestedByValue("presentation", "element")
+    .nestedByValue("component", "sidebar");
 
-    return (
-      resourceReader.value("presentation") === "element" &&
-      resourceReader
-        .nestedByValue("presentation", "element")
-        .value("component") === "sidebar"
-    );
-  });
-  if (sidebarResource != null) {
-    const sidebarBaseProperties = sidebarResource.properties
-      ? parseSimplifiedProperties(sidebarResource.properties, options)
-      : [];
-
-    title = parseWebTitle(
+  return {
+    isDisplayed: true,
+    items,
+    title: parseWebTitle(
       sidebarBaseProperties,
       parseIdentification(sidebarResource.identification, options),
-    );
-
-    const sidebarReader = websitePresentationReader(sidebarBaseProperties)
-      .nestedByValue("presentation", "element")
-      .nestedByValue("component", "sidebar");
-
-    layout = sidebarReader.valueOr<typeof layout>("layout", "start");
-    mobileLayout = sidebarReader.valueOr<typeof mobileLayout>(
+    ),
+    layout: sidebarReader.valueOr<WebSidebar<T>["layout"]>("layout", "start"),
+    mobileLayout: sidebarReader.valueOr<WebSidebar<T>["mobileLayout"]>(
       "layout-mobile",
       "default",
-    );
-
-    const parsedCssStyles = parseResponsiveCssStyles(sidebarBaseProperties);
-    cssStyles.default = parsedCssStyles.default;
-    cssStyles.tablet = parsedCssStyles.tablet;
-    cssStyles.mobile = parsedCssStyles.mobile;
-
-    const sidebarResources = sidebarResource.resource
-      ? normalizeWebsiteResources(sidebarResource.resource)
-      : [];
-
-    for (const resource of sidebarResources) {
-      const resourceProperties = resource.properties
-        ? parseSimplifiedProperties(resource.properties, options)
-        : [];
-
-      const resourceType = websitePresentationReader(resourceProperties).value<
-        "element" | "block"
-      >("presentation");
-      if (resourceType === null) {
-        continue;
-      }
-
-      switch (resourceType) {
-        case "element": {
-          const element = parseWebElement(resource, options, context);
-          items.push(element);
-          break;
-        }
-        case "block": {
-          const block = parseWebBlock(resource, options, context);
-          if (block) {
-            items.push(block);
-          }
-          break;
-        }
-      }
-    }
-  }
-
-  if (title != null && items.length > 0) {
-    returnSidebar = {
-      isDisplayed: true,
-      items,
-      title,
-      layout,
-      mobileLayout,
-      cssStyles,
-    };
-  }
-
-  return returnSidebar;
+    ),
+    cssStyles: parseResponsiveCssStyles(sidebarBaseProperties),
+  };
 }
 
 function parseWebAccordionItem<T extends ReadonlyArray<string>>(
@@ -2267,36 +2412,100 @@ function parseWebAccordionItem<T extends ReadonlyArray<string>>(
     context,
   ) as WebAccordionItem<T>["trigger"];
 
-  const items: Array<WebBlockItem<T>> = [];
-  for (const resource of childResources) {
-    const resourceProperties = resource.properties
-      ? parseSimplifiedProperties(resource.properties, options)
-      : [];
+  const items = parseWebBlockItems(childResources, options, context);
 
-    const resourceType = websitePresentationReader(resourceProperties).value<
-      "element" | "block"
-    >("presentation");
+  return { uuid: trigger.uuid, type: "accordion-item", trigger, items };
+}
+
+function parseBlockOverwrite<T extends ReadonlyArray<string>>(
+  overwriteReader: WebsitePresentationReader<T>,
+  isDefaultLayoutAccordion: boolean,
+): WebBlock<T>["properties"]["tablet"] {
+  if (overwriteReader.size === 0) {
+    return null;
+  }
+
+  type BlockOverwrite = NonNullable<WebBlock<T>["properties"]["tablet"]>;
+  const properties: BlockOverwrite = {
+    layout:
+      overwriteReader.value<BlockOverwrite["layout"]>("layout") ?? undefined,
+    wrap: overwriteReader.value<BlockOverwrite["wrap"]>("wrap") ?? undefined,
+    spacing:
+      overwriteReader.value<BlockOverwrite["spacing"]>("spacing") ?? undefined,
+    gap: overwriteReader.value<BlockOverwrite["gap"]>("gap") ?? undefined,
+    isAccordionEnabled: undefined,
+    isAccordionExpandedByDefault: undefined,
+    isAccordionSidebarDisplayed: undefined,
+  };
+
+  if (isDefaultLayoutAccordion || properties.layout === "accordion") {
+    properties.isAccordionEnabled =
+      overwriteReader.value<BlockOverwrite["isAccordionEnabled"]>(
+        "accordion-enabled",
+      ) ?? undefined;
+    properties.isAccordionExpandedByDefault =
+      overwriteReader.value<BlockOverwrite["isAccordionExpandedByDefault"]>(
+        "accordion-expanded",
+      ) ?? undefined;
+    properties.isAccordionSidebarDisplayed =
+      overwriteReader.value<BlockOverwrite["isAccordionSidebarDisplayed"]>(
+        "accordion-sidebar-displayed",
+      ) ?? undefined;
+  }
+
+  const cleanedProperties = cleanObject(properties);
+
+  return Object.keys(cleanedProperties).length > 0 ? cleanedProperties : null;
+}
+
+function parseAccordionAwareBlockItems<T extends ReadonlyArray<string>>(
+  blockResources: Array<XMLWebsiteResource>,
+  options: ParserOptions<T>,
+  context: WebsiteParseContext<T>,
+  isSupportingAccordionItems: boolean,
+): Array<WebAccordionItem<T> | WebBlockItem<T>> {
+  const blockItems: Array<WebAccordionItem<T> | WebBlockItem<T>> = [];
+  for (const resource of blockResources) {
+    const resourceProperties = parseSimplifiedProperties(
+      resource.properties,
+      options,
+    );
+    const resourceReader = websitePresentationReader(resourceProperties);
+
+    const resourceType = resourceReader.value<"element" | "block">(
+      "presentation",
+    );
     if (resourceType === null) {
       continue;
     }
 
     switch (resourceType) {
       case "element": {
-        const element = parseWebElement(resource, options, context);
-        items.push(element);
+        const childResources = normalizeWebsiteResources(resource.resource);
+        const componentType = resourceReader
+          .nestedByValue("presentation", "element")
+          .value<string>("component");
+
+        blockItems.push(
+          isSupportingAccordionItems &&
+            componentType === "text" &&
+            childResources.length > 0
+            ? parseWebAccordionItem(resource, childResources, options, context)
+            : parseWebElement(resource, options, context),
+        );
         break;
       }
       case "block": {
         const block = parseWebBlock(resource, options, context);
         if (block) {
-          items.push(block);
+          blockItems.push(block);
         }
         break;
       }
     }
   }
 
-  return { uuid: trigger.uuid, type: "accordion-item", trigger, items };
+  return blockItems;
 }
 
 /**
@@ -2310,9 +2519,10 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
   context: WebsiteParseContext<T>,
 ): WebBlock<T> | null {
-  const blockProperties = blockResource.properties
-    ? parseSimplifiedProperties(blockResource.properties, options)
-    : [];
+  const blockProperties = parseSimplifiedProperties(
+    blockResource.properties,
+    options,
+  );
 
   const returnBlock: WebBlock<T> = {
     uuid: blockResource.uuid,
@@ -2368,185 +2578,31 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
       WebBlock<T>["properties"]["default"]["gap"]
     >("gap", null);
 
-    const tabletOverwriteReader = blockReader.nested("overwrite-tablet");
-    if (tabletOverwriteReader.size > 0) {
-      const propertiesTablet: NonNullable<WebBlock<T>["properties"]["tablet"]> =
-        {
-          layout:
-            tabletOverwriteReader.value<
-              NonNullable<WebBlock<T>["properties"]["tablet"]>["layout"]
-            >("layout") ?? undefined,
-          wrap:
-            tabletOverwriteReader.value<
-              NonNullable<WebBlock<T>["properties"]["tablet"]>["wrap"]
-            >("wrap") ?? undefined,
-          spacing:
-            tabletOverwriteReader.value<
-              NonNullable<WebBlock<T>["properties"]["tablet"]>["spacing"]
-            >("spacing") ?? undefined,
-          gap:
-            tabletOverwriteReader.value<
-              NonNullable<WebBlock<T>["properties"]["tablet"]>["gap"]
-            >("gap") ?? undefined,
-          isAccordionEnabled: undefined,
-          isAccordionExpandedByDefault: undefined,
-          isAccordionSidebarDisplayed: undefined,
-        };
-
-      if (
-        propertiesTablet.layout === "accordion" ||
-        returnBlock.properties.default.layout === "accordion"
-      ) {
-        propertiesTablet.isAccordionEnabled =
-          tabletOverwriteReader.value<
-            NonNullable<
-              WebBlock<T>["properties"]["tablet"]
-            >["isAccordionEnabled"]
-          >("accordion-enabled") ?? undefined;
-
-        propertiesTablet.isAccordionExpandedByDefault =
-          tabletOverwriteReader.value<
-            NonNullable<
-              WebBlock<T>["properties"]["tablet"]
-            >["isAccordionExpandedByDefault"]
-          >("accordion-expanded") ?? undefined;
-
-        propertiesTablet.isAccordionSidebarDisplayed =
-          tabletOverwriteReader.value<
-            NonNullable<
-              WebBlock<T>["properties"]["tablet"]
-            >["isAccordionSidebarDisplayed"]
-          >("accordion-sidebar-displayed") ?? undefined;
-      }
-
-      const cleanedPropertiesTablet = cleanObject(propertiesTablet);
-
-      if (Object.keys(cleanedPropertiesTablet).length > 0) {
-        returnBlock.properties.tablet = cleanedPropertiesTablet;
-      }
-    }
-
-    const mobileOverwriteReader = blockReader.nested("overwrite-mobile");
-    if (mobileOverwriteReader.size > 0) {
-      const propertiesMobile: NonNullable<WebBlock<T>["properties"]["mobile"]> =
-        {
-          layout:
-            mobileOverwriteReader.value<
-              NonNullable<WebBlock<T>["properties"]["default"]>["layout"]
-            >("layout") ?? undefined,
-          wrap:
-            mobileOverwriteReader.value<
-              NonNullable<WebBlock<T>["properties"]["mobile"]>["wrap"]
-            >("wrap") ?? undefined,
-          spacing:
-            mobileOverwriteReader.value<
-              NonNullable<WebBlock<T>["properties"]["default"]>["spacing"]
-            >("spacing") ?? undefined,
-          gap:
-            mobileOverwriteReader.value<
-              NonNullable<WebBlock<T>["properties"]["default"]>["gap"]
-            >("gap") ?? undefined,
-          isAccordionEnabled: undefined,
-          isAccordionExpandedByDefault: undefined,
-          isAccordionSidebarDisplayed: undefined,
-        };
-
-      if (
-        propertiesMobile.layout === "accordion" ||
-        returnBlock.properties.default.layout === "accordion"
-      ) {
-        propertiesMobile.isAccordionEnabled =
-          mobileOverwriteReader.value<
-            NonNullable<
-              WebBlock<T>["properties"]["mobile"]
-            >["isAccordionEnabled"]
-          >("accordion-enabled") ?? undefined;
-
-        propertiesMobile.isAccordionExpandedByDefault =
-          mobileOverwriteReader.value<
-            NonNullable<
-              WebBlock<T>["properties"]["mobile"]
-            >["isAccordionExpandedByDefault"]
-          >("accordion-expanded") ?? undefined;
-
-        propertiesMobile.isAccordionSidebarDisplayed =
-          mobileOverwriteReader.value<
-            NonNullable<
-              WebBlock<T>["properties"]["mobile"]
-            >["isAccordionSidebarDisplayed"]
-          >("accordion-sidebar-displayed") ?? undefined;
-      }
-
-      const cleanedPropertiesMobile = cleanObject(propertiesMobile);
-
-      if (Object.keys(cleanedPropertiesMobile).length > 0) {
-        returnBlock.properties.mobile = cleanedPropertiesMobile;
-      }
-    }
+    const isDefaultLayoutAccordion =
+      returnBlock.properties.default.layout === "accordion";
+    returnBlock.properties.tablet = parseBlockOverwrite(
+      blockReader.nested("overwrite-tablet"),
+      isDefaultLayoutAccordion,
+    );
+    returnBlock.properties.mobile = parseBlockOverwrite(
+      blockReader.nested("overwrite-mobile"),
+      isDefaultLayoutAccordion,
+    );
   }
 
-  const blockResources = blockResource.resource
-    ? normalizeWebsiteResources(blockResource.resource)
-    : [];
+  const blockResources = normalizeWebsiteResources(blockResource.resource);
 
   const isSupportingAccordionItems =
     returnBlock.properties.default.layout === "accordion" ||
     returnBlock.properties.tablet?.layout === "accordion" ||
     returnBlock.properties.mobile?.layout === "accordion";
 
-  const blockItems: Array<WebAccordionItem<T> | WebBlockItem<T>> = [];
-  for (const resource of blockResources) {
-    const resourceProperties = resource.properties
-      ? parseSimplifiedProperties(resource.properties, options)
-      : [];
-    const resourceReader = websitePresentationReader(resourceProperties);
-
-    const resourceType = resourceReader.value<"element" | "block">(
-      "presentation",
-    );
-    if (resourceType === null) {
-      continue;
-    }
-
-    switch (resourceType) {
-      case "element": {
-        const childResources = resource.resource
-          ? normalizeWebsiteResources(resource.resource)
-          : [];
-        const componentType = resourceReader
-          .nestedByValue("presentation", "element")
-          .value<string>("component");
-
-        if (
-          isSupportingAccordionItems &&
-          componentType === "text" &&
-          childResources.length > 0
-        ) {
-          const item = parseWebAccordionItem(
-            resource,
-            childResources,
-            options,
-            context,
-          );
-          blockItems.push(item);
-          break;
-        }
-
-        const element = parseWebElement(resource, options, context);
-        blockItems.push(element);
-        break;
-      }
-      case "block": {
-        const block = parseWebBlock(resource, options, context);
-        if (block) {
-          blockItems.push(block);
-        }
-        break;
-      }
-    }
-  }
-
-  returnBlock.items = blockItems;
+  returnBlock.items = parseAccordionAwareBlockItems(
+    blockResources,
+    options,
+    context,
+    isSupportingAccordionItems,
+  );
 
   returnBlock.cssStyles = parseResponsiveCssStyles(blockProperties);
 
@@ -3015,10 +3071,7 @@ export function parseWebsite<
 >(data: XMLWebsiteData, options?: { languages?: T }): Website<T> {
   const rawOchre = data.result.ochre;
   const metadataLanguages = parseMetadataLanguages(rawOchre);
-  const languages = resolveLanguages(
-    options?.languages ?? ([] as unknown as T),
-    metadataLanguages,
-  );
+  const languages = resolveLanguages(options?.languages, metadataLanguages);
   const parserOptions: ParserOptions<T> = { languages };
   const defaultLanguage = resolveDefaultLanguage(rawOchre, languages);
   const websiteTree = rawOchre.tree[0];

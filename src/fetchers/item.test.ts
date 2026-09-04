@@ -22,6 +22,7 @@ import type {
   XMLData,
   XMLDataItem,
   XMLIdentification,
+  XMLItemLinks,
   XMLLink,
   XMLMetadata,
   XMLNote,
@@ -331,45 +332,12 @@ function getTopLevelRawItems(
   rawData: XMLData,
   category: ItemCategory,
 ): Array<XMLTopLevelItem> {
-  const rawOchre = rawData.result.ochre;
-  switch (category) {
-    case "tree": {
-      return "tree" in rawOchre ? rawOchre.tree : [];
-    }
-    case "bibliography": {
-      return "bibliography" in rawOchre ? rawOchre.bibliography : [];
-    }
-    case "concept": {
-      return "concept" in rawOchre ? rawOchre.concept : [];
-    }
-    case "spatialUnit": {
-      return "spatialUnit" in rawOchre ? rawOchre.spatialUnit : [];
-    }
-    case "period": {
-      return "period" in rawOchre ? rawOchre.period : [];
-    }
-    case "person": {
-      return "person" in rawOchre ? rawOchre.person : [];
-    }
-    case "propertyVariable": {
-      if ("propertyVariable" in rawOchre) {
-        return rawOchre.propertyVariable;
-      }
-      return "variable" in rawOchre ? rawOchre.variable : [];
-    }
-    case "propertyValue": {
-      return "propertyValue" in rawOchre ? rawOchre.propertyValue : [];
-    }
-    case "resource": {
-      return "resource" in rawOchre ? rawOchre.resource : [];
-    }
-    case "text": {
-      return "text" in rawOchre ? rawOchre.text : [];
-    }
-    case "set": {
-      return "set" in rawOchre ? rawOchre.set : [];
-    }
+  const rawItems: XMLItemLinks = rawData.result.ochre;
+  if (category === "propertyVariable") {
+    return rawItems.propertyVariable ?? rawItems.variable ?? [];
   }
+
+  return rawItems[category] ?? [];
 }
 
 function expectMetadataMatchesRaw(
@@ -616,6 +584,60 @@ function expectBaseItemMatchesRaw(
   expect(parsedItem.events).toHaveLength(rawItem.events?.event.length ?? 0);
 }
 
+function getRawPropertyValueLabel(
+  rawValue: NonNullable<XMLProperty["value"]>[number],
+): string | null {
+  if (rawValue.content != null) {
+    return parseContentLikeForTest(rawValue);
+  }
+
+  return rawValue.payload != null && rawValue.payload !== ""
+    ? rawValue.payload
+    : null;
+}
+
+function getExpectedPropertyValueContent(
+  rawValue: NonNullable<XMLProperty["value"]>[number],
+  rawLabel: string | null,
+  dataType: ParsedPropertyFields["values"][number]["dataType"],
+): string | number | boolean {
+  const expectedContent =
+    rawValue.rawValue ?? rawValue.payload ?? rawLabel ?? rawValue.slug ?? "";
+
+  if (dataType === "boolean") {
+    return expectedContent === "true";
+  }
+
+  if (["integer", "decimal", "time"].includes(dataType)) {
+    const expectedNumericContent = Number(expectedContent);
+    return Number.isNaN(expectedNumericContent) ? 0 : expectedNumericContent;
+  }
+
+  return expectedContent;
+}
+
+function expectPropertyValueMatchesRaw(
+  rawValue: NonNullable<XMLProperty["value"]>[number],
+  parsedValue: ParsedPropertyFields["values"][number],
+): void {
+  const rawLabel = getRawPropertyValueLabel(rawValue);
+
+  expect(parsedValue.uuid).toBe(
+    rawValue.uuid == null || rawValue.uuid === "" ? null : rawValue.uuid,
+  );
+  expect(parsedValue.category).toBe(rawValue.category ?? null);
+  expect(parsedValue.type).toBe(rawValue.type ?? null);
+  expect(parsedValue.content).toBe(
+    getExpectedPropertyValueContent(rawValue, rawLabel, parsedValue.dataType),
+  );
+
+  if (rawLabel != null) {
+    expect(parsedValue.label?.getText("eng")).toBe(rawLabel);
+  } else {
+    expect(parsedValue.label).toBeNull();
+  }
+}
+
 function expectPropertyFieldsMatchRaw(
   rawProperty: XMLProperty,
   parsedProperty: ParsedPropertyFields,
@@ -630,45 +652,11 @@ function expectPropertyFieldsMatchRaw(
   expect(parsedProperty.variable.relation).toBe(
     rawProperty.label.relation ?? null,
   );
-  expect(parsedProperty.values).toHaveLength(rawProperty.value?.length ?? 0);
+  const rawValues = rawProperty.value ?? [];
+  expect(parsedProperty.values).toHaveLength(rawValues.length);
 
-  for (
-    let valueIndex = 0;
-    valueIndex < (rawProperty.value?.length ?? 0);
-    valueIndex += 1
-  ) {
-    const rawValue = rawProperty.value![valueIndex]!;
-    const parsedValue = parsedProperty.values[valueIndex]!;
-    const rawLabel =
-      rawValue.content != null
-        ? parseContentLikeForTest(rawValue)
-        : rawValue.payload != null && rawValue.payload !== ""
-          ? rawValue.payload
-          : null;
-    const expectedContent =
-      rawValue.rawValue ?? rawValue.payload ?? rawLabel ?? rawValue.slug ?? "";
-    const expectedNumericContent = Number(expectedContent);
-
-    expect(parsedValue.uuid).toBe(
-      rawValue.uuid == null || rawValue.uuid === "" ? null : rawValue.uuid,
-    );
-    expect(parsedValue.category).toBe(rawValue.category ?? null);
-    expect(parsedValue.type).toBe(rawValue.type ?? null);
-    expect(parsedValue.content).toBe(
-      parsedValue.dataType === "boolean"
-        ? expectedContent === "true"
-        : ["integer", "decimal", "time"].includes(parsedValue.dataType)
-          ? Number.isNaN(expectedNumericContent)
-            ? 0
-            : expectedNumericContent
-          : expectedContent,
-    );
-
-    if (rawLabel != null) {
-      expect(parsedValue.label?.getText("eng")).toBe(rawLabel);
-    } else {
-      expect(parsedValue.label).toBeNull();
-    }
+  for (const [valueIndex, rawValue] of rawValues.entries()) {
+    expectPropertyValueMatchesRaw(rawValue, parsedProperty.values[valueIndex]!);
   }
 }
 
@@ -791,6 +779,40 @@ function countItemsInHierarchy(
   return count;
 }
 
+const RAW_SET_ITEM_KEYS = [
+  { key: "tree", category: "tree" },
+  { key: "bibliography", category: "bibliography" },
+  { key: "concept", category: "concept" },
+  { key: "spatialUnit", category: "spatialUnit" },
+  { key: "period", category: "period" },
+  { key: "person", category: "person" },
+  { key: "propertyVariable", category: "propertyVariable" },
+  { key: "variable", category: "propertyVariable" },
+  { key: "propertyValue", category: "propertyValue" },
+  { key: "resource", category: "resource" },
+  { key: "text", category: "text" },
+  { key: "set", category: "set" },
+] as const satisfies ReadonlyArray<{
+  key: keyof XMLItemHierarchy;
+  category: SetItemCategory;
+}>;
+
+function flattenRawResources(
+  resources: XMLItemHierarchy["resource"],
+): Array<XMLResource> {
+  const flattened: Array<XMLResource> = [];
+  const rawResources = resources ?? [];
+  for (const resource of rawResources) {
+    if ("uuid" in resource) {
+      flattened.push(resource);
+    } else {
+      flattened.push(...resource.resource);
+    }
+  }
+
+  return flattened;
+}
+
 function getRawSetItemEntries(
   hierarchy: XMLItemHierarchy | undefined,
 ): Array<RawSetItemEntry> {
@@ -799,60 +821,14 @@ function getRawSetItemEntries(
     return entries;
   }
 
-  const trees = hierarchy.tree ?? [];
-  for (const tree of trees) {
-    entries.push({ category: "tree", item: tree });
-  }
-  const bibliographies = hierarchy.bibliography ?? [];
-  for (const bibliography of bibliographies) {
-    entries.push({ category: "bibliography", item: bibliography });
-  }
-  const concepts = hierarchy.concept ?? [];
-  for (const concept of concepts) {
-    entries.push({ category: "concept", item: concept });
-  }
-  const spatialUnits = hierarchy.spatialUnit ?? [];
-  for (const spatialUnit of spatialUnits) {
-    entries.push({ category: "spatialUnit", item: spatialUnit });
-  }
-  const periods = hierarchy.period ?? [];
-  for (const period of periods) {
-    entries.push({ category: "period", item: period });
-  }
-  const persons = hierarchy.person ?? [];
-  for (const person of persons) {
-    entries.push({ category: "person", item: person });
-  }
-  const propertyVariables = hierarchy.propertyVariable ?? [];
-  for (const propertyVariable of propertyVariables) {
-    entries.push({ category: "propertyVariable", item: propertyVariable });
-  }
-  const variables = hierarchy.variable ?? [];
-  for (const propertyVariable of variables) {
-    entries.push({ category: "propertyVariable", item: propertyVariable });
-  }
-  const propertyValues = hierarchy.propertyValue ?? [];
-  for (const propertyValue of propertyValues) {
-    entries.push({ category: "propertyValue", item: propertyValue });
-  }
-  const resources = hierarchy.resource ?? [];
-  for (const resource of resources) {
-    if (!("uuid" in resource)) {
-      for (const embeddedResource of resource.resource) {
-        entries.push({ category: "resource", item: embeddedResource });
-      }
-      continue;
+  for (const { key, category } of RAW_SET_ITEM_KEYS) {
+    const items =
+      key === "resource"
+        ? flattenRawResources(hierarchy.resource)
+        : (hierarchy[key] ?? []);
+    for (const item of items) {
+      entries.push({ category, item });
     }
-
-    entries.push({ category: "resource", item: resource });
-  }
-  const texts = hierarchy.text ?? [];
-  for (const text of texts) {
-    entries.push({ category: "text", item: text });
-  }
-  const sets = hierarchy.set ?? [];
-  for (const set of sets) {
-    entries.push({ category: "set", item: set });
   }
 
   return entries;
@@ -981,6 +957,232 @@ function expectCommonLinkedStructures(
   }
 }
 
+function expectTreeFieldsMatchRaw(
+  rawItem: XMLTopLevelItem,
+  parsedItem: TopLevelItemForTest,
+): void {
+  const rawTree = rawItem as XMLTree;
+  expectCommonLinkedStructures(rawTree, parsedItem);
+  if (!("items" in parsedItem) || !("containedItemCategory" in parsedItem)) {
+    throw new Error("Parsed tree is missing tree fields");
+  }
+  if (parsedItem.containedItemCategory != null) {
+    expect(parsedItem.items.length).toBeGreaterThanOrEqual(0);
+  }
+}
+
+function expectBibliographyFieldsMatchRaw(
+  rawItem: XMLTopLevelItem,
+  parsedItem: TopLevelItemForTest,
+): void {
+  const rawBibliography = rawItem as XMLBibliography;
+  expectCommonLinkedStructures(rawBibliography, parsedItem);
+  if (!("sourceDocument" in parsedItem)) {
+    throw new Error("Parsed bibliography is missing bibliography fields");
+  }
+  expect(parsedItem.image == null).toBe(rawBibliography.image == null);
+  expect(parsedItem.sourceDocument?.uuid ?? null).toBe(
+    rawBibliography.sourceDocument?.uuid ?? null,
+  );
+  expect(parsedItem.sourceDocument?.content ?? null).toBe(
+    rawBibliography.sourceDocument?.payload ?? null,
+  );
+  expect(parsedItem.periods).toHaveLength(
+    rawBibliography.periods?.period.length ?? 0,
+  );
+  expect(parsedItem.authors).toHaveLength(
+    rawBibliography.authors?.person.length ?? 0,
+  );
+  expect(parsedItem.items).toHaveLength(
+    rawBibliography.bibliography?.length ?? 0,
+  );
+}
+
+function expectConceptFieldsMatchRaw(
+  rawItem: XMLTopLevelItem,
+  parsedItem: TopLevelItemForTest,
+): void {
+  if (!("interpretations" in parsedItem)) {
+    throw new Error("Parsed concept is missing concept fields");
+  }
+  const rawConcept = rawItem as XMLConcept;
+  expect(parsedItem.interpretations).toHaveLength(
+    rawConcept.interpretations?.interpretation.length ?? 0,
+  );
+  expect(parsedItem.coordinates).toHaveLength(
+    rawConcept.coordinates?.coord.length ?? 0,
+  );
+  expect(parsedItem.items).toHaveLength(rawConcept.concept?.length ?? 0);
+}
+
+function expectSpatialUnitFieldsMatchRaw(
+  rawItem: XMLTopLevelItem,
+  parsedItem: TopLevelItemForTest,
+): void {
+  if (!("observations" in parsedItem)) {
+    throw new Error("Parsed spatial unit is missing spatial unit fields");
+  }
+  const rawSpatialUnit = rawItem as XMLSpatialUnit;
+  expect(parsedItem.observations).toHaveLength(
+    rawSpatialUnit.observations?.observation.length ?? 0,
+  );
+  expect(parsedItem.coordinates).toHaveLength(
+    rawSpatialUnit.coordinates?.coord.length ?? 0,
+  );
+  expect(parsedItem.bibliographies).toHaveLength(
+    rawSpatialUnit.bibliographies?.bibliography.length ?? 0,
+  );
+  expect(parsedItem.items).toHaveLength(
+    rawSpatialUnit.spatialUnit?.length ?? 0,
+  );
+}
+
+function expectPeriodFieldsMatchRaw(
+  rawItem: XMLTopLevelItem,
+  parsedItem: TopLevelItemForTest,
+): void {
+  const rawPeriod = rawItem as XMLPeriod;
+  expectCommonLinkedStructures(rawPeriod, parsedItem);
+  if (!("items" in parsedItem) || !("coordinates" in parsedItem)) {
+    throw new Error("Parsed period is missing period fields");
+  }
+  expect(parsedItem.coordinates).toHaveLength(
+    rawPeriod.coordinates?.coord.length ?? 0,
+  );
+  expect(parsedItem.items).toHaveLength(rawPeriod.period?.length ?? 0);
+}
+
+function expectPersonFieldsMatchRaw(
+  rawItem: XMLTopLevelItem,
+  parsedItem: TopLevelItemForTest,
+): void {
+  const rawPerson = rawItem as XMLPerson;
+  expectCommonLinkedStructures(rawPerson, parsedItem);
+  if (!("address" in parsedItem)) {
+    throw new Error("Parsed person is missing person fields");
+  }
+  if (rawPerson.address == null) {
+    expect(parsedItem.address).toBeNull();
+  } else {
+    expect(parsedItem.address?.country).toBe(
+      parseStringLikeForTest(rawPerson.address.country),
+    );
+    expect(parsedItem.address?.city).toBe(
+      parseStringLikeForTest(rawPerson.address.city),
+    );
+    expect(parsedItem.address?.state).toBe(
+      parseStringLikeForTest(rawPerson.address.state),
+    );
+    expect(parsedItem.address?.postalCode).toBe(
+      parseStringLikeForTest(rawPerson.address.postalCode),
+    );
+  }
+  expect(parsedItem.coordinates).toHaveLength(
+    rawPerson.coordinates?.coord.length ?? 0,
+  );
+  expect(parsedItem.periods).toHaveLength(
+    rawPerson.periods?.period.length ?? 0,
+  );
+}
+
+function expectPropertyVariableFieldsMatchRaw(
+  rawItem: XMLTopLevelItem,
+  parsedItem: TopLevelItemForTest,
+): void {
+  const rawPropertyVariable = rawItem as XMLPropertyVariable;
+  expectCommonLinkedStructures(rawPropertyVariable, parsedItem);
+  if (!("coordinates" in parsedItem)) {
+    throw new Error("Parsed property variable is missing fields");
+  }
+  expect(parsedItem.coordinates).toHaveLength(
+    rawPropertyVariable.coordinates?.coord.length ?? 0,
+  );
+}
+
+function expectPropertyValueFieldsMatchRaw(
+  rawItem: XMLTopLevelItem,
+  parsedItem: TopLevelItemForTest,
+): void {
+  const rawPropertyValue = rawItem as XMLPropertyValue;
+  expectCommonLinkedStructures(rawPropertyValue, parsedItem);
+  if (!("coordinates" in parsedItem)) {
+    throw new Error("Parsed property value is missing fields");
+  }
+  expect(parsedItem.coordinates).toHaveLength(
+    rawPropertyValue.coordinates?.coord.length ?? 0,
+  );
+}
+
+function expectResourceFieldsMatchRaw(
+  rawItem: XMLTopLevelItem,
+  parsedItem: TopLevelItemForTest,
+): void {
+  const rawResource = rawItem as XMLResource;
+  expectCommonLinkedStructures(rawResource, parsedItem);
+  if (!("href" in parsedItem)) {
+    throw new Error("Parsed resource is missing resource fields");
+  }
+  expect(parsedItem.href).toBe(
+    transformPermanentIdentificationUrlForTest(rawResource.href),
+  );
+  expect(parsedItem.fileFormat).toBe(rawResource.fileFormat ?? null);
+  expect(parsedItem.fileSize).toBe(rawResource.fileSize ?? null);
+  expect(parsedItem.image == null).toBe(rawResource.image == null);
+  expect(parsedItem.document?.getText("eng") ?? null).toBe(
+    parseContentLikeForTest(rawResource.document),
+  );
+  expect(parsedItem.coordinates).toHaveLength(
+    rawResource.coordinates?.coord.length ?? 0,
+  );
+  expect(parsedItem.periods).toHaveLength(
+    rawResource.periods?.period.length ?? 0,
+  );
+  expect(parsedItem.reverseLinks).toHaveLength(
+    countLinkItems(rawResource.reverseLinks),
+  );
+  expect(parsedItem.items).toHaveLength(rawResource.resource?.length ?? 0);
+}
+
+function expectTextFieldsMatchRaw(
+  rawItem: XMLTopLevelItem,
+  parsedItem: TopLevelItemForTest,
+): void {
+  if (!("sections" in parsedItem)) {
+    throw new Error("Parsed text is missing text fields");
+  }
+  const rawText = rawItem as XMLText;
+  expect(parsedItem.text).toBe(rawText.text ?? null);
+  expect(parsedItem.language).toBe(rawText.language ?? null);
+  expect(parsedItem.coordinates).toHaveLength(
+    rawText.coordinates?.coord.length ?? 0,
+  );
+  expect(parsedItem.links).toHaveLength(countLinkItems(rawText.links));
+  expect(parsedItem.reverseLinks).toHaveLength(
+    countLinkItems(rawText.reverseLinks),
+  );
+  expectNotesMatchRaw(rawText.notes, parsedItem.notes);
+  expect(parsedItem.sections).toHaveLength(countRawSections(rawText));
+  expect(parsedItem.periods).toHaveLength(rawText.periods?.period.length ?? 0);
+  expect(parsedItem.creators).toHaveLength(
+    rawText.creators?.creator.length ?? 0,
+  );
+  expect(parsedItem.editions).toHaveLength(countRawTextEditions(rawText));
+}
+
+function expectSetFieldsMatchRaw(
+  rawItem: XMLTopLevelItem,
+  parsedItem: TopLevelItemForTest,
+): void {
+  const rawSet = rawItem as XMLSet;
+  expectCommonLinkedStructures(rawSet, parsedItem);
+  if (!("containedItemCategories" in parsedItem) || !("items" in parsedItem)) {
+    throw new Error("Parsed set is missing set fields");
+  }
+  const parsedSet = parsedItem;
+  expect(parsedSet.items).toHaveLength(countItemsInHierarchy(rawSet.items));
+  expectSetItemsMatchRaw(rawSet, parsedSet);
+}
+
 function expectCategorySpecificFields(
   category: ItemCategory,
   rawItem: XMLTopLevelItem,
@@ -988,204 +1190,47 @@ function expectCategorySpecificFields(
 ): void {
   switch (category) {
     case "tree": {
-      const rawTree = rawItem as XMLTree;
-      expectCommonLinkedStructures(rawTree, parsedItem);
-      if (
-        !("items" in parsedItem) ||
-        !("containedItemCategory" in parsedItem)
-      ) {
-        throw new Error("Parsed tree is missing tree fields");
-      }
-      if (parsedItem.containedItemCategory != null) {
-        expect(parsedItem.items.length).toBeGreaterThanOrEqual(0);
-      }
+      expectTreeFieldsMatchRaw(rawItem, parsedItem);
       break;
     }
     case "bibliography": {
-      const rawBibliography = rawItem as XMLBibliography;
-      expectCommonLinkedStructures(rawBibliography, parsedItem);
-      if (!("sourceDocument" in parsedItem)) {
-        throw new Error("Parsed bibliography is missing bibliography fields");
-      }
-      expect(parsedItem.image == null).toBe(rawBibliography.image == null);
-      expect(parsedItem.sourceDocument?.uuid ?? null).toBe(
-        rawBibliography.sourceDocument?.uuid ?? null,
-      );
-      expect(parsedItem.sourceDocument?.content ?? null).toBe(
-        rawBibliography.sourceDocument?.payload ?? null,
-      );
-      expect(parsedItem.periods).toHaveLength(
-        rawBibliography.periods?.period.length ?? 0,
-      );
-      expect(parsedItem.authors).toHaveLength(
-        rawBibliography.authors?.person.length ?? 0,
-      );
-      expect(parsedItem.items).toHaveLength(
-        rawBibliography.bibliography?.length ?? 0,
-      );
+      expectBibliographyFieldsMatchRaw(rawItem, parsedItem);
       break;
     }
     case "concept": {
-      if (!("interpretations" in parsedItem)) {
-        throw new Error("Parsed concept is missing concept fields");
-      }
-      const rawConcept = rawItem as XMLConcept;
-      expect(parsedItem.interpretations).toHaveLength(
-        rawConcept.interpretations?.interpretation.length ?? 0,
-      );
-      expect(parsedItem.coordinates).toHaveLength(
-        rawConcept.coordinates?.coord.length ?? 0,
-      );
-      expect(parsedItem.items).toHaveLength(rawConcept.concept?.length ?? 0);
+      expectConceptFieldsMatchRaw(rawItem, parsedItem);
       break;
     }
     case "spatialUnit": {
-      if (!("observations" in parsedItem)) {
-        throw new Error("Parsed spatial unit is missing spatial unit fields");
-      }
-      const rawSpatialUnit = rawItem as XMLSpatialUnit;
-      expect(parsedItem.observations).toHaveLength(
-        rawSpatialUnit.observations?.observation.length ?? 0,
-      );
-      expect(parsedItem.coordinates).toHaveLength(
-        rawSpatialUnit.coordinates?.coord.length ?? 0,
-      );
-      expect(parsedItem.bibliographies).toHaveLength(
-        rawSpatialUnit.bibliographies?.bibliography.length ?? 0,
-      );
-      expect(parsedItem.items).toHaveLength(
-        rawSpatialUnit.spatialUnit?.length ?? 0,
-      );
+      expectSpatialUnitFieldsMatchRaw(rawItem, parsedItem);
       break;
     }
     case "period": {
-      const rawPeriod = rawItem as XMLPeriod;
-      expectCommonLinkedStructures(rawPeriod, parsedItem);
-      if (!("items" in parsedItem) || !("coordinates" in parsedItem)) {
-        throw new Error("Parsed period is missing period fields");
-      }
-      expect(parsedItem.coordinates).toHaveLength(
-        rawPeriod.coordinates?.coord.length ?? 0,
-      );
-      expect(parsedItem.items).toHaveLength(rawPeriod.period?.length ?? 0);
+      expectPeriodFieldsMatchRaw(rawItem, parsedItem);
       break;
     }
     case "person": {
-      const rawPerson = rawItem as XMLPerson;
-      expectCommonLinkedStructures(rawPerson, parsedItem);
-      if (!("address" in parsedItem)) {
-        throw new Error("Parsed person is missing person fields");
-      }
-      if (rawPerson.address == null) {
-        expect(parsedItem.address).toBeNull();
-      } else {
-        expect(parsedItem.address?.country).toBe(
-          parseStringLikeForTest(rawPerson.address.country),
-        );
-        expect(parsedItem.address?.city).toBe(
-          parseStringLikeForTest(rawPerson.address.city),
-        );
-        expect(parsedItem.address?.state).toBe(
-          parseStringLikeForTest(rawPerson.address.state),
-        );
-        expect(parsedItem.address?.postalCode).toBe(
-          parseStringLikeForTest(rawPerson.address.postalCode),
-        );
-      }
-      expect(parsedItem.coordinates).toHaveLength(
-        rawPerson.coordinates?.coord.length ?? 0,
-      );
-      expect(parsedItem.periods).toHaveLength(
-        rawPerson.periods?.period.length ?? 0,
-      );
+      expectPersonFieldsMatchRaw(rawItem, parsedItem);
       break;
     }
     case "propertyVariable": {
-      const rawPropertyVariable = rawItem as XMLPropertyVariable;
-      expectCommonLinkedStructures(rawPropertyVariable, parsedItem);
-      if (!("coordinates" in parsedItem)) {
-        throw new Error("Parsed property variable is missing fields");
-      }
-      expect(parsedItem.coordinates).toHaveLength(
-        rawPropertyVariable.coordinates?.coord.length ?? 0,
-      );
+      expectPropertyVariableFieldsMatchRaw(rawItem, parsedItem);
       break;
     }
     case "propertyValue": {
-      const rawPropertyValue = rawItem as XMLPropertyValue;
-      expectCommonLinkedStructures(rawPropertyValue, parsedItem);
-      if (!("coordinates" in parsedItem)) {
-        throw new Error("Parsed property value is missing fields");
-      }
-      expect(parsedItem.coordinates).toHaveLength(
-        rawPropertyValue.coordinates?.coord.length ?? 0,
-      );
+      expectPropertyValueFieldsMatchRaw(rawItem, parsedItem);
       break;
     }
     case "resource": {
-      const rawResource = rawItem as XMLResource;
-      expectCommonLinkedStructures(rawResource, parsedItem);
-      if (!("href" in parsedItem)) {
-        throw new Error("Parsed resource is missing resource fields");
-      }
-      expect(parsedItem.href).toBe(
-        transformPermanentIdentificationUrlForTest(rawResource.href),
-      );
-      expect(parsedItem.fileFormat).toBe(rawResource.fileFormat ?? null);
-      expect(parsedItem.fileSize).toBe(rawResource.fileSize ?? null);
-      expect(parsedItem.image == null).toBe(rawResource.image == null);
-      expect(parsedItem.document?.getText("eng") ?? null).toBe(
-        parseContentLikeForTest(rawResource.document),
-      );
-      expect(parsedItem.coordinates).toHaveLength(
-        rawResource.coordinates?.coord.length ?? 0,
-      );
-      expect(parsedItem.periods).toHaveLength(
-        rawResource.periods?.period.length ?? 0,
-      );
-      expect(parsedItem.reverseLinks).toHaveLength(
-        countLinkItems(rawResource.reverseLinks),
-      );
-      expect(parsedItem.items).toHaveLength(rawResource.resource?.length ?? 0);
+      expectResourceFieldsMatchRaw(rawItem, parsedItem);
       break;
     }
     case "text": {
-      if (!("sections" in parsedItem)) {
-        throw new Error("Parsed text is missing text fields");
-      }
-      const rawText = rawItem as XMLText;
-      expect(parsedItem.text).toBe(rawText.text ?? null);
-      expect(parsedItem.language).toBe(rawText.language ?? null);
-      expect(parsedItem.coordinates).toHaveLength(
-        rawText.coordinates?.coord.length ?? 0,
-      );
-      expect(parsedItem.links).toHaveLength(countLinkItems(rawText.links));
-      expect(parsedItem.reverseLinks).toHaveLength(
-        countLinkItems(rawText.reverseLinks),
-      );
-      expectNotesMatchRaw(rawText.notes, parsedItem.notes);
-      expect(parsedItem.sections).toHaveLength(countRawSections(rawText));
-      expect(parsedItem.periods).toHaveLength(
-        rawText.periods?.period.length ?? 0,
-      );
-      expect(parsedItem.creators).toHaveLength(
-        rawText.creators?.creator.length ?? 0,
-      );
-      expect(parsedItem.editions).toHaveLength(countRawTextEditions(rawText));
+      expectTextFieldsMatchRaw(rawItem, parsedItem);
       break;
     }
     case "set": {
-      const rawSet = rawItem as XMLSet;
-      expectCommonLinkedStructures(rawSet, parsedItem);
-      if (
-        !("containedItemCategories" in parsedItem) ||
-        !("items" in parsedItem)
-      ) {
-        throw new Error("Parsed set is missing set fields");
-      }
-      const parsedSet = parsedItem;
-      expect(parsedSet.items).toHaveLength(countItemsInHierarchy(rawSet.items));
-      expectSetItemsMatchRaw(rawSet, parsedSet);
+      expectSetFieldsMatchRaw(rawItem, parsedItem);
       break;
     }
   }

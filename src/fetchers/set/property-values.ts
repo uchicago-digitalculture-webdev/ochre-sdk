@@ -229,11 +229,11 @@ function getItemFilterQueriesFromPropertyValueQueries(
   }
 
   if ("target" in queries) {
-    if (queries.target !== "property") {
-      return queries;
-    }
-
-    if (queries.dataType === "date" || queries.dataType === "dateTime") {
+    if (
+      queries.target !== "property" ||
+      queries.dataType === "date" ||
+      queries.dataType === "dateTime"
+    ) {
       return queries;
     }
 
@@ -252,11 +252,7 @@ function getItemFilterQueriesFromPropertyValueQueries(
     }
   }
 
-  if (filteredChildren.length === 0) {
-    return null;
-  }
-
-  if (filteredChildren.length === 1) {
+  if (filteredChildren.length <= 1) {
     return filteredChildren[0] ?? null;
   }
 
@@ -647,6 +643,113 @@ return (${returnedSequences.join(", ")})
   return xquery;
 }
 
+function collectPropertyValues(
+  parsedPropertyValues: ReadonlyArray<ParsedPropertyValueItem>,
+): {
+  propertyValuesByPropertyVariableUuid: Record<
+    string,
+    Array<PropertyValueQueryItem>
+  >;
+  flattenedPropertyValues: Array<PropertyValueQueryItem>;
+} {
+  const propertyValuesByPropertyVariableUuid: Record<
+    string,
+    Array<PropertyValueQueryItem>
+  > = {};
+  const flattenedPropertyValuesByKey = new Map<
+    string,
+    PropertyValueQueryItem
+  >();
+
+  for (const propertyValue of parsedPropertyValues) {
+    if (propertyValue.content == null) {
+      continue;
+    }
+
+    const propertyValueItem: PropertyValueQueryItem = {
+      uuid: propertyValue.uuid,
+      count: propertyValue.count,
+      dataType: propertyValue.dataType,
+      content: propertyValue.content,
+      label: propertyValue.label,
+    };
+
+    const globalPropertyValueItem: PropertyValueQueryItem = {
+      uuid: propertyValue.uuid,
+      count: propertyValue.globalCount ?? propertyValue.count,
+      dataType: propertyValue.dataType,
+      content: propertyValue.content,
+      label: propertyValue.label,
+    };
+    const globalPropertyValueKey = getPropertyValueKey({
+      dataType: globalPropertyValueItem.dataType,
+      content: propertyValue.content,
+    });
+    const existingGlobalPropertyValue = flattenedPropertyValuesByKey.get(
+      globalPropertyValueKey,
+    );
+
+    if (existingGlobalPropertyValue == null) {
+      flattenedPropertyValuesByKey.set(
+        globalPropertyValueKey,
+        globalPropertyValueItem,
+      );
+    } else if (
+      existingGlobalPropertyValue.label == null &&
+      globalPropertyValueItem.label != null
+    ) {
+      existingGlobalPropertyValue.label = globalPropertyValueItem.label;
+    }
+
+    if (propertyValue.scope === "global") {
+      continue;
+    }
+
+    if (propertyValue.variableUuid != null) {
+      const valuesByPropertyVariableUuid =
+        (propertyValuesByPropertyVariableUuid[propertyValue.variableUuid] ??=
+          []);
+      valuesByPropertyVariableUuid.push(propertyValueItem);
+    }
+  }
+
+  for (const [propertyVariableUuid, values] of Object.entries(
+    propertyValuesByPropertyVariableUuid,
+  )) {
+    propertyValuesByPropertyVariableUuid[propertyVariableUuid] =
+      sortPropertyValues(values);
+  }
+
+  return {
+    propertyValuesByPropertyVariableUuid,
+    flattenedPropertyValues: sortPropertyValues(
+      flattenedPropertyValuesByKey.values().toArray(),
+    ),
+  };
+}
+
+function collectAttributeValues(
+  parsedAttributeValues: ReadonlyArray<ParsedAttributeValueItem>,
+): Record<"bibliographies" | "periods", Array<SetAttributeValueQueryItem>> {
+  const attributeValuesByType: Record<
+    "bibliographies" | "periods",
+    Array<SetAttributeValueQueryItem>
+  > = { bibliographies: [], periods: [] };
+
+  for (const attributeValue of parsedAttributeValues) {
+    if (attributeValue.content == null || attributeValue.content === "") {
+      continue;
+    }
+
+    attributeValuesByType[attributeValue.attributeType].push({
+      count: attributeValue.count,
+      content: attributeValue.content,
+    });
+  }
+
+  return attributeValuesByType;
+}
+
 /**
  * Fetches and parses Set property values from the OCHRE API
  *
@@ -757,113 +860,19 @@ export async function fetchSetPropertyValues(
       );
     }
 
-    const parsedPropertyValues: Array<ParsedPropertyValueItem> = [];
-    const parsedAttributeValues: Array<ParsedAttributeValueItem> = [];
+    const parsedPropertyValues: Array<ParsedPropertyValueItem> = [
+      output.result.ochre.propertyValue ?? [],
+    ].flat();
+    const parsedAttributeValues: Array<ParsedAttributeValueItem> = [
+      output.result.ochre.attributeValue ?? [],
+    ].flat();
 
-    if (output.result.ochre.propertyValue != null) {
-      parsedPropertyValues.push(
-        ...(Array.isArray(output.result.ochre.propertyValue)
-          ? output.result.ochre.propertyValue
-          : [output.result.ochre.propertyValue]),
-      );
-    }
-
-    if (output.result.ochre.attributeValue != null) {
-      parsedAttributeValues.push(
-        ...(Array.isArray(output.result.ochre.attributeValue)
-          ? output.result.ochre.attributeValue
-          : [output.result.ochre.attributeValue]),
-      );
-    }
-
-    const propertyValuesByPropertyVariableUuid: Record<
-      string,
-      Array<PropertyValueQueryItem>
-    > = {};
-    const flattenedPropertyValuesByKey = new Map<
-      string,
-      PropertyValueQueryItem
-    >();
-
-    for (const propertyValue of parsedPropertyValues) {
-      if (propertyValue.content == null) {
-        continue;
-      }
-
-      const propertyValueItem: PropertyValueQueryItem = {
-        uuid: propertyValue.uuid,
-        count: propertyValue.count,
-        dataType: propertyValue.dataType,
-        content: propertyValue.content,
-        label: propertyValue.label,
-      };
-
-      const globalPropertyValueItem: PropertyValueQueryItem = {
-        uuid: propertyValue.uuid,
-        count: propertyValue.globalCount ?? propertyValue.count,
-        dataType: propertyValue.dataType,
-        content: propertyValue.content,
-        label: propertyValue.label,
-      };
-      const globalPropertyValueKey = getPropertyValueKey({
-        dataType: globalPropertyValueItem.dataType,
-        content: propertyValue.content,
-      });
-      const existingGlobalPropertyValue = flattenedPropertyValuesByKey.get(
-        globalPropertyValueKey,
-      );
-
-      if (existingGlobalPropertyValue == null) {
-        flattenedPropertyValuesByKey.set(
-          globalPropertyValueKey,
-          globalPropertyValueItem,
-        );
-      } else if (
-        existingGlobalPropertyValue.label == null &&
-        globalPropertyValueItem.label != null
-      ) {
-        existingGlobalPropertyValue.label = globalPropertyValueItem.label;
-      }
-
-      if (propertyValue.scope === "global") {
-        continue;
-      }
-
-      if (propertyValue.variableUuid != null) {
-        const valuesByPropertyVariableUuid =
-          (propertyValuesByPropertyVariableUuid[propertyValue.variableUuid] ??=
-            []);
-        valuesByPropertyVariableUuid.push(propertyValueItem);
-      }
-    }
-
-    for (const [propertyVariableUuid, values] of Object.entries(
-      propertyValuesByPropertyVariableUuid,
-    )) {
-      propertyValuesByPropertyVariableUuid[propertyVariableUuid] =
-        sortPropertyValues(values);
-    }
-
-    const attributeValuesByType: Record<
-      "bibliographies" | "periods",
-      Array<SetAttributeValueQueryItem>
-    > = { bibliographies: [], periods: [] };
-
-    for (const attributeValue of parsedAttributeValues) {
-      if (attributeValue.content == null || attributeValue.content === "") {
-        continue;
-      }
-
-      attributeValuesByType[attributeValue.attributeType].push({
-        count: attributeValue.count,
-        content: attributeValue.content,
-      });
-    }
+    const { propertyValuesByPropertyVariableUuid, flattenedPropertyValues } =
+      collectPropertyValues(parsedPropertyValues);
+    const attributeValuesByType = collectAttributeValues(parsedAttributeValues);
 
     return {
-      propertyValues: sortPropertyValues(
-        flattenedPropertyValuesByKey.values().toArray(),
-      ),
+      propertyValues: flattenedPropertyValues,
       propertyValuesByPropertyVariableUuid,
       attributeValues: {
         bibliographies: attributes.bibliographies

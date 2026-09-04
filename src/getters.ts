@@ -132,27 +132,31 @@ function searchPropertyResult<T extends LanguageCodes, TResult>(
     return directResult;
   }
 
-  if (options.includeNestedProperties) {
-    for (const property of properties) {
-      if (!("properties" in property)) {
-        continue;
-      }
+  if (!options.includeNestedProperties) {
+    return null;
+  }
 
-      const nestedResult = searchPropertyResult(
-        property.properties,
-        options,
-        findDirectResult,
-        transformNestedResult,
-      );
-      if (nestedResult !== null) {
-        const transformedResult =
-          transformNestedResult != null
-            ? transformNestedResult(nestedResult)
-            : nestedResult;
-        if (transformedResult !== null) {
-          return transformedResult;
-        }
-      }
+  for (const property of properties) {
+    if (!("properties" in property)) {
+      continue;
+    }
+
+    const nestedResult = searchPropertyResult(
+      property.properties,
+      options,
+      findDirectResult,
+      transformNestedResult,
+    );
+    if (nestedResult === null) {
+      continue;
+    }
+
+    const transformedResult =
+      transformNestedResult != null
+        ? transformNestedResult(nestedResult)
+        : nestedResult;
+    if (transformedResult !== null) {
+      return transformedResult;
     }
   }
 
@@ -178,31 +182,7 @@ function getPropertyValuesResult<T extends LanguageCodes>(
 function clonePropertyValues<T extends LanguageCodes>(
   values: ReadonlyArray<PropertyValueContent<T>>,
 ): Array<PropertyValueContent<T>> {
-  const clonedValues: Array<PropertyValueContent<T>> = [];
-  for (const value of values) {
-    switch (value.dataType) {
-      case "IDREF":
-      case "coordinate":
-      case "date":
-      case "dateTime":
-      case "string": {
-        clonedValues.push({ ...value, content: value.content });
-        break;
-      }
-      case "decimal":
-      case "integer":
-      case "time": {
-        clonedValues.push({ ...value, content: value.content });
-        break;
-      }
-      case "boolean": {
-        clonedValues.push({ ...value, content: value.content });
-        break;
-      }
-    }
-  }
-
-  return clonedValues;
+  return Array.from(values, (value) => ({ ...value }));
 }
 
 function getNormalizedProperty<

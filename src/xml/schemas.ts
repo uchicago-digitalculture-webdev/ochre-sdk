@@ -2,7 +2,6 @@
 import * as v from "valibot";
 import type {
   XMLBibliography as XMLBibliographyType,
-  XMLBoolean as XMLBooleanType,
   XMLConcept as XMLConceptType,
   XMLContextGroup as XMLContextGroupType,
   XMLContextItem as XMLContextItemType,
@@ -40,7 +39,6 @@ import type {
   XMLLink as XMLLinkType,
   XMLMetadata as XMLMetadataType,
   XMLNote as XMLNoteType,
-  XMLNumber as XMLNumberType,
   XMLObservation as XMLObservationType,
   XMLPeriod as XMLPeriodType,
   XMLPerson as XMLPersonType,
@@ -103,7 +101,7 @@ function parseXMLNumber(value: string | XMLStringType): number {
 
 function parseOptionalXMLNumber(
   value: string | XMLStringType,
-): XMLNumberType | undefined {
+): number | undefined {
   const payload = getXMLStringPayload(value);
   return payload === "" || payload == null ? undefined : Number(payload);
 }
@@ -175,13 +173,13 @@ const XMLContent = v.object(
   "XMLContent: Shape error",
 );
 
-const XMLNumber: v.GenericSchema<unknown, XMLNumberType> = v.pipe(
+const XMLNumber: v.GenericSchema<unknown, number> = v.pipe(
   v.union([v.string("XMLNumber: string is string and required"), XMLString]),
   v.check(isXMLNumber, "XMLNumber: string is not a number"),
   v.transform(parseXMLNumber),
 );
 
-const XMLOptionalNumber: v.GenericSchema<unknown, XMLNumberType | undefined> =
+const XMLOptionalNumber: v.GenericSchema<unknown, number | undefined> =
   v.optional(
     v.pipe(
       v.union([
@@ -193,7 +191,7 @@ const XMLOptionalNumber: v.GenericSchema<unknown, XMLNumberType | undefined> =
     ),
   );
 
-const XMLBoolean: v.GenericSchema<unknown, XMLBooleanType> = v.pipe(
+const XMLBoolean: v.GenericSchema<unknown, boolean> = v.pipe(
   v.union([v.string("XMLBoolean: string is string and required"), XMLString]),
   v.check((value) => {
     const payload = getXMLStringPayload(value);
@@ -2134,6 +2132,22 @@ export const XMLDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.union(
   "XMLDataItem: Shape error",
 );
 
+function hasNestedRecursiveChildren<T>(
+  items: ReadonlyArray<T>,
+  getChildren: (item: T) => Array<T> | undefined,
+): boolean {
+  for (const item of items) {
+    const children = getChildren(item) ?? [];
+    for (const child of children) {
+      if ((getChildren(child)?.length ?? 0) > 0) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 const XMLTopLevelDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.pipe(
   XMLDataItem,
   v.check((dataItem) => {
@@ -2141,59 +2155,45 @@ const XMLTopLevelDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.pipe(
       return true;
     }
 
-    if ("bibliography" in dataItem) {
-      for (const bibliography of dataItem.bibliography) {
-        const children = bibliography.bibliography ?? [];
-        for (const child of children) {
-          if ((child.bibliography?.length ?? 0) > 0) {
-            return false;
-          }
-        }
-      }
+    if (
+      "bibliography" in dataItem &&
+      hasNestedRecursiveChildren(
+        dataItem.bibliography,
+        (item) => item.bibliography,
+      )
+    ) {
+      return false;
     }
 
-    if ("concept" in dataItem) {
-      for (const concept of dataItem.concept) {
-        const children = concept.concept ?? [];
-        for (const child of children) {
-          if ((child.concept?.length ?? 0) > 0) {
-            return false;
-          }
-        }
-      }
+    if (
+      "concept" in dataItem &&
+      hasNestedRecursiveChildren(dataItem.concept, (item) => item.concept)
+    ) {
+      return false;
     }
 
-    if ("spatialUnit" in dataItem) {
-      for (const spatialUnit of dataItem.spatialUnit) {
-        const children = spatialUnit.spatialUnit ?? [];
-        for (const child of children) {
-          if ((child.spatialUnit?.length ?? 0) > 0) {
-            return false;
-          }
-        }
-      }
+    if (
+      "spatialUnit" in dataItem &&
+      hasNestedRecursiveChildren(
+        dataItem.spatialUnit,
+        (item) => item.spatialUnit,
+      )
+    ) {
+      return false;
     }
 
-    if ("period" in dataItem) {
-      for (const period of dataItem.period) {
-        const children = period.period ?? [];
-        for (const child of children) {
-          if ((child.period?.length ?? 0) > 0) {
-            return false;
-          }
-        }
-      }
+    if (
+      "period" in dataItem &&
+      hasNestedRecursiveChildren(dataItem.period, (item) => item.period)
+    ) {
+      return false;
     }
 
-    if ("resource" in dataItem) {
-      for (const resource of dataItem.resource) {
-        const children = resource.resource ?? [];
-        for (const child of children) {
-          if ((child.resource?.length ?? 0) > 0) {
-            return false;
-          }
-        }
-      }
+    if (
+      "resource" in dataItem &&
+      hasNestedRecursiveChildren(dataItem.resource, (item) => item.resource)
+    ) {
+      return false;
     }
 
     return true;

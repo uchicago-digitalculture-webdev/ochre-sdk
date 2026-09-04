@@ -196,11 +196,6 @@ type XMLPropertyValueNode = NonNullable<XMLProperty["value"]>[number] & {
   payload?: string;
 };
 
-type XMLContextValueHierarchy = Record<
-  string,
-  Array<XMLContextValue> | undefined
->;
-
 function isXMLContextGroup(
   context: XMLContext[number],
 ): context is XMLContextGroup {
@@ -334,6 +329,35 @@ function emptyContextItem(): ContextItem {
   return { uuid: null, publicationDateTime: null, index: 0, content: "" };
 }
 
+function parseContextNode(
+  rawContextItem: XMLContextItem,
+): ContextNode<ContextItemCategory> {
+  const node: ContextNode<ContextItemCategory> = {
+    tree:
+      rawContextItem.tree[0] == null
+        ? emptyContextItem()
+        : parseContextItem(rawContextItem.tree[0]),
+    project: parseContextItem(rawContextItem.project),
+    heading: [],
+  };
+
+  const headings = rawContextItem.heading ?? [];
+  for (const heading of headings) {
+    node.heading.push(parseContextItem(heading));
+  }
+
+  for (const { raw, parsed } of CONTEXT_CATEGORY_MAPPINGS) {
+    const contextValues = rawContextItem[raw] ?? [];
+    for (const contextValue of contextValues) {
+      const parsedItems = node[parsed] ?? [];
+      parsedItems.push(parseContextItem(contextValue));
+      node[parsed] = parsedItems;
+    }
+  }
+
+  return node;
+}
+
 function parseContext(rawContext: XMLContext): Context<ContextItemCategory> {
   const nodes: Array<ContextNode<ContextItemCategory>> = [];
   let displayPath = "";
@@ -350,32 +374,7 @@ function parseContext(rawContext: XMLContext): Context<ContextItemCategory> {
         continue;
       }
 
-      const node: ContextNode<ContextItemCategory> = {
-        tree:
-          rawContextItem.tree[0] == null
-            ? emptyContextItem()
-            : parseContextItem(rawContextItem.tree[0]),
-        project: parseContextItem(rawContextItem.project),
-        heading: [],
-      };
-
-      const rawContextValues =
-        rawContextItem as unknown as XMLContextValueHierarchy;
-      const headings = rawContextValues.heading ?? [];
-      for (const heading of headings) {
-        node.heading.push(parseContextItem(heading));
-      }
-
-      for (const { raw, parsed } of CONTEXT_CATEGORY_MAPPINGS) {
-        const contextValues = rawContextValues[raw] ?? [];
-        for (const contextValue of contextValues) {
-          const parsedItems = node[parsed] ?? [];
-          parsedItems.push(parseContextItem(contextValue));
-          node[parsed] = parsedItems;
-        }
-      }
-
-      nodes.push(node);
+      nodes.push(parseContextNode(rawContextItem));
     }
   }
 
@@ -590,16 +589,14 @@ function collectHierarchyEntries(
     }
 
     for (const value of values) {
-      if (category === "resource" && isResourceWrapper(value)) {
-        for (const resource of value.resource) {
-          entries.push({ category, item: resource, fallbackIndex });
-          fallbackIndex += 1;
-        }
-        continue;
+      const items =
+        category === "resource" && isResourceWrapper(value)
+          ? value.resource
+          : [value];
+      for (const item of items) {
+        entries.push({ category, item, fallbackIndex });
+        fallbackIndex += 1;
       }
-
-      entries.push({ category, item: value, fallbackIndex });
-      fallbackIndex += 1;
     }
   }
 
@@ -2386,11 +2383,12 @@ export function parseMetadataLanguages(rawOchre: {
 }
 
 export function resolveLanguages<T extends ReadonlyArray<string>>(
-  requestedLanguages: T,
+  requestedLanguages: T | undefined,
   metadataLanguages: Array<string>,
 ): T {
-  if (requestedLanguages.length === 0) {
-    return metadataLanguages as unknown as T;
+  if (requestedLanguages == null || requestedLanguages.length === 0) {
+    const resolvedLanguages: unknown = metadataLanguages;
+    return resolvedLanguages as T;
   }
 
   const unsupportedLanguages: Array<string> = [];
@@ -2548,7 +2546,7 @@ function inferTopLevelCategory(rawOchre: RawOchre): ItemCategory {
 }
 
 function getSingleTopLevelRawItem<T>(
-  items: Array<T> | null,
+  items: Array<T> | null | undefined,
   category: string,
 ): T {
   if (items == null || items.length === 0) {
@@ -2573,118 +2571,98 @@ function parseTopLevelItem<
   category: U,
   options: ParserOptions<T> & { containedItemCategory?: V | ReadonlyArray<V> },
 ): Item<U, V, T, "embedded"> {
+  const rawItems: XMLItemLinks = rawOchre;
+  let parsedItem: unknown;
+
   switch (category) {
     case "tree": {
-      return parseTree(
-        getSingleTopLevelRawItem(
-          "tree" in rawOchre ? rawOchre.tree : null,
-          "tree",
+      parsedItem = parseTree(getSingleTopLevelRawItem(rawItems.tree, "tree"), {
+        ...options,
+        containedItemCategory: normalizeTreeItemCategory(
+          options.containedItemCategory,
         ),
-        {
-          ...options,
-          containedItemCategory: normalizeTreeItemCategory(
-            options.containedItemCategory,
-          ),
-        },
-      ) as unknown as Item<U, V, T, "embedded">;
+      });
+      break;
     }
     case "bibliography": {
-      return parseBibliography(
-        getSingleTopLevelRawItem(
-          "bibliography" in rawOchre ? rawOchre.bibliography : null,
-          "bibliography",
-        ),
+      parsedItem = parseBibliography(
+        getSingleTopLevelRawItem(rawItems.bibliography, "bibliography"),
         options,
-      ) as unknown as Item<U, V, T, "embedded">;
+      );
+      break;
     }
     case "concept": {
-      return parseConcept(
-        getSingleTopLevelRawItem(
-          "concept" in rawOchre ? rawOchre.concept : null,
-          "concept",
-        ),
+      parsedItem = parseConcept(
+        getSingleTopLevelRawItem(rawItems.concept, "concept"),
         options,
-      ) as unknown as Item<U, V, T, "embedded">;
+      );
+      break;
     }
     case "spatialUnit": {
-      return parseSpatialUnit(
-        getSingleTopLevelRawItem(
-          "spatialUnit" in rawOchre ? rawOchre.spatialUnit : null,
-          "spatial unit",
-        ),
+      parsedItem = parseSpatialUnit(
+        getSingleTopLevelRawItem(rawItems.spatialUnit, "spatial unit"),
         options,
-      ) as unknown as Item<U, V, T, "embedded">;
+      );
+      break;
     }
     case "period": {
-      return parsePeriod(
-        getSingleTopLevelRawItem(
-          "period" in rawOchre ? rawOchre.period : null,
-          "period",
-        ),
+      parsedItem = parsePeriod(
+        getSingleTopLevelRawItem(rawItems.period, "period"),
         options,
-      ) as unknown as Item<U, V, T, "embedded">;
+      );
+      break;
     }
     case "person": {
-      return parsePerson(
-        getSingleTopLevelRawItem(
-          "person" in rawOchre ? rawOchre.person : null,
-          "person",
-        ),
+      parsedItem = parsePerson(
+        getSingleTopLevelRawItem(rawItems.person, "person"),
         options,
-      ) as unknown as Item<U, V, T, "embedded">;
+      );
+      break;
     }
     case "propertyVariable": {
-      const propertyVariables =
-        "propertyVariable" in rawOchre
-          ? rawOchre.propertyVariable
-          : "variable" in rawOchre
-            ? rawOchre.variable
-            : null;
-      return parsePropertyVariable(
-        getSingleTopLevelRawItem(propertyVariables, "property variable"),
+      parsedItem = parsePropertyVariable(
+        getSingleTopLevelRawItem(
+          rawItems.propertyVariable ?? rawItems.variable,
+          "property variable",
+        ),
         options,
-      ) as unknown as Item<U, V, T, "embedded">;
+      );
+      break;
     }
     case "propertyValue": {
-      const propertyValues =
-        "propertyValue" in rawOchre
-          ? rawOchre.propertyValue
-          : "value" in rawOchre
-            ? rawOchre.value
-            : null;
-      return parsePropertyValue(
-        getSingleTopLevelRawItem(propertyValues, "property value"),
+      parsedItem = parsePropertyValue(
+        getSingleTopLevelRawItem(
+          rawItems.propertyValue ?? rawItems.value,
+          "property value",
+        ),
         options,
-      ) as unknown as Item<U, V, T, "embedded">;
+      );
+      break;
     }
     case "resource": {
-      return parseResource(
-        getSingleTopLevelRawItem(
-          "resource" in rawOchre ? rawOchre.resource : null,
-          "resource",
-        ),
+      parsedItem = parseResource(
+        getSingleTopLevelRawItem(rawItems.resource, "resource"),
         options,
-      ) as unknown as Item<U, V, T, "embedded">;
+      );
+      break;
     }
     case "text": {
-      return parseText(
-        getSingleTopLevelRawItem(
-          "text" in rawOchre ? rawOchre.text : null,
-          "text",
-        ),
+      parsedItem = parseText(
+        getSingleTopLevelRawItem(rawItems.text, "text"),
         options,
-      ) as unknown as Item<U, V, T, "embedded">;
+      );
+      break;
     }
     case "set": {
-      return parseSet(
-        getSingleTopLevelRawItem(
-          "set" in rawOchre ? rawOchre.set : null,
-          "set",
-        ),
+      parsedItem = parseSet(
+        getSingleTopLevelRawItem(rawItems.set, "set"),
         options,
-      ) as unknown as Item<U, V, T, "embedded">;
+      );
+      break;
     }
   }
+
+  return parsedItem as Item<U, V, T, "embedded">;
 }
 
 export function parseLinkedItems<
