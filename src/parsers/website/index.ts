@@ -1052,6 +1052,9 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
       const filterSidebarSort = componentReader.valueOr<
         CollectionComponent<T>["filter"]["sidebarSort"]
       >("filter-sidebar-sort", "default");
+      const isFilterSidebarHelpTooltipsDisplayed = componentReader.valueOr<
+        CollectionComponent<T>["filter"]["isSidebarHelpTooltipsDisplayed"]
+      >("filter-sidebar-help-tooltips-displayed", false);
 
       const componentOptions = parseWebsiteOptions(
         elementResource.options,
@@ -1076,6 +1079,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
           isLimitedToInputFilter: isFilterLimitedToInputFilter,
           isLimitedToLeafPropertyValues: isFilterLimitedToLeafPropertyValues,
           sidebarSort: filterSidebarSort,
+          isSidebarHelpTooltipsDisplayed: isFilterSidebarHelpTooltipsDisplayed,
         },
         options: componentOptions,
       };

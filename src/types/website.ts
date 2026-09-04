@@ -392,6 +392,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
         isLimitedToInputFilter: boolean;
         isLimitedToLeafPropertyValues: boolean;
         sidebarSort: "default" | "alphabetical";
+        isSidebarHelpTooltipsDisplayed: boolean;
       };
       options: WebOptions<T>;
     }
