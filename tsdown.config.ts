@@ -7,6 +7,6 @@ export default defineConfig({
   root: "src",
   unbundle: true,
   dts: true,
-  deps: { skipNodeModulesBundle: true },
+  deps: { neverBundle: true },
   treeshake: true,
 });
