@@ -4,6 +4,7 @@ export default antfu({
   type: "lib",
   stylistic: false,
   markdown: false,
+  antislop: true,
   typescript: {
     tsconfigPath: "tsconfig.json",
     erasableOnly: true,
@@ -58,6 +59,7 @@ export default antfu({
       "unicorn/no-thenable": "off",
       "unicorn/prevent-abbreviations": "off",
       "unicorn/prefer-ternary": "off",
+      "unicorn/single-line-block-comment-style": "off",
     },
   },
   imports: {
