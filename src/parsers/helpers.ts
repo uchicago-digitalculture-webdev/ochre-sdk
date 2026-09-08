@@ -11,7 +11,12 @@ export type FetchFunction = (
 
 export type FetchBaseOptions<
   TLanguages extends ReadonlyArray<string> | undefined = undefined,
-> = { languages?: TLanguages; fetch?: FetchFunction };
+> = {
+  languages?: TLanguages;
+  fetch?: FetchFunction;
+  signal?: AbortSignal;
+  timeoutMilliseconds?: number;
+};
 
 export type FetchRuntimeOptions = FetchBaseOptions<ReadonlyArray<string>>;
 
