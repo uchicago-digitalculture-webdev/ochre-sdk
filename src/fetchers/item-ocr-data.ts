@@ -2,10 +2,11 @@
 import * as v from "valibot";
 import type { OchreRequestOptions } from "#/fetchers/request.js";
 import type { OcrString } from "#/types/index.js";
+import { getErrorOutput } from "#/errors.js";
 import { requestOchre } from "#/fetchers/request.js";
 import { buildOcrWordPath } from "#/ocr.js";
 import { itemOcrDataParametersSchema } from "#/schemas.js";
-import { getErrorOutput, stringLiteral } from "#/utilities.js";
+import { stringLiteral } from "#/xquery.js";
 
 const OCR_STRING_VERTEX_REGEX =
   /\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/g;

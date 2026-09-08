@@ -11,6 +11,7 @@ import {
   ITEM_CATEGORY_ALIASES,
   OCHRE_COLLECTION_CATEGORIES,
 } from "#/categories.js";
+import { getErrorOutput } from "#/errors.js";
 import { requestOchre } from "#/fetchers/request.js";
 import { parseLinkedItems } from "#/parsers/index.js";
 import {
@@ -18,13 +19,8 @@ import {
   resolveContentLanguages,
 } from "#/parsers/languages.js";
 import { uuidSchema } from "#/schemas.js";
-import {
-  getErrorOutput,
-  omitSupplemental,
-  stringLiteral,
-  SUPPLEMENTAL_XQUERY_PROLOG,
-} from "#/utilities.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
+import { compileOchreQuery, stringLiteral } from "#/xquery.js";
 
 /**
  * Build an XQuery string to fetch linked items from the OCHRE API.
@@ -49,7 +45,10 @@ function buildXQuery(uuid: string): string {
         ${linkedItemBranches.join("\n        else ")}
         else ()`;
 
-  const xquery = `let $item-uuid := ${stringLiteral(uuid)}
+  return compileOchreQuery({
+    body: ({
+      omitSupplemental,
+    }) => `<ochre>{let $item-uuid := ${stringLiteral(uuid)}
 
 let $source-items := (
 ${OCHRE_COLLECTION_CATEGORIES.map((category) => `  fn:collection("ochre/${category}")/ochre[@uuid = $item-uuid]/${category}`).join(",\n")}
@@ -64,13 +63,8 @@ let $link-nodes := (
 return
     <items>{
       ${omitSupplemental(linkedItems)}
-    }</items>`;
-
-  return `xquery version "1.0-ml";
-
-${SUPPLEMENTAL_XQUERY_PROLOG}
-
-<ochre>{${xquery}}</ochre>`;
+    }</items>}</ochre>`,
+  });
 }
 
 /**

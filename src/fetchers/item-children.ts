@@ -12,6 +12,7 @@ import type {
   TreeItemCategory,
 } from "#/types/index.js";
 import { OCHRE_COLLECTION_CATEGORIES } from "#/categories.js";
+import { getErrorOutput } from "#/errors.js";
 import { requestOchre } from "#/fetchers/request.js";
 import { parseLinkedItems } from "#/parsers/index.js";
 import {
@@ -19,13 +20,8 @@ import {
   resolveContentLanguages,
 } from "#/parsers/languages.js";
 import { uuidSchema } from "#/schemas.js";
-import {
-  getErrorOutput,
-  omitSupplemental,
-  stringLiteral,
-  SUPPLEMENTAL_XQUERY_PROLOG,
-} from "#/utilities.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
+import { compileOchreQuery, stringLiteral } from "#/xquery.js";
 
 type FetchItemChildrenResult<TItems> = Promise<
   | { items: TItems; error: null; detailedError: null }
@@ -68,18 +64,17 @@ function buildXQuery(
       `cts:search(fn:collection("ochre/${possibleCategory}")/ochre, $uuid-query)`,
   );
 
-  return `xquery version "1.0-ml";
-
-${SUPPLEMENTAL_XQUERY_PROLOG}
-
-declare function local:item-children($nodes as node()*) as node()* {
+  return compileOchreQuery({
+    declarations: [
+      `declare function local:item-children($nodes as node()*) as node()* {
   for $node in $nodes
   return
     if (local-name($node) = "heading")
     then local:item-children($node/*)
     else $node
-};
-
+};`,
+    ],
+    body: ({ omitSupplemental }) => `
 let $uuid := ${stringLiteral(uuid)}
 let $uuid-query := cts:element-attribute-value-query(xs:QName("ochre"), xs:QName("uuid"), $uuid, "exact")
 let $ochre := (
@@ -111,7 +106,8 @@ let $children :=
 return
   <ochre>
     <items>{${omitSupplemental("$children")}}</items>
-  </ochre>`;
+  </ochre>`,
+  });
 }
 
 /**

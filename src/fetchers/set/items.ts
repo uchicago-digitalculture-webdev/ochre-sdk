@@ -12,6 +12,7 @@ import type {
   SetItemsSort,
 } from "#/types/index.js";
 import type { XMLSetItems } from "#/xml/types.js";
+import { getErrorOutput } from "#/errors.js";
 import { requestOchre } from "#/fetchers/request.js";
 import { parseSetItems } from "#/parsers/index.js";
 import {
@@ -20,12 +21,8 @@ import {
 } from "#/parsers/languages.js";
 import { compileSetItemsQuery } from "#/query.js";
 import { setItemsParametersSchema } from "#/schemas.js";
-import {
-  getErrorOutput,
-  omitSupplemental,
-  stringLiteral,
-} from "#/utilities.js";
 import { XMLSetItemsData as XMLSetItemsDataSchema } from "#/xml/schemas.js";
+import { stringLiteral } from "#/xquery.js";
 
 type FetchSetItemsCategory<
   TContainedItemCategories extends ReadonlyArray<SetItemCategory> | undefined,
@@ -243,7 +240,7 @@ function buildXQuery(parameters: {
     setScopeUuids,
     belongsToCollectionScopeUuids,
     queries,
-    body: (items) => `  let $totalCount := count(${items})
+    body: ({ items, omitSupplemental }) => `  let $totalCount := count(${items})
   ${buildOrderedItemsClause(sort)}
   let $pagedItems := subsequence($orderedItems, ${startPosition}, ${pageSize})
 

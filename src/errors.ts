@@ -1,11 +1,5 @@
 import * as v from "valibot";
-import type {
-  LanguageCodes,
-  Property,
-  SetItemProperty,
-} from "./types/index.js";
 
-const PSEUDO_UUID_REGEX = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
 type SchemaValidationIssue = v.BaseIssue<unknown>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -273,6 +267,13 @@ function getDetailedError(
   return lines.join("\n");
 }
 
+/**
+ * Render an error as a short message and a fully detailed report
+ * @param error - The thrown value
+ * @param fallbackMessage - The message to use when the value is not an Error
+ * @returns The message and the detailed report
+ * @internal
+ */
 export function getErrorOutput(
   error: unknown,
   fallbackMessage: string,
@@ -281,6 +282,13 @@ export function getErrorOutput(
   return { error: message, detailedError: getDetailedError(error, message) };
 }
 
+/**
+ * Wrap schema validation issues in an error {@link getErrorOutput} can render
+ * @param message - The failure message
+ * @param issues - The validation issues to carry as the cause
+ * @returns The error
+ * @internal
+ */
 export function createSchemaValidationError(
   message: string,
   issues: ReadonlyArray<SchemaValidationIssue>,
@@ -294,86 +302,3 @@ export function createSchemaValidationError(
  * @returns True if the string is a valid pseudo-UUID, false otherwise
  * @internal
  */
-export function isPseudoUuid(value: string): boolean {
-  return PSEUDO_UUID_REGEX.test(value);
-}
-
-/**
- * Build a string literal for an XQuery string
- * @param value - The string value to escape
- * @returns The escaped string literal
- */
-export function stringLiteral(value: string): string {
-  const escapedDoubleQuote = value.replaceAll('"', '""');
-  return `"${escapedDoubleQuote}"`;
-}
-
-/**
- * XQuery prolog declaring `local:omit-supplemental`, which drops every element
- * carrying `supplemental="true"` from a node sequence, at any depth.
- *
- * Subtrees without a supplemental descendant are returned by reference, so
- * nodes are only copied along the path leading to an omitted element. The
- * lookahead walks the attribute axis (`//@supplemental`) rather than testing
- * every element, which measures around three times faster on large documents.
- *
- * Must be declared before any query body that calls {@link omitSupplemental}.
- */
-export const SUPPLEMENTAL_XQUERY_PROLOG = `declare function local:omit-supplemental($nodes as node()*) as node()* {
-  for $node in $nodes
-  return
-    if ($node instance of element())
-    then
-      if ($node/@supplemental = "true")
-      then ()
-      else if (empty($node//@supplemental[. = "true"]))
-      then $node
-      else element { node-name($node) } {
-        $node/@*,
-        local:omit-supplemental($node/node())
-      }
-    else $node
-};`;
-
-/**
- * Wrap an XQuery node expression so supplemental nodes are omitted from it
- * @param expression - The XQuery expression returning the nodes to filter
- * @returns The wrapped XQuery expression
- */
-export function omitSupplemental(expression: string): string {
-  return `local:omit-supplemental(${expression})`;
-}
-
-/**
- * XQuery predicate keeping only nodes that are neither supplemental themselves
- * nor nested inside a supplemental node. Use it when aggregating over nodes
- * instead of returning them.
- */
-export const NOT_SUPPLEMENTAL_PREDICATE =
-  '[not(ancestor-or-self::*[@supplemental = "true"])]';
-
-/**
- * Flatten a properties array
- * @param properties - The properties to flatten
- * @returns The flattened properties
- * @internal
- */
-export function flattenProperties<T extends LanguageCodes = LanguageCodes>(
-  properties: ReadonlyArray<Property<T> | SetItemProperty<T>>,
-): Array<SetItemProperty<T>> {
-  const result: Array<SetItemProperty<T>> = [];
-
-  for (const property of properties) {
-    result.push({
-      variable: property.variable,
-      values: property.values,
-      comment: property.comment,
-    });
-
-    if ("properties" in property) {
-      result.push(...flattenProperties(property.properties));
-    }
-  }
-
-  return result;
-}

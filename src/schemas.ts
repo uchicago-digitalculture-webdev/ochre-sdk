@@ -8,7 +8,18 @@ import type {
 } from "#/types/index.js";
 import type { WebElementComponent } from "#/types/website.js";
 import { DEFAULT_PAGE_SIZE } from "#/constants.js";
-import { isPseudoUuid } from "#/utilities.js";
+
+const PSEUDO_UUID_REGEX = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
+
+/**
+ * Validates a pseudo-UUID string
+ * @param value - The string to validate
+ * @returns True if the string is a valid pseudo-UUID, false otherwise
+ * @internal
+ */
+export function isPseudoUuid(value: string): boolean {
+  return PSEUDO_UUID_REGEX.test(value);
+}
 
 const positiveNumber = (message: string): v.GenericSchema<unknown, number> =>
   v.pipe(v.number(), v.minValue(1, message));

@@ -70,7 +70,7 @@ import type {
   XMLWebsiteStyle as XMLWebsiteStyleType,
   XMLWebsiteTree as XMLWebsiteTreeType,
 } from "#/xml/types.js";
-import { isPseudoUuid } from "#/utilities.js";
+import { isPseudoUuid } from "#/schemas.js";
 import { parseDateTime } from "#/xml/dates.js";
 
 function getXMLStringPayload(value: string | XMLStringType): string | null {

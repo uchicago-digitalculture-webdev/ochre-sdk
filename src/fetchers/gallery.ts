@@ -6,6 +6,7 @@ import type {
   FetchRuntimeOptions,
 } from "#/parsers/helpers.js";
 import type { Gallery } from "#/types/index.js";
+import { getErrorOutput } from "#/errors.js";
 import { requestOchre } from "#/fetchers/request.js";
 import { parseGallery } from "#/parsers/index.js";
 import {
@@ -13,13 +14,8 @@ import {
   resolveContentLanguages,
 } from "#/parsers/languages.js";
 import { gallerySchema } from "#/schemas.js";
-import {
-  getErrorOutput,
-  omitSupplemental,
-  stringLiteral,
-  SUPPLEMENTAL_XQUERY_PROLOG,
-} from "#/utilities.js";
 import { XMLGalleryData as XMLGalleryDataSchema } from "#/xml/schemas.js";
+import { compileOchreQuery, stringLiteral } from "#/xquery.js";
 
 function buildXQuery(parameters: {
   uuid: string;
@@ -31,11 +27,8 @@ function buildXQuery(parameters: {
   const start = (page - 1) * perPage + 1;
   const filterLiteral = stringLiteral(filter?.trim() ?? "");
 
-  return `xquery version "1.0-ml";
-
-${SUPPLEMENTAL_XQUERY_PROLOG}
-
-<ochre>{
+  return compileOchreQuery({
+    body: ({ omitSupplemental }) => `<ochre>{
   for $q in doc()/ochre[@uuid=${stringLiteral(uuid)}]
   let $filter := ${filterLiteral}
   let $resources := $q//items/resource
@@ -51,7 +44,8 @@ ${SUPPLEMENTAL_XQUERY_PROLOG}
       subsequence($filtered, ${start}, ${perPage})
     )`)}
   }</gallery>
-}</ochre>`;
+}</ochre>`,
+  });
 }
 
 /**

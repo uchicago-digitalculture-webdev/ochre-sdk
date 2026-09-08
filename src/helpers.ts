@@ -7,7 +7,6 @@ import type {
   Property,
   SetItemProperty,
 } from "#/types/index.js";
-import { flattenProperties } from "#/utilities.js";
 
 type FlattenedItem<U, T extends LanguageCodes> = Omit<U, "properties"> & {
   properties: Array<SetItemProperty<T>>;
@@ -68,4 +67,30 @@ export function flattenItemProperties<
   }
 
   return { ...item, properties: flattenProperties(allProperties) };
+}
+
+/**
+ * Flatten a properties array
+ * @param properties - The properties to flatten
+ * @returns The flattened properties
+ * @internal
+ */
+function flattenProperties<T extends LanguageCodes = LanguageCodes>(
+  properties: ReadonlyArray<Property<T> | SetItemProperty<T>>,
+): Array<SetItemProperty<T>> {
+  const result: Array<SetItemProperty<T>> = [];
+
+  for (const property of properties) {
+    result.push({
+      variable: property.variable,
+      values: property.values,
+      comment: property.comment,
+    });
+
+    if ("properties" in property) {
+      result.push(...flattenProperties(property.properties));
+    }
+  }
+
+  return result;
 }

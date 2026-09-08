@@ -1,4 +1,4 @@
-import { stringLiteral } from "#/utilities.js";
+import { stringLiteral } from "#/xquery.js";
 
 // The namespace is an identifier matched verbatim against the documents, not
 // an address, so it has to stay on http.

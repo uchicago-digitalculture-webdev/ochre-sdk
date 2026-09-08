@@ -18,18 +18,14 @@ import {
   ITEM_CATEGORIES_WITH_EMBEDDED_ITEMS,
   ITEM_CONTAINER_CATEGORIES,
 } from "#/categories.js";
+import { getErrorOutput } from "#/errors.js";
 import { requestOchre } from "#/fetchers/request.js";
 import { parseItem } from "#/parsers/index.js";
 import { parseRequestedLanguages } from "#/parsers/languages.js";
 import { parseWebpageView } from "#/parsers/website/index.js";
 import { uuidSchema } from "#/schemas.js";
-import {
-  getErrorOutput,
-  omitSupplemental,
-  stringLiteral,
-  SUPPLEMENTAL_XQUERY_PROLOG,
-} from "#/utilities.js";
 import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
+import { compileOchreQuery, stringLiteral } from "#/xquery.js";
 
 type FetchItemResult<TItem> = Promise<
   | { item: TItem; error: null; detailedError: null }
@@ -103,17 +99,15 @@ ${ITEM_CATEGORIES_WITH_EMBEDDED_ITEMS.map((category) => `  $ochre/${category}`).
     )`;
   }
 
-  return `xquery version "1.0-ml";
-
-${SUPPLEMENTAL_XQUERY_PROLOG}
-
-${letClauses.join("\n")}
+  return compileOchreQuery({
+    body: ({ omitSupplemental }) => `${letClauses.join("\n")}
 return
   if (empty($ochre)) then ()
   else element ochre {
     $ochre/@*,
     ${omitSupplemental(itemNodesExpression)}
-  }`;
+  }`,
+  });
 }
 
 function omitEmbeddedItems(

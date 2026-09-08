@@ -4,6 +4,7 @@ import type {
   QueryGroup,
   QueryLeaf,
 } from "#/types/index.js";
+import type { OchreQueryContext } from "#/xquery.js";
 import { BELONGS_TO_COLLECTION_UUID } from "#/constants.js";
 import {
   buildOcrWordPath,
@@ -11,7 +12,7 @@ import {
   OCR_WORD_CONTENT_ATTRIBUTE,
   OCR_WORD_QNAMES,
 } from "#/ocr.js";
-import { stringLiteral, SUPPLEMENTAL_XQUERY_PROLOG } from "#/utilities.js";
+import { compileOchreQuery, stringLiteral } from "#/xquery.js";
 
 const CTS_INCLUDES_STOP_WORDS = new Set<string>([
   "and",
@@ -2072,7 +2073,7 @@ export function compileSetItemsQuery(parameters: {
   belongsToCollectionScopeUuids: ReadonlyArray<string>;
   queries: Query | null;
   declarations?: ReadonlyArray<string>;
-  body: (itemsVariable: string) => string;
+  body: (context: OchreQueryContext & { items: string }) => string;
 }): string {
   const {
     setScopeUuids,
@@ -2091,23 +2092,17 @@ export function compileSetItemsQuery(parameters: {
     ),
   });
 
-  const prologDeclarations: Array<string> = [
-    'xquery version "1.0-ml";',
-    ...declarations,
-    `declare variable ${SET_SCOPE_VARIABLE} := (${Array.from(setScopeUuids, (uuid) => stringLiteral(uuid)).join(", ")});`,
-    SUPPLEMENTAL_XQUERY_PROLOG,
-  ];
-
-  if (plan.prolog !== "") {
-    prologDeclarations.push(plan.prolog);
-  }
-
-  return `${prologDeclarations.join("\n\n")}
-
-<ochre>{
+  return compileOchreQuery({
+    declarations: [
+      ...declarations,
+      `declare variable ${SET_SCOPE_VARIABLE} := (${Array.from(setScopeUuids, (uuid) => stringLiteral(uuid)).join(", ")});`,
+      ...(plan.prolog === "" ? [] : [plan.prolog]),
+    ],
+    body: (context) => `<ochre>{
 ${plan.itemsClause}
-${body(plan.itemsVariable)}
-}</ochre>`;
+${body({ ...context, items: plan.itemsVariable })}
+}</ochre>`,
+  });
 }
 
 /**

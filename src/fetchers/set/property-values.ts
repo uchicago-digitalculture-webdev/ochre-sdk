@@ -10,6 +10,7 @@ import type {
 } from "#/types/index.js";
 import type { XMLContent } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES } from "#/constants.js";
+import { getErrorOutput } from "#/errors.js";
 import { requestOchre } from "#/fetchers/request.js";
 import { MultilingualString } from "#/parsers/multilingual.js";
 import { parseXMLContent } from "#/parsers/string.js";
@@ -19,11 +20,7 @@ import {
   getPropertyFacetSelectors,
 } from "#/query.js";
 import { setPropertyValuesParametersSchema } from "#/schemas.js";
-import {
-  getErrorOutput,
-  NOT_SUPPLEMENTAL_PREDICATE,
-  stringLiteral,
-} from "#/utilities.js";
+import { stringLiteral } from "#/xquery.js";
 
 type ParsedPropertyValueItem = PropertyValueQueryItem & {
   scope: "global" | "variable";
@@ -328,7 +325,6 @@ function buildXQuery(parameters: {
   } = parameters;
 
   const valueFilter = isLimitedToLeafPropertyValues ? "[not(@i)]" : "";
-  const queryBlocks: Array<string> = [];
   const returnedSequences: Array<string> = [];
   const xqueryDeclarations = [
     'declare namespace map = "http://marklogic.com/xdmp/map";',
@@ -449,33 +445,40 @@ declare function local:add-attribute-facet($counts, $seen, $key) {
 };`,
   ];
 
-  if (propertyFacetSelectors.length > 0) {
-    const facetPropertyPredicates: Array<string> = [];
-    for (const selector of propertyFacetSelectors) {
-      const uuidPredicate = `label/@uuid = ${stringLiteral(selector.uuid)}`;
-      facetPropertyPredicates.push(
-        selector.relation == null
-          ? uuidPredicate
-          : `(${uuidPredicate} and label/@relation = ${stringLiteral(selector.relation)})`,
-      );
-    }
-    const facetPropertyPredicate =
-      facetPropertyPredicates.length === 1
-        ? (facetPropertyPredicates[0] ?? "false()")
-        : `(${facetPropertyPredicates.join(" or ")})`;
+  function buildQueryBlocks(context: {
+    items: string;
+    notSupplemental: string;
+  }): Array<string> {
+    const { items, notSupplemental } = context;
+    const queryBlocks: Array<string> = [];
 
-    queryBlocks.push(`let $global-property-counts := map:map()
+    if (propertyFacetSelectors.length > 0) {
+      const facetPropertyPredicates: Array<string> = [];
+      for (const selector of propertyFacetSelectors) {
+        const uuidPredicate = `label/@uuid = ${stringLiteral(selector.uuid)}`;
+        facetPropertyPredicates.push(
+          selector.relation == null
+            ? uuidPredicate
+            : `(${uuidPredicate} and label/@relation = ${stringLiteral(selector.relation)})`,
+        );
+      }
+      const facetPropertyPredicate =
+        facetPropertyPredicates.length === 1
+          ? (facetPropertyPredicates[0] ?? "false()")
+          : `(${facetPropertyPredicates.join(" or ")})`;
+
+      queryBlocks.push(`let $global-property-counts := map:map()
 let $variable-property-counts := map:map()
 let $variable-property-details := map:map()
 let $variable-property-global-keys := map:map()
 let $_property-aggregation := xdmp:eager(
-  for $item in $items
+  for $item in ${items}
   let $global-seen := map:map()
   let $variable-seen := map:map()
   return
-    for $p in $item/properties/property[${facetPropertyPredicate}]${NOT_SUPPLEMENTAL_PREDICATE}
+    for $p in $item/properties/property[${facetPropertyPredicate}]${notSupplemental}
     let $variable-uuid := string($p/label/@uuid)
-    for $v in $p/value${valueFilter}${NOT_SUPPLEMENTAL_PREDICATE}
+    for $v in $p/value${valueFilter}${notSupplemental}
     let $value-uuid := string($v/@uuid)
     let $raw-value := string($v/@rawValue)
     let $data-type := local:normalize-data-type(string($v/@dataType))
@@ -504,16 +507,16 @@ let $property-values :=
       $detail/node()
     }</propertyValue>
   )`);
-    returnedSequences.push("$property-values");
-  }
+      returnedSequences.push("$property-values");
+    }
 
-  if (attributes.bibliographies) {
-    queryBlocks.push(`let $bibliography-counts := map:map()
+    if (attributes.bibliographies) {
+      queryBlocks.push(`let $bibliography-counts := map:map()
 let $_bibliography-aggregation := xdmp:eager(
-  for $item in $items
+  for $item in ${items}
   let $seen := map:map()
   return
-    for $bibliography in $item/bibliographies/bibliography${NOT_SUPPLEMENTAL_PREDICATE}
+    for $bibliography in $item/bibliographies/bibliography${notSupplemental}
     let $label := string-join($bibliography/identification/label/content[@xml:lang="eng"]//text(), "")
     where string-length($label) gt 0
     return local:add-attribute-facet($bibliography-counts, $seen, $label)
@@ -525,16 +528,16 @@ let $bibliography-values :=
     for $label in map:keys($bibliography-counts)
     return <attributeValue attributeType="bibliographies" count="{map:get($bibliography-counts, $label)}" content="{$label}" />
   )`);
-    returnedSequences.push("$bibliography-values");
-  }
+      returnedSequences.push("$bibliography-values");
+    }
 
-  if (attributes.periods) {
-    queryBlocks.push(`let $period-counts := map:map()
+    if (attributes.periods) {
+      queryBlocks.push(`let $period-counts := map:map()
 let $_period-aggregation := xdmp:eager(
-  for $item in $items
+  for $item in ${items}
   let $seen := map:map()
   return
-    for $period in $item/periods/period${NOT_SUPPLEMENTAL_PREDICATE}
+    for $period in $item/periods/period${notSupplemental}
     let $label := string-join($period/identification/label/content[@xml:lang="eng"]//text(), "")
     where string-length($label) gt 0
     return local:add-attribute-facet($period-counts, $seen, $label)
@@ -546,7 +549,10 @@ let $period-values :=
     for $label in map:keys($period-counts)
     return <attributeValue attributeType="periods" count="{map:get($period-counts, $label)}" content="{$label}" />
   )`);
-    returnedSequences.push("$period-values");
+      returnedSequences.push("$period-values");
+    }
+
+    return queryBlocks;
   }
 
   const xquery = compileSetItemsQuery({
@@ -554,9 +560,13 @@ let $period-values :=
     belongsToCollectionScopeUuids,
     queries: getItemFilterQueries(queries),
     declarations: xqueryDeclarations,
-    body: () => `${queryBlocks.join("\n\n")}
+    body: (context) => {
+      const blocks = buildQueryBlocks(context);
 
-return (${returnedSequences.join(", ")})`,
+      return `${blocks.join("\n\n")}
+
+return (${returnedSequences.join(", ")})`;
+    },
   });
 
   return xquery;

@@ -1,16 +1,12 @@
 import type { OchreRequestOptions } from "#/fetchers/request.js";
 import type { LanguageCodes } from "#/types/index.js";
 import type { ProtectedWebsite, Website } from "#/types/website.js";
+import { getErrorOutput } from "#/errors.js";
 import { isOchreJsonAccepted, requestOchre } from "#/fetchers/request.js";
 import { parseLanguages } from "#/parsers/languages.js";
 import { parseWebsite } from "#/parsers/website/index.js";
-import {
-  getErrorOutput,
-  omitSupplemental,
-  stringLiteral,
-  SUPPLEMENTAL_XQUERY_PROLOG,
-} from "#/utilities.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
+import { compileOchreQuery, stringLiteral } from "#/xquery.js";
 
 async function areWebsiteCredentialsValid(
   uuid: string,
@@ -36,12 +32,11 @@ async function areWebsiteCredentialsValid(
  * @returns An XQuery string
  */
 function buildXQuery(abbreviation: string): string {
-  return `xquery version "1.0-ml";
-
-${SUPPLEMENTAL_XQUERY_PROLOG}
-
-for $ochre in collection("ochre/tree")/ochre[tree/identification/abbreviation/content/string = ${stringLiteral(abbreviation)}]
-return element ochre { $ochre/@*, ${omitSupplemental("$ochre/node()")} }`;
+  return compileOchreQuery({
+    body: ({ omitSupplemental }) =>
+      `for $ochre in collection("ochre/tree")/ochre[tree/identification/abbreviation/content/string = ${stringLiteral(abbreviation)}]
+return element ochre { $ochre/@*, ${omitSupplemental("$ochre/node()")} }`,
+  });
 }
 
 /**

@@ -5,6 +5,7 @@ import type {
 } from "#/parsers/helpers.js";
 import type { WebsiteMetadata } from "#/types/website.js";
 import type { XMLWebsiteData } from "#/xml/types.js";
+import { getErrorOutput } from "#/errors.js";
 import { requestOchre } from "#/fetchers/request.js";
 import { parseStringLike } from "#/parsers/helpers.js";
 import {
@@ -21,13 +22,8 @@ import {
   SEGMENT_UNIQUE_SLUG_PREFIX_PATTERN,
   WEBSITE_PAGE_SLUG_SEPARATOR,
 } from "#/parsers/website/slug.js";
-import {
-  getErrorOutput,
-  omitSupplemental,
-  stringLiteral,
-  SUPPLEMENTAL_XQUERY_PROLOG,
-} from "#/utilities.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
+import { compileOchreQuery, stringLiteral } from "#/xquery.js";
 
 /**
  * The presentation properties the metadata projection carries
@@ -104,11 +100,9 @@ function buildXQuery(parameters: {
   abbreviation: string;
   slug: string;
 }): string {
-  return `xquery version "1.0-ml";
-
-${SUPPLEMENTAL_XQUERY_PROLOG}
-
-declare function local:resource-items($resources) {
+  return compileOchreQuery({
+    declarations: [
+      `declare function local:resource-items($resources) {
   for $resource in $resources
   return
     if ($resource/segments) then $resource
@@ -193,9 +187,13 @@ declare function local:metadata-tree($tree, $target-slug, $slug-prefix) {
     }
 };
 
-let $website := collection("ochre/tree")/ochre[tree/identification/abbreviation/content/string = ${stringLiteral(
-    parameters.abbreviation,
-  )}][1]
+`,
+    ],
+    body: ({
+      omitSupplemental,
+    }) => `let $website := collection("ochre/tree")/ochre[tree/identification/abbreviation/content/string = ${stringLiteral(
+      parameters.abbreviation,
+    )}][1]
 let $target-slug := ${stringLiteral(parameters.slug)}
 return
   <ochre>{
@@ -208,7 +206,8 @@ return
       $website/metadata,
       local:metadata-tree($website/tree[1], $target-slug, "")
     )`)}
-  }</ochre>`;
+  }</ochre>`,
+  });
 }
 
 /**

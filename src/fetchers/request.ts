@@ -2,7 +2,7 @@ import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type { FetchFunction } from "#/parsers/helpers.js";
 import { OCHRE_ENDPOINT, XML_PARSER_OPTIONS } from "#/constants.js";
-import { createSchemaValidationError } from "#/utilities.js";
+import { createSchemaValidationError } from "#/errors.js";
 import { restoreXMLMetadata } from "#/xml/metadata.js";
 
 const OCHRE_XQUERY_ENDPOINT = `${OCHRE_ENDPOINT}?xquery&xsl=none&lang="*"`;
