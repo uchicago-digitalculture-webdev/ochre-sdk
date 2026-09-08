@@ -50,7 +50,6 @@ import type {
   XMLSetItemsData as XMLSetItemsDataType,
   XMLSetItems as XMLSetItemsType,
   XMLSet as XMLSetType,
-  XMLSimplifiedProperty as XMLSimplifiedPropertyType,
   XMLSpatialUnit as XMLSpatialUnitType,
   XMLString as XMLStringType,
   XMLText as XMLTextType,
@@ -770,117 +769,15 @@ const XMLProperty: v.GenericSchema<unknown, XMLPropertyType> = v.lazy(() =>
   ),
 );
 
-const XMLSimplifiedProperty: v.GenericSchema<
-  unknown,
-  XMLSimplifiedPropertyType
-> = v.lazy(() =>
-  v.object(
-    {
-      label: v.intersect([
-        v.union([XMLContent, XMLString]),
-        v.object(
-          {
-            uuid: v.union(
-              [
-                v.literal(""),
-                v.pipe(
-                  v.string(
-                    "XMLSimplifiedProperty: uuid is string and required",
-                  ),
-                  v.check(
-                    isPseudoUuid,
-                    "XMLSimplifiedProperty: uuid is not a valid pseudo-UUID",
-                  ),
-                ),
-              ],
-              "XMLSimplifiedProperty: uuid is string and required",
-            ),
-            publicationDateTime: v.optional(
-              customDateTime(
-                "XMLSimplifiedProperty: publicationDateTime is not a valid datetime",
-              ),
-            ),
-            relation: v.optional(XMLPropertyRelation),
-          },
-          "XMLSimplifiedProperty: label is object with uuid",
-        ),
-      ]),
-      value: v.optional(
-        v.array(
-          v.object({
-            ...v.partial(XMLContent).entries,
-            i: XMLOptionalNumber,
-            inherited: v.optional(XMLBoolean),
-            uuid: v.optional(
-              v.union([
-                v.literal(""),
-                v.pipe(
-                  v.string(
-                    "XMLSimplifiedProperty: uuid is string and optional",
-                  ),
-                  v.check(
-                    isPseudoUuid,
-                    "XMLSimplifiedProperty: uuid is not a valid pseudo-UUID",
-                  ),
-                ),
-              ]),
-            ),
-            publicationDateTime: v.optional(
-              customDateTime(
-                "XMLSimplifiedProperty: publicationDateTime is not a valid datetime",
-              ),
-            ),
-            dataType: v.optional(
-              v.string(
-                "XMLSimplifiedProperty: dataType is string and optional",
-              ),
-            ),
-            category: v.optional(
-              v.string(
-                "XMLSimplifiedProperty: category is string and optional",
-              ),
-            ),
-            type: v.optional(
-              v.string("XMLSimplifiedProperty: type is string and optional"),
-            ),
-            slug: v.optional(
-              v.string("XMLSimplifiedProperty: slug is string and optional"),
-            ),
-            unit: v.optional(
-              v.string("XMLSimplifiedProperty: unit is string and optional"),
-            ),
-            height: XMLOptionalNumber,
-            width: XMLOptionalNumber,
-            fileSize: XMLOptionalNumber,
-            rawValue: v.optional(
-              v.string(
-                "XMLSimplifiedProperty: rawValue is string and optional",
-              ),
-            ),
-            isUncertain: v.optional(
-              v.literal("true", "XMLSimplifiedProperty: isUncertain is true"),
-            ),
-            href: v.optional(
-              v.string("XMLSimplifiedProperty: href is string and optional"),
-            ),
-            payload: v.optional(
-              v.string("XMLSimplifiedProperty: payload is string"),
-            ),
-          }),
-          "XMLSimplifiedProperty: value is array of objects with payload",
-        ),
-      ),
-      comment: v.optional(XMLContent),
-      property: v.optional(
-        v.array(
-          XMLSimplifiedProperty,
-          "XMLSimplifiedProperty: property is array of XMLSimplifiedProperty",
-        ),
-      ),
-    },
-    "XMLSimplifiedProperty: Shape error",
-  ),
-);
+/**
+ * The raw shape of a simplified property
+ *
+ * Identical to {@link XMLProperty}: OCHRE serves one shape, and the
+ * "simplified" distinction is a parsing choice, not a wire-format one. The
+ * parser decides whether a label becomes a multilingual string or a plain
+ * string; nothing about the XML differs.
+ */
+const XMLSimplifiedProperty = XMLProperty;
 
 const XMLBaseItem = v.object(
   {

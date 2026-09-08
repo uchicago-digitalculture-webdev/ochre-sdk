@@ -235,35 +235,13 @@ export type XMLProperty = {
   property?: Array<XMLProperty>;
 };
 
-export type XMLSimplifiedProperty = {
-  label: (XMLContent | XMLString) & {
-    uuid: string;
-    publicationDateTime?: Date;
-    relation?: XMLPropertyRelation;
-  };
-  value?: Array<
-    Partial<XMLContent> & {
-      i?: number;
-      inherited?: boolean;
-      uuid?: string;
-      publicationDateTime?: Date;
-      dataType?: string;
-      category?: string;
-      type?: string;
-      slug?: string;
-      unit?: string;
-      height?: number;
-      width?: number;
-      fileSize?: number;
-      href?: string;
-      rawValue?: string;
-      isUncertain?: "true";
-      payload?: string;
-    }
-  >;
-  comment?: XMLContent;
-  property?: Array<XMLSimplifiedProperty>;
-};
+/**
+ * The raw shape of a simplified property
+ *
+ * Identical to {@link XMLProperty}: the "simplified" distinction is a parsing
+ * choice, not a wire-format one.
+ */
+export type XMLSimplifiedProperty = XMLProperty;
 
 export type XMLBaseItem = {
   uuid: string;
