@@ -82,16 +82,6 @@ function parsePropertyValueLabel(
   return MultilingualString.fromObject({ [DEFAULT_LANGUAGES[0]]: parsedText });
 }
 
-function parsePropertyValueBooleanContent(
-  rawValue: string | null | undefined,
-): boolean | null {
-  if (rawValue === "" || rawValue == null) {
-    return null;
-  }
-
-  return rawValue.toLocaleLowerCase("en-US") === "true";
-}
-
 /**
  * The prefix OCHRE puts on every `dataType` attribute
  *
@@ -187,6 +177,39 @@ const propertyValueLabelContentSchema = v.object({
 });
 
 /**
+ * Give the canonical value the type its `dataType` implies
+ *
+ * Which value a facet stands for is decided once, server-side, by
+ * `local:value-content`, and travels back as `canonicalValue`. This only gives
+ * that string a TypeScript type: re-deriving it here from `rawValue`, `uuid`
+ * and the label is what let the facet key and the facet content disagree.
+ */
+function typePropertyValueContent(
+  dataType: PropertyValueQueryItem["dataType"],
+  canonicalValue: string | undefined,
+): PropertyValueQueryItem["content"] {
+  if (canonicalValue == null || canonicalValue === "") {
+    return null;
+  }
+
+  switch (dataType) {
+    case "integer":
+    case "decimal":
+    case "time": {
+      const numericContent = Number(canonicalValue);
+
+      return Number.isNaN(numericContent) ? null : numericContent;
+    }
+    case "boolean": {
+      return canonicalValue === "true";
+    }
+    default: {
+      return canonicalValue;
+    }
+  }
+}
+
+/**
  * Schema for a single property value query item in the OCHRE API response
  */
 const propertyValueQueryItemSchema = v.pipe(
@@ -197,14 +220,15 @@ const propertyValueQueryItemSchema = v.pipe(
     count: countSchema,
     globalCount: v.nullish(countSchema),
     dataType: v.optional(v.string(), "string"),
+    canonicalValue: v.optional(v.string()),
     rawValue: v.optional(v.string()),
     payload: v.optional(v.string()),
     content: v.optional(v.array(propertyValueLabelContentSchema)),
   }),
   v.transform((value): ParsedPropertyValueItem => {
     const dataType = normalizePropertyValueDataType(value.dataType);
-    const label = parsePropertyValueLabel(value.content, value.payload);
-    const returnValue: ParsedPropertyValueItem = {
+
+    return {
       uuid: value.uuid !== "" ? value.uuid : null,
       scope: value.scope,
       variableUuid:
@@ -214,41 +238,9 @@ const propertyValueQueryItemSchema = v.pipe(
       count: value.count,
       globalCount: value.globalCount ?? null,
       dataType,
-      content: null,
-      label,
+      content: typePropertyValueContent(dataType, value.canonicalValue),
+      label: parsePropertyValueLabel(value.content, value.payload),
     };
-
-    switch (dataType) {
-      case "IDREF": {
-        returnValue.content = value.uuid !== "" ? value.uuid : null;
-        break;
-      }
-      case "integer":
-      case "decimal":
-      case "time": {
-        if (value.rawValue != null && value.rawValue !== "") {
-          const numericContent = Number(value.rawValue);
-          returnValue.content = Number.isNaN(numericContent)
-            ? null
-            : numericContent;
-        }
-        break;
-      }
-      case "boolean": {
-        returnValue.content = parsePropertyValueBooleanContent(value.rawValue);
-        break;
-      }
-      default: {
-        const labelText = label?.getText() ?? null;
-        returnValue.content =
-          value.rawValue != null && value.rawValue !== ""
-            ? value.rawValue
-            : labelText;
-        break;
-      }
-    }
-
-    return returnValue;
   }),
 );
 
@@ -391,6 +383,7 @@ declare function local:put-property-detail(
   $value-uuid,
   $raw-value,
   $data-type,
+  $canonical-value,
   $display,
   $label-content
 ) {
@@ -408,7 +401,7 @@ declare function local:put-property-detail(
       map:put(
         $details,
         $key,
-        <propertyValue scope="{$scope}" variableUuid="{$variable-uuid}" uuid="{$value-uuid}" rawValue="{$raw-value}" dataType="{$data-type}">{
+        <propertyValue scope="{$scope}" variableUuid="{$variable-uuid}" uuid="{$value-uuid}" rawValue="{$raw-value}" dataType="{$data-type}" canonicalValue="{$canonical-value}">{
           if (exists($label-content)) then $label-content else $display
         }</propertyValue>
       )
@@ -425,6 +418,7 @@ declare function local:add-property-facet(
   $value-uuid,
   $raw-value,
   $data-type,
+  $canonical-value,
   $display,
   $label-content
 ) {
@@ -432,7 +426,7 @@ declare function local:add-property-facet(
   else (
     map:put($seen, $key, true()),
     local:increment-count($counts, $key),
-    local:put-property-detail($details, $key, $scope, $variable-uuid, $value-uuid, $raw-value, $data-type, $display, $label-content)
+    local:put-property-detail($details, $key, $scope, $variable-uuid, $value-uuid, $raw-value, $data-type, $canonical-value, $display, $label-content)
   )
 };
 
@@ -492,7 +486,7 @@ let $_property-aggregation := xdmp:eager(
     where $content != ""
     return (
       local:add-attribute-facet($global-property-counts, $global-seen, $global-key),
-      local:add-property-facet($variable-property-counts, $variable-property-details, $variable-seen, $variable-key, "variable", $variable-uuid, $value-uuid, $output-raw-value, $data-type, $display, $label-content),
+      local:add-property-facet($variable-property-counts, $variable-property-details, $variable-seen, $variable-key, "variable", $variable-uuid, $value-uuid, $output-raw-value, $data-type, $content, $display, $label-content),
       map:put($variable-property-global-keys, $variable-key, $global-key)
     )
 )
@@ -503,7 +497,7 @@ let $property-values :=
     for $key in map:keys($variable-property-counts)
     let $detail := map:get($variable-property-details, $key)
     let $global-key := map:get($variable-property-global-keys, $key)
-    return <propertyValue scope="variable" variableUuid="{string($detail/@variableUuid)}" uuid="{string($detail/@uuid)}" rawValue="{string($detail/@rawValue)}" dataType="{string($detail/@dataType)}" count="{map:get($variable-property-counts, $key)}" globalCount="{map:get($global-property-counts, $global-key)}">{
+    return <propertyValue scope="variable" variableUuid="{string($detail/@variableUuid)}" uuid="{string($detail/@uuid)}" rawValue="{string($detail/@rawValue)}" dataType="{string($detail/@dataType)}" canonicalValue="{string($detail/@canonicalValue)}" count="{map:get($variable-property-counts, $key)}" globalCount="{map:get($global-property-counts, $global-key)}">{
       $detail/node()
     }</propertyValue>
   )`);
