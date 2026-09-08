@@ -43,6 +43,7 @@ import { fetchItem } from "#/fetchers/item.js";
 import { MultilingualString } from "#/index.js";
 import { parseItem } from "#/parsers/index.js";
 import { defineLanguages } from "#/parsers/languages.js";
+import { readPropertyValueText } from "#/parsers/property-token.js";
 import {
   extractAliases,
   parseXMLContent,
@@ -602,8 +603,7 @@ function getExpectedPropertyValueContent(
   rawLabel: string | null,
   dataType: ParsedPropertyFields["values"][number]["dataType"],
 ): string | number | boolean {
-  const expectedContent =
-    rawValue.rawValue ?? rawValue.payload ?? rawLabel ?? rawValue.slug ?? "";
+  const expectedContent = readPropertyValueText(rawValue, () => rawLabel);
 
   if (dataType === "boolean") {
     return expectedContent === "true";

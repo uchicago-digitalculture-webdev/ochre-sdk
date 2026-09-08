@@ -22,6 +22,10 @@ import {
 import { normalizePropertyVariableLabel } from "#/getters.js";
 import { serializeMDXContent, serializeMDXText } from "#/parsers/mdx.js";
 import { MultilingualString } from "#/parsers/multilingual.js";
+import {
+  readPropertyValueText,
+  readPropertyValueUuid,
+} from "#/parsers/property-token.js";
 import { renderOptionsSchema } from "#/schemas.js";
 import { getXMLSourceIndex } from "#/xml/metadata.js";
 
@@ -351,8 +355,7 @@ function createMDXStringAttribute(
 function getPropertyValueUuid(
   property: XMLProperty | undefined,
 ): string | null {
-  const value = property?.value?.[0];
-  return value?.uuid == null || value.uuid === "" ? null : value.uuid;
+  return readPropertyValueUuid(property?.value?.[0]);
 }
 
 function getFirstPropertyMetadata(
@@ -403,23 +406,9 @@ function parsePropertyValueText(
     return "";
   }
 
-  if (value.rawValue != null) {
-    return value.rawValue;
-  }
-
-  if (value.payload != null) {
-    return value.payload;
-  }
-
-  if (value.slug != null) {
-    return value.slug;
-  }
-
-  if (value.content != null) {
-    return parseContentLikeForLanguage(value, options);
-  }
-
-  return "";
+  return readPropertyValueText(value, () =>
+    value.content == null ? null : parseContentLikeForLanguage(value, options),
+  );
 }
 
 function hasMatchingPropertyLabel(

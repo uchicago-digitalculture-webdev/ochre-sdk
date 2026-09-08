@@ -136,6 +136,7 @@ import {
   resolveLanguages,
 } from "#/parsers/languages.js";
 import { MultilingualString } from "#/parsers/multilingual.js";
+import { readPropertyValueText } from "#/parsers/property-token.js";
 import {
   parseXMLString,
   transformPermanentIdentificationUrl,
@@ -1028,8 +1029,10 @@ function parsePropertyValueContent<T extends ReadonlyArray<string>>(
       : value.payload != null && value.payload !== ""
         ? multilingualFromText(value.payload, options)
         : null;
-  const displayText = rawLabel?.getText() ?? value.payload ?? value.slug ?? "";
-  const contentText = value.rawValue ?? value.payload ?? displayText;
+  const contentText = readPropertyValueText(
+    value,
+    () => rawLabel?.getText() ?? null,
+  );
   const common = {
     hierarchy: {
       isLeaf: value.inherited == null || !value.inherited,
