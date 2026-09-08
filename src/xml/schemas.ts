@@ -1,105 +1,37 @@
 /* eslint-disable ts/no-use-before-define */
 import * as v from "valibot";
-import type {
-  XMLBibliography as XMLBibliographyType,
-  XMLConcept as XMLConceptType,
-  XMLContextGroup as XMLContextGroupType,
-  XMLContextItem as XMLContextItemType,
-  XMLContext as XMLContextType,
-  XMLContextValue as XMLContextValueType,
-  XMLCoordinatesSource as XMLCoordinatesSourceType,
-  XMLCoordinates as XMLCoordinatesType,
-  XMLDataItem as XMLDataItemType,
-  XMLData as XMLDataType,
-  XMLDictionaryUnit as XMLDictionaryUnitType,
-  XMLEmptyContext as XMLEmptyContextType,
-  XMLEvent as XMLEventType,
-  XMLGalleryData as XMLGalleryDataType,
-  XMLGallery as XMLGalleryType,
-  XMLHeading as XMLHeadingType,
-  XMLIdentification as XMLIdentificationType,
-  XMLImageMapArea as XMLImageMapAreaType,
-  XMLImageMap as XMLImageMapType,
-  XMLImage as XMLImageType,
-  XMLInterpretation as XMLInterpretationType,
-  XMLItemLinksData as XMLItemLinksDataType,
-  XMLItemLinks as XMLItemLinksType,
-  XMLLicense as XMLLicenseType,
-  XMLLinkedBibliography as XMLLinkedBibliographyType,
-  XMLLinkedConcept as XMLLinkedConceptType,
-  XMLLinkedPeriod as XMLLinkedPeriodType,
-  XMLLinkedPerson as XMLLinkedPersonType,
-  XMLLinkedPropertyValue as XMLLinkedPropertyValueType,
-  XMLLinkedPropertyVariable as XMLLinkedPropertyVariableType,
-  XMLLinkedResource as XMLLinkedResourceType,
-  XMLLinkedSet as XMLLinkedSetType,
-  XMLLinkedSpatialUnit as XMLLinkedSpatialUnitType,
-  XMLLinkedText as XMLLinkedTextType,
-  XMLLinkedTree as XMLLinkedTreeType,
-  XMLLink as XMLLinkType,
-  XMLMetadata as XMLMetadataType,
-  XMLNote as XMLNoteType,
-  XMLObservation as XMLObservationType,
-  XMLPeriod as XMLPeriodType,
-  XMLPerson as XMLPersonType,
-  XMLPropertyRelation as XMLPropertyRelationType,
-  XMLProperty as XMLPropertyType,
-  XMLPropertyValue as XMLPropertyValueType,
-  XMLPropertyVariable as XMLPropertyVariableType,
-  XMLResource as XMLResourceType,
-  XMLSetItemsData as XMLSetItemsDataType,
-  XMLSetItems as XMLSetItemsType,
-  XMLSet as XMLSetType,
-  XMLSpatialUnit as XMLSpatialUnitType,
-  XMLString as XMLStringType,
-  XMLText as XMLTextType,
-  XMLTree as XMLTreeType,
-  XMLWebsiteContextItem as XMLWebsiteContextItemType,
-  XMLWebsiteContextLevel as XMLWebsiteContextLevelType,
-  XMLWebsiteContext as XMLWebsiteContextType,
-  XMLWebsiteData as XMLWebsiteDataType,
-  XMLWebsiteFilterContextItem as XMLWebsiteFilterContextItemType,
-  XMLWebsiteFilterContext as XMLWebsiteFilterContextType,
-  XMLWebsiteOptions as XMLWebsiteOptionsType,
-  XMLWebsiteProperties as XMLWebsitePropertiesType,
-  XMLWebsiteResourceGroup as XMLWebsiteResourceGroupType,
-  XMLWebsiteResource as XMLWebsiteResourceType,
-  XMLWebsiteScope as XMLWebsiteScopeType,
-  XMLWebsiteSegment as XMLWebsiteSegmentType,
-  XMLWebsiteStyle as XMLWebsiteStyleType,
-  XMLWebsiteTree as XMLWebsiteTreeType,
-} from "#/xml/types.js";
+import type * as XML from "#/xml/types.js";
 import { isPseudoUuid } from "#/schemas.js";
 import { parseDateTime } from "#/xml/dates.js";
 
-function getXMLStringPayload(value: string | XMLStringType): string | null {
+function getXMLStringPayload(value: string | XML.XMLString): string | null {
   return typeof value === "string" ? value : (value.payload ?? null);
 }
 
-function parseXMLDate(value: string | XMLStringType): Date {
+function parseXMLDate(value: string | XML.XMLString): Date {
   return parseDateTime(getXMLStringPayload(value) ?? "");
 }
 
-function isXMLDate(value: string | XMLStringType): boolean {
+function isXMLDate(value: string | XML.XMLString): boolean {
   return !Number.isNaN(parseXMLDate(value).getTime());
 }
 
-function isXMLNumber(value: string | XMLStringType): boolean {
+function isXMLNumber(value: string | XML.XMLString): boolean {
   const payload = getXMLStringPayload(value);
   return payload != null && !Number.isNaN(Number(payload));
 }
 
-function isOptionalXMLNumber(value: string | XMLStringType): boolean {
+function isOptionalXMLNumber(value: string | XML.XMLString): boolean {
   const payload = getXMLStringPayload(value);
   return payload == null || payload === "" || !Number.isNaN(Number(payload));
 }
 
-function parseXMLNumber(value: string | XMLStringType): number {
+function parseXMLNumber(value: string | XML.XMLString): number {
   return Number(getXMLStringPayload(value));
 }
 
 function parseOptionalXMLNumber(
-  value: string | XMLStringType,
+  value: string | XML.XMLString,
 ): number | undefined {
   const payload = getXMLStringPayload(value);
   return payload === "" || payload == null ? undefined : Number(payload);
@@ -124,11 +56,13 @@ const ITEM_CATEGORIES = [
 const XMLItemCategory = v.picklist(ITEM_CATEGORIES);
 
 const XMLRichTextEnvelope = {
-  links: v.optional(v.lazy(() => XMLLink)),
+  links: v.optional(
+    v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+  ),
   properties: v.optional(
     v.object({
       property: v.array(
-        v.lazy(() => XMLProperty),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLProperty> => XMLProperty),
         "XMLRichTextEnvelope: properties is array of XMLProperty",
       ),
     }),
@@ -153,16 +87,13 @@ const XMLStringEntries = {
   ...XMLRichTextEnvelope,
   string: v.optional(
     v.array(
-      v.lazy(() => XMLString),
+      v.lazy((): v.GenericSchema<unknown, XML.XMLString> => XMLString),
       "XMLString: string is array of XMLString",
     ),
   ),
 };
 
-const XMLString: v.GenericSchema<unknown, XMLStringType> = v.object(
-  XMLStringEntries,
-  "XMLString: Shape error",
-);
+const XMLString = v.object(XMLStringEntries, "XMLString: Shape error");
 
 const XMLContent = v.object(
   {
@@ -179,25 +110,21 @@ const XMLContent = v.object(
   "XMLContent: Shape error",
 );
 
-const XMLNumber: v.GenericSchema<unknown, number> = v.pipe(
+const XMLNumber = v.pipe(
   v.union([v.string("XMLNumber: string is string and required"), XMLString]),
   v.check(isXMLNumber, "XMLNumber: string is not a number"),
   v.transform(parseXMLNumber),
 );
 
-const XMLOptionalNumber: v.GenericSchema<unknown, number | undefined> =
-  v.optional(
-    v.pipe(
-      v.union([
-        v.string("XMLNumber: string is string and required"),
-        XMLString,
-      ]),
-      v.check(isOptionalXMLNumber, "XMLNumber: string is not a number"),
-      v.transform(parseOptionalXMLNumber),
-    ),
-  );
+const XMLOptionalNumber = v.optional(
+  v.pipe(
+    v.union([v.string("XMLNumber: string is string and required"), XMLString]),
+    v.check(isOptionalXMLNumber, "XMLNumber: string is not a number"),
+    v.transform(parseOptionalXMLNumber),
+  ),
+);
 
-const XMLBoolean: v.GenericSchema<unknown, boolean> = v.pipe(
+const XMLBoolean = v.pipe(
   v.union([v.string("XMLBoolean: string is string and required"), XMLString]),
   v.check((value) => {
     const payload = getXMLStringPayload(value);
@@ -219,34 +146,33 @@ function customDateTime(message?: string): v.GenericSchema<unknown, Date> {
   );
 }
 
-const XMLIdentification: v.GenericSchema<unknown, XMLIdentificationType> =
-  v.object(
-    {
-      label: v.union([XMLContent, XMLString]),
-      abbreviation: v.optional(v.union([XMLContent, XMLString])),
-      code: v.optional(
-        v.union([
-          XMLString,
-          v.string("XMLIdentification: code is string and optional"),
-        ]),
-      ),
-      email: v.optional(
-        v.union([
-          XMLString,
-          v.string("XMLIdentification: email is string and optional"),
-        ]),
-      ),
-      website: v.optional(
-        v.union([
-          XMLString,
-          v.string("XMLIdentification: website is string and optional"),
-        ]),
-      ),
-    },
-    "XMLIdentification: Shape error",
-  );
+const XMLIdentification = v.object(
+  {
+    label: v.union([XMLContent, XMLString]),
+    abbreviation: v.optional(v.union([XMLContent, XMLString])),
+    code: v.optional(
+      v.union([
+        XMLString,
+        v.string("XMLIdentification: code is string and optional"),
+      ]),
+    ),
+    email: v.optional(
+      v.union([
+        XMLString,
+        v.string("XMLIdentification: email is string and optional"),
+      ]),
+    ),
+    website: v.optional(
+      v.union([
+        XMLString,
+        v.string("XMLIdentification: website is string and optional"),
+      ]),
+    ),
+  },
+  "XMLIdentification: Shape error",
+);
 
-const XMLMetadata: v.GenericSchema<unknown, XMLMetadataType> = v.object({
+const XMLMetadata = v.object({
   dataset: XMLString,
   description: XMLString,
   publisher: v.union([XMLString, v.array(XMLString)]),
@@ -345,7 +271,7 @@ const XMLMetadata: v.GenericSchema<unknown, XMLMetadataType> = v.object({
   ),
 });
 
-const XMLLicense: v.GenericSchema<unknown, XMLLicenseType> = v.object(
+const XMLLicense = v.object(
   {
     ...XMLStringEntries,
     payload: v.string("XMLLicense: payload is string and required"),
@@ -359,7 +285,7 @@ const XMLLicense: v.GenericSchema<unknown, XMLLicenseType> = v.object(
   "XMLLicense: Shape error",
 );
 
-const XMLContextValue: v.GenericSchema<unknown, XMLContextValueType> = v.object(
+const XMLContextValue = v.object(
   {
     uuid: v.optional(
       v.pipe(
@@ -381,25 +307,22 @@ const XMLContextValue: v.GenericSchema<unknown, XMLContextValueType> = v.object(
   "XMLContextValue: Shape error",
 );
 
-const XMLContextItem: v.GenericSchema<unknown, XMLContextItemType> =
-  v.objectWithRest(
-    {
-      project: XMLContextValue,
-      tree: v.array(XMLContextValue),
-      displayPath: v.string(
-        "XMLContextItem: displayPath is string and required",
-      ),
-    },
-    v.array(XMLContextValue),
-    "XMLContextItem: Shape error",
-  );
+const XMLContextItem = v.objectWithRest(
+  {
+    project: XMLContextValue,
+    tree: v.array(XMLContextValue),
+    displayPath: v.string("XMLContextItem: displayPath is string and required"),
+  },
+  v.array(XMLContextValue),
+  "XMLContextItem: Shape error",
+);
 
-const XMLEmptyContext: v.GenericSchema<unknown, XMLEmptyContextType> = v.object(
+const XMLEmptyContext = v.object(
   { payload: v.string("XMLEmptyContext: payload is string and required") },
   "XMLEmptyContext: Shape error",
 );
 
-const XMLContextGroup: v.GenericSchema<unknown, XMLContextGroupType> = v.object(
+const XMLContextGroup = v.object(
   {
     context: v.array(
       v.union([XMLContextItem, XMLEmptyContext]),
@@ -412,14 +335,14 @@ const XMLContextGroup: v.GenericSchema<unknown, XMLContextGroupType> = v.object(
   "XMLContextGroup: Shape error",
 );
 
-const XMLContext: v.GenericSchema<unknown, XMLContextType> = v.array(
+const XMLContext = v.array(
   v.union(
     [XMLContextGroup, XMLEmptyContext],
     "XMLContext: item is XMLContextGroup or XMLEmptyContext",
   ),
 );
 
-const XMLEvent: v.GenericSchema<unknown, XMLEventType> = v.object(
+const XMLEvent = v.object(
   {
     dateTime: v.optional(
       customDateTime("XMLEvent: dateTime is not a valid datetime"),
@@ -508,53 +431,49 @@ const XMLCoordinatesSourceValue = v.intersect([
   }),
 ]);
 
-const XMLCoordinatesSource: v.GenericSchema<unknown, XMLCoordinatesSourceType> =
-  v.variant("context", [
-    v.object(
-      {
-        context: v.literal("self", "XMLCoordinatesSource: context is self"),
-        label: XMLCoordinatesSourceLabel,
-      },
-      "XMLCoordinatesSource: Shape error",
-    ),
-    v.object(
-      {
-        context: v.literal(
-          "related",
-          "XMLCoordinatesSource: context is related",
-        ),
-        label: XMLCoordinatesSourceLabel,
-        value: v.array(XMLCoordinatesSourceValue),
-      },
-      "XMLCoordinatesSource: Shape error",
-    ),
-    v.object(
-      {
-        context: v.literal(
-          "inherited",
-          "XMLCoordinatesSource: context is inherited",
-        ),
-        label: XMLCoordinatesSourceLabel,
-        value: v.optional(v.array(XMLCoordinatesSourceValue)),
-        item: v.object(
-          {
-            uuid: v.optional(
-              v.pipe(
-                v.string("XMLCoordinatesSource: uuid is string and optional"),
-                v.check(
-                  isPseudoUuid,
-                  "XMLCoordinatesSource: uuid is not a valid UUID",
-                ),
+const XMLCoordinatesSource = v.variant("context", [
+  v.object(
+    {
+      context: v.literal("self", "XMLCoordinatesSource: context is self"),
+      label: XMLCoordinatesSourceLabel,
+    },
+    "XMLCoordinatesSource: Shape error",
+  ),
+  v.object(
+    {
+      context: v.literal("related", "XMLCoordinatesSource: context is related"),
+      label: XMLCoordinatesSourceLabel,
+      value: v.array(XMLCoordinatesSourceValue),
+    },
+    "XMLCoordinatesSource: Shape error",
+  ),
+  v.object(
+    {
+      context: v.literal(
+        "inherited",
+        "XMLCoordinatesSource: context is inherited",
+      ),
+      label: XMLCoordinatesSourceLabel,
+      value: v.optional(v.array(XMLCoordinatesSourceValue)),
+      item: v.object(
+        {
+          uuid: v.optional(
+            v.pipe(
+              v.string("XMLCoordinatesSource: uuid is string and optional"),
+              v.check(
+                isPseudoUuid,
+                "XMLCoordinatesSource: uuid is not a valid UUID",
               ),
             ),
-            label: XMLCoordinatesSourceValue,
-          },
-          "XMLCoordinatesSource: Shape error",
-        ),
-      },
-      "XMLCoordinatesSource: Shape error",
-    ),
-  ]);
+          ),
+          label: XMLCoordinatesSourceValue,
+        },
+        "XMLCoordinatesSource: Shape error",
+      ),
+    },
+    "XMLCoordinatesSource: Shape error",
+  ),
+]);
 
 const XMLCoordinate = v.variant(
   "type",
@@ -588,12 +507,12 @@ const XMLCoordinate = v.variant(
   "XMLCoordinates: Shape error",
 );
 
-const XMLCoordinates: v.GenericSchema<unknown, XMLCoordinatesType> = v.object(
+const XMLCoordinates = v.object(
   { coord: v.array(XMLCoordinate) },
   "XMLCoordinates: Shape error",
 );
 
-const XMLImage: v.GenericSchema<unknown, XMLImageType> = v.object(
+const XMLImage = v.object(
   {
     publicationDateTime: v.optional(
       customDateTime("XMLImage: publicationDateTime is not a valid datetime"),
@@ -616,7 +535,7 @@ const XMLImage: v.GenericSchema<unknown, XMLImageType> = v.object(
   "XMLImage: Shape error",
 );
 
-const XMLImageMapArea: v.GenericSchema<unknown, XMLImageMapAreaType> = v.object(
+const XMLImageMapArea = v.object(
   {
     uuid: v.pipe(
       v.string("XMLImageMapArea: uuid is string and required"),
@@ -639,7 +558,7 @@ const XMLImageMapArea: v.GenericSchema<unknown, XMLImageMapAreaType> = v.object(
   "XMLImageMapArea: Shape error",
 );
 
-const XMLImageMap: v.GenericSchema<unknown, XMLImageMapType> = v.object(
+const XMLImageMap = v.object(
   {
     area: v.array(
       XMLImageMapArea,
@@ -651,7 +570,7 @@ const XMLImageMap: v.GenericSchema<unknown, XMLImageMapType> = v.object(
   "XMLImageMap: Shape error",
 );
 
-const XMLNote: v.GenericSchema<unknown, XMLNoteType> = v.object(
+const XMLNote = v.object(
   {
     ...XMLStringEntries,
     content: v.optional(XMLContent.entries.content),
@@ -660,7 +579,11 @@ const XMLNote: v.GenericSchema<unknown, XMLNoteType> = v.object(
     date: v.optional(customDateTime("XMLNote: date is not a valid datetime")),
     authors: v.optional(
       v.object(
-        { author: v.array(v.lazy(() => XMLPerson)) },
+        {
+          author: v.array(
+            v.lazy((): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson),
+          ),
+        },
         "XMLNote: authors is object with author array of XMLPerson",
       ),
     ),
@@ -671,9 +594,9 @@ const XMLNote: v.GenericSchema<unknown, XMLNoteType> = v.object(
 const XMLPropertyRelation = v.picklist([
   "related",
   "inverse",
-] as const satisfies ReadonlyArray<XMLPropertyRelationType>);
+] as const satisfies ReadonlyArray<XML.XMLPropertyRelation>);
 
-const XMLProperty: v.GenericSchema<unknown, XMLPropertyType> = v.lazy(() =>
+const XMLProperty: v.GenericSchema<unknown, XML.XMLProperty> = v.lazy(() =>
   v.object(
     {
       label: v.intersect([
@@ -798,7 +721,11 @@ const XMLBaseItem = v.object(
     context: v.optional(XMLContext),
     creators: v.optional(
       v.object(
-        { creator: v.array(v.lazy(() => XMLPerson)) },
+        {
+          creator: v.array(
+            v.lazy((): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson),
+          ),
+        },
         "XMLBaseItem: creators is object with creator array of XMLPerson",
       ),
     ),
@@ -827,7 +754,7 @@ const XMLLinkedBaseItem = v.object(
   "XMLLinkedBaseItem: Shape error",
 );
 
-const XMLLinkedTree: v.GenericSchema<unknown, XMLLinkedTreeType> = v.object(
+const XMLLinkedTree = v.object(
   {
     ...XMLLinkedBaseItem.entries,
     type: v.optional(v.string("XMLLinkedTree: type is string and optional")),
@@ -835,7 +762,7 @@ const XMLLinkedTree: v.GenericSchema<unknown, XMLLinkedTreeType> = v.object(
   "XMLLinkedTree: Shape error",
 );
 
-const XMLLinkedSet: v.GenericSchema<unknown, XMLLinkedSetType> = v.object(
+const XMLLinkedSet = v.object(
   {
     ...XMLLinkedBaseItem.entries,
     type: v.optional(v.string("XMLLinkedSet: type is string and optional")),
@@ -843,27 +770,25 @@ const XMLLinkedSet: v.GenericSchema<unknown, XMLLinkedSetType> = v.object(
   "XMLLinkedSet: Shape error",
 );
 
-const XMLLinkedConcept: v.GenericSchema<unknown, XMLLinkedConceptType> =
-  v.object(
-    {
-      ...XMLLinkedBaseItem.entries,
-      image: v.optional(XMLImage),
-      coordinates: v.optional(XMLCoordinates),
-    },
-    "XMLLinkedConcept: Shape error",
-  );
+const XMLLinkedConcept = v.object(
+  {
+    ...XMLLinkedBaseItem.entries,
+    image: v.optional(XMLImage),
+    coordinates: v.optional(XMLCoordinates),
+  },
+  "XMLLinkedConcept: Shape error",
+);
 
-const XMLLinkedSpatialUnit: v.GenericSchema<unknown, XMLLinkedSpatialUnitType> =
-  v.object(
-    {
-      ...XMLLinkedBaseItem.entries,
-      image: v.optional(XMLImage),
-      coordinates: v.optional(XMLCoordinates),
-    },
-    "XMLLinkedSpatialUnit: Shape error",
-  );
+const XMLLinkedSpatialUnit = v.object(
+  {
+    ...XMLLinkedBaseItem.entries,
+    image: v.optional(XMLImage),
+    coordinates: v.optional(XMLCoordinates),
+  },
+  "XMLLinkedSpatialUnit: Shape error",
+);
 
-const XMLLinkedPeriod: v.GenericSchema<unknown, XMLLinkedPeriodType> = v.object(
+const XMLLinkedPeriod = v.object(
   {
     ...XMLLinkedBaseItem.entries,
     type: v.optional(v.string("XMLLinkedPeriod: type is string and optional")),
@@ -872,7 +797,7 @@ const XMLLinkedPeriod: v.GenericSchema<unknown, XMLLinkedPeriodType> = v.object(
   "XMLLinkedPeriod: Shape error",
 );
 
-const XMLLinkedPerson: v.GenericSchema<unknown, XMLLinkedPersonType> = v.object(
+const XMLLinkedPerson = v.object(
   {
     ...XMLLinkedBaseItem.entries,
     type: v.optional(v.string("XMLLinkedPerson: type is string and optional")),
@@ -881,10 +806,7 @@ const XMLLinkedPerson: v.GenericSchema<unknown, XMLLinkedPersonType> = v.object(
   "XMLLinkedPerson: Shape error",
 );
 
-const XMLLinkedPropertyVariable: v.GenericSchema<
-  unknown,
-  XMLLinkedPropertyVariableType
-> = v.object(
+const XMLLinkedPropertyVariable = v.object(
   {
     ...XMLLinkedBaseItem.entries,
     type: v.optional(
@@ -895,47 +817,41 @@ const XMLLinkedPropertyVariable: v.GenericSchema<
   "XMLLinkedPropertyVariable: Shape error",
 );
 
-const XMLLinkedPropertyValue: v.GenericSchema<
-  unknown,
-  XMLLinkedPropertyValueType
-> = v.object(
+const XMLLinkedPropertyValue = v.object(
   { ...XMLLinkedBaseItem.entries, coordinates: v.optional(XMLCoordinates) },
   "XMLLinkedPropertyValue: Shape error",
 );
 
-const XMLLinkedResource: v.GenericSchema<unknown, XMLLinkedResourceType> =
-  v.object(
-    {
-      ...XMLLinkedBaseItem.entries,
-      type: v.optional(
-        v.string("XMLLinkedResource: type is string and optional"),
-      ),
-      date: v.optional(
-        v.union([
-          customDateTime("XMLLinkedResource: date is not a valid datetime"),
-          XMLString,
-        ]),
-      ),
-      href: v.optional(
-        v.string("XMLLinkedResource: href is string and optional"),
-      ),
-      fileFormat: v.optional(
-        v.string("XMLLinkedResource: fileFormat is string and optional"),
-      ),
-      fileSize: XMLOptionalNumber,
-      rend: v.optional(
-        v.literal("inline", "XMLLinkedResource: rend is inline"),
-      ),
-      isPrimary: v.optional(XMLBoolean),
-      height: XMLOptionalNumber,
-      width: XMLOptionalNumber,
-      image: v.optional(XMLImage),
-      coordinates: v.optional(XMLCoordinates),
-    },
-    "XMLLinkedResource: Shape error",
-  );
+const XMLLinkedResource = v.object(
+  {
+    ...XMLLinkedBaseItem.entries,
+    type: v.optional(
+      v.string("XMLLinkedResource: type is string and optional"),
+    ),
+    date: v.optional(
+      v.union([
+        customDateTime("XMLLinkedResource: date is not a valid datetime"),
+        XMLString,
+      ]),
+    ),
+    href: v.optional(
+      v.string("XMLLinkedResource: href is string and optional"),
+    ),
+    fileFormat: v.optional(
+      v.string("XMLLinkedResource: fileFormat is string and optional"),
+    ),
+    fileSize: XMLOptionalNumber,
+    rend: v.optional(v.literal("inline", "XMLLinkedResource: rend is inline")),
+    isPrimary: v.optional(XMLBoolean),
+    height: XMLOptionalNumber,
+    width: XMLOptionalNumber,
+    image: v.optional(XMLImage),
+    coordinates: v.optional(XMLCoordinates),
+  },
+  "XMLLinkedResource: Shape error",
+);
 
-const XMLLinkedText: v.GenericSchema<unknown, XMLLinkedTextType> = v.object(
+const XMLLinkedText = v.object(
   {
     ...XMLLinkedBaseItem.entries,
     type: v.optional(v.string("XMLLinkedText: type is string and optional")),
@@ -949,13 +865,12 @@ const XMLLinkedText: v.GenericSchema<unknown, XMLLinkedTextType> = v.object(
   "XMLLinkedText: Shape error",
 );
 
-const XMLDictionaryUnit: v.GenericSchema<unknown, XMLDictionaryUnitType> =
-  v.object({ ...XMLLinkedBaseItem.entries }, "XMLDictionaryUnit: Shape error");
+const XMLDictionaryUnit = v.object(
+  { ...XMLLinkedBaseItem.entries },
+  "XMLDictionaryUnit: Shape error",
+);
 
-const XMLLinkedBibliography: v.GenericSchema<
-  unknown,
-  XMLLinkedBibliographyType
-> = v.object(
+const XMLLinkedBibliography = v.object(
   {
     ...XMLLinkedBaseItem.entries,
     type: v.optional(
@@ -995,10 +910,22 @@ const XMLLinkedBibliography: v.GenericSchema<
         {
           publishers: v.optional(
             v.union([
-              v.object({ publisher: v.array(v.lazy(() => XMLLinkedPerson)) }),
+              v.object({
+                publisher: v.array(
+                  v.lazy(
+                    (): v.GenericSchema<unknown, XML.XMLLinkedPerson> =>
+                      XMLLinkedPerson,
+                  ),
+                ),
+              }),
               v.object({
                 publishers: v.object({
-                  person: v.array(v.lazy(() => XMLLinkedPerson)),
+                  person: v.array(
+                    v.lazy(
+                      (): v.GenericSchema<unknown, XML.XMLLinkedPerson> =>
+                        XMLLinkedPerson,
+                    ),
+                  ),
                 }),
               }),
             ]),
@@ -1047,59 +974,125 @@ const XMLLinkedBibliography: v.GenericSchema<
     citationFormatSpan: v.optional(XMLString),
     referenceFormatDiv: v.optional(XMLString),
     source: v.optional(
-      v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)]),
+      v.union([
+        v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+      ]),
     ),
     authors: v.optional(
-      v.object({ person: v.array(v.lazy(() => XMLLinkedPerson)) }),
+      v.object({
+        person: v.array(
+          v.lazy(
+            (): v.GenericSchema<unknown, XML.XMLLinkedPerson> =>
+              XMLLinkedPerson,
+          ),
+        ),
+      }),
     ),
     periods: v.optional(
-      v.object({ period: v.array(v.lazy(() => XMLLinkedPeriod)) }),
+      v.object({
+        period: v.array(
+          v.lazy(
+            (): v.GenericSchema<unknown, XML.XMLLinkedPeriod> =>
+              XMLLinkedPeriod,
+          ),
+        ),
+      }),
     ),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
   },
   "XMLLinkedBibliography: Shape error",
 );
 
-const XMLHeading: v.GenericSchema<unknown, XMLHeadingType> = v.intersect([
+const XMLHeading = v.intersect([
   v.object(
     {
       name: v.string("XMLHeading: name is string and required"),
       abbreviation: v.optional(
         v.string("XMLHeading: abbreviation is string and optional"),
       ),
-      heading: v.optional(v.array(v.lazy(() => XMLHeading))),
+      heading: v.optional(
+        v.array(
+          v.lazy((): v.GenericSchema<unknown, XML.XMLHeading> => XMLHeading),
+        ),
+      ),
     },
     "XMLHeading: Shape error",
   ),
   v.union([
-    v.optional(v.object({ person: v.array(v.lazy(() => XMLPerson)) })),
     v.optional(
       v.object({
-        propertyVariable: v.array(v.lazy(() => XMLPropertyVariable)),
+        person: v.array(
+          v.lazy((): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson),
+        ),
       }),
     ),
     v.optional(
-      v.object({ variable: v.array(v.lazy(() => XMLPropertyVariable)) }),
+      v.object({
+        propertyVariable: v.array(
+          v.lazy(
+            (): v.GenericSchema<unknown, XML.XMLPropertyVariable> =>
+              XMLPropertyVariable,
+          ),
+        ),
+      }),
     ),
     v.optional(
-      v.object({ propertyValue: v.array(v.lazy(() => XMLPropertyValue)) }),
+      v.object({
+        variable: v.array(
+          v.lazy(
+            (): v.GenericSchema<unknown, XML.XMLPropertyVariable> =>
+              XMLPropertyVariable,
+          ),
+        ),
+      }),
+    ),
+    v.optional(
+      v.object({
+        propertyValue: v.array(
+          v.lazy(
+            (): v.GenericSchema<unknown, XML.XMLPropertyValue> =>
+              XMLPropertyValue,
+          ),
+        ),
+      }),
     ),
     v.optional(
       v.object({
         resource: v.array(
           v.union([
-            v.lazy(() => XMLResource),
-            v.object({ resource: v.array(v.lazy(() => XMLResource)) }),
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLResource> => XMLResource,
+            ),
+            v.object({
+              resource: v.array(
+                v.lazy(
+                  (): v.GenericSchema<unknown, XML.XMLResource> => XMLResource,
+                ),
+              ),
+            }),
           ]),
         ),
       }),
     ),
-    v.optional(v.object({ text: v.array(v.lazy(() => XMLText)) })),
-    v.optional(v.object({ set: v.array(v.lazy(() => XMLSet)) })),
+    v.optional(
+      v.object({
+        text: v.array(
+          v.lazy((): v.GenericSchema<unknown, XML.XMLText> => XMLText),
+        ),
+      }),
+    ),
+    v.optional(
+      v.object({
+        set: v.array(
+          v.lazy((): v.GenericSchema<unknown, XML.XMLSet> => XMLSet),
+        ),
+      }),
+    ),
   ]),
 ]);
 
-const XMLTree: v.GenericSchema<unknown, XMLTreeType> = v.object(
+const XMLTree = v.object(
   {
     ...XMLBaseItem.entries,
     type: v.optional(v.string("XMLTree: type is string and optional")),
@@ -1109,94 +1102,241 @@ const XMLTree: v.GenericSchema<unknown, XMLTreeType> = v.object(
         XMLString,
       ]),
     ),
-    links: v.optional(v.lazy(() => XMLLink)),
+    links: v.optional(
+      v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+    ),
     reverseLinks: v.optional(
       v.union([
-        v.lazy(() => XMLLink),
-        v.lazy(() => XMLDataItem),
-        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+        v.array(
+          v.union([
+            v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem,
+            ),
+          ]),
+        ),
       ]),
     ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     bibliographies: v.optional(
-      v.object({ bibliography: v.array(v.lazy(() => XMLBibliography)) }),
+      v.object({
+        bibliography: v.array(
+          v.lazy(
+            (): v.GenericSchema<unknown, XML.XMLBibliography> =>
+              XMLBibliography,
+          ),
+        ),
+      }),
     ),
     items: v.optional(
       v.object({
-        heading: v.optional(v.array(v.lazy(() => XMLHeading))),
-        bibliography: v.optional(v.array(v.lazy(() => XMLBibliography))),
-        concept: v.optional(v.array(v.lazy(() => XMLConcept))),
-        spatialUnit: v.optional(v.array(v.lazy(() => XMLSpatialUnit))),
-        period: v.optional(v.array(v.lazy(() => XMLPeriod))),
-        person: v.optional(v.array(v.lazy(() => XMLPerson))),
-        propertyVariable: v.optional(
-          v.array(v.lazy(() => XMLPropertyVariable)),
+        heading: v.optional(
+          v.array(
+            v.lazy((): v.GenericSchema<unknown, XML.XMLHeading> => XMLHeading),
+          ),
         ),
-        variable: v.optional(v.array(v.lazy(() => XMLPropertyVariable))),
-        propertyValue: v.optional(v.array(v.lazy(() => XMLPropertyValue))),
+        bibliography: v.optional(
+          v.array(
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLBibliography> =>
+                XMLBibliography,
+            ),
+          ),
+        ),
+        concept: v.optional(
+          v.array(
+            v.lazy((): v.GenericSchema<unknown, XML.XMLConcept> => XMLConcept),
+          ),
+        ),
+        spatialUnit: v.optional(
+          v.array(
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLSpatialUnit> =>
+                XMLSpatialUnit,
+            ),
+          ),
+        ),
+        period: v.optional(
+          v.array(
+            v.lazy((): v.GenericSchema<unknown, XML.XMLPeriod> => XMLPeriod),
+          ),
+        ),
+        person: v.optional(
+          v.array(
+            v.lazy((): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson),
+          ),
+        ),
+        propertyVariable: v.optional(
+          v.array(
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLPropertyVariable> =>
+                XMLPropertyVariable,
+            ),
+          ),
+        ),
+        variable: v.optional(
+          v.array(
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLPropertyVariable> =>
+                XMLPropertyVariable,
+            ),
+          ),
+        ),
+        propertyValue: v.optional(
+          v.array(
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLPropertyValue> =>
+                XMLPropertyValue,
+            ),
+          ),
+        ),
         resource: v.optional(
           v.array(
             v.union([
-              v.lazy(() => XMLResource),
-              v.object({ resource: v.array(v.lazy(() => XMLResource)) }),
+              v.lazy(
+                (): v.GenericSchema<unknown, XML.XMLResource> => XMLResource,
+              ),
+              v.object({
+                resource: v.array(
+                  v.lazy(
+                    (): v.GenericSchema<unknown, XML.XMLResource> =>
+                      XMLResource,
+                  ),
+                ),
+              }),
             ]),
           ),
         ),
-        text: v.optional(v.array(v.lazy(() => XMLText))),
-        set: v.optional(v.array(v.lazy(() => XMLSet))),
+        text: v.optional(
+          v.array(v.lazy((): v.GenericSchema<unknown, XML.XMLText> => XMLText)),
+        ),
+        set: v.optional(
+          v.array(v.lazy((): v.GenericSchema<unknown, XML.XMLSet> => XMLSet)),
+        ),
       }),
     ),
   },
   "XMLTree: Shape error",
 );
 
-const XMLSet: v.GenericSchema<unknown, XMLSetType> = v.object(
+const XMLSet = v.object(
   {
     ...XMLBaseItem.entries,
     type: v.optional(v.string("XMLSet: type is string and optional")),
     suppressBlanks: v.optional(XMLBoolean),
     tabularStructure: v.optional(XMLBoolean),
-    links: v.optional(v.lazy(() => XMLLink)),
+    links: v.optional(
+      v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+    ),
     reverseLinks: v.optional(
       v.union([
-        v.lazy(() => XMLLink),
-        v.lazy(() => XMLDataItem),
-        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+        v.array(
+          v.union([
+            v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem,
+            ),
+          ]),
+        ),
       ]),
     ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     items: v.optional(
       v.object({
-        tree: v.optional(v.array(v.lazy(() => XMLTree))),
-        bibliography: v.optional(v.array(v.lazy(() => XMLBibliography))),
-        concept: v.optional(v.array(v.lazy(() => XMLConcept))),
-        spatialUnit: v.optional(v.array(v.lazy(() => XMLSpatialUnit))),
-        period: v.optional(v.array(v.lazy(() => XMLPeriod))),
-        person: v.optional(v.array(v.lazy(() => XMLPerson))),
-        propertyVariable: v.optional(
-          v.array(v.lazy(() => XMLPropertyVariable)),
+        tree: v.optional(
+          v.array(v.lazy((): v.GenericSchema<unknown, XML.XMLTree> => XMLTree)),
         ),
-        variable: v.optional(v.array(v.lazy(() => XMLPropertyVariable))),
-        propertyValue: v.optional(v.array(v.lazy(() => XMLPropertyValue))),
+        bibliography: v.optional(
+          v.array(
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLBibliography> =>
+                XMLBibliography,
+            ),
+          ),
+        ),
+        concept: v.optional(
+          v.array(
+            v.lazy((): v.GenericSchema<unknown, XML.XMLConcept> => XMLConcept),
+          ),
+        ),
+        spatialUnit: v.optional(
+          v.array(
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLSpatialUnit> =>
+                XMLSpatialUnit,
+            ),
+          ),
+        ),
+        period: v.optional(
+          v.array(
+            v.lazy((): v.GenericSchema<unknown, XML.XMLPeriod> => XMLPeriod),
+          ),
+        ),
+        person: v.optional(
+          v.array(
+            v.lazy((): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson),
+          ),
+        ),
+        propertyVariable: v.optional(
+          v.array(
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLPropertyVariable> =>
+                XMLPropertyVariable,
+            ),
+          ),
+        ),
+        variable: v.optional(
+          v.array(
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLPropertyVariable> =>
+                XMLPropertyVariable,
+            ),
+          ),
+        ),
+        propertyValue: v.optional(
+          v.array(
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLPropertyValue> =>
+                XMLPropertyValue,
+            ),
+          ),
+        ),
         resource: v.optional(
           v.array(
             v.union([
-              v.lazy(() => XMLResource),
-              v.object({ resource: v.array(v.lazy(() => XMLResource)) }),
+              v.lazy(
+                (): v.GenericSchema<unknown, XML.XMLResource> => XMLResource,
+              ),
+              v.object({
+                resource: v.array(
+                  v.lazy(
+                    (): v.GenericSchema<unknown, XML.XMLResource> =>
+                      XMLResource,
+                  ),
+                ),
+              }),
             ]),
           ),
         ),
-        text: v.optional(v.array(v.lazy(() => XMLText))),
-        set: v.optional(v.array(v.lazy(() => XMLSet))),
+        text: v.optional(
+          v.array(v.lazy((): v.GenericSchema<unknown, XML.XMLText> => XMLText)),
+        ),
+        set: v.optional(
+          v.array(v.lazy((): v.GenericSchema<unknown, XML.XMLSet> => XMLSet)),
+        ),
       }),
     ),
   },
   "XMLSet: Shape error",
 );
 
-const XMLBibliography: v.GenericSchema<unknown, XMLBibliographyType> = v.object(
+const XMLBibliography = v.object(
   {
     ...v.partial(XMLBaseItem).entries,
     type: v.optional(v.string("XMLBibliography: type is string and optional")),
@@ -1232,10 +1372,20 @@ const XMLBibliography: v.GenericSchema<unknown, XMLBibliographyType> = v.object(
         {
           publishers: v.optional(
             v.union([
-              v.object({ publisher: v.array(v.lazy(() => XMLPerson)) }),
+              v.object({
+                publisher: v.array(
+                  v.lazy(
+                    (): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson,
+                  ),
+                ),
+              }),
               v.object({
                 publishers: v.object({
-                  person: v.array(v.lazy(() => XMLPerson)),
+                  person: v.array(
+                    v.lazy(
+                      (): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson,
+                    ),
+                  ),
                 }),
               }),
             ]),
@@ -1279,58 +1429,110 @@ const XMLBibliography: v.GenericSchema<unknown, XMLBibliographyType> = v.object(
     citationFormat: v.optional(v.union([XMLString, v.string()])),
     citationFormatSpan: v.optional(XMLString),
     referenceFormatDiv: v.optional(XMLString),
-    source: v.optional(v.lazy(() => XMLDataItem)),
-    authors: v.optional(v.object({ person: v.array(v.lazy(() => XMLPerson)) })),
-    periods: v.optional(v.object({ period: v.array(v.lazy(() => XMLPeriod)) })),
-    links: v.optional(v.lazy(() => XMLLink)),
+    source: v.optional(
+      v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+    ),
+    authors: v.optional(
+      v.object({
+        person: v.array(
+          v.lazy((): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson),
+        ),
+      }),
+    ),
+    periods: v.optional(
+      v.object({
+        period: v.array(
+          v.lazy((): v.GenericSchema<unknown, XML.XMLPeriod> => XMLPeriod),
+        ),
+      }),
+    ),
+    links: v.optional(
+      v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+    ),
     reverseLinks: v.optional(
       v.union([
-        v.lazy(() => XMLLink),
-        v.lazy(() => XMLDataItem),
-        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+        v.array(
+          v.union([
+            v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem,
+            ),
+          ]),
+        ),
       ]),
     ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     bibliographies: v.optional(
-      v.object({ bibliography: v.array(v.lazy(() => XMLBibliography)) }),
+      v.object({
+        bibliography: v.array(
+          v.lazy(
+            (): v.GenericSchema<unknown, XML.XMLBibliography> =>
+              XMLBibliography,
+          ),
+        ),
+      }),
     ),
-    bibliography: v.optional(v.array(v.lazy(() => XMLBibliography))),
+    bibliography: v.optional(
+      v.array(
+        v.lazy(
+          (): v.GenericSchema<unknown, XML.XMLBibliography> => XMLBibliography,
+        ),
+      ),
+    ),
   },
   "XMLBibliography: Shape error",
 );
 
-const XMLInterpretation: v.GenericSchema<unknown, XMLInterpretationType> =
-  v.object(
-    {
-      interpretationNo: XMLNumber,
-      date: v.optional(
-        customDateTime("XMLInterpretation: date is not a valid datetime"),
-      ),
-      interpreters: v.optional(
-        v.object({ interpreter: v.array(v.lazy(() => XMLPerson)) }),
-      ),
-      periods: v.optional(
-        v.object({ period: v.array(v.lazy(() => XMLPeriod)) }),
-      ),
-      links: v.optional(v.lazy(() => XMLLink)),
-      reverseLinks: v.optional(
-        v.union([
-          v.lazy(() => XMLLink),
-          v.lazy(() => XMLDataItem),
-          v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
-        ]),
-      ),
-      notes: v.optional(v.object({ note: v.array(XMLNote) })),
-      properties: v.optional(v.object({ property: v.array(XMLProperty) })),
-      bibliographies: v.optional(
-        v.object({ bibliography: v.array(XMLBibliography) }),
-      ),
-    },
-    "XMLInterpretation: Shape error",
-  );
+const XMLInterpretation = v.object(
+  {
+    interpretationNo: XMLNumber,
+    date: v.optional(
+      customDateTime("XMLInterpretation: date is not a valid datetime"),
+    ),
+    interpreters: v.optional(
+      v.object({
+        interpreter: v.array(
+          v.lazy((): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson),
+        ),
+      }),
+    ),
+    periods: v.optional(
+      v.object({
+        period: v.array(
+          v.lazy((): v.GenericSchema<unknown, XML.XMLPeriod> => XMLPeriod),
+        ),
+      }),
+    ),
+    links: v.optional(
+      v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+    ),
+    reverseLinks: v.optional(
+      v.union([
+        v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+        v.array(
+          v.union([
+            v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem,
+            ),
+          ]),
+        ),
+      ]),
+    ),
+    notes: v.optional(v.object({ note: v.array(XMLNote) })),
+    properties: v.optional(v.object({ property: v.array(XMLProperty) })),
+    bibliographies: v.optional(
+      v.object({ bibliography: v.array(XMLBibliography) }),
+    ),
+  },
+  "XMLInterpretation: Shape error",
+);
 
-const XMLConcept: v.GenericSchema<unknown, XMLConceptType> = v.object(
+const XMLConcept = v.object(
   {
     ...XMLBaseItem.entries,
     status: v.optional(v.literal("live", "XMLConcept: status is live")),
@@ -1341,27 +1543,50 @@ const XMLConcept: v.GenericSchema<unknown, XMLConceptType> = v.object(
     interpretation: v.optional(v.array(XMLInterpretation)),
     coordinates: v.optional(XMLCoordinates),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
-    concept: v.optional(v.array(v.lazy(() => XMLConcept))),
+    concept: v.optional(
+      v.array(
+        v.lazy((): v.GenericSchema<unknown, XML.XMLConcept> => XMLConcept),
+      ),
+    ),
   },
   "XMLConcept: Shape error",
 );
 
-const XMLObservation: v.GenericSchema<unknown, XMLObservationType> = v.object(
+const XMLObservation = v.object(
   {
     observationNo: XMLNumber,
     date: v.optional(
       customDateTime("XMLObservation: date is not a valid datetime"),
     ),
     observers: v.optional(
-      v.object({ observer: v.array(v.lazy(() => XMLPerson)) }),
+      v.object({
+        observer: v.array(
+          v.lazy((): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson),
+        ),
+      }),
     ),
-    periods: v.optional(v.object({ period: v.array(v.lazy(() => XMLPeriod)) })),
-    links: v.optional(v.lazy(() => XMLLink)),
+    periods: v.optional(
+      v.object({
+        period: v.array(
+          v.lazy((): v.GenericSchema<unknown, XML.XMLPeriod> => XMLPeriod),
+        ),
+      }),
+    ),
+    links: v.optional(
+      v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+    ),
     reverseLinks: v.optional(
       v.union([
-        v.lazy(() => XMLLink),
-        v.lazy(() => XMLDataItem),
-        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+        v.array(
+          v.union([
+            v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem,
+            ),
+          ]),
+        ),
       ]),
     ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
@@ -1373,7 +1598,7 @@ const XMLObservation: v.GenericSchema<unknown, XMLObservationType> = v.object(
   "XMLObservation: Shape error",
 );
 
-const XMLSpatialUnit: v.GenericSchema<unknown, XMLSpatialUnitType> = v.object(
+const XMLSpatialUnit = v.object(
   {
     ...XMLBaseItem.entries,
     image: v.optional(XMLImage),
@@ -1401,22 +1626,37 @@ const XMLSpatialUnit: v.GenericSchema<unknown, XMLSpatialUnitType> = v.object(
     bibliographies: v.optional(
       v.object({ bibliography: v.array(XMLBibliography) }),
     ),
-    spatialUnit: v.optional(v.array(v.lazy(() => XMLSpatialUnit))),
+    spatialUnit: v.optional(
+      v.array(
+        v.lazy(
+          (): v.GenericSchema<unknown, XML.XMLSpatialUnit> => XMLSpatialUnit,
+        ),
+      ),
+    ),
   },
   "XMLSpatialUnit: Shape error",
 );
 
-const XMLPeriod: v.GenericSchema<unknown, XMLPeriodType> = v.object(
+const XMLPeriod = v.object(
   {
     ...XMLBaseItem.entries,
     type: v.optional(v.string("XMLPeriod: type is string and optional")),
     coordinates: v.optional(XMLCoordinates),
-    links: v.optional(v.lazy(() => XMLDataItem)),
+    links: v.optional(
+      v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+    ),
     reverseLinks: v.optional(
       v.union([
-        v.lazy(() => XMLLink),
-        v.lazy(() => XMLDataItem),
-        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+        v.array(
+          v.union([
+            v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem,
+            ),
+          ]),
+        ),
       ]),
     ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
@@ -1424,12 +1664,14 @@ const XMLPeriod: v.GenericSchema<unknown, XMLPeriodType> = v.object(
     bibliographies: v.optional(
       v.object({ bibliography: v.array(XMLBibliography) }),
     ),
-    period: v.optional(v.array(v.lazy(() => XMLPeriod))),
+    period: v.optional(
+      v.array(v.lazy((): v.GenericSchema<unknown, XML.XMLPeriod> => XMLPeriod)),
+    ),
   },
   "XMLPeriod: Shape error",
 );
 
-const XMLPerson: v.GenericSchema<unknown, XMLPersonType> = v.object(
+const XMLPerson = v.object(
   {
     ...XMLBaseItem.entries,
     ...v.partial(XMLContent).entries,
@@ -1468,12 +1710,21 @@ const XMLPerson: v.GenericSchema<unknown, XMLPersonType> = v.object(
     ),
     coordinates: v.optional(XMLCoordinates),
     periods: v.optional(v.object({ period: v.array(XMLPeriod) })),
-    links: v.optional(v.lazy(() => XMLLink)),
+    links: v.optional(
+      v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+    ),
     reverseLinks: v.optional(
       v.union([
-        v.lazy(() => XMLLink),
-        v.lazy(() => XMLDataItem),
-        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+        v.array(
+          v.union([
+            v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem,
+            ),
+          ]),
+        ),
       ]),
     ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
@@ -1485,53 +1736,69 @@ const XMLPerson: v.GenericSchema<unknown, XMLPersonType> = v.object(
   "XMLPerson: Shape error",
 );
 
-const XMLPropertyValue: v.GenericSchema<unknown, XMLPropertyValueType> =
-  v.object(
-    {
-      ...XMLBaseItem.entries,
-      coordinates: v.optional(XMLCoordinates),
-      links: v.optional(v.lazy(() => XMLLink)),
-      reverseLinks: v.optional(
-        v.union([
-          v.lazy(() => XMLLink),
-          v.lazy(() => XMLDataItem),
-          v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
-        ]),
-      ),
-      notes: v.optional(v.object({ note: v.array(XMLNote) })),
-      properties: v.optional(v.object({ property: v.array(XMLProperty) })),
-      bibliographies: v.optional(
-        v.object({ bibliography: v.array(XMLBibliography) }),
-      ),
-    },
-    "XMLPropertyValue: Shape error",
-  );
+const XMLPropertyValue = v.object(
+  {
+    ...XMLBaseItem.entries,
+    coordinates: v.optional(XMLCoordinates),
+    links: v.optional(
+      v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+    ),
+    reverseLinks: v.optional(
+      v.union([
+        v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+        v.array(
+          v.union([
+            v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem,
+            ),
+          ]),
+        ),
+      ]),
+    ),
+    notes: v.optional(v.object({ note: v.array(XMLNote) })),
+    properties: v.optional(v.object({ property: v.array(XMLProperty) })),
+    bibliographies: v.optional(
+      v.object({ bibliography: v.array(XMLBibliography) }),
+    ),
+  },
+  "XMLPropertyValue: Shape error",
+);
 
-const XMLPropertyVariable: v.GenericSchema<unknown, XMLPropertyVariableType> =
-  v.object(
-    {
-      ...XMLBaseItem.entries,
-      type: v.optional(
-        v.string("XMLPropertyVariable: type is string and optional"),
-      ),
-      coordinates: v.optional(XMLCoordinates),
-      links: v.optional(v.lazy(() => XMLLink)),
-      reverseLinks: v.optional(
-        v.union([
-          v.lazy(() => XMLLink),
-          v.lazy(() => XMLDataItem),
-          v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
-        ]),
-      ),
-      notes: v.optional(v.object({ note: v.array(XMLNote) })),
-      bibliographies: v.optional(
-        v.object({ bibliography: v.array(XMLBibliography) }),
-      ),
-    },
-    "XMLPropertyVariable: Shape error",
-  );
+const XMLPropertyVariable = v.object(
+  {
+    ...XMLBaseItem.entries,
+    type: v.optional(
+      v.string("XMLPropertyVariable: type is string and optional"),
+    ),
+    coordinates: v.optional(XMLCoordinates),
+    links: v.optional(
+      v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+    ),
+    reverseLinks: v.optional(
+      v.union([
+        v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+        v.array(
+          v.union([
+            v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem,
+            ),
+          ]),
+        ),
+      ]),
+    ),
+    notes: v.optional(v.object({ note: v.array(XMLNote) })),
+    bibliographies: v.optional(
+      v.object({ bibliography: v.array(XMLBibliography) }),
+    ),
+  },
+  "XMLPropertyVariable: Shape error",
+);
 
-const XMLResource: v.GenericSchema<unknown, XMLResourceType> = v.object(
+const XMLResource = v.object(
   {
     ...XMLBaseItem.entries,
     type: v.optional(v.string("XMLResource: type is string and optional")),
@@ -1559,12 +1826,21 @@ const XMLResource: v.GenericSchema<unknown, XMLResourceType> = v.object(
     document: v.optional(XMLContent),
     coordinates: v.optional(XMLCoordinates),
     periods: v.optional(v.object({ period: v.array(XMLPeriod) })),
-    links: v.optional(v.lazy(() => XMLLink)),
+    links: v.optional(
+      v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+    ),
     reverseLinks: v.optional(
       v.union([
-        v.lazy(() => XMLLink),
-        v.lazy(() => XMLDataItem),
-        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+        v.array(
+          v.union([
+            v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem,
+            ),
+          ]),
+        ),
       ]),
     ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
@@ -1572,10 +1848,21 @@ const XMLResource: v.GenericSchema<unknown, XMLResourceType> = v.object(
     bibliographies: v.optional(
       v.object({ bibliography: v.array(XMLBibliography) }),
     ),
-    resource: v.optional(v.array(v.lazy(() => XMLResource))),
+    resource: v.optional(
+      v.array(
+        v.lazy((): v.GenericSchema<unknown, XML.XMLResource> => XMLResource),
+      ),
+    ),
     view: v.optional(
       v.object({
-        resource: v.optional(v.array(v.lazy(() => XMLWebsiteResource))),
+        resource: v.optional(
+          v.array(
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLWebsiteResource> =>
+                XMLWebsiteResource,
+            ),
+          ),
+        ),
       }),
     ),
     lang: v.optional(v.string("XMLResource: lang is string and optional")),
@@ -1599,7 +1886,7 @@ const XMLSection = v.object(
   "XMLSection: Shape error",
 );
 
-const XMLText: v.GenericSchema<unknown, XMLTextType> = v.object(
+const XMLText = v.object(
   {
     ...XMLBaseItem.entries,
     type: v.optional(v.string("XMLText: type is string and optional")),
@@ -1607,12 +1894,21 @@ const XMLText: v.GenericSchema<unknown, XMLTextType> = v.object(
     language: v.optional(v.string("XMLText: language is string and optional")),
     image: v.optional(XMLImage),
     coordinates: v.optional(XMLCoordinates),
-    links: v.optional(v.lazy(() => XMLLink)),
+    links: v.optional(
+      v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+    ),
     reverseLinks: v.optional(
       v.union([
-        v.lazy(() => XMLLink),
-        v.lazy(() => XMLDataItem),
-        v.array(v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)])),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+        v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+        v.array(
+          v.union([
+            v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem,
+            ),
+          ]),
+        ),
       ]),
     ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
@@ -1632,16 +1928,32 @@ const XMLText: v.GenericSchema<unknown, XMLTextType> = v.object(
     periods: v.optional(v.object({ period: v.array(XMLPeriod) })),
     creators: v.optional(
       v.object(
-        { creator: v.array(v.lazy(() => XMLPerson)) },
+        {
+          creator: v.array(
+            v.lazy((): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson),
+          ),
+        },
         "XMLText: creators is object with creator array of XMLPerson",
       ),
     ),
     editions: v.optional(
       v.object(
         {
-          edition: v.optional(v.array(v.lazy(() => XMLPerson))),
-          editor: v.optional(v.array(v.lazy(() => XMLPerson))),
-          publisher: v.optional(v.array(v.lazy(() => XMLPerson))),
+          edition: v.optional(
+            v.array(
+              v.lazy((): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson),
+            ),
+          ),
+          editor: v.optional(
+            v.array(
+              v.lazy((): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson),
+            ),
+          ),
+          publisher: v.optional(
+            v.array(
+              v.lazy((): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson),
+            ),
+          ),
         },
         "XMLText: editions is object with edition array of XMLPerson",
       ),
@@ -1650,7 +1962,7 @@ const XMLText: v.GenericSchema<unknown, XMLTextType> = v.object(
   "XMLText: Shape error",
 );
 
-export const XMLLink: v.GenericSchema<unknown, XMLLinkType> = v.pipe(
+export const XMLLink: v.GenericSchema<unknown, XML.XMLLink> = v.pipe(
   v.object(
     {
       tree: v.optional(v.array(XMLLinkedTree)),
@@ -1685,10 +1997,7 @@ export const XMLLink: v.GenericSchema<unknown, XMLLinkType> = v.pipe(
   }, "XMLLink: at least one link category is required"),
 );
 
-const XMLWebsiteContextLevel: v.GenericSchema<
-  unknown,
-  XMLWebsiteContextLevelType
-> = v.intersect([
+const XMLWebsiteContextLevel = v.intersect([
   XMLString,
   v.object(
     {
@@ -1712,18 +2021,12 @@ const XMLWebsiteContextItemEntries = {
   ),
 };
 
-const XMLWebsiteContextItem: v.GenericSchema<
-  unknown,
-  XMLWebsiteContextItemType
-> = v.object(
+const XMLWebsiteContextItem = v.object(
   XMLWebsiteContextItemEntries,
   "XMLWebsiteContextItem: Shape error",
 );
 
-const XMLWebsiteFilterContextItem: v.GenericSchema<
-  unknown,
-  XMLWebsiteFilterContextItemType
-> = v.object(
+const XMLWebsiteFilterContextItem = v.object(
   {
     ...XMLWebsiteContextItemEntries,
     filterType: v.optional(
@@ -1755,21 +2058,17 @@ const XMLWebsiteFilterContextItem: v.GenericSchema<
   "XMLWebsiteFilterContextItem: Shape error",
 );
 
-const XMLWebsiteContext: v.GenericSchema<unknown, XMLWebsiteContextType> =
-  v.object(
-    { context: v.array(XMLWebsiteContextItem) },
-    "XMLWebsiteContext: Shape error",
-  );
+const XMLWebsiteContext = v.object(
+  { context: v.array(XMLWebsiteContextItem) },
+  "XMLWebsiteContext: Shape error",
+);
 
-const XMLWebsiteFilterContext: v.GenericSchema<
-  unknown,
-  XMLWebsiteFilterContextType
-> = v.object(
+const XMLWebsiteFilterContext = v.object(
   { context: v.array(XMLWebsiteFilterContextItem) },
   "XMLWebsiteFilterContext: Shape error",
 );
 
-const XMLWebsiteScope: v.GenericSchema<unknown, XMLWebsiteScopeType> = v.object(
+const XMLWebsiteScope = v.object(
   {
     uuid: v.intersect([
       XMLString,
@@ -1792,104 +2091,100 @@ const XMLWebsiteScope: v.GenericSchema<unknown, XMLWebsiteScopeType> = v.object(
   "XMLWebsiteScope: Shape error",
 );
 
-const XMLWebsiteOptions: v.GenericSchema<unknown, XMLWebsiteOptionsType> =
-  v.object(
-    {
-      notes: v.optional(v.object({ note: v.array(XMLNote) })),
-      scopes: v.optional(v.object({ scope: v.array(XMLWebsiteScope) })),
-      flattenContexts: v.optional(v.array(XMLWebsiteContext)),
-      suppressContexts: v.optional(v.array(XMLWebsiteContext)),
-      filterContexts: v.optional(v.array(XMLWebsiteFilterContext)),
-      sortContexts: v.optional(v.array(XMLWebsiteContext)),
-      detailContexts: v.optional(v.array(XMLWebsiteContext)),
-      downloadContexts: v.optional(v.array(XMLWebsiteContext)),
-      labelContexts: v.optional(v.array(XMLWebsiteContext)),
-      prominentContexts: v.optional(v.array(XMLWebsiteContext)),
-    },
-    "XMLWebsiteOptions: Shape error",
-  );
+const XMLWebsiteOptions = v.object(
+  {
+    notes: v.optional(v.object({ note: v.array(XMLNote) })),
+    scopes: v.optional(v.object({ scope: v.array(XMLWebsiteScope) })),
+    flattenContexts: v.optional(v.array(XMLWebsiteContext)),
+    suppressContexts: v.optional(v.array(XMLWebsiteContext)),
+    filterContexts: v.optional(v.array(XMLWebsiteFilterContext)),
+    sortContexts: v.optional(v.array(XMLWebsiteContext)),
+    detailContexts: v.optional(v.array(XMLWebsiteContext)),
+    downloadContexts: v.optional(v.array(XMLWebsiteContext)),
+    labelContexts: v.optional(v.array(XMLWebsiteContext)),
+    prominentContexts: v.optional(v.array(XMLWebsiteContext)),
+  },
+  "XMLWebsiteOptions: Shape error",
+);
 
-const XMLWebsiteStyle: v.GenericSchema<unknown, XMLWebsiteStyleType> =
-  v.intersect([
-    XMLString,
-    v.objectWithRest(
-      {
-        payload: v.string("XMLWebsiteStyle: payload is required"),
-        variableUuid: v.pipe(
-          v.string("XMLWebsiteStyle: variableUuid is required"),
+const XMLWebsiteStyle = v.intersect([
+  XMLString,
+  v.objectWithRest(
+    {
+      payload: v.string("XMLWebsiteStyle: payload is required"),
+      variableUuid: v.pipe(
+        v.string("XMLWebsiteStyle: variableUuid is required"),
+        v.check(
+          isPseudoUuid,
+          "XMLWebsiteStyle: variableUuid is not a valid pseudo-UUID",
+        ),
+      ),
+      valueUuid: v.optional(
+        v.pipe(
+          v.string("XMLWebsiteStyle: valueUuid is optional"),
           v.check(
             isPseudoUuid,
-            "XMLWebsiteStyle: variableUuid is not a valid pseudo-UUID",
+            "XMLWebsiteStyle: valueUuid is not a valid pseudo-UUID",
           ),
         ),
-        valueUuid: v.optional(
-          v.pipe(
-            v.string("XMLWebsiteStyle: valueUuid is optional"),
-            v.check(
-              isPseudoUuid,
-              "XMLWebsiteStyle: valueUuid is not a valid pseudo-UUID",
-            ),
-          ),
-        ),
-        category: v.optional(v.string("XMLWebsiteStyle: category is optional")),
-        lucideIcon: v.optional(
-          v.string("XMLWebsiteStyle: lucideIcon is optional"),
-        ),
-      },
-      v.unknown(),
-      "XMLWebsiteStyle: Shape error",
-    ),
-  ]);
-
-const XMLWebsiteProperties: v.GenericSchema<unknown, XMLWebsitePropertiesType> =
-  v.object(
-    {
-      property: v.array(XMLSimplifiedProperty),
-      simplify: v.optional(XMLBoolean),
+      ),
+      category: v.optional(v.string("XMLWebsiteStyle: category is optional")),
+      lucideIcon: v.optional(
+        v.string("XMLWebsiteStyle: lucideIcon is optional"),
+      ),
     },
-    "XMLWebsiteProperties: Shape error",
-  );
+    v.unknown(),
+    "XMLWebsiteStyle: Shape error",
+  ),
+]);
 
-const XMLWebsiteResourceGroup: v.GenericSchema<
-  unknown,
-  XMLWebsiteResourceGroupType
-> = v.lazy(() =>
+const XMLWebsiteProperties = v.object(
+  {
+    property: v.array(XMLSimplifiedProperty),
+    simplify: v.optional(XMLBoolean),
+  },
+  "XMLWebsiteProperties: Shape error",
+);
+
+const XMLWebsiteResourceGroup = v.lazy(() =>
   v.object(
     { resource: v.array(XMLWebsiteResource) },
     "XMLWebsiteResourceGroup: Shape error",
   ),
 );
 
-const XMLWebsiteSegment: v.GenericSchema<unknown, XMLWebsiteSegmentType> =
-  v.lazy(() =>
-    v.object(
-      {
-        segments: v.object(
-          { tree: v.array(XMLWebsiteTree) },
-          "XMLWebsiteSegment: segments is object with tree array",
+const XMLWebsiteSegment = v.lazy(() =>
+  v.object(
+    {
+      segments: v.object(
+        { tree: v.array(XMLWebsiteTree) },
+        "XMLWebsiteSegment: segments is object with tree array",
+      ),
+      uuid: v.pipe(
+        v.string("XMLWebsiteSegment: uuid is string and required"),
+        v.check(
+          isPseudoUuid,
+          "XMLWebsiteSegment: uuid is not a valid pseudo-UUID",
         ),
-        uuid: v.pipe(
-          v.string("XMLWebsiteSegment: uuid is string and required"),
-          v.check(
-            isPseudoUuid,
-            "XMLWebsiteSegment: uuid is not a valid pseudo-UUID",
-          ),
+      ),
+      publicationDateTime: v.optional(
+        customDateTime(
+          "XMLWebsiteSegment: publicationDateTime is not a valid datetime",
         ),
-        publicationDateTime: v.optional(
-          customDateTime(
-            "XMLWebsiteSegment: publicationDateTime is not a valid datetime",
-          ),
-        ),
-      },
-      "XMLWebsiteSegment: Shape error",
-    ),
-  );
+      ),
+    },
+    "XMLWebsiteSegment: Shape error",
+  ),
+);
 
-const XMLWebsiteResourceItem = v.lazy(() =>
+const XMLWebsiteResourceItem: v.GenericSchema<
+  unknown,
+  XML.XMLWebsiteResourceItem
+> = v.lazy(() =>
   v.union([XMLWebsiteResource, XMLWebsiteResourceGroup, XMLWebsiteSegment]),
 );
 
-const XMLWebsiteResource: v.GenericSchema<unknown, XMLWebsiteResourceType> =
+const XMLWebsiteResource: v.GenericSchema<unknown, XML.XMLWebsiteResource> =
   v.lazy(() =>
     v.object(
       {
@@ -1926,13 +2221,22 @@ const XMLWebsiteResource: v.GenericSchema<unknown, XMLWebsiteResourceType> =
         document: v.optional(XMLContent),
         coordinates: v.optional(XMLCoordinates),
         periods: v.optional(v.object({ period: v.array(XMLPeriod) })),
-        links: v.optional(v.lazy(() => XMLLink)),
+        links: v.optional(
+          v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+        ),
         reverseLinks: v.optional(
           v.union([
-            v.lazy(() => XMLLink),
-            v.lazy(() => XMLDataItem),
+            v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem,
+            ),
             v.array(
-              v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)]),
+              v.union([
+                v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+                v.lazy(
+                  (): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem,
+                ),
+              ]),
             ),
           ]),
         ),
@@ -1950,46 +2254,57 @@ const XMLWebsiteResource: v.GenericSchema<unknown, XMLWebsiteResourceType> =
     ),
   );
 
-const XMLWebsiteTree: v.GenericSchema<unknown, XMLWebsiteTreeType> = v.lazy(
-  () =>
-    v.object(
-      {
-        ...XMLBaseItem.entries,
-        type: v.optional(
-          v.string("XMLWebsiteTree: type is string and optional"),
-        ),
-        date: v.optional(
-          v.union([
-            customDateTime("XMLWebsiteTree: date is not a valid datetime"),
-            XMLString,
-          ]),
-        ),
-        links: v.optional(v.lazy(() => XMLLink)),
-        reverseLinks: v.optional(
-          v.union([
-            v.lazy(() => XMLLink),
-            v.lazy(() => XMLDataItem),
-            v.array(
-              v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)]),
+const XMLWebsiteTree = v.lazy(() =>
+  v.object(
+    {
+      ...XMLBaseItem.entries,
+      type: v.optional(v.string("XMLWebsiteTree: type is string and optional")),
+      date: v.optional(
+        v.union([
+          customDateTime("XMLWebsiteTree: date is not a valid datetime"),
+          XMLString,
+        ]),
+      ),
+      links: v.optional(
+        v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+      ),
+      reverseLinks: v.optional(
+        v.union([
+          v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+          v.lazy((): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem),
+          v.array(
+            v.union([
+              v.lazy((): v.GenericSchema<unknown, XML.XMLLink> => XMLLink),
+              v.lazy(
+                (): v.GenericSchema<unknown, XML.XMLDataItem> => XMLDataItem,
+              ),
+            ]),
+          ),
+        ]),
+      ),
+      notes: v.optional(v.object({ note: v.array(XMLNote) })),
+      bibliographies: v.optional(
+        v.object({
+          bibliography: v.array(
+            v.lazy(
+              (): v.GenericSchema<unknown, XML.XMLBibliography> =>
+                XMLBibliography,
             ),
-          ]),
-        ),
-        notes: v.optional(v.object({ note: v.array(XMLNote) })),
-        bibliographies: v.optional(
-          v.object({ bibliography: v.array(v.lazy(() => XMLBibliography)) }),
-        ),
-        options: v.optional(XMLWebsiteOptions),
-        styleOptions: v.optional(v.object({ style: v.array(XMLWebsiteStyle) })),
-        properties: v.optional(XMLWebsiteProperties),
-        items: v.optional(
-          v.object({ resource: v.optional(v.array(XMLWebsiteResourceItem)) }),
-        ),
-      },
-      "XMLWebsiteTree: Shape error",
-    ),
+          ),
+        }),
+      ),
+      options: v.optional(XMLWebsiteOptions),
+      styleOptions: v.optional(v.object({ style: v.array(XMLWebsiteStyle) })),
+      properties: v.optional(XMLWebsiteProperties),
+      items: v.optional(
+        v.object({ resource: v.optional(v.array(XMLWebsiteResourceItem)) }),
+      ),
+    },
+    "XMLWebsiteTree: Shape error",
+  ),
 );
 
-export const XMLDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.union(
+export const XMLDataItem: v.GenericSchema<unknown, XML.XMLDataItem> = v.union(
   [
     v.object(
       { tree: v.array(XMLTree) },
@@ -2044,14 +2359,32 @@ export const XMLDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.union(
   "XMLDataItem: Shape error",
 );
 
-function hasNestedRecursiveChildren<T>(
-  items: ReadonlyArray<T>,
-  getChildren: (item: T) => Array<T> | undefined,
+function readRecursiveChildren(
+  item: unknown,
+  childKey: string,
+): ReadonlyArray<unknown> {
+  if (typeof item !== "object" || item == null) {
+    return [];
+  }
+
+  const children = (item as Record<string, unknown>)[childKey];
+
+  return Array.isArray(children) ? children : [];
+}
+
+/**
+ * Whether any child of these items has children of its own
+ *
+ * Driven by the child element's name rather than an accessor, so the check does
+ * not have to name a declared element type and cannot drift from one.
+ */
+function hasNestedRecursiveChildren(
+  items: ReadonlyArray<unknown>,
+  childKey: string,
 ): boolean {
   for (const item of items) {
-    const children = getChildren(item) ?? [];
-    for (const child of children) {
-      if ((getChildren(child)?.length ?? 0) > 0) {
+    for (const child of readRecursiveChildren(item, childKey)) {
+      if (readRecursiveChildren(child, childKey).length > 0) {
         return true;
       }
     }
@@ -2060,7 +2393,7 @@ function hasNestedRecursiveChildren<T>(
   return false;
 }
 
-const XMLTopLevelDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.pipe(
+const XMLTopLevelDataItem = v.pipe(
   XMLDataItem,
   v.check((dataItem) => {
     if ("tree" in dataItem) {
@@ -2069,41 +2402,35 @@ const XMLTopLevelDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.pipe(
 
     if (
       "bibliography" in dataItem &&
-      hasNestedRecursiveChildren(
-        dataItem.bibliography,
-        (item) => item.bibliography,
-      )
+      hasNestedRecursiveChildren(dataItem.bibliography, "bibliography")
     ) {
       return false;
     }
 
     if (
       "concept" in dataItem &&
-      hasNestedRecursiveChildren(dataItem.concept, (item) => item.concept)
+      hasNestedRecursiveChildren(dataItem.concept, "concept")
     ) {
       return false;
     }
 
     if (
       "spatialUnit" in dataItem &&
-      hasNestedRecursiveChildren(
-        dataItem.spatialUnit,
-        (item) => item.spatialUnit,
-      )
+      hasNestedRecursiveChildren(dataItem.spatialUnit, "spatialUnit")
     ) {
       return false;
     }
 
     if (
       "period" in dataItem &&
-      hasNestedRecursiveChildren(dataItem.period, (item) => item.period)
+      hasNestedRecursiveChildren(dataItem.period, "period")
     ) {
       return false;
     }
 
     if (
       "resource" in dataItem &&
-      hasNestedRecursiveChildren(dataItem.resource, (item) => item.resource)
+      hasNestedRecursiveChildren(dataItem.resource, "resource")
     ) {
       return false;
     }
@@ -2112,7 +2439,7 @@ const XMLTopLevelDataItem: v.GenericSchema<unknown, XMLDataItemType> = v.pipe(
   }, "XMLDataItem: standalone recursive item children cannot contain nested recursive children"),
 );
 
-const XMLItemLinks: v.GenericSchema<unknown, XMLItemLinksType> = v.object(
+const XMLItemLinks = v.object(
   {
     payload: v.optional(
       v.string("XMLItemLinks: payload is string and optional"),
@@ -2176,7 +2503,7 @@ const XMLItemLinks: v.GenericSchema<unknown, XMLItemLinksType> = v.object(
   "XMLItemLinks: Shape error",
 );
 
-export const XMLItemLinksData: v.GenericSchema<unknown, XMLItemLinksDataType> =
+export const XMLItemLinksData: v.GenericSchema<unknown, XML.XMLItemLinksData> =
   v.object(
     {
       result: v.object({
@@ -2194,7 +2521,7 @@ export const XMLItemLinksData: v.GenericSchema<unknown, XMLItemLinksDataType> =
     "XMLItemLinksData: Shape error",
   );
 
-const XMLGallery: v.GenericSchema<unknown, XMLGalleryType> = v.object(
+const XMLGallery = v.object(
   {
     payload: v.optional(v.string("XMLGallery: payload is string and optional")),
     project: v.object(
@@ -2226,17 +2553,16 @@ const XMLGallery: v.GenericSchema<unknown, XMLGalleryType> = v.object(
   "XMLGallery: Shape error",
 );
 
-export const XMLGalleryData: v.GenericSchema<unknown, XMLGalleryDataType> =
-  v.object(
-    {
-      result: v.object({
-        ochre: v.object({ gallery: XMLGallery }, "XMLGalleryData: ochre"),
-      }),
-    },
-    "XMLGalleryData: Shape error",
-  );
+export const XMLGalleryData = v.object(
+  {
+    result: v.object({
+      ochre: v.object({ gallery: XMLGallery }, "XMLGalleryData: ochre"),
+    }),
+  },
+  "XMLGalleryData: Shape error",
+);
 
-const XMLSetItems: v.GenericSchema<unknown, XMLSetItemsType> = v.intersect([
+const XMLSetItems = v.intersect([
   XMLItemLinks,
   v.object(
     { totalCount: XMLNumber, page: XMLNumber, pageSize: XMLNumber },
@@ -2244,7 +2570,7 @@ const XMLSetItems: v.GenericSchema<unknown, XMLSetItemsType> = v.intersect([
   ),
 ]);
 
-export const XMLSetItemsData: v.GenericSchema<unknown, XMLSetItemsDataType> =
+export const XMLSetItemsData: v.GenericSchema<unknown, XML.XMLSetItemsData> =
   v.object(
     {
       result: v.object({
@@ -2254,7 +2580,7 @@ export const XMLSetItemsData: v.GenericSchema<unknown, XMLSetItemsDataType> =
     "XMLSetItemsData: Shape error",
   );
 
-export const XMLData: v.GenericSchema<unknown, XMLDataType> = v.object(
+export const XMLData: v.GenericSchema<unknown, XML.XMLData> = v.object(
   {
     result: v.object({
       ochre: v.intersect([
@@ -2295,54 +2621,174 @@ export const XMLData: v.GenericSchema<unknown, XMLDataType> = v.object(
   "XMLData: Shape error",
 );
 
-export const XMLWebsiteData: v.GenericSchema<unknown, XMLWebsiteDataType> =
-  v.object(
-    {
-      result: v.object(
-        {
-          ochre: v.object(
-            {
-              uuid: v.pipe(
-                v.string("XMLWebsiteData: uuid is string and required"),
-                v.check(
-                  isPseudoUuid,
-                  "XMLWebsiteData: uuid is not a valid pseudo-UUID",
-                ),
+export const XMLWebsiteData = v.object(
+  {
+    result: v.object(
+      {
+        ochre: v.object(
+          {
+            uuid: v.pipe(
+              v.string("XMLWebsiteData: uuid is string and required"),
+              v.check(
+                isPseudoUuid,
+                "XMLWebsiteData: uuid is not a valid pseudo-UUID",
               ),
-              belongsTo: v.string(
-                "XMLWebsiteData: belongsTo is string and required",
+            ),
+            belongsTo: v.string(
+              "XMLWebsiteData: belongsTo is string and required",
+            ),
+            uuidBelongsTo: v.pipe(
+              v.string("XMLWebsiteData: uuidBelongsTo is string and required"),
+              v.check(
+                isPseudoUuid,
+                "XMLWebsiteData: uuidBelongsTo is not a valid pseudo-UUID",
               ),
-              uuidBelongsTo: v.pipe(
+            ),
+            publicationDateTime: customDateTime(
+              "XMLWebsiteData: publicationDateTime is not a valid datetime",
+            ),
+            metadata: XMLMetadata,
+            persistentUrl: v.optional(
+              v.pipe(
                 v.string(
-                  "XMLWebsiteData: uuidBelongsTo is string and required",
+                  "XMLWebsiteData: persistentUrl is string and optional",
                 ),
-                v.check(
-                  isPseudoUuid,
-                  "XMLWebsiteData: uuidBelongsTo is not a valid pseudo-UUID",
-                ),
+                v.url("XMLWebsiteData: persistentUrl is not a valid URL"),
               ),
-              publicationDateTime: customDateTime(
-                "XMLWebsiteData: publicationDateTime is not a valid datetime",
-              ),
-              metadata: XMLMetadata,
-              persistentUrl: v.optional(
-                v.pipe(
-                  v.string(
-                    "XMLWebsiteData: persistentUrl is string and optional",
-                  ),
-                  v.url("XMLWebsiteData: persistentUrl is not a valid URL"),
-                ),
-              ),
-              languages: v.optional(
-                v.string("XMLWebsiteData: languages is string and optional"),
-              ),
-              tree: v.array(XMLWebsiteTree),
-            },
-            "XMLWebsiteData: ochre is object with website tree",
-          ),
-        },
-        "XMLWebsiteData: result is object with ochre",
-      ),
-    },
-    "XMLWebsiteData: Shape error",
-  );
+            ),
+            languages: v.optional(
+              v.string("XMLWebsiteData: languages is string and optional"),
+            ),
+            tree: v.array(XMLWebsiteTree),
+          },
+          "XMLWebsiteData: ochre is object with website tree",
+        ),
+      },
+      "XMLWebsiteData: result is object with ochre",
+    ),
+  },
+  "XMLWebsiteData: Shape error",
+);
+
+/**
+ * Whether two types are exactly the same, in both directions
+ */
+type Exact<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+
+/**
+ * Whether a schema's inferred output matches the type declared for it
+ *
+ * A schema annotated `v.GenericSchema<unknown, T>` only promises its output is
+ * assignable to `T`, which is how a field came to be declared in xml/types.ts,
+ * read by the parser, and never validated. The schemas here infer their own
+ * shapes instead, and this compares each inferred shape against the declared
+ * type: the key sets have to match exactly, so an extra or missing field is a
+ * build error, and the output still has to satisfy the declared type.
+ */
+type SchemaMatchesType<
+  TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>,
+  TType,
+> =
+  Exact<keyof v.InferOutput<TSchema>, keyof TType> extends true
+    ? v.InferOutput<TSchema> extends TType
+      ? true
+      : false
+    : false;
+
+/**
+ * Whether a schema's inferred output satisfies the type declared for it
+ *
+ * For the two shapes carrying a rest signature, whose key set is `string` on
+ * the inferred side and a literal union on the declared side.
+ */
+type SchemaSatisfiesType<
+  TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>,
+  TType,
+> = v.InferOutput<TSchema> extends TType ? true : false;
+
+type AssertAllTrue<T extends ReadonlyArray<true>> = T;
+
+type _SchemaAssertions = AssertAllTrue<
+  [
+    SchemaMatchesType<typeof XMLString, XML.XMLString>,
+    SchemaSatisfiesType<typeof XMLNumber, number>,
+    SchemaSatisfiesType<typeof XMLBoolean, boolean>,
+    SchemaMatchesType<typeof XMLIdentification, XML.XMLIdentification>,
+    SchemaMatchesType<typeof XMLMetadata, XML.XMLMetadata>,
+    SchemaMatchesType<typeof XMLLicense, XML.XMLLicense>,
+    SchemaMatchesType<typeof XMLContextValue, XML.XMLContextValue>,
+    SchemaSatisfiesType<typeof XMLContextItem, XML.XMLContextItem>,
+    SchemaMatchesType<typeof XMLEmptyContext, XML.XMLEmptyContext>,
+    SchemaMatchesType<typeof XMLContextGroup, XML.XMLContextGroup>,
+    SchemaMatchesType<typeof XMLContext, XML.XMLContext>,
+    SchemaMatchesType<typeof XMLEvent, XML.XMLEvent>,
+    SchemaMatchesType<typeof XMLCoordinatesSource, XML.XMLCoordinatesSource>,
+    SchemaMatchesType<typeof XMLCoordinates, XML.XMLCoordinates>,
+    SchemaMatchesType<typeof XMLImage, XML.XMLImage>,
+    SchemaMatchesType<typeof XMLImageMapArea, XML.XMLImageMapArea>,
+    SchemaMatchesType<typeof XMLImageMap, XML.XMLImageMap>,
+    SchemaMatchesType<typeof XMLNote, XML.XMLNote>,
+    SchemaMatchesType<typeof XMLLinkedTree, XML.XMLLinkedTree>,
+    SchemaMatchesType<typeof XMLLinkedSet, XML.XMLLinkedSet>,
+    SchemaMatchesType<typeof XMLLinkedConcept, XML.XMLLinkedConcept>,
+    SchemaMatchesType<typeof XMLLinkedSpatialUnit, XML.XMLLinkedSpatialUnit>,
+    SchemaMatchesType<typeof XMLLinkedPeriod, XML.XMLLinkedPeriod>,
+    SchemaMatchesType<typeof XMLLinkedPerson, XML.XMLLinkedPerson>,
+    SchemaMatchesType<
+      typeof XMLLinkedPropertyVariable,
+      XML.XMLLinkedPropertyVariable
+    >,
+    SchemaMatchesType<
+      typeof XMLLinkedPropertyValue,
+      XML.XMLLinkedPropertyValue
+    >,
+    SchemaMatchesType<typeof XMLLinkedResource, XML.XMLLinkedResource>,
+    SchemaMatchesType<typeof XMLLinkedText, XML.XMLLinkedText>,
+    SchemaMatchesType<typeof XMLDictionaryUnit, XML.XMLDictionaryUnit>,
+    SchemaMatchesType<typeof XMLLinkedBibliography, XML.XMLLinkedBibliography>,
+    SchemaMatchesType<typeof XMLHeading, XML.XMLHeading>,
+    SchemaMatchesType<typeof XMLTree, XML.XMLTree>,
+    SchemaMatchesType<typeof XMLSet, XML.XMLSet>,
+    SchemaMatchesType<typeof XMLBibliography, XML.XMLBibliography>,
+    SchemaMatchesType<typeof XMLInterpretation, XML.XMLInterpretation>,
+    SchemaMatchesType<typeof XMLConcept, XML.XMLConcept>,
+    SchemaMatchesType<typeof XMLObservation, XML.XMLObservation>,
+    SchemaMatchesType<typeof XMLSpatialUnit, XML.XMLSpatialUnit>,
+    SchemaMatchesType<typeof XMLPeriod, XML.XMLPeriod>,
+    SchemaMatchesType<typeof XMLPerson, XML.XMLPerson>,
+    SchemaMatchesType<typeof XMLPropertyValue, XML.XMLPropertyValue>,
+    SchemaMatchesType<typeof XMLPropertyVariable, XML.XMLPropertyVariable>,
+    SchemaMatchesType<typeof XMLResource, XML.XMLResource>,
+    SchemaMatchesType<typeof XMLText, XML.XMLText>,
+    SchemaMatchesType<
+      typeof XMLWebsiteContextLevel,
+      XML.XMLWebsiteContextLevel
+    >,
+    SchemaMatchesType<typeof XMLWebsiteContextItem, XML.XMLWebsiteContextItem>,
+    SchemaMatchesType<
+      typeof XMLWebsiteFilterContextItem,
+      XML.XMLWebsiteFilterContextItem
+    >,
+    SchemaMatchesType<typeof XMLWebsiteContext, XML.XMLWebsiteContext>,
+    SchemaMatchesType<
+      typeof XMLWebsiteFilterContext,
+      XML.XMLWebsiteFilterContext
+    >,
+    SchemaMatchesType<typeof XMLWebsiteScope, XML.XMLWebsiteScope>,
+    SchemaMatchesType<typeof XMLWebsiteOptions, XML.XMLWebsiteOptions>,
+    SchemaSatisfiesType<typeof XMLWebsiteStyle, XML.XMLWebsiteStyle>,
+    SchemaMatchesType<typeof XMLWebsiteProperties, XML.XMLWebsiteProperties>,
+    SchemaMatchesType<
+      typeof XMLWebsiteResourceGroup,
+      XML.XMLWebsiteResourceGroup
+    >,
+    SchemaMatchesType<typeof XMLWebsiteSegment, XML.XMLWebsiteSegment>,
+    SchemaMatchesType<typeof XMLWebsiteTree, XML.XMLWebsiteTree>,
+    SchemaSatisfiesType<typeof XMLTopLevelDataItem, XML.XMLDataItem>,
+    SchemaMatchesType<typeof XMLItemLinks, XML.XMLItemLinks>,
+    SchemaMatchesType<typeof XMLGallery, XML.XMLGallery>,
+    SchemaMatchesType<typeof XMLGalleryData, XML.XMLGalleryData>,
+    SchemaMatchesType<typeof XMLSetItems, XML.XMLSetItems>,
+    SchemaMatchesType<typeof XMLWebsiteData, XML.XMLWebsiteData>,
+  ]
+>;
