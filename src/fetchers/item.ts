@@ -1,4 +1,3 @@
-import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type { FetchBaseOptions, FetchLanguages } from "#/parsers/helpers.js";
 import type {
@@ -13,45 +12,32 @@ import type {
   ItemWithoutEmbeddedItems,
   SetItemCategory,
 } from "#/types/index.js";
-import { XML_PARSER_OPTIONS } from "#/constants.js";
-import { parseItem } from "#/parsers/index.js";
-import { parseWebpageView } from "#/parsers/website/index.js";
-import { iso639_3Schema, uuidSchema } from "#/schemas.js";
 import {
-  createSchemaValidationError,
+  isItemCategoryWithEmbeddedItems,
+  isItemContainerCategory,
+  ITEM_CATEGORIES_WITH_EMBEDDED_ITEMS,
+  ITEM_CONTAINER_CATEGORIES,
+} from "#/categories.js";
+import { requestOchre } from "#/fetchers/request.js";
+import { parseItem } from "#/parsers/index.js";
+import {
+  parseLanguages,
+  parseRequestedLanguages,
+} from "#/parsers/languages.js";
+import { parseWebpageView } from "#/parsers/website/index.js";
+import { uuidSchema } from "#/schemas.js";
+import {
   getErrorOutput,
   omitSupplemental,
   stringLiteral,
   SUPPLEMENTAL_XQUERY_PROLOG,
 } from "#/utilities.js";
-import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
 
 type FetchItemResult<TItem> = Promise<
   | { item: TItem; error: null; detailedError: null }
   | { item: null; error: string; detailedError: string }
 >;
-
-function isItemContainerCategory(
-  category: ItemCategory,
-): category is ItemContainerCategory {
-  return category === "tree" || category === "set";
-}
-
-function isItemCategoryWithEmbeddedItems(
-  category: ItemCategory,
-): category is ItemCategoryWithEmbeddedItems {
-  const categories: ReadonlyArray<ItemCategory> = [
-    "tree",
-    "bibliography",
-    "concept",
-    "spatialUnit",
-    "period",
-    "resource",
-    "set",
-  ];
-  return categories.includes(category);
-}
 
 function isItemWithEmbeddedItems(
   item: Item<ItemCategory, SetItemCategory, ReadonlyArray<string>>,
@@ -107,15 +93,9 @@ function buildXQuery(parameters: {
   if (shouldOmitEmbeddedItems) {
     letClauses.push(
       `let $item := (
-  $ochre/tree,
-  $ochre/bibliography,
-  $ochre/concept,
-  $ochre/spatialUnit,
-  $ochre/period,
-  $ochre/resource,
-  $ochre/set
+${ITEM_CATEGORIES_WITH_EMBEDDED_ITEMS.map((category) => `  $ochre/${category}`).join(",\n")}
 )[1]`,
-      `let $embedded-child-name := if (local-name($item) = ("tree", "set")) then "items" else local-name($item)`,
+      `let $embedded-child-name := if (local-name($item) = (${ITEM_CONTAINER_CATEGORIES.map((category) => stringLiteral(category)).join(", ")})) then "items" else local-name($item)`,
     );
     itemNodesExpression = `(
       for $node in $ochre/node()
@@ -153,19 +133,6 @@ function omitEmbeddedItems(
   const { items: _items, ...itemWithoutEmbeddedItems } = item;
 
   return itemWithoutEmbeddedItems;
-}
-
-/**
- * Validate language codes while preserving literal tuple inference.
- */
-function parseLanguages<const T extends ReadonlyArray<string>>(
-  languages: T,
-): T {
-  for (const language of languages) {
-    v.parse(iso639_3Schema, language);
-  }
-
-  return languages;
 }
 
 /**
@@ -340,40 +307,24 @@ export async function fetchItem(
       options?.containedItemCategory,
     );
     const shouldOmitEmbeddedItems = options?.shouldOmitEmbeddedItems === true;
-    const languages: ReadonlyArray<string> =
-      options?.languages == null ? [] : parseLanguages(options.languages);
+    const languages = parseRequestedLanguages(options?.languages);
 
-    const response = await (options?.fetch ?? fetch)(
-      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
-      {
-        method: "POST",
-        body: buildXQuery({ uuid: parsedUuid, shouldOmitEmbeddedItems }),
-        headers: { "Content-Type": "application/xquery" },
+    const output = await requestOchre({
+      xquery: buildXQuery({ uuid: parsedUuid, shouldOmitEmbeddedItems }),
+      schema: XMLDataSchema,
+      label: "OCHRE item",
+      options,
+      checkRawData: (data) => {
+        const uuidOnPayload = (
+          data as { result?: { ochre?: { uuid?: string } } }
+        ).result?.ochre?.uuid;
+        if (uuidOnPayload == null) {
+          throw new Error(`No OCHRE item found for UUID "${parsedUuid}"`, {
+            cause: data,
+          });
+        }
       },
-    );
-    if (!response.ok) {
-      throw new Error("Failed to fetch OCHRE data", {
-        cause: response.statusText,
-      });
-    }
-
-    const dataRaw = await response.text();
-
-    const parser = new XMLParser(XML_PARSER_OPTIONS);
-    const data = parser.parse(dataRaw) as {
-      result?: { ochre?: { uuid?: string } };
-    };
-    if (data.result?.ochre?.uuid == null) {
-      throw new Error(`No OCHRE item found for UUID "${parsedUuid}"`, {
-        cause: dataRaw,
-      });
-    }
-
-    const { success, issues, output } = v.safeParse(XMLDataSchema, data);
-    if (!success) {
-      throw createSchemaValidationError("Failed to parse OCHRE data", issues);
-    }
-    restoreXMLMetadata(output, data);
+    });
 
     const parsedItem = parseItem(output, {
       category: options?.category,

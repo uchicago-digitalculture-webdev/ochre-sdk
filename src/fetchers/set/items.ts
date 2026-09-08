@@ -1,5 +1,4 @@
 /* eslint-disable unicorn/no-incorrect-template-string-interpolation */
-import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type {
   FetchBaseOptions,
@@ -12,26 +11,20 @@ import type {
   SetItemCategory,
   SetItemsSort,
 } from "#/types/index.js";
-import type { XMLSetItems, XMLSetItemsData } from "#/xml/types.js";
-import {
-  BELONGS_TO_COLLECTION_UUID,
-  DEFAULT_LANGUAGES,
-  XML_PARSER_OPTIONS,
-} from "#/constants.js";
+import type { XMLSetItems } from "#/xml/types.js";
+import { requestOchre } from "#/fetchers/request.js";
 import { parseSetItems } from "#/parsers/index.js";
 import {
-  buildBelongsToCollectionQueryExpression,
-  buildQueryPlan,
-} from "#/query.js";
-import { iso639_3Schema, setItemsParametersSchema } from "#/schemas.js";
+  parseRequestedLanguages,
+  resolveContentLanguages,
+} from "#/parsers/languages.js";
+import { compileSetItemsQuery } from "#/query.js";
+import { setItemsParametersSchema } from "#/schemas.js";
 import {
-  createSchemaValidationError,
   getErrorOutput,
   omitSupplemental,
   stringLiteral,
-  SUPPLEMENTAL_XQUERY_PROLOG,
 } from "#/utilities.js";
-import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLSetItemsData as XMLSetItemsDataSchema } from "#/xml/schemas.js";
 
 type FetchSetItemsCategory<
@@ -44,65 +37,6 @@ type FetchSetItemsCategory<
 type SortWithDirection = Exclude<SetItemsSort, { target: "none" }>;
 type PropertyValueSort = Extract<SetItemsSort, { target: "propertyValue" }>;
 type PropertyValueSortDataType = PropertyValueSort["dataType"];
-
-function parseLanguages<const T extends ReadonlyArray<string>>(
-  languages: T,
-): T {
-  for (const language of languages) {
-    v.parse(iso639_3Schema, language);
-  }
-
-  return languages;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function collectContentLanguages(value: unknown, languages: Set<string>): void {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      collectContentLanguages(item, languages);
-    }
-    return;
-  }
-
-  if (!isRecord(value)) {
-    return;
-  }
-
-  const content = value.content;
-  if (Array.isArray(content)) {
-    for (const contentItem of content) {
-      if (!isRecord(contentItem)) {
-        continue;
-      }
-
-      const language = contentItem.lang;
-      if (typeof language === "string" && language !== "zxx") {
-        languages.add(language);
-      }
-    }
-  }
-
-  for (const child of Object.values(value)) {
-    collectContentLanguages(child, languages);
-  }
-}
-
-function resolveSetItemsLanguages(
-  data: XMLSetItemsData,
-  requestedLanguages: ReadonlyArray<string>,
-): ReadonlyArray<string> {
-  if (requestedLanguages.length > 0) {
-    return requestedLanguages;
-  }
-
-  const languages = new Set<string>();
-  collectContentLanguages(data.result.ochre.items, languages);
-
-  return languages.size > 0 ? [...languages] : [...DEFAULT_LANGUAGES];
-}
 
 function hasArray<T>(items: Array<T> | undefined): boolean {
   return items != null && items.length > 0;
@@ -304,41 +238,19 @@ function buildXQuery(parameters: {
   } = parameters;
 
   const startPosition = (page - 1) * pageSize + 1;
-  const setScopeValues = setScopeUuids.map((uuid) => stringLiteral(uuid));
-  const setScopeDeclaration = `declare variable $setScopeUuids := (${setScopeValues.join(", ")});`;
-  const compiledQueryPlan = buildQueryPlan({
+
+  return compileSetItemsQuery({
+    setScopeUuids,
+    belongsToCollectionScopeUuids,
     queries,
-    baseItemsExpression: "doc()/ochre/set[@uuid = $setScopeUuids]/items/*",
-    scopeQueryExpression: buildBelongsToCollectionQueryExpression(
-      belongsToCollectionScopeUuids,
-      BELONGS_TO_COLLECTION_UUID,
-    ),
-  });
-  const orderedItemsClause = buildOrderedItemsClause(sort);
-  const xqueryDeclarations = [
-    'xquery version "1.0-ml";',
-    setScopeDeclaration,
-    SUPPLEMENTAL_XQUERY_PROLOG,
-  ];
-
-  if (compiledQueryPlan.prolog !== "") {
-    xqueryDeclarations.push(compiledQueryPlan.prolog);
-  }
-
-  const xquery = `${xqueryDeclarations.join("\n\n")}
-
-<ochre>{
-${compiledQueryPlan.itemsClause}
-  let $totalCount := count($items)
-  ${orderedItemsClause}
+    body: (items) => `  let $totalCount := count(${items})
+  ${buildOrderedItemsClause(sort)}
   let $pagedItems := subsequence($orderedItems, ${startPosition}, ${pageSize})
 
   return <items totalCount="{$totalCount}" page="${page}" pageSize="${pageSize}">{
     ${omitSupplemental("$pagedItems")}
-  }</items>
-}</ochre>`;
-
-  return xquery;
+  }</items>`,
+  });
 }
 
 /**
@@ -431,47 +343,21 @@ export async function fetchSetItems(
       page,
       pageSize,
     } = v.parse(setItemsParametersSchema, parameters);
-    const requestedLanguages: ReadonlyArray<string> =
-      options?.languages == null ? [] : parseLanguages(options.languages);
+    const requestedLanguages = parseRequestedLanguages(options?.languages);
 
-    const xquery = buildXQuery({
-      setScopeUuids,
-      belongsToCollectionScopeUuids,
-      queries,
-      sort,
-      page,
-      pageSize,
+    const output = await requestOchre({
+      xquery: buildXQuery({
+        setScopeUuids,
+        belongsToCollectionScopeUuids,
+        queries,
+        sort,
+        page,
+        pageSize,
+      }),
+      schema: XMLSetItemsDataSchema,
+      label: "OCHRE Set items",
+      options,
     });
-
-    const response = await (options?.fetch ?? fetch)(
-      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
-      {
-        method: "POST",
-        body: xquery,
-        headers: { "Content-Type": "application/xquery" },
-      },
-    );
-    if (!response.ok) {
-      throw new Error(`OCHRE API responded with status: ${response.status}`, {
-        cause: response.statusText,
-      });
-    }
-
-    const dataRaw = await response.text();
-    const parser = new XMLParser(XML_PARSER_OPTIONS);
-    const data = parser.parse(dataRaw) as unknown;
-
-    const { success, issues, output } = v.safeParse(
-      XMLSetItemsDataSchema,
-      data,
-    );
-    if (!success) {
-      throw createSchemaValidationError(
-        "Failed to parse OCHRE Set items",
-        issues,
-      );
-    }
-    restoreXMLMetadata(output, data);
 
     if (containedItemCategories != null) {
       const missingCategories = containedItemCategories.filter(
@@ -486,7 +372,10 @@ export async function fetchSetItems(
       }
     }
 
-    const languages = resolveSetItemsLanguages(output, requestedLanguages);
+    const languages = resolveContentLanguages(
+      output.result.ochre.items,
+      requestedLanguages,
+    );
     const items = parseSetItems(output.result.ochre.items, {
       containedItemCategories,
       languages,

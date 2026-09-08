@@ -1,7 +1,7 @@
 /* eslint-disable unicorn/prefer-https */
 /* eslint-disable unicorn/no-incorrect-template-string-interpolation */
-import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
+import type { OchreRequestOptions } from "#/fetchers/request.js";
 import type {
   PropertyRelation,
   PropertyValueQueryItem,
@@ -9,20 +9,17 @@ import type {
   SetAttributeValueQueryItem,
 } from "#/types/index.js";
 import type { XMLContent } from "#/xml/types.js";
-import {
-  BELONGS_TO_COLLECTION_UUID,
-  DEFAULT_LANGUAGES,
-  XML_PARSER_OPTIONS,
-} from "#/constants.js";
+import { DEFAULT_LANGUAGES } from "#/constants.js";
+import { requestOchre } from "#/fetchers/request.js";
 import { MultilingualString } from "#/parsers/multilingual.js";
 import { parseXMLContent } from "#/parsers/string.js";
 import {
-  buildBelongsToCollectionQueryExpression,
-  buildQueryPlan,
+  compileSetItemsQuery,
+  getItemFilterQueries,
+  getPropertyFacetSelectors,
 } from "#/query.js";
 import { setPropertyValuesParametersSchema } from "#/schemas.js";
 import {
-  createSchemaValidationError,
   getErrorOutput,
   NOT_SUPPLEMENTAL_PREDICATE,
   stringLiteral,
@@ -183,84 +180,6 @@ const propertyValueLabelContentSchema = v.object({
   string: v.array(propertyValueLabelStringSchema),
 });
 
-function getPropertyFacetSelectorsFromQueries(
-  queries: Query | null,
-): Array<PropertyFacetSelector> {
-  if (queries == null) {
-    return [];
-  }
-
-  const propertyFacetSelectors = new Map<string, PropertyFacetSelector>();
-  const pendingQueries: Array<Query> = [queries];
-
-  while (pendingQueries.length > 0) {
-    const query = pendingQueries.shift();
-    if (query == null) {
-      continue;
-    }
-
-    if ("target" in query) {
-      if (query.target !== "property") {
-        continue;
-      }
-
-      if (query.propertyVariable != null) {
-        const relation = query.propertyRelation ?? null;
-        propertyFacetSelectors.set(`${query.propertyVariable}|${relation}`, {
-          uuid: query.propertyVariable,
-          relation,
-        });
-      }
-
-      continue;
-    }
-
-    pendingQueries.push(...("and" in query ? query.and : query.or));
-  }
-
-  return propertyFacetSelectors.values().toArray();
-}
-
-function getItemFilterQueriesFromPropertyValueQueries(
-  queries: Query | null,
-): Query | null {
-  if (queries == null) {
-    return null;
-  }
-
-  if ("target" in queries) {
-    if (
-      queries.target !== "property" ||
-      queries.dataType === "date" ||
-      queries.dataType === "dateTime"
-    ) {
-      return queries;
-    }
-
-    return "value" in queries && queries.value != null ? queries : null;
-  }
-
-  const filteredChildren: Array<Query> = [];
-  const childQueries = "and" in queries ? queries.and : queries.or;
-
-  for (const childQuery of childQueries) {
-    const filteredChildQuery =
-      getItemFilterQueriesFromPropertyValueQueries(childQuery);
-
-    if (filteredChildQuery != null) {
-      filteredChildren.push(filteredChildQuery);
-    }
-  }
-
-  if (filteredChildren.length <= 1) {
-    return filteredChildren[0] ?? null;
-  }
-
-  return "and" in queries
-    ? { and: filteredChildren }
-    : { or: filteredChildren };
-}
-
 /**
  * Schema for a single property value query item in the OCHRE API response
  */
@@ -399,23 +318,11 @@ function buildXQuery(parameters: {
     isLimitedToLeafPropertyValues,
   } = parameters;
 
-  const setScopeValues = setScopeUuids.map((uuid) => stringLiteral(uuid));
-  const setScopeDeclaration = `declare variable $setScopeUuids := (${setScopeValues.join(", ")});`;
-  const compiledQueryPlan = buildQueryPlan({
-    queries: getItemFilterQueriesFromPropertyValueQueries(queries),
-    baseItemsExpression: "doc()/ochre/set[@uuid = $setScopeUuids]/items/*",
-    scopeQueryExpression: buildBelongsToCollectionQueryExpression(
-      belongsToCollectionScopeUuids,
-      BELONGS_TO_COLLECTION_UUID,
-    ),
-  });
   const valueFilter = isLimitedToLeafPropertyValues ? "[not(@i)]" : "";
   const queryBlocks: Array<string> = [];
   const returnedSequences: Array<string> = [];
   const xqueryDeclarations = [
-    'xquery version "1.0-ml";',
     'declare namespace map = "http://marklogic.com/xdmp/map";',
-    setScopeDeclaration,
     `declare function local:increment-count($counts, $key) {
   let $current := map:get($counts, $key)
   return map:put(
@@ -527,10 +434,6 @@ declare function local:add-attribute-facet($counts, $seen, $key) {
 };`,
   ];
 
-  if (compiledQueryPlan.prolog !== "") {
-    xqueryDeclarations.push(compiledQueryPlan.prolog);
-  }
-
   if (propertyFacetSelectors.length > 0) {
     const facetPropertyPredicates: Array<string> = [];
     for (const selector of propertyFacetSelectors) {
@@ -631,14 +534,15 @@ let $period-values :=
     returnedSequences.push("$period-values");
   }
 
-  const xquery = `${xqueryDeclarations.join("\n\n")}
+  const xquery = compileSetItemsQuery({
+    setScopeUuids,
+    belongsToCollectionScopeUuids,
+    queries: getItemFilterQueries(queries),
+    declarations: xqueryDeclarations,
+    body: () => `${queryBlocks.join("\n\n")}
 
-<ochre>{
-${compiledQueryPlan.itemsClause}
-${queryBlocks.join("\n\n")}
-
-return (${returnedSequences.join(", ")})
-}</ochre>`;
+return (${returnedSequences.join(", ")})`,
+  });
 
   return xquery;
 }
@@ -772,12 +676,7 @@ export async function fetchSetPropertyValues(
     attributes?: { bibliographies: boolean; periods: boolean };
     isLimitedToLeafPropertyValues?: boolean;
   },
-  options?: {
-    fetch?: (
-      input: string | URL | globalThis.Request,
-      init?: RequestInit,
-    ) => Promise<Response>;
-  },
+  options?: OchreRequestOptions,
 ): Promise<
   | {
       propertyValues: Array<PropertyValueQueryItem>;
@@ -808,8 +707,7 @@ export async function fetchSetPropertyValues(
       attributes,
       isLimitedToLeafPropertyValues,
     } = v.parse(setPropertyValuesParametersSchema, parameters);
-    const propertyFacetSelectors =
-      getPropertyFacetSelectorsFromQueries(queries);
+    const propertyFacetSelectors = getPropertyFacetSelectors(queries);
 
     if (
       propertyFacetSelectors.length === 0 &&
@@ -834,31 +732,12 @@ export async function fetchSetPropertyValues(
       isLimitedToLeafPropertyValues,
     });
 
-    const response = await (options?.fetch ?? fetch)(
-      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
-      {
-        method: "POST",
-        body: xquery,
-        headers: { "Content-Type": "application/xquery" },
-      },
-    );
-    if (!response.ok) {
-      throw new Error(`OCHRE API responded with status: ${response.status}`, {
-        cause: response.statusText,
-      });
-    }
-
-    const dataRaw = await response.text();
-    const parser = new XMLParser(XML_PARSER_OPTIONS);
-    const data = parser.parse(dataRaw) as unknown;
-
-    const { success, issues, output } = v.safeParse(responseSchema, data);
-    if (!success) {
-      throw createSchemaValidationError(
-        "Failed to parse OCHRE Set property values",
-        issues,
-      );
-    }
+    const output = await requestOchre({
+      xquery,
+      schema: responseSchema,
+      label: "OCHRE Set property values",
+      options,
+    });
 
     const parsedPropertyValues: Array<ParsedPropertyValueItem> = [
       output.result.ochre.propertyValue ?? [],

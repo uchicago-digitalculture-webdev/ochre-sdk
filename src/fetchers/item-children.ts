@@ -1,4 +1,3 @@
-import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type { FetchBaseOptions, FetchLanguages } from "#/parsers/helpers.js";
 import type {
@@ -12,18 +11,20 @@ import type {
   SetItemCategory,
   TreeItemCategory,
 } from "#/types/index.js";
-import type { XMLItemLinksData } from "#/xml/types.js";
-import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
+import { OCHRE_COLLECTION_CATEGORIES } from "#/categories.js";
+import { requestOchre } from "#/fetchers/request.js";
 import { parseLinkedItems } from "#/parsers/index.js";
-import { iso639_3Schema, uuidSchema } from "#/schemas.js";
 import {
-  createSchemaValidationError,
+  parseRequestedLanguages,
+  resolveContentLanguages,
+} from "#/parsers/languages.js";
+import { uuidSchema } from "#/schemas.js";
+import {
   getErrorOutput,
   omitSupplemental,
   stringLiteral,
   SUPPLEMENTAL_XQUERY_PROLOG,
 } from "#/utilities.js";
-import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
 
 type FetchItemChildrenResult<TItems> = Promise<
@@ -51,86 +52,13 @@ type ItemChildrenPayloadKind<U extends ItemCategory> = U extends "tree" | "set"
   ? "embedded"
   : "standaloneChild";
 
-const ITEM_COLLECTION_CATEGORIES = [
-  "tree",
-  "bibliography",
-  "concept",
-  "spatialUnit",
-  "period",
-  "person",
-  "propertyVariable",
-  "propertyValue",
-  "resource",
-  "text",
-  "set",
-] as const satisfies ReadonlyArray<ItemCategory>;
-
-function parseLanguages<const T extends ReadonlyArray<string>>(
-  languages: T,
-): T {
-  for (const language of languages) {
-    v.parse(iso639_3Schema, language);
-  }
-
-  return languages;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function collectContentLanguages(value: unknown, languages: Set<string>): void {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      collectContentLanguages(item, languages);
-    }
-    return;
-  }
-
-  if (!isRecord(value)) {
-    return;
-  }
-
-  const content = value.content;
-  if (Array.isArray(content)) {
-    for (const contentItem of content) {
-      if (!isRecord(contentItem)) {
-        continue;
-      }
-
-      const language = contentItem.lang;
-      if (typeof language === "string" && language !== "zxx") {
-        languages.add(language);
-      }
-    }
-  }
-
-  for (const child of Object.values(value)) {
-    collectContentLanguages(child, languages);
-  }
-}
-
-function resolveItemChildrenLanguages(
-  data: XMLItemLinksData,
-  requestedLanguages: ReadonlyArray<string>,
-): ReadonlyArray<string> {
-  if (requestedLanguages.length > 0) {
-    return requestedLanguages;
-  }
-
-  const languages = new Set<string>();
-  collectContentLanguages(data.result.ochre.items, languages);
-
-  return languages.size > 0 ? [...languages] : [...DEFAULT_LANGUAGES];
-}
-
 function buildXQuery(
   uuid: string,
   category: ItemCategoryOption | undefined,
 ): string {
   const categories: ReadonlyArray<ItemCategory> =
     category == null
-      ? ITEM_COLLECTION_CATEGORIES
+      ? OCHRE_COLLECTION_CATEGORIES
       : typeof category === "string"
         ? [category]
         : category;
@@ -262,40 +190,19 @@ export async function fetchItemChildren(
 > {
   try {
     const parsedUuid = v.parse(uuidSchema, uuid);
-    const requestedLanguages: ReadonlyArray<string> =
-      options?.languages == null ? [] : parseLanguages(options.languages);
+    const requestedLanguages = parseRequestedLanguages(options?.languages);
 
-    const response = await (options?.fetch ?? fetch)(
-      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
-      {
-        method: "POST",
-        body: buildXQuery(parsedUuid, options?.category),
-        headers: { "Content-Type": "application/xquery" },
-      },
+    const output = await requestOchre({
+      xquery: buildXQuery(parsedUuid, options?.category),
+      schema: XMLItemLinksDataSchema,
+      label: "OCHRE item children",
+      options,
+    });
+
+    const languages = resolveContentLanguages(
+      output.result.ochre.items,
+      requestedLanguages,
     );
-    if (!response.ok) {
-      throw new Error("Failed to fetch OCHRE item children", {
-        cause: response.statusText,
-      });
-    }
-
-    const dataRaw = await response.text();
-    const parser = new XMLParser(XML_PARSER_OPTIONS);
-    const data = parser.parse(dataRaw) as unknown;
-
-    const { success, issues, output } = v.safeParse(
-      XMLItemLinksDataSchema,
-      data,
-    );
-    if (!success) {
-      throw createSchemaValidationError(
-        "Failed to parse OCHRE item children",
-        issues,
-      );
-    }
-    restoreXMLMetadata(output, data);
-
-    const languages = resolveItemChildrenLanguages(output, requestedLanguages);
     const items = parseLinkedItems(output.result.ochre.items, {
       containedItemCategory: options?.containedItemCategory,
       languages,

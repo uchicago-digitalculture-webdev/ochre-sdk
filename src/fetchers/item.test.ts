@@ -1341,8 +1341,9 @@ describe("fetchItem", () => {
     >();
     await expect(result).resolves.toStrictEqual({
       item: null,
-      error: "Failed to fetch OCHRE data",
-      detailedError: "Error\nMessage: Failed to fetch OCHRE data",
+      error: "Failed to fetch OCHRE item: OCHRE API responded with status 500",
+      detailedError:
+        "Error\nMessage: Failed to fetch OCHRE item: OCHRE API responded with status 500",
     });
   });
 
@@ -1375,8 +1376,9 @@ describe("fetchItem", () => {
     >();
     await expect(result).resolves.toStrictEqual({
       item: null,
-      error: "Failed to fetch OCHRE data",
-      detailedError: "Error\nMessage: Failed to fetch OCHRE data",
+      error: "Failed to fetch OCHRE item: OCHRE API responded with status 500",
+      detailedError:
+        "Error\nMessage: Failed to fetch OCHRE item: OCHRE API responded with status 500",
     });
   });
 
@@ -1466,8 +1468,9 @@ describe("fetchItem", () => {
     >();
     await expect(omittedTextResult).resolves.toStrictEqual({
       item: null,
-      error: "Failed to fetch OCHRE data",
-      detailedError: "Error\nMessage: Failed to fetch OCHRE data",
+      error: "Failed to fetch OCHRE item: OCHRE API responded with status 500",
+      detailedError:
+        "Error\nMessage: Failed to fetch OCHRE item: OCHRE API responded with status 500",
     });
     expect(omittedTextFetchCalls).toHaveLength(1);
     expect(omittedTextFetchCalls[0]?.input).toBe(

@@ -1,14 +1,11 @@
 /* eslint-disable unicorn/no-incorrect-template-string-interpolation */
-import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
+import type { OchreRequestOptions } from "#/fetchers/request.js";
 import type { OcrString } from "#/types/index.js";
-import { XML_PARSER_OPTIONS } from "#/constants.js";
+import { requestOchre } from "#/fetchers/request.js";
+import { buildOcrWordPath } from "#/ocr.js";
 import { itemOcrDataParametersSchema } from "#/schemas.js";
-import {
-  createSchemaValidationError,
-  getErrorOutput,
-  stringLiteral,
-} from "#/utilities.js";
+import { getErrorOutput, stringLiteral } from "#/utilities.js";
 
 const OCR_STRING_VERTEX_REGEX =
   /\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/g;
@@ -134,7 +131,7 @@ declare variable $terms := (${termValues.join(", ")});
 
 let $ochre := doc(${stringLiteral(uuid)})/ochre
 let $ocrStrings :=
-  for $string in $ochre//*[lower-case(local-name(.)) = "ocr"]//*[lower-case(local-name(.)) = "string"][@CONTENT]
+  for $string in ${buildOcrWordPath("$ochre")}
   where (some $term in $terms satisfies ${matchExpression})
   return <ocrString
     resourceUuid="{string($string/ancestor::*[local-name(.) = "resource"][1]/@uuid)}"
@@ -174,13 +171,9 @@ return <ochre><ocrStrings found="{exists($ochre)}">{$ocrStrings}</ocrStrings></o
 export async function fetchItemOcrData(
   uuid: string,
   value: string,
-  options?: {
+  options?: OchreRequestOptions & {
     matchMode?: "includes" | "exact";
     isCaseSensitive?: boolean;
-    fetch?: (
-      input: string | URL | globalThis.Request,
-      init?: RequestInit,
-    ) => Promise<Response>;
   },
 ): Promise<
   | { ocrStrings: Array<OcrString>; error: null; detailedError: null }
@@ -205,31 +198,12 @@ export async function fetchItemOcrData(
       isCaseSensitive: parameters.isCaseSensitive,
     });
 
-    const response = await (options?.fetch ?? fetch)(
-      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
-      {
-        method: "POST",
-        body: xquery,
-        headers: { "Content-Type": "application/xquery" },
-      },
-    );
-    if (!response.ok) {
-      throw new Error(`OCHRE API responded with status: ${response.status}`, {
-        cause: response.statusText,
-      });
-    }
-
-    const dataRaw = await response.text();
-    const parser = new XMLParser(XML_PARSER_OPTIONS);
-    const data = parser.parse(dataRaw) as unknown;
-
-    const { success, issues, output } = v.safeParse(responseSchema, data);
-    if (!success) {
-      throw createSchemaValidationError(
-        "Failed to parse OCHRE item OCR data",
-        issues,
-      );
-    }
+    const output = await requestOchre({
+      xquery,
+      schema: responseSchema,
+      label: "OCHRE item OCR data",
+      options,
+    });
 
     const { found, ocrString } = output.result.ochre.ocrStrings;
 

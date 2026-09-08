@@ -1,4 +1,3 @@
-import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type { FetchBaseOptions, FetchLanguages } from "#/parsers/helpers.js";
 import type {
@@ -8,78 +7,24 @@ import type {
   ItemCategory,
   ItemContainerCategory,
 } from "#/types/index.js";
-import type { XMLItemLinksData } from "#/xml/types.js";
-import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
-import { parseLinkedItems } from "#/parsers/index.js";
-import { iso639_3Schema, uuidSchema } from "#/schemas.js";
 import {
-  createSchemaValidationError,
+  ITEM_CATEGORY_ALIASES,
+  OCHRE_COLLECTION_CATEGORIES,
+} from "#/categories.js";
+import { requestOchre } from "#/fetchers/request.js";
+import { parseLinkedItems } from "#/parsers/index.js";
+import {
+  parseRequestedLanguages,
+  resolveContentLanguages,
+} from "#/parsers/languages.js";
+import { uuidSchema } from "#/schemas.js";
+import {
   getErrorOutput,
   omitSupplemental,
   stringLiteral,
   SUPPLEMENTAL_XQUERY_PROLOG,
 } from "#/utilities.js";
-import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
-
-function parseLanguages<const T extends ReadonlyArray<string>>(
-  languages: T,
-): T {
-  for (const language of languages) {
-    v.parse(iso639_3Schema, language);
-  }
-
-  return languages;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function collectContentLanguages(value: unknown, languages: Set<string>): void {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      collectContentLanguages(item, languages);
-    }
-    return;
-  }
-
-  if (!isRecord(value)) {
-    return;
-  }
-
-  const content = value.content;
-  if (Array.isArray(content)) {
-    for (const contentItem of content) {
-      if (!isRecord(contentItem)) {
-        continue;
-      }
-
-      const language = contentItem.lang;
-      if (typeof language === "string" && language !== "zxx") {
-        languages.add(language);
-      }
-    }
-  }
-
-  for (const child of Object.values(value)) {
-    collectContentLanguages(child, languages);
-  }
-}
-
-function resolveItemLinksLanguages(
-  data: XMLItemLinksData,
-  requestedLanguages: ReadonlyArray<string>,
-): ReadonlyArray<string> {
-  if (requestedLanguages.length > 0) {
-    return requestedLanguages;
-  }
-
-  const languages = new Set<string>();
-  collectContentLanguages(data.result.ochre.items, languages);
-
-  return languages.size > 0 ? [...languages] : [...DEFAULT_LANGUAGES];
-}
 
 /**
  * Build an XQuery string to fetch linked items from the OCHRE API.
@@ -88,38 +33,26 @@ function resolveItemLinksLanguages(
  * @returns An XQuery string
  */
 function buildXQuery(uuid: string): string {
+  const linkedItemBranches = OCHRE_COLLECTION_CATEGORIES.map((category) => {
+    const aliasTest = ITEM_CATEGORY_ALIASES[category]
+      .map((alias) => `$category = ${stringLiteral(alias)}`)
+      .join(" or ");
+
+    return `if (${aliasTest}) then fn:collection("ochre/${category}")/ochre/${category}[@uuid = $uuid]`;
+  });
+
   const linkedItems = `for $link at $position in $link-nodes
       let $uuid := $link/@uuid/string()
       let $category := name($link)
       where $uuid ne "" and not($uuid = $link-nodes[position() lt $position]/@uuid/string())
       return
-        if ($category = "resource") then fn:collection("ochre/resource")/ochre/resource[@uuid = $uuid]
-        else if ($category = "bibliography") then fn:collection("ochre/bibliography")/ochre/bibliography[@uuid = $uuid]
-        else if ($category = "period") then fn:collection("ochre/period")/ochre/period[@uuid = $uuid]
-        else if ($category = "person") then fn:collection("ochre/person")/ochre/person[@uuid = $uuid]
-        else if ($category = "propertyVariable" or $category = "variable") then fn:collection("ochre/propertyVariable")/ochre/propertyVariable[@uuid = $uuid]
-        else if ($category = "propertyValue" or $category = "value") then fn:collection("ochre/propertyValue")/ochre/propertyValue[@uuid = $uuid]
-        else if ($category = "text") then fn:collection("ochre/text")/ochre/text[@uuid = $uuid]
-        else if ($category = "tree") then fn:collection("ochre/tree")/ochre/tree[@uuid = $uuid]
-        else if ($category = "set") then fn:collection("ochre/set")/ochre/set[@uuid = $uuid]
-        else if ($category = "spatialUnit") then fn:collection("ochre/spatialUnit")/ochre/spatialUnit[@uuid = $uuid]
-        else if ($category = "concept") then fn:collection("ochre/concept")/ochre/concept[@uuid = $uuid]
+        ${linkedItemBranches.join("\n        else ")}
         else ()`;
 
   const xquery = `let $item-uuid := ${stringLiteral(uuid)}
 
 let $source-items := (
-  fn:collection("ochre/resource")/ochre[@uuid = $item-uuid]/resource,
-  fn:collection("ochre/bibliography")/ochre[@uuid = $item-uuid]/bibliography,
-  fn:collection("ochre/period")/ochre[@uuid = $item-uuid]/period,
-  fn:collection("ochre/person")/ochre[@uuid = $item-uuid]/person,
-  fn:collection("ochre/propertyVariable")/ochre[@uuid = $item-uuid]/propertyVariable,
-  fn:collection("ochre/propertyValue")/ochre[@uuid = $item-uuid]/propertyValue,
-  fn:collection("ochre/text")/ochre[@uuid = $item-uuid]/text,
-  fn:collection("ochre/tree")/ochre[@uuid = $item-uuid]/tree,
-  fn:collection("ochre/set")/ochre[@uuid = $item-uuid]/set,
-  fn:collection("ochre/spatialUnit")/ochre[@uuid = $item-uuid]/spatialUnit,
-  fn:collection("ochre/concept")/ochre[@uuid = $item-uuid]/concept
+${OCHRE_COLLECTION_CATEGORIES.map((category) => `  fn:collection("ochre/${category}")/ochre[@uuid = $item-uuid]/${category}`).join(",\n")}
 )
 
 let $link-nodes := (
@@ -192,41 +125,19 @@ export async function fetchItemLinks(
 > {
   try {
     const parsedUuid = v.parse(uuidSchema, uuid);
-    const requestedLanguages: ReadonlyArray<string> =
-      options?.languages == null ? [] : parseLanguages(options.languages);
+    const requestedLanguages = parseRequestedLanguages(options?.languages);
 
-    const response = await (options?.fetch ?? fetch)(
-      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
-      {
-        method: "POST",
-        body: buildXQuery(parsedUuid),
-        headers: { "Content-Type": "application/xquery" },
-      },
+    const output = await requestOchre({
+      xquery: buildXQuery(parsedUuid),
+      schema: XMLItemLinksDataSchema,
+      label: "OCHRE item links",
+      options,
+    });
+
+    const languages = resolveContentLanguages(
+      output.result.ochre.items,
+      requestedLanguages,
     );
-    if (!response.ok) {
-      throw new Error("Failed to fetch OCHRE item links", {
-        cause: response.statusText,
-      });
-    }
-
-    const dataRaw = await response.text();
-
-    const parser = new XMLParser(XML_PARSER_OPTIONS);
-    const data = parser.parse(dataRaw) as unknown;
-
-    const { success, issues, output } = v.safeParse(
-      XMLItemLinksDataSchema,
-      data,
-    );
-    if (!success) {
-      throw createSchemaValidationError(
-        "Failed to parse OCHRE item links",
-        issues,
-      );
-    }
-    restoreXMLMetadata(output, data);
-
-    const languages = resolveItemLinksLanguages(output, requestedLanguages);
     const items = parseLinkedItems(output.result.ochre.items, {
       containedItemCategory: options?.containedItemCategory,
       languages,

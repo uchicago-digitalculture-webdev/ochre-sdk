@@ -1,5 +1,3 @@
-import { XMLParser } from "fast-xml-parser";
-import * as v from "valibot";
 import type {
   FetchBaseOptions,
   FetchLanguages,
@@ -7,25 +5,43 @@ import type {
 } from "#/parsers/helpers.js";
 import type { WebsiteMetadata } from "#/types/website.js";
 import type { XMLWebsiteData } from "#/xml/types.js";
-import { XML_PARSER_OPTIONS } from "#/constants.js";
+import { requestOchre } from "#/fetchers/request.js";
 import { parseStringLike } from "#/parsers/helpers.js";
 import {
   parseIdentification,
-  parseMetadataLanguages,
   parseSimplifiedProperties,
-  resolveLanguages,
 } from "#/parsers/index.js";
-import { websitePresentationReader } from "#/parsers/website/reader.js";
-import { iso639_3Schema } from "#/schemas.js";
 import {
-  createSchemaValidationError,
+  parseMetadataLanguages,
+  parseRequestedLanguages,
+  resolveLanguages,
+} from "#/parsers/languages.js";
+import { websitePresentationReader } from "#/parsers/website/reader.js";
+import {
+  SEGMENT_UNIQUE_SLUG_PREFIX_PATTERN,
+  WEBSITE_PAGE_SLUG_SEPARATOR,
+} from "#/parsers/website/slug.js";
+import {
   getErrorOutput,
   omitSupplemental,
   stringLiteral,
   SUPPLEMENTAL_XQUERY_PROLOG,
 } from "#/utilities.js";
-import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
+
+/**
+ * The presentation properties the metadata projection carries
+ *
+ * The XQuery whitelists exactly these labels and the parser reads exactly
+ * these labels, so they come from one list: whitelisting a label the parser
+ * ignores is dead weight, and reading one the whitelist drops silently yields
+ * the default.
+ */
+const METADATA_PRESENTATION_LABELS = {
+  privacy: "privacy",
+  faviconIco: "favicon-ico",
+  faviconImg: "favicon-img",
+} as const;
 
 function parseWebsiteMetadata<T extends ReadonlyArray<string>>(
   data: XMLWebsiteData,
@@ -71,12 +87,14 @@ function parseWebsiteMetadata<T extends ReadonlyArray<string>>(
     webpageTitle,
     properties: {
       privacy: reader.valueOr<WebsiteMetadata<T>["properties"]["privacy"]>(
-        "privacy",
+        METADATA_PRESENTATION_LABELS.privacy,
         "public",
       ),
       icon: {
-        faviconUuid: reader.uuid("favicon-ico"),
-        appleTouchIconUuid: reader.uuid("favicon-img"),
+        faviconUuid: reader.uuid(METADATA_PRESENTATION_LABELS.faviconIco),
+        appleTouchIconUuid: reader.uuid(
+          METADATA_PRESENTATION_LABELS.faviconImg,
+        ),
       },
     },
   };
@@ -86,7 +104,7 @@ function buildXQuery(parameters: {
   abbreviation: string;
   slug: string;
 }): string {
-  return String.raw`xquery version "1.0-ml";
+  return `xquery version "1.0-ml";
 
 ${SUPPLEMENTAL_XQUERY_PROLOG}
 
@@ -103,7 +121,7 @@ declare function local:presentation($resource) {
 };
 
 declare function local:clean-slug($slug) {
-  replace(string($slug), "^\$[^-]*-", "")
+  replace(string($slug), ${stringLiteral(SEGMENT_UNIQUE_SLUG_PREFIX_PATTERN)}, "")
 };
 
 declare function local:page-slug($resource, $slug-prefix) {
@@ -111,7 +129,7 @@ declare function local:page-slug($resource, $slug-prefix) {
   return
     if ($slug-prefix = "") then $slug
     else if ($slug = "") then $slug-prefix
-    else concat($slug-prefix, "/", $slug)
+    else concat($slug-prefix, ${stringLiteral(WEBSITE_PAGE_SLUG_SEPARATOR)}, $slug)
 };
 
 declare function local:matches-page-slug($resource, $target-slug, $slug-prefix) {
@@ -155,7 +173,11 @@ declare function local:matching-pages($resources, $target-slug, $slug-prefix) {
 
 declare function local:metadata-tree($tree, $target-slug, $slug-prefix) {
   let $resources := local:resource-items($tree/items/resource)
-  let $presentation-properties := $tree/properties/property[label/string() = "presentation"][value/string() = "website"]/property[label/string() = ("favicon-ico", "favicon-img", "privacy")]
+  let $presentation-properties := $tree/properties/property[label/string() = "presentation"][value/string() = "website"]/property[label/string() = (${Object.values(
+    METADATA_PRESENTATION_LABELS,
+  )
+    .map((label) => stringLiteral(label))
+    .join(", ")})]
   return
     element tree {
       attribute uuid { string($tree/@uuid) },
@@ -224,37 +246,14 @@ export async function fetchWebsiteMetadata(
 
     const cleanAbbreviation = abbreviation.trim().toLocaleLowerCase("en-US");
     const slug = options.slug.trim().replaceAll(/^\/+|\/+$/g, "");
-    const requestedLanguages: Array<string> = Array.from(
-      options.languages ?? [],
-      (language) => v.parse(iso639_3Schema, language),
-    );
+    const requestedLanguages = parseRequestedLanguages(options.languages);
 
-    const response = await (options.fetch ?? fetch)(
-      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
-      {
-        method: "POST",
-        body: buildXQuery({ abbreviation: cleanAbbreviation, slug }),
-        headers: { "Content-Type": "application/xquery" },
-      },
-    );
-    if (!response.ok) {
-      throw new Error("Failed to fetch website metadata", {
-        cause: response.statusText,
-      });
-    }
-
-    const dataRaw = await response.text();
-    const parser = new XMLParser(XML_PARSER_OPTIONS);
-    const data = parser.parse(dataRaw) as unknown;
-
-    const { success, issues, output } = v.safeParse(XMLWebsiteDataSchema, data);
-    if (!success) {
-      throw createSchemaValidationError(
-        "Failed to parse website metadata XML",
-        issues,
-      );
-    }
-    restoreXMLMetadata(output, data);
+    const output = await requestOchre({
+      xquery: buildXQuery({ abbreviation: cleanAbbreviation, slug }),
+      schema: XMLWebsiteDataSchema,
+      label: "OCHRE website metadata",
+      options,
+    });
 
     const metadataLanguages = parseMetadataLanguages(output.result.ochre);
     const languages = resolveLanguages(requestedLanguages, metadataLanguages);

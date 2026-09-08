@@ -1,40 +1,32 @@
-import { XMLParser } from "fast-xml-parser";
-import * as v from "valibot";
-import type { FetchFunction } from "#/parsers/helpers.js";
+import type { OchreRequestOptions } from "#/fetchers/request.js";
 import type { LanguageCodes } from "#/types/index.js";
 import type { ProtectedWebsite, Website } from "#/types/website.js";
-import { XML_PARSER_OPTIONS } from "#/constants.js";
+import { isOchreJsonAccepted, requestOchre } from "#/fetchers/request.js";
+import { parseLanguages } from "#/parsers/languages.js";
 import { parseWebsite } from "#/parsers/website/index.js";
 import {
-  createSchemaValidationError,
   getErrorOutput,
   omitSupplemental,
   stringLiteral,
   SUPPLEMENTAL_XQUERY_PROLOG,
 } from "#/utilities.js";
-import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
 
 async function areWebsiteCredentialsValid(
   uuid: string,
   credentials: string | { username: string; password: string },
-  fetcher: FetchFunction,
+  options: OchreRequestOptions | undefined,
 ): Promise<boolean> {
   const security =
     typeof credentials === "string"
       ? { validate: credentials }
       : { validate: credentials.password, userOCHRE: credentials.username };
 
-  const response = await fetcher(
-    "https://ochre.lib.uchicago.edu/ochre/v2/ochre.php",
-    {
-      method: "POST",
-      body: JSON.stringify({ uuid, data: { security } }),
-      headers: { "Content-Type": "application/json" },
-    },
-  );
-
-  return response.ok;
+  return isOchreJsonAccepted({
+    body: { uuid, data: { security } },
+    label: "website credentials",
+    options,
+  });
 }
 
 /**
@@ -65,8 +57,7 @@ export async function fetchWebsite<
   const T extends LanguageCodes = LanguageCodes,
 >(
   abbreviation: string,
-  options?: {
-    fetch?: FetchFunction;
+  options?: OchreRequestOptions & {
     languages?: T;
     credentials?: string | { username: string; password: string };
   },
@@ -91,35 +82,20 @@ export async function fetchWebsite<
     }
 > {
   try {
-    const fetcher = options?.fetch ?? fetch;
     const cleanAbbreviation = abbreviation.trim().toLocaleLowerCase("en-US");
+    const languages =
+      options?.languages == null
+        ? undefined
+        : parseLanguages(options.languages);
 
-    const response = await fetcher(
-      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
-      {
-        method: "POST",
-        body: buildXQuery(cleanAbbreviation),
-        headers: { "Content-Type": "application/xquery" },
-      },
-    );
-    if (!response.ok) {
-      throw new Error("Failed to fetch website", {
-        cause: response.statusText,
-      });
-    }
+    const output = await requestOchre({
+      xquery: buildXQuery(cleanAbbreviation),
+      schema: XMLWebsiteDataSchema,
+      label: "OCHRE website",
+      options,
+    });
 
-    const dataRaw = await response.text();
-
-    const parser = new XMLParser(XML_PARSER_OPTIONS);
-    const data = parser.parse(dataRaw) as unknown;
-
-    const { success, issues, output } = v.safeParse(XMLWebsiteDataSchema, data);
-    if (!success) {
-      throw createSchemaValidationError("Failed to parse website XML", issues);
-    }
-    restoreXMLMetadata(output, data);
-
-    const website = parseWebsite(output, { languages: options?.languages });
+    const website = parseWebsite(output, { languages });
 
     if (website.properties.privacy !== "public") {
       if (options?.credentials == null) {
@@ -138,7 +114,7 @@ export async function fetchWebsite<
       const isValid = await areWebsiteCredentialsValid(
         website.uuid,
         options.credentials,
-        fetcher,
+        options,
       );
       if (!isValid) {
         throw new Error("Invalid credentials for protected website");

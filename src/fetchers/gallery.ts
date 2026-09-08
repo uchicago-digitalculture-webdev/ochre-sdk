@@ -1,5 +1,4 @@
 /* eslint-disable unicorn/no-incorrect-template-string-interpolation */
-import { XMLParser } from "fast-xml-parser";
 import * as v from "valibot";
 import type {
   FetchBaseOptions,
@@ -7,78 +6,20 @@ import type {
   FetchRuntimeOptions,
 } from "#/parsers/helpers.js";
 import type { Gallery } from "#/types/index.js";
-import type { XMLGalleryData } from "#/xml/types.js";
-import { DEFAULT_LANGUAGES, XML_PARSER_OPTIONS } from "#/constants.js";
+import { requestOchre } from "#/fetchers/request.js";
 import { parseGallery } from "#/parsers/index.js";
-import { gallerySchema, iso639_3Schema } from "#/schemas.js";
 import {
-  createSchemaValidationError,
+  parseRequestedLanguages,
+  resolveContentLanguages,
+} from "#/parsers/languages.js";
+import { gallerySchema } from "#/schemas.js";
+import {
   getErrorOutput,
   omitSupplemental,
   stringLiteral,
   SUPPLEMENTAL_XQUERY_PROLOG,
 } from "#/utilities.js";
-import { restoreXMLMetadata } from "#/xml/metadata.js";
 import { XMLGalleryData as XMLGalleryDataSchema } from "#/xml/schemas.js";
-
-function parseLanguages<const T extends ReadonlyArray<string>>(
-  languages: T,
-): T {
-  for (const language of languages) {
-    v.parse(iso639_3Schema, language);
-  }
-
-  return languages;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function collectContentLanguages(value: unknown, languages: Set<string>): void {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      collectContentLanguages(item, languages);
-    }
-    return;
-  }
-
-  if (!isRecord(value)) {
-    return;
-  }
-
-  const content = value.content;
-  if (Array.isArray(content)) {
-    for (const contentItem of content) {
-      if (!isRecord(contentItem)) {
-        continue;
-      }
-
-      const language = contentItem.lang;
-      if (typeof language === "string" && language !== "zxx") {
-        languages.add(language);
-      }
-    }
-  }
-
-  for (const child of Object.values(value)) {
-    collectContentLanguages(child, languages);
-  }
-}
-
-function resolveGalleryLanguages(
-  data: XMLGalleryData,
-  requestedLanguages: ReadonlyArray<string>,
-): ReadonlyArray<string> {
-  if (requestedLanguages.length > 0) {
-    return requestedLanguages;
-  }
-
-  const languages = new Set<string>();
-  collectContentLanguages(data.result.ochre.gallery, languages);
-
-  return languages.size > 0 ? [...languages] : [...DEFAULT_LANGUAGES];
-}
 
 function buildXQuery(parameters: {
   uuid: string;
@@ -152,41 +93,26 @@ export async function fetchGallery(
 > {
   try {
     const { uuid, filter, page, perPage } = v.parse(gallerySchema, parameters);
-    const requestedLanguages: ReadonlyArray<string> =
-      options?.languages == null ? [] : parseLanguages(options.languages);
+    const requestedLanguages = parseRequestedLanguages(options?.languages);
 
-    const response = await (options?.fetch ?? fetch)(
-      'https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?xquery&xsl=none&lang="*"',
-      {
-        method: "POST",
-        body: buildXQuery({ uuid, filter, page, perPage }),
-        headers: { "Content-Type": "application/xquery" },
-      },
+    const output = await requestOchre({
+      xquery: buildXQuery({ uuid, filter, page, perPage }),
+      schema: XMLGalleryDataSchema,
+      label: "OCHRE gallery",
+      options,
+    });
+
+    const languages = resolveContentLanguages(
+      output.result.ochre.gallery,
+      requestedLanguages,
     );
-    if (!response.ok) {
-      throw new Error("Error fetching gallery items, please try again later.", {
-        cause: response.statusText,
-      });
-    }
-
-    const dataRaw = await response.text();
-    const parser = new XMLParser(XML_PARSER_OPTIONS);
-    const data = parser.parse(dataRaw) as unknown;
-
-    const { success, issues, output } = v.safeParse(XMLGalleryDataSchema, data);
-    if (!success) {
-      throw createSchemaValidationError("Failed to parse gallery XML", issues);
-    }
-    restoreXMLMetadata(output, data);
-
-    const languages = resolveGalleryLanguages(output, requestedLanguages);
     const gallery = parseGallery(output, { languages });
 
     return { gallery, error: null, detailedError: null };
   } catch (error) {
     return {
       gallery: null,
-      ...getErrorOutput(error, "Failed to fetch gallery"),
+      ...getErrorOutput(error, "Failed to fetch OCHRE gallery"),
     };
   }
 }
