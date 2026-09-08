@@ -93,27 +93,60 @@ export type StylesheetCategory = Extract<
   "propertyVariable" | "propertyValue"
 >;
 
+/**
+ * The style overrides for each viewport a website presentation targets
+ */
+export type ResponsiveStyles = {
+  default: Array<Style>;
+  tablet: Array<Style>;
+  mobile: Array<Style>;
+};
+
+/**
+ * Whether an item page section and its header are shown
+ */
+export type WebSectionDisplay = {
+  isDisplayed: boolean;
+  isHeaderDisplayed: boolean;
+};
+
+/**
+ * How a website indicates that content is loading
+ */
+export type WebLoadingVariant = "spinner" | "skeleton" | "animation" | "none";
+
+/**
+ * How an item page groups a repeated section
+ */
+export type WebSectionVariant =
+  | "discrete"
+  | "tabs-horizontal"
+  | "tabs-vertical"
+  | "tabular";
+
+/**
+ * The IIIF viewer a website renders images with
+ */
+export type WebIiifViewer = "universal-viewer" | "clover";
+
+/**
+ * How a website restricts access to its content
+ */
+export type WebsitePrivacy = "public" | "password" | "credentials-ochre";
+
 export type StylesheetItem =
   | {
       uuid: string;
       category: "propertyVariable";
       icon: string | null;
-      styles: {
-        default: Array<Style>;
-        tablet: Array<Style>;
-        mobile: Array<Style>;
-      };
+      styles: ResponsiveStyles;
     }
   | {
       uuid: string;
       category: "propertyValue";
       variableUuid: string;
       icon: string | null;
-      styles: {
-        default: Array<Style>;
-        tablet: Array<Style>;
-        mobile: Array<Style>;
-      };
+      styles: ResponsiveStyles;
     };
 
 export type WebsitePropertyQueryNode<T extends LanguageCodes = LanguageCodes> =
@@ -153,11 +186,7 @@ export type WebSidebar<T extends LanguageCodes = LanguageCodes> = {
   title: WebTitle<T>;
   layout: "start" | "end";
   mobileLayout: "default" | "inline";
-  cssStyles: {
-    default: Array<Style>;
-    tablet: Array<Style>;
-    mobile: Array<Style>;
-  };
+  cssStyles: ResponsiveStyles;
 };
 
 /**
@@ -184,9 +213,9 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
       | "staging"
       | "pre-release"
       | "release";
-    privacy: "public" | "password" | "credentials-ochre";
+    privacy: WebsitePrivacy;
     contact: { name: string; email: string | null } | null;
-    loadingVariant: "spinner" | "skeleton" | "animation" | "none";
+    loadingVariant: WebLoadingVariant;
     theme: {
       isThemeToggleDisplayed: boolean;
       defaultTheme: "light" | "dark" | "system";
@@ -212,25 +241,25 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
     sidebar: WebSidebar<T> | null;
     itemPage: {
       isMainContentDisplayed: boolean;
-      description: { isDisplayed: boolean; isHeaderDisplayed: boolean };
-      document: { isDisplayed: boolean; isHeaderDisplayed: boolean };
+      description: WebSectionDisplay;
+      document: WebSectionDisplay;
       notes: {
         isDisplayed: boolean;
         isHeaderDisplayed: boolean;
-        variant: "discrete" | "tabs-horizontal" | "tabs-vertical" | "tabular";
+        variant: WebSectionVariant;
       };
       events: {
         isDisplayed: boolean;
         isHeaderDisplayed: boolean;
-        variant: "discrete" | "tabs-horizontal" | "tabs-vertical" | "tabular";
+        variant: WebSectionVariant;
       };
-      periods: { isDisplayed: boolean; isHeaderDisplayed: boolean };
+      periods: WebSectionDisplay;
       isPropertiesDisplayed: boolean;
-      bibliography: { isDisplayed: boolean; isHeaderDisplayed: boolean };
+      bibliography: WebSectionDisplay;
       isPropertyValuesGrouped: boolean;
       isPublicationDateTimeDisplayed: boolean;
       isPersistentIdentifierDisplayed: boolean;
-      iiifViewer: "universal-viewer" | "clover";
+      iiifViewer: WebIiifViewer;
     };
     options: Prettify<
       WebOptions<T> & { stylesheets: { properties: Array<StylesheetItem> } }
@@ -266,11 +295,7 @@ export type Webpage<T extends LanguageCodes = LanguageCodes> = {
       | null;
     backgroundImage: WebImage<T> | null;
     sidebar: WebSidebar<T> | null;
-    cssStyles: {
-      default: Array<Style>;
-      tablet: Array<Style>;
-      mobile: Array<Style>;
-    };
+    cssStyles: ResponsiveStyles;
   };
   webpages: Array<Webpage<T>>;
 };
@@ -298,11 +323,7 @@ export type WebElement<T extends LanguageCodes = LanguageCodes> = {
   language: string | null;
   type: "element";
   title: WebTitle<T>;
-  cssStyles: {
-    default: Array<Style>;
-    tablet: Array<Style>;
-    mobile: Array<Style>;
-  };
+  cssStyles: ResponsiveStyles;
 } & WebElementComponent<T>;
 
 /**
@@ -372,7 +393,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       }> | null;
       variant: "slide" | "table" | "card" | "tile" | "showcase";
       paginationVariant: "default" | "numeric";
-      loadingVariant: "spinner" | "skeleton" | "animation" | "none";
+      loadingVariant: WebLoadingVariant;
       image: {
         layout: "top" | "bottom" | "start" | "end" | null;
         fit: "fill" | "fit";
@@ -403,11 +424,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       height: string | null;
       width: string | null;
     }
-  | {
-      component: "iiif-viewer";
-      linkUuid: string;
-      variant: "universal-viewer" | "clover";
-    }
+  | { component: "iiif-viewer"; linkUuid: string; variant: WebIiifViewer }
   | {
       component: "image";
       images: Array<WebImage<T>>;
@@ -575,11 +592,7 @@ export type WebBlock<
     tablet: Partial<WebBlock<T>["properties"]["default"]> | null;
     mobile: Partial<WebBlock<T>["properties"]["default"]> | null;
   };
-  cssStyles: {
-    default: Array<Style>;
-    tablet: Array<Style>;
-    mobile: Array<Style>;
-  };
+  cssStyles: ResponsiveStyles;
 };
 
 export type WebBlockByLayout<
@@ -597,7 +610,7 @@ export type WebsiteMetadata<T extends LanguageCodes = LanguageCodes> = {
   description: string;
   webpageTitle: MultilingualString<T> | null;
   properties: {
-    privacy: "public" | "password" | "credentials-ochre";
+    privacy: WebsitePrivacy;
     icon: { faviconUuid: string | null; appleTouchIconUuid: string | null };
   };
 };

@@ -52,15 +52,21 @@ import {
   parseIdentification,
   parseLinks,
   parseMetadata,
-  parseMetadataLanguages,
   parseNotes,
   parsePersonList,
   parseSimplifiedProperties,
+} from "#/parsers/index.js";
+import {
+  parseMetadataLanguages,
   resolveDefaultLanguage,
   resolveLanguages,
-} from "#/parsers/index.js";
-import { parseXMLContent } from "#/parsers/string.js";
+} from "#/parsers/languages.js";
+import {
+  parseXMLContent,
+  transformPermanentIdentificationUrlToItemLink,
+} from "#/parsers/string.js";
 import { websitePresentationReader } from "#/parsers/website/reader.js";
+import { cleanWebsitePageSlug, prefixSlug } from "#/parsers/website/slug.js";
 import { componentSchema } from "#/schemas.js";
 
 type WebsiteLinkCategory = Extract<
@@ -137,10 +143,6 @@ function getWebsiteLinks<
   return matchedLinks;
 }
 
-function transformPermanentIdentificationUrlToItemLink(url: string): string {
-  return url.replace("https://pi.lib.uchicago.edu/1001/org/ochre/", "/item/");
-}
-
 function normalizeWebsiteResources(
   resources: Array<XMLWebsiteResourceItem> | undefined,
 ): Array<XMLWebsiteResource> {
@@ -158,24 +160,6 @@ function normalizeWebsiteResources(
   }
 
   return normalized;
-}
-
-const SEGMENT_UNIQUE_SLUG_PREFIX_REGEX = /^\$[^-]*-/;
-
-function cleanWebsitePageSlug(slug: string | undefined): string | null {
-  return slug?.replace(SEGMENT_UNIQUE_SLUG_PREFIX_REGEX, "") ?? null;
-}
-
-function prefixSlug(slug: string, slugPrefix: string | undefined): string {
-  if (slugPrefix === "" || slugPrefix == null) {
-    return slug;
-  }
-
-  if (slug === "") {
-    return slugPrefix;
-  }
-
-  return `${slugPrefix}/${slug}`;
 }
 
 function collectSegmentPageSlugs<T extends ReadonlyArray<string>>(
@@ -1833,6 +1817,43 @@ function parseVideoComponent<T extends ReadonlyArray<string>>(
  * @param elementResource - Raw element resource data in OCHRE format
  * @returns Parsed WebElementComponent object
  */
+/**
+ * The parser for each web element component, keyed by its OCHRE component name
+ *
+ * Every component parser takes the same {@link WebElementComponentParameters}
+ * bag, so this is a table rather than a `switch`: a missing component is a type
+ * error here instead of a runtime throw, and each parser can be exercised on
+ * its own.
+ */
+const WEB_ELEMENT_COMPONENT_PARSERS = {
+  "3d-viewer": parse3dViewerComponent,
+  "advanced-search": parseAdvancedSearchComponent,
+  "annotated-document": parseAnnotatedDocumentComponent,
+  "annotated-image": parseAnnotatedImageComponent,
+  "audio-player": parseAudioPlayerComponent,
+  bibliography: parseBibliographyComponent,
+  button: parseButtonComponent,
+  collection: parseCollectionComponent,
+  "empty-space": parseEmptySpaceComponent,
+  entries: parseEntriesComponent,
+  iframe: parseIframeComponent,
+  "iiif-viewer": parseIiifViewerComponent,
+  image: parseImageComponent,
+  "image-gallery": parseImageGalleryComponent,
+  map: parseMapComponent,
+  query: parseQueryComponent,
+  table: parseTableComponent,
+  "search-bar": parseSearchBarComponent,
+  text: parseTextComponent,
+  timeline: parseTimelineComponent,
+  video: parseVideoComponent,
+} as const satisfies Record<
+  WebElementComponent["component"],
+  <T extends ReadonlyArray<string>>(
+    parameters: WebElementComponentParameters<T>,
+  ) => WebElementComponent<T>
+>;
+
 function parseWebElementProperties<T extends ReadonlyArray<string>>(
   componentProperty: SimplifiedProperty<T>,
   elementResource: XMLWebsiteResource,
@@ -1844,97 +1865,27 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
     componentSchema,
     unparsedComponentName,
   );
-  const componentName = componentNameResult.success
-    ? componentNameResult.output
+  const parse = componentNameResult.success
+    ? WEB_ELEMENT_COMPONENT_PARSERS[componentNameResult.output]
     : undefined;
 
-  const websiteLinks = parseLinks(elementResource.links, options);
-  const componentReader = websitePresentationReader(
-    componentProperty.properties,
-  );
+  if (parse == null) {
+    throw new Error(
+      `Invalid or non-implemented component name \u{201C}${unparsedComponentName.toString()}\u{201D} for the following element: \u{201C}${parseStringContent(
+        elementResource.identification.label,
+        options,
+      )}\u{201D}`,
+    );
+  }
 
-  const parameters: WebElementComponentParameters<T> = {
+  return parse({
     componentProperty,
-    componentReader,
+    componentReader: websitePresentationReader(componentProperty.properties),
     elementResource,
-    websiteLinks,
+    websiteLinks: parseLinks(elementResource.links, options),
     options,
     context,
-  };
-
-  switch (componentName) {
-    case "3d-viewer": {
-      return parse3dViewerComponent(parameters);
-    }
-    case "advanced-search": {
-      return parseAdvancedSearchComponent(parameters);
-    }
-    case "annotated-document": {
-      return parseAnnotatedDocumentComponent(parameters);
-    }
-    case "annotated-image": {
-      return parseAnnotatedImageComponent(parameters);
-    }
-    case "audio-player": {
-      return parseAudioPlayerComponent(parameters);
-    }
-    case "bibliography": {
-      return parseBibliographyComponent(parameters);
-    }
-    case "button": {
-      return parseButtonComponent(parameters);
-    }
-    case "collection": {
-      return parseCollectionComponent(parameters);
-    }
-    case "empty-space": {
-      return parseEmptySpaceComponent(parameters);
-    }
-    case "entries": {
-      return parseEntriesComponent(parameters);
-    }
-    case "iframe": {
-      return parseIframeComponent(parameters);
-    }
-    case "iiif-viewer": {
-      return parseIiifViewerComponent(parameters);
-    }
-    case "image": {
-      return parseImageComponent(parameters);
-    }
-    case "image-gallery": {
-      return parseImageGalleryComponent(parameters);
-    }
-    case "map": {
-      return parseMapComponent(parameters);
-    }
-    case "query": {
-      return parseQueryComponent(parameters);
-    }
-    case "table": {
-      return parseTableComponent(parameters);
-    }
-    case "search-bar": {
-      return parseSearchBarComponent(parameters);
-    }
-    case "text": {
-      return parseTextComponent(parameters);
-    }
-    case "timeline": {
-      return parseTimelineComponent(parameters);
-    }
-    case "video": {
-      return parseVideoComponent(parameters);
-    }
-    default: {
-      throw new Error(
-        `Invalid or non-implemented component name “${unparsedComponentName.toString()}” for the following element: “${parseStringContent(
-          elementResource.identification.label,
-          options,
-        )}”`,
-      );
-    }
-  }
+  });
 }
 
 function parseWebTitle<T extends ReadonlyArray<string>>(
@@ -2734,56 +2685,59 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
     }
   }
 
-  returnProperties.loadingVariant = websiteReader.valueOr<
-    Website<T>["properties"]["loadingVariant"]
-  >("loading-variant", parent?.loadingVariant ?? "spinner");
-
-  returnProperties.theme.isThemeToggleDisplayed = websiteReader.valueOr<
-    Website<T>["properties"]["theme"]["isThemeToggleDisplayed"]
-  >("supports-theme-toggle", parent?.theme.isThemeToggleDisplayed ?? true);
-
-  returnProperties.theme.defaultTheme = websiteReader.valueOr<
-    Website<T>["properties"]["theme"]["defaultTheme"]
-  >("default-theme", parent?.theme.defaultTheme ?? "system");
-
-  returnProperties.icon.logoUuid =
-    websiteReader.uuid("navbar-logo") ?? parent?.icon.logoUuid ?? null;
-
-  returnProperties.icon.faviconUuid =
-    websiteReader.uuid("favicon-ico") ?? parent?.icon.faviconUuid ?? null;
-
-  returnProperties.icon.appleTouchIconUuid =
-    websiteReader.uuid("favicon-img") ??
-    parent?.icon.appleTouchIconUuid ??
-    null;
-
-  returnProperties.navbar.isDisplayed = websiteReader.valueOr<
-    Website<T>["properties"]["navbar"]["isDisplayed"]
-  >("navbar-displayed", parent?.navbar.isDisplayed ?? true);
-
-  returnProperties.navbar.variant = websiteReader.valueOr<
-    Website<T>["properties"]["navbar"]["variant"]
-  >("navbar-variant", parent?.navbar.variant ?? "default");
-
-  returnProperties.navbar.alignment = websiteReader.valueOr<
-    Website<T>["properties"]["navbar"]["alignment"]
-  >("navbar-alignment", parent?.navbar.alignment ?? "start");
-
-  returnProperties.navbar.isProjectDisplayed = websiteReader.valueOr<
-    Website<T>["properties"]["navbar"]["isProjectDisplayed"]
-  >("navbar-project-displayed", parent?.navbar.isProjectDisplayed ?? true);
-
-  returnProperties.navbar.searchBarBoundElementUuid =
-    websiteReader.uuid("bound-element-navbar-search-bar") ??
-    parent?.navbar.searchBarBoundElementUuid ??
-    null;
-
-  returnProperties.footer.isDisplayed = websiteReader.valueOr<
-    Website<T>["properties"]["footer"]["isDisplayed"]
-  >("footer-displayed", parent?.footer.isDisplayed ?? true);
-
-  returnProperties.footer.logoUuid =
-    websiteReader.uuid("footer-logo") ?? parent?.footer.logoUuid ?? null;
+  websiteReader.readInto(returnProperties, "loadingVariant", "loading-variant");
+  websiteReader.readInto(
+    returnProperties.theme,
+    "isThemeToggleDisplayed",
+    "supports-theme-toggle",
+  );
+  websiteReader.readInto(
+    returnProperties.theme,
+    "defaultTheme",
+    "default-theme",
+  );
+  websiteReader.readUuidInto(returnProperties.icon, "logoUuid", "navbar-logo");
+  websiteReader.readUuidInto(
+    returnProperties.icon,
+    "faviconUuid",
+    "favicon-ico",
+  );
+  websiteReader.readUuidInto(
+    returnProperties.icon,
+    "appleTouchIconUuid",
+    "favicon-img",
+  );
+  websiteReader.readInto(
+    returnProperties.navbar,
+    "isDisplayed",
+    "navbar-displayed",
+  );
+  websiteReader.readInto(returnProperties.navbar, "variant", "navbar-variant");
+  websiteReader.readInto(
+    returnProperties.navbar,
+    "alignment",
+    "navbar-alignment",
+  );
+  websiteReader.readInto(
+    returnProperties.navbar,
+    "isProjectDisplayed",
+    "navbar-project-displayed",
+  );
+  websiteReader.readUuidInto(
+    returnProperties.navbar,
+    "searchBarBoundElementUuid",
+    "bound-element-navbar-search-bar",
+  );
+  websiteReader.readInto(
+    returnProperties.footer,
+    "isDisplayed",
+    "footer-displayed",
+  );
+  websiteReader.readUuidInto(
+    returnProperties.footer,
+    "logoUuid",
+    "footer-logo",
+  );
 
   const itemPageReader = websiteReader.nestedByValue("page-type", "item-page");
   if (itemPageReader.size > 0) {
@@ -2800,57 +2754,48 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
       const section: { isDisplayed: boolean; isHeaderDisplayed: boolean } =
         returnProperties.itemPage[key];
 
-      section.isDisplayed = itemPageReader.valueOr<boolean>(
+      itemPageReader.readInto(
+        section,
+        "isDisplayed",
         `item-page-${slug}-displayed`,
-        section.isDisplayed,
       );
-
-      section.isHeaderDisplayed = itemPageReader.valueOr<boolean>(
+      itemPageReader.readInto(
+        section,
+        "isHeaderDisplayed",
         `item-page-${slug}-header-displayed`,
-        section.isHeaderDisplayed,
       );
     }
 
-    returnProperties.itemPage.notes.variant = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["notes"]["variant"]
-    >(
+    itemPageReader.readInto(
+      returnProperties.itemPage.notes,
+      "variant",
       "item-page-notes-display-variant",
-      returnProperties.itemPage.notes.variant,
     );
-
-    returnProperties.itemPage.events.variant = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["events"]["variant"]
-    >(
+    itemPageReader.readInto(
+      returnProperties.itemPage.events,
+      "variant",
       "item-page-events-display-variant",
-      returnProperties.itemPage.events.variant,
     );
-
-    returnProperties.itemPage.isPropertyValuesGrouped = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["isPropertyValuesGrouped"]
-    >(
+    itemPageReader.readInto(
+      returnProperties.itemPage,
+      "isPropertyValuesGrouped",
       "item-page-property-values-grouped",
-      returnProperties.itemPage.isPropertyValuesGrouped,
     );
-
-    returnProperties.itemPage.isPublicationDateTimeDisplayed =
-      itemPageReader.valueOr<
-        Website<T>["properties"]["itemPage"]["isPublicationDateTimeDisplayed"]
-      >(
-        "item-page-publication-date-time-displayed",
-        returnProperties.itemPage.isPublicationDateTimeDisplayed,
-      );
-
-    returnProperties.itemPage.isPersistentIdentifierDisplayed =
-      itemPageReader.valueOr<
-        Website<T>["properties"]["itemPage"]["isPersistentIdentifierDisplayed"]
-      >(
-        "item-page-persistent-identifier-displayed",
-        returnProperties.itemPage.isPersistentIdentifierDisplayed,
-      );
-
-    returnProperties.itemPage.iiifViewer = itemPageReader.valueOr<
-      Website<T>["properties"]["itemPage"]["iiifViewer"]
-    >("item-page-iiif-viewer", returnProperties.itemPage.iiifViewer);
+    itemPageReader.readInto(
+      returnProperties.itemPage,
+      "isPublicationDateTimeDisplayed",
+      "item-page-publication-date-time-displayed",
+    );
+    itemPageReader.readInto(
+      returnProperties.itemPage,
+      "isPersistentIdentifierDisplayed",
+      "item-page-persistent-identifier-displayed",
+    );
+    itemPageReader.readInto(
+      returnProperties.itemPage,
+      "iiifViewer",
+      "item-page-iiif-viewer",
+    );
   }
 
   if (websiteTree.options != null) {
