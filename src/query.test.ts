@@ -8,7 +8,6 @@ import {
 } from "#/query.js";
 
 const BASE_ITEMS_EXPRESSION = "doc()/ochre/set[@uuid = $setScopeUuids]/items/*";
-const ITEMS_BINDING = "\n  let $items := ";
 const QUERY_BINDING = "let $query := ";
 
 const SET_UUID = "41f855f5-202e-4ec9-95d6-a87b793a9dcb";
@@ -24,27 +23,21 @@ function compiledItemsClause(queries: Query | null): string {
 }
 
 /**
- * Compile a query tree and read back the single CTS query it binds to `$query`,
- * which is null when the plan resolves without one
+ * Compile a query tree and read back the single CTS query it binds, which is
+ * null when the plan resolves without one
  */
 function compiledQueryPlan(parameters: { queries: Query | null }): {
   prolog: string;
   queryExpression: string | null;
 } {
-  const { prolog, itemsClause } = buildQueryPlan({
+  const { prolog, queryBindings } = buildQueryPlan({
     queries: parameters.queries,
     baseItemsExpression: BASE_ITEMS_EXPRESSION,
   });
-  const startIndex = itemsClause.indexOf(QUERY_BINDING);
-  const endIndex = itemsClause.lastIndexOf(ITEMS_BINDING);
 
-  return {
-    prolog,
-    queryExpression:
-      startIndex === -1 || endIndex === -1
-        ? null
-        : itemsClause.slice(startIndex + QUERY_BINDING.length, endIndex),
-  };
+  expect(queryBindings.length).toBeLessThanOrEqual(1);
+
+  return { prolog, queryExpression: queryBindings[0]?.expression ?? null };
 }
 
 function compiledQueryText(queries: Query | null): string {
@@ -317,8 +310,9 @@ describe("ocr target queries", () => {
     const itemsClause = compiledItemsClause(ocrQuery);
 
     expectContainsAll(itemsClause, [
-      'let $ocrItemUuids1 := cts:search(/ochre/resource, cts:element-query(xs:QName("ocr"), cts:element-attribute-word-query(',
+      'let $ocrItemUuids1 := cts:search(/ochre/resource, cts:and-query((cts:element-query(xs:QName("ocr"), cts:element-attribute-word-query(',
       'xs:QName("CONTENT"), "cappaert"',
+      `cts:document-query(${BASE_ITEMS_EXPRESSION}/@uuid/string())`,
       ")/@uuid/string()",
       `let $items := ${BASE_ITEMS_EXPRESSION}[@uuid = $ocrItemUuids1]`,
     ]);

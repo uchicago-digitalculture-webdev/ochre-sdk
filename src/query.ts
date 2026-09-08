@@ -4,7 +4,14 @@ import type {
   QueryGroup,
   QueryLeaf,
 } from "#/types/index.js";
-import { stringLiteral } from "#/utilities.js";
+import { BELONGS_TO_COLLECTION_UUID } from "#/constants.js";
+import {
+  buildOcrWordPath,
+  OCR_LAYER_ELEMENT_NAME,
+  OCR_WORD_CONTENT_ATTRIBUTE,
+  OCR_WORD_QNAMES,
+} from "#/ocr.js";
+import { stringLiteral, SUPPLEMENTAL_XQUERY_PROLOG } from "#/utilities.js";
 
 const CTS_INCLUDES_STOP_WORDS = new Set<string>([
   "and",
@@ -62,6 +69,7 @@ type QueryCompilerContext = {
   helperDeclarations: Array<string>;
   ocrBindingNamesByKey: Map<string, string>;
   ocrBindings: Array<OcrBinding>;
+  baseItemsExpression: string;
 };
 
 type QueryHelperRegistration = { name: string; callExpression: string };
@@ -87,6 +95,26 @@ const CONTENT_TARGET_CONTENT_ELEMENT_PATHS: Record<
     "content",
   ],
 };
+
+/**
+ * A search value as it travels through the query builders
+ *
+ * `text` drives tokenization and the wildcard/stemming classification, while
+ * `expression` is what the emitted XQuery carries. They come apart inside a
+ * parameterized helper, whose body has to reference the helper's `$value`
+ * parameter while still being classified from the sample term it was built for.
+ */
+type QuerySearchValue = { text: string; expression: string };
+
+const HELPER_SEARCH_VALUE_REFERENCE = "$value";
+
+function searchValue(text: string): QuerySearchValue {
+  return { text, expression: stringLiteral(text) };
+}
+
+function referencedSearchValue(text: string): QuerySearchValue {
+  return { text, expression: HELPER_SEARCH_VALUE_REFERENCE };
+}
 
 function tokenizeIncludesSearchValue(parameters: {
   value: string;
@@ -254,7 +282,7 @@ function buildRichTextPhraseOptionsExpression(parameters: {
 }
 
 function buildCtsWordQueryExpression(parameters: {
-  value: string;
+  value: QuerySearchValue;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
   queryFamily?: CtsQueryFamily;
@@ -262,27 +290,28 @@ function buildCtsWordQueryExpression(parameters: {
 }): string {
   const { value, matchMode, isCaseSensitive, queryFamily, language } =
     parameters;
-  const isWildcarded = matchMode === "includes" && hasWildcardCharacters(value);
+  const isWildcarded =
+    matchMode === "includes" && hasWildcardCharacters(value.text);
   const isStemmed =
     matchMode === "includes" &&
     queryFamily === "text" &&
     !isWildcarded &&
-    shouldUseStemmedTextSearch(value);
+    shouldUseStemmedTextSearch(value.text);
 
-  return `cts:word-query(${stringLiteral(value)}, ${buildWordQueryOptionsExpression({ matchMode, isCaseSensitive, queryFamily, language, isWildcarded, isStemmed })})`;
+  return `cts:word-query(${value.expression}, ${buildWordQueryOptionsExpression({ matchMode, isCaseSensitive, queryFamily, language, isWildcarded, isStemmed })})`;
 }
 
 function buildRichTextPhraseQueryExpression(parameters: {
-  value: string;
+  value: QuerySearchValue;
   isCaseSensitive: boolean;
 }): string {
   const { value, isCaseSensitive } = parameters;
 
-  return `cts:word-query(${stringLiteral(value)}, ${buildRichTextPhraseOptionsExpression({ isCaseSensitive })})`;
+  return `cts:word-query(${value.expression}, ${buildRichTextPhraseOptionsExpression({ isCaseSensitive })})`;
 }
 
 function buildRichTextExactQueryExpression(parameters: {
-  value: string;
+  value: QuerySearchValue;
   isCaseSensitive: boolean;
   language: string;
 }): string {
@@ -291,7 +320,10 @@ function buildRichTextExactQueryExpression(parameters: {
     value,
     isCaseSensitive,
   });
-  const terms = tokenizeExactTextSearchValue({ value, isCaseSensitive });
+  const terms = tokenizeExactTextSearchValue({
+    value: value.text,
+    isCaseSensitive,
+  });
 
   if (terms.length <= 1) {
     return phraseQuery;
@@ -299,7 +331,10 @@ function buildRichTextExactQueryExpression(parameters: {
 
   const tokenAndQuery = buildAndCtsQueryExpressionInternal(
     terms.map((term) =>
-      buildRichTextPhraseQueryExpression({ value: term, isCaseSensitive }),
+      buildRichTextPhraseQueryExpression({
+        value: searchValue(term),
+        isCaseSensitive,
+      }),
     ),
   );
 
@@ -308,7 +343,7 @@ function buildRichTextExactQueryExpression(parameters: {
 
 function buildCtsElementWordQueryExpression(parameters: {
   elementName: string;
-  value: string;
+  value: QuerySearchValue;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
   queryFamily?: CtsQueryFamily;
@@ -322,20 +357,21 @@ function buildCtsElementWordQueryExpression(parameters: {
     queryFamily,
     language,
   } = parameters;
-  const isWildcarded = matchMode === "includes" && hasWildcardCharacters(value);
+  const isWildcarded =
+    matchMode === "includes" && hasWildcardCharacters(value.text);
   const isStemmed =
     matchMode === "includes" &&
     queryFamily === "text" &&
     !isWildcarded &&
-    shouldUseStemmedTextSearch(value);
+    shouldUseStemmedTextSearch(value.text);
 
-  return `cts:element-word-query(xs:QName("${elementName}"), ${stringLiteral(value)}, ${buildWordQueryOptionsExpression({ matchMode, isCaseSensitive, queryFamily, language, isWildcarded, isStemmed })})`;
+  return `cts:element-word-query(xs:QName("${elementName}"), ${value.expression}, ${buildWordQueryOptionsExpression({ matchMode, isCaseSensitive, queryFamily, language, isWildcarded, isStemmed })})`;
 }
 
 function buildCtsElementAttributeWordQueryExpression(parameters: {
   elementName: string;
   attributeName: string;
-  value: string;
+  value: QuerySearchValue;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
   queryFamily?: CtsQueryFamily;
@@ -350,45 +386,46 @@ function buildCtsElementAttributeWordQueryExpression(parameters: {
     queryFamily,
     language,
   } = parameters;
-  const isWildcarded = matchMode === "includes" && hasWildcardCharacters(value);
+  const isWildcarded =
+    matchMode === "includes" && hasWildcardCharacters(value.text);
   const isStemmed =
     matchMode === "includes" &&
     queryFamily === "text" &&
     !isWildcarded &&
-    shouldUseStemmedTextSearch(value);
+    shouldUseStemmedTextSearch(value.text);
 
-  return `cts:element-attribute-word-query(xs:QName("${elementName}"), xs:QName("${attributeName}"), ${stringLiteral(value)}, ${buildWordQueryOptionsExpression({ matchMode, isCaseSensitive, queryFamily, language, isWildcarded, isStemmed })})`;
+  return `cts:element-attribute-word-query(xs:QName("${elementName}"), xs:QName("${attributeName}"), ${value.expression}, ${buildWordQueryOptionsExpression({ matchMode, isCaseSensitive, queryFamily, language, isWildcarded, isStemmed })})`;
 }
 
 function buildCtsElementValueQueryExpression(parameters: {
   elementName: string;
-  value: string;
+  value: QuerySearchValue;
   isCaseSensitive: boolean;
 }): string {
   const { elementName, value, isCaseSensitive } = parameters;
 
-  return `cts:element-value-query(xs:QName("${elementName}"), ${stringLiteral(value)}, ${buildWordQueryOptionsExpression({ matchMode: "exact", isCaseSensitive })})`;
+  return `cts:element-value-query(xs:QName("${elementName}"), ${value.expression}, ${buildWordQueryOptionsExpression({ matchMode: "exact", isCaseSensitive })})`;
 }
 
 function buildCtsElementAttributeValueQueryExpression(parameters: {
   elementName: string;
   attributeName: string;
-  value: string;
+  value: QuerySearchValue;
   isCaseSensitive: boolean;
 }): string {
   const { elementName, attributeName, value, isCaseSensitive } = parameters;
 
-  return `cts:element-attribute-value-query(xs:QName("${elementName}"), xs:QName("${attributeName}"), ${stringLiteral(value)}, ${buildWordQueryOptionsExpression({ matchMode: "exact", isCaseSensitive })})`;
+  return `cts:element-attribute-value-query(xs:QName("${elementName}"), xs:QName("${attributeName}"), ${value.expression}, ${buildWordQueryOptionsExpression({ matchMode: "exact", isCaseSensitive })})`;
 }
 
 function buildPlainElementAttributeValueQueryExpression(parameters: {
   elementName: string;
   attributeName: string;
-  value: string;
+  value: QuerySearchValue;
 }): string {
   const { elementName, attributeName, value } = parameters;
 
-  return `cts:element-attribute-value-query(xs:QName("${elementName}"), xs:QName("${attributeName}"), ${stringLiteral(value)})`;
+  return `cts:element-attribute-value-query(xs:QName("${elementName}"), xs:QName("${attributeName}"), ${value.expression})`;
 }
 
 function buildNestedElementQuery(
@@ -450,7 +487,7 @@ function buildContentLanguageQuery(language: string): string {
   return buildPlainElementAttributeValueQueryExpression({
     elementName: "content",
     attributeName: "xml:lang",
-    value: language,
+    value: searchValue(language),
   });
 }
 
@@ -458,7 +495,7 @@ function buildPropertyLabelQuery(propertyVariable: string): string {
   return buildPlainElementAttributeValueQueryExpression({
     elementName: "label",
     attributeName: "uuid",
-    value: propertyVariable,
+    value: searchValue(propertyVariable),
   });
 }
 
@@ -467,13 +504,13 @@ function buildValueNotIdReferenceQuery(): string {
     buildPlainElementAttributeValueQueryExpression({
       elementName: "value",
       attributeName: "dataType",
-      value: "IDREF",
+      value: searchValue("IDREF"),
     }),
   );
 }
 
 function buildRichTextContentQueryExpression(parameters: {
-  value: string;
+  value: QuerySearchValue;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
   language: string;
@@ -496,7 +533,7 @@ function buildRichTextContentQueryExpression(parameters: {
 
 function buildValueContentInnerQuery(parameters: {
   language: string;
-  value: string;
+  value: QuerySearchValue;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
 }): string {
@@ -515,7 +552,7 @@ function buildValueContentInnerQuery(parameters: {
 
 function buildValueContentExactInnerQuery(parameters: {
   language: string;
-  value: string;
+  value: QuerySearchValue;
   isCaseSensitive: boolean;
 }): string {
   const { language, value, isCaseSensitive } = parameters;
@@ -534,7 +571,7 @@ function buildValueContentExactInnerQuery(parameters: {
 }
 
 function buildValueDirectTextInnerQuery(parameters: {
-  value: string;
+  value: QuerySearchValue;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
 }): string {
@@ -563,7 +600,7 @@ function buildValueDirectTextInnerQuery(parameters: {
 }
 
 function buildValueRawValueInnerQuery(parameters: {
-  value: string;
+  value: QuerySearchValue;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
 }): string {
@@ -589,7 +626,7 @@ function buildValueRawValueInnerQuery(parameters: {
 }
 
 function buildNotesQueryExpression(parameters: {
-  value: string;
+  value: QuerySearchValue;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
   language: string;
@@ -609,7 +646,7 @@ function buildNotesQueryExpression(parameters: {
 
 function buildContentTargetQueryExpression(parameters: {
   target: ContentTextTarget;
-  value: string;
+  value: QuerySearchValue;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
   language: string;
@@ -645,7 +682,7 @@ function buildPropertyQueryExpression(parameters: {
       buildPlainElementAttributeValueQueryExpression({
         elementName: "label",
         attributeName: "relation",
-        value: propertyRelation,
+        value: searchValue(propertyRelation),
       }),
     );
   }
@@ -709,7 +746,7 @@ function buildPropertyTextMatchQueryExpression(parameters: {
       buildPlainElementAttributeValueQueryExpression({
         elementName: "label",
         attributeName: "relation",
-        value: propertyRelation,
+        value: searchValue(propertyRelation),
       }),
     );
   }
@@ -747,7 +784,7 @@ function buildPropertyPresenceQueryExpression(parameters: {
 function buildPropertyStringQueryExpression(parameters: {
   propertyVariable?: string;
   propertyRelation?: PropertyRelation;
-  value: string;
+  value: QuerySearchValue;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
   language: string;
@@ -789,7 +826,7 @@ function buildPropertyStringQueryExpression(parameters: {
 function buildPropertyScalarQueryExpression(parameters: {
   propertyVariable?: string;
   propertyRelation?: PropertyRelation;
-  value: string;
+  value: QuerySearchValue;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
 }): string {
@@ -816,7 +853,7 @@ function buildPropertyScalarQueryExpression(parameters: {
 
 function buildPropertyAllQueryExpression(parameters: {
   query: AllPropertyQuery;
-  value: string;
+  value: QuerySearchValue;
   matchMode: QueryMatchMode;
 }): string {
   const { query, value, matchMode } = parameters;
@@ -847,7 +884,7 @@ function buildPropertyAllQueryExpression(parameters: {
 function buildPropertyIdReferenceQueryExpression(parameters: {
   propertyVariable?: string;
   propertyRelation?: PropertyRelation;
-  value: string;
+  value: QuerySearchValue;
 }): string {
   const { propertyVariable, propertyRelation, value } = parameters;
 
@@ -896,7 +933,7 @@ function buildPropertyDateRangeQueryExpression(
 }
 
 function buildItemStringQueryExpression(parameters: {
-  value: string;
+  value: QuerySearchValue;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
   language: string;
@@ -920,12 +957,6 @@ function buildItemStringQueryExpression(parameters: {
   ]);
 }
 
-// OCHRE serves OCR word elements under more than one element name, so every
-// query over the layer carries all of them. The namespace is an identifier
-// matched verbatim, not an address, so it stays on http.
-// eslint-disable-next-line unicorn/prefer-https -- XML namespace identifier, not a URL
-const OCR_STRING_QNAMES = `(xs:QName("String"), fn:QName("http://www.loc.gov/standards/alto/ns-v2#", "string"))`;
-
 function tokenizeOcrExactValue(value: string): Array<string> {
   const terms: Array<string> = [];
 
@@ -945,7 +976,7 @@ function tokenizeOcrExactValue(value: string): Array<string> {
  * resolves the term against the database default instead.
  */
 function buildOcrWordQueryExpression(parameters: {
-  value: string;
+  value: QuerySearchValue;
   isCaseSensitive: boolean;
 }): string {
   const { value, isCaseSensitive } = parameters;
@@ -956,20 +987,20 @@ function buildOcrWordQueryExpression(parameters: {
     "whitespace-insensitive",
   ];
 
-  if (hasWildcardCharacters(value)) {
+  if (hasWildcardCharacters(value.text)) {
     options.push("wildcarded");
   }
 
-  return `cts:element-attribute-word-query(${OCR_STRING_QNAMES}, xs:QName("CONTENT"), ${stringLiteral(value)}, (${options.map((option) => stringLiteral(option)).join(", ")}))`;
+  return `cts:element-attribute-word-query(${OCR_WORD_QNAMES}, xs:QName(${stringLiteral(OCR_WORD_CONTENT_ATTRIBUTE)}), ${value.expression}, (${options.map((option) => stringLiteral(option)).join(", ")}))`;
 }
 
 function buildOcrValueQueryExpression(parameters: {
-  value: string;
+  value: QuerySearchValue;
   isCaseSensitive: boolean;
 }): string {
   const { value, isCaseSensitive } = parameters;
 
-  return `cts:element-attribute-value-query(${OCR_STRING_QNAMES}, xs:QName("CONTENT"), ${stringLiteral(value)}, ${buildWordQueryOptionsExpression({ matchMode: "exact", isCaseSensitive })})`;
+  return `cts:element-attribute-value-query(${OCR_WORD_QNAMES}, xs:QName(${stringLiteral(OCR_WORD_CONTENT_ATTRIBUTE)}), ${value.expression}, ${buildWordQueryOptionsExpression({ matchMode: "exact", isCaseSensitive })})`;
 }
 
 /**
@@ -998,10 +1029,13 @@ function buildOcrQueryExpression(query: OcrQuery): string {
     }
 
     return buildNestedElementQuery(
-      ["ocr"],
+      [OCR_LAYER_ELEMENT_NAME],
       buildAndCtsQueryExpressionInternal(
         Array.from(terms, (term) =>
-          buildOcrValueQueryExpression({ value: term, isCaseSensitive }),
+          buildOcrValueQueryExpression({
+            value: searchValue(term),
+            isCaseSensitive,
+          }),
         ),
       ),
     );
@@ -1014,10 +1048,13 @@ function buildOcrQueryExpression(query: OcrQuery): string {
   }
 
   return buildNestedElementQuery(
-    ["ocr"],
+    [OCR_LAYER_ELEMENT_NAME],
     buildAndCtsQueryExpressionInternal(
       Array.from(terms, (term) =>
-        buildOcrWordQueryExpression({ value: term, isCaseSensitive }),
+        buildOcrWordQueryExpression({
+          value: searchValue(term),
+          isCaseSensitive,
+        }),
       ),
     ),
   );
@@ -1038,8 +1075,8 @@ function registerOcrPhraseHelper(context: QueryCompilerContext): string {
   context.helperDeclarations.push(
     `declare function ${helperName}($resource as node(), $terms as xs:string*, $isCaseSensitive as xs:boolean) as xs:boolean {
   let $contents :=
-    for $word in $resource//*[lower-case(local-name(.)) = "ocr"]//*[lower-case(local-name(.)) = "string"][@CONTENT]
-    return if ($isCaseSensitive) then string($word/@CONTENT) else lower-case(string($word/@CONTENT))
+    for $word in ${buildOcrWordPath("$resource")}
+    return if ($isCaseSensitive) then string($word/@${OCR_WORD_CONTENT_ATTRIBUTE}) else lower-case(string($word/@${OCR_WORD_CONTENT_ATTRIBUTE}))
   let $needles :=
     for $term in $terms
     return if ($isCaseSensitive) then $term else lower-case($term)
@@ -1080,10 +1117,15 @@ function registerOcrBinding(
   const phraseTerms =
     query.matchMode === "exact" ? tokenizeOcrExactValue(query.value) : [];
   context.ocrBindingNamesByKey.set(key, name);
-  // Document URIs are bare item UUIDs and the OCR layer is only ever carried by
-  // a Resource, so searching the Resource roots resolves the join with one
-  // index-only search, whatever Set the items are later filtered against.
-  const searchExpression = `cts:search(/ochre/resource, ${queryExpression})`;
+  // Scoping to the filtered items' documents keeps only what the UUID join
+  // downstream would keep anyway, because the matched Resource is always the
+  // top-level document. Unscoped, the phrase filter walks every word of every
+  // matching document in the database.
+  const scopedQueryExpression = buildAndCtsQueryExpressionInternal([
+    queryExpression,
+    `cts:document-query(${context.baseItemsExpression}/@uuid/string())`,
+  ]);
+  const searchExpression = `cts:search(/ochre/resource, ${scopedQueryExpression})`;
   const phraseHelperName =
     phraseTerms.length > 1 ? registerOcrPhraseHelper(context) : null;
   context.ocrBindings.push({
@@ -1120,7 +1162,7 @@ function getLeafSearchValue(query: CtsQueryLeaf): string | null {
 
 function buildLeafValueQueryExpression(parameters: {
   query: CtsQueryLeaf;
-  value: string;
+  value: QuerySearchValue;
   matchMode: QueryMatchMode;
 }): string {
   const { query, value, matchMode } = parameters;
@@ -1205,13 +1247,16 @@ function indentBlock(value: string, spaces: number): string {
     .join("\n");
 }
 
-function createQueryCompilerContext(): QueryCompilerContext {
+function createQueryCompilerContext(
+  baseItemsExpression: string,
+): QueryCompilerContext {
   return {
     nextHelperSerial: 1,
     helperNamesByKey: new Map(),
     helperDeclarations: [],
     ocrBindingNamesByKey: new Map(),
     ocrBindings: [],
+    baseItemsExpression,
   };
 }
 
@@ -1235,17 +1280,6 @@ function registerConstantHelper(parameters: {
   );
 
   return { name: helperName, callExpression: `${helperName}()` };
-}
-
-function replaceSampleValueLiteral(
-  expression: string,
-  sampleValue: string,
-  valueReference: string,
-): string {
-  return expression.replaceAll(
-    stringLiteral(sampleValue),
-    () => valueReference,
-  );
 }
 
 function registerParameterizedHelper(parameters: {
@@ -1327,7 +1361,11 @@ function registerLeafHelper(parameters: {
   return registerConstantHelper({
     context,
     key: getLeafHelperKey({ query, matchMode, value }),
-    bodyExpression: buildLeafValueQueryExpression({ query, value, matchMode }),
+    bodyExpression: buildLeafValueQueryExpression({
+      query,
+      value: searchValue(value),
+      matchMode,
+    }),
   });
 }
 
@@ -1382,15 +1420,11 @@ function registerIncludesLeafHelper(parameters: {
   return registerParameterizedHelper({
     context,
     key: getIncludesLeafHelperKey({ query, value: sampleValue }),
-    bodyExpression: replaceSampleValueLiteral(
-      buildLeafValueQueryExpression({
-        query,
-        value: sampleValue,
-        matchMode: "includes",
-      }),
-      sampleValue,
-      "$value",
-    ),
+    bodyExpression: buildLeafValueQueryExpression({
+      query,
+      value: referencedSearchValue(sampleValue),
+      matchMode: "includes",
+    }),
   });
 }
 
@@ -1874,7 +1908,7 @@ function buildItemsPlanExpression(parameters: {
 }
 
 export function buildBelongsToCollectionQueryExpression(
-  belongsToCollectionScopeUuids: Array<string>,
+  belongsToCollectionScopeUuids: ReadonlyArray<string>,
   belongsToCollectionPropertyVariableUuid: string,
 ): string | null {
   if (belongsToCollectionScopeUuids.length === 0) {
@@ -1887,7 +1921,7 @@ export function buildBelongsToCollectionQueryExpression(
       buildPlainElementAttributeValueQueryExpression({
         elementName: "value",
         attributeName: "uuid",
-        value: uuid,
+        value: searchValue(uuid),
       }),
   );
 
@@ -1922,14 +1956,46 @@ export function buildBelongsToCollectionQueryExpression(
  * @param parameters.scopeQueryExpression - An optional CTS query ANDed into every compiled search
  * @returns The prolog declaring the query helpers, and the `let` clauses binding `$items`
  */
+const ITEMS_VARIABLE = "$items";
+const SET_SCOPE_VARIABLE = "$setScopeUuids";
+
+/**
+ * The XQuery path a Set item search runs over
+ *
+ * The path has to stay inline in `cts:search`: binding it to a variable first
+ * materializes the sequence and makes every query `XDMP-UNSEARCHABLE`, even a
+ * plain word query. It references {@link SET_SCOPE_VARIABLE}, which
+ * {@link compileSetItemsQuery} declares.
+ */
+const SET_ITEMS_EXPRESSION = `doc()/ochre/set[@uuid = ${SET_SCOPE_VARIABLE}]/items/*`;
+
+/**
+ * Compile a query tree into the clauses that bind the matching Set items
+ *
+ * The returned `itemsClause` binds {@link ITEMS_VARIABLE} and has to be placed
+ * inside an XQuery body, with `prolog` declared ahead of it.
+ * {@link compileSetItemsQuery} does both and is what fetchers should use;
+ * this is exposed for tests that assert on the compiled CTS.
+ * @param parameters - The plan parameters
+ * @param parameters.queries - The query tree to compile, or null to match every item
+ * @param parameters.baseItemsExpression - The inline searchable path to filter
+ * @param parameters.scopeQueryExpression - An extra query AND-ed into every search
+ * @returns The prolog, the clauses binding the items, and the bound CTS queries
+ * @internal
+ */
 export function buildQueryPlan(parameters: {
   queries: Query | null;
   baseItemsExpression: string;
   scopeQueryExpression?: string | null;
-}): { prolog: string; itemsClause: string } {
+}): {
+  prolog: string;
+  itemsClause: string;
+  itemsVariable: string;
+  queryBindings: Array<{ name: string; expression: string }>;
+} {
   const { queries, baseItemsExpression, scopeQueryExpression } = parameters;
 
-  const context = createQueryCompilerContext();
+  const context = createQueryCompilerContext(baseItemsExpression);
   const plan: ItemsPlan =
     queries == null
       ? { kind: "search", itemPredicates: [], queryExpressions: [] }
@@ -1954,6 +2020,7 @@ export function buildQueryPlan(parameters: {
   }
 
   const queryNamesByPlan = new Map<ItemsSearchPlan, string>();
+  const queryBindings: Array<{ name: string; expression: string }> = [];
   const letClauses: Array<string> = Array.from(
     context.ocrBindings,
     (binding) => `let ${binding.name} := ${binding.expression}`,
@@ -1964,15 +2031,170 @@ export function buildQueryPlan(parameters: {
       boundSearchPlans.length === 1 ? "$query" : `$query${index + 1}`;
 
     queryNamesByPlan.set(boundSearchPlan.plan, queryName);
+    queryBindings.push({
+      name: queryName,
+      expression: boundSearchPlan.queryExpression,
+    });
     letClauses.push(`let ${queryName} := ${boundSearchPlan.queryExpression}`);
   }
 
   letClauses.push(
-    `let $items := ${buildItemsPlanExpression({ plan, baseItemsExpression, queryNamesByPlan })}`,
+    `let ${ITEMS_VARIABLE} := ${buildItemsPlanExpression({ plan, baseItemsExpression, queryNamesByPlan })}`,
   );
 
   return {
     prolog: context.helperDeclarations.join("\n\n"),
     itemsClause: letClauses.join("\n  "),
+    itemsVariable: ITEMS_VARIABLE,
+    queryBindings,
   };
+}
+
+/**
+ * Compile a Set item query into a complete XQuery document
+ *
+ * Owns everything a caller would otherwise have to know and restate: the
+ * version declaration, the Set scope variable, the supplemental-stripping
+ * prolog, the inline searchable path, where the compiled helper prolog goes and
+ * that it is only declared when non-empty, the `<ochre>` wrapper, and the name
+ * of the variable holding the matching items. The body receives that name.
+ * @param parameters - The query parameters
+ * @param parameters.setScopeUuids - The Set scope UUIDs to search within
+ * @param parameters.belongsToCollectionScopeUuids - Collection scope UUIDs to narrow to
+ * @param parameters.queries - The query tree to compile, or null to match every item
+ * @param parameters.declarations - Extra prolog declarations, placed before the compiled prolog
+ * @param parameters.body - Builds the body from the name of the variable holding the items
+ * @returns A complete XQuery document
+ * @internal
+ */
+export function compileSetItemsQuery(parameters: {
+  setScopeUuids: ReadonlyArray<string>;
+  belongsToCollectionScopeUuids: ReadonlyArray<string>;
+  queries: Query | null;
+  declarations?: ReadonlyArray<string>;
+  body: (itemsVariable: string) => string;
+}): string {
+  const {
+    setScopeUuids,
+    belongsToCollectionScopeUuids,
+    queries,
+    declarations = [],
+    body,
+  } = parameters;
+
+  const plan = buildQueryPlan({
+    queries,
+    baseItemsExpression: SET_ITEMS_EXPRESSION,
+    scopeQueryExpression: buildBelongsToCollectionQueryExpression(
+      belongsToCollectionScopeUuids,
+      BELONGS_TO_COLLECTION_UUID,
+    ),
+  });
+
+  const prologDeclarations: Array<string> = [
+    'xquery version "1.0-ml";',
+    ...declarations,
+    `declare variable ${SET_SCOPE_VARIABLE} := (${Array.from(setScopeUuids, (uuid) => stringLiteral(uuid)).join(", ")});`,
+    SUPPLEMENTAL_XQUERY_PROLOG,
+  ];
+
+  if (plan.prolog !== "") {
+    prologDeclarations.push(plan.prolog);
+  }
+
+  return `${prologDeclarations.join("\n\n")}
+
+<ochre>{
+${plan.itemsClause}
+${body(plan.itemsVariable)}
+}</ochre>`;
+}
+
+/**
+ * Reduce a property-value facet query tree to the leaves that filter items
+ *
+ * A facet request carries property leaves that name a variable without naming
+ * a value, which select what to aggregate rather than which items to keep.
+ * Those are dropped, and groups left with a single child collapse into it.
+ * @param queries - The query tree to reduce
+ * @returns The reduced tree, or null when nothing filters items
+ * @internal
+ */
+export function getItemFilterQueries(queries: Query | null): Query | null {
+  if (queries == null) {
+    return null;
+  }
+
+  if (isQueryLeaf(queries)) {
+    if (
+      queries.target !== "property" ||
+      queries.dataType === "date" ||
+      queries.dataType === "dateTime"
+    ) {
+      return queries;
+    }
+
+    return "value" in queries && queries.value != null ? queries : null;
+  }
+
+  const filteredChildren: Array<Query> = [];
+
+  for (const childQuery of getQueryGroupChildren(queries)) {
+    const filteredChildQuery = getItemFilterQueries(childQuery);
+
+    if (filteredChildQuery != null) {
+      filteredChildren.push(filteredChildQuery);
+    }
+  }
+
+  if (filteredChildren.length <= 1) {
+    return filteredChildren[0] ?? null;
+  }
+
+  return getQueryGroupOperator(queries) === "and"
+    ? { and: filteredChildren }
+    : { or: filteredChildren };
+}
+
+/**
+ * Collect the property variables a query tree asks to be aggregated
+ * @param queries - The query tree to walk
+ * @returns One selector per distinct property variable and relation pair
+ * @internal
+ */
+export function getPropertyFacetSelectors(
+  queries: Query | null,
+): Array<{ uuid: string; relation: PropertyRelation | null }> {
+  if (queries == null) {
+    return [];
+  }
+
+  const selectors = new Map<
+    string,
+    { uuid: string; relation: PropertyRelation | null }
+  >();
+  const pendingQueries: Array<Query> = [queries];
+
+  while (pendingQueries.length > 0) {
+    const query = pendingQueries.shift();
+    if (query == null) {
+      continue;
+    }
+
+    if (isQueryLeaf(query)) {
+      if (query.target === "property" && query.propertyVariable != null) {
+        const relation = query.propertyRelation ?? null;
+        selectors.set(`${query.propertyVariable}|${relation}`, {
+          uuid: query.propertyVariable,
+          relation,
+        });
+      }
+
+      continue;
+    }
+
+    pendingQueries.push(...getQueryGroupChildren(query));
+  }
+
+  return selectors.values().toArray();
 }

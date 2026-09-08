@@ -10,7 +10,7 @@ const UCHICAGO_NODE_SET_SCOPE_UUIDS = [
   "606c62dd-80ad-41db-ae1d-7a8b2ff7ef27",
 ] as const;
 
-const CONVOCATION_PROGRAMS_SET_UUID = "a121516f-1f82-41b3-8529-c1f5c3364958";
+const CONVOCATION_PROGRAMS_SET_UUID = "96551f43-4905-49c3-8493-4d7c3bf0234e";
 
 function buildInputValueQueries(value: string) {
   return {
@@ -314,7 +314,7 @@ it("should fetch convocation-programs Set items for a negated OCR query", async 
     pageSize: 48,
   });
 
-  expect(totalCount).toBe(3);
+  expect(totalCount).toBe(146);
 });
 
 it("should fetch convocation-programs Set items for an OCR query OR-ed with a title query", async () => {
@@ -330,8 +330,8 @@ it("should fetch convocation-programs Set items for an OCR query OR-ed with a ti
         },
         {
           target: "title",
-          value: "2025",
-          matchMode: "includes",
+          value: "page 4",
+          matchMode: "exact",
           isCaseSensitive: false,
           language: "eng",
         },
