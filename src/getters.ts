@@ -1,12 +1,8 @@
 import { deepEqual } from "fast-equals";
 import type {
   LanguageCodes,
-  Property,
   PropertyLike,
   PropertyValueContent,
-  SetItemProperty,
-  SetItemSimplifiedProperty,
-  SimplifiedProperty,
 } from "#/types/index.js";
 
 /**
@@ -18,20 +14,60 @@ export type PropertyOptions = {
   */
   includeNestedProperties?: boolean;
   /**
-  Whether to limit property values to leaf values.
+  Whether to limit property values to leaf values. Applies to the value
+  lookups; {@link getProperty} and {@link getUniqueProperties} always return a
+  property exactly as it was found.
   */
   limitToLeafPropertyValues?: boolean;
-};
-
-const DEFAULT_OPTIONS: PropertyOptions = {
-  includeNestedProperties: false,
-  limitToLeafPropertyValues: true,
 };
 
 type PropertyContent<T extends LanguageCodes> =
   PropertyValueContent<T>["content"];
 
 type SearchableProperty<T extends LanguageCodes> = PropertyLike<T>;
+
+/**
+ * Which property to look for
+ *
+ * A property is named either by its variable UUID or by its variable label, and
+ * a label can be narrowed further by the values the property carries. The value
+ * forms differ in what they compare: `values` and `valueContents` require the
+ * property to carry exactly that sequence, while `value` and `valueContent`
+ * only require it to carry that one among others.
+ */
+export type PropertySelector<T extends LanguageCodes = LanguageCodes> =
+  | { uuid: string }
+  | { label: string }
+  | { label: string; values: ReadonlyArray<PropertyValueContent<T>> }
+  | { label: string; valueContents: ReadonlyArray<PropertyContent<T>> }
+  | { label: string; value: PropertyValueContent<T> }
+  | { label: string; valueContent: PropertyContent<T> };
+
+/**
+ * The variable label that asks a filter to match against every property
+ */
+const ALL_FIELDS_VARIABLE_LABEL = "all-fields";
+
+const DEFAULT_OPTIONS: PropertyOptions = {
+  includeNestedProperties: false,
+  limitToLeafPropertyValues: true,
+};
+
+/**
+ * Normalize an OCHRE property variable label for comparison
+ *
+ * OCHRE varies the casing and the word separator of a property label, so every
+ * comparison against a label goes through here. This is the only rule in the
+ * SDK for deciding whether a label names a given property.
+ * @param value - The label to normalize
+ * @returns The normalized label
+ */
+export function normalizePropertyVariableLabel(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase("en-US")
+    .replaceAll(/[\s_]+/g, "-");
+}
 
 function withDefaultOptions(
   options: PropertyOptions,
@@ -40,32 +76,6 @@ function withDefaultOptions(
     includeNestedProperties: options.includeNestedProperties ?? false,
     limitToLeafPropertyValues: options.limitToLeafPropertyValues ?? true,
   };
-}
-
-function findPropertyByVariableUuid<T extends LanguageCodes>(
-  properties: ReadonlyArray<SearchableProperty<T>>,
-  variableUuid: string,
-): SearchableProperty<T> | null {
-  for (const property of properties) {
-    if (property.variable.uuid === variableUuid) {
-      return property;
-    }
-  }
-
-  return null;
-}
-
-function findPropertyByVariableLabel<T extends LanguageCodes>(
-  properties: ReadonlyArray<SearchableProperty<T>>,
-  variableLabel: string,
-): SearchableProperty<T> | null {
-  for (const property of properties) {
-    if (getPropertyVariableLabel(property) === variableLabel) {
-      return property;
-    }
-  }
-
-  return null;
 }
 
 function getPropertyVariableLabel<T extends LanguageCodes>(
@@ -119,20 +129,76 @@ function hasEqualPropertyValueContents<T extends LanguageCodes>(
   return true;
 }
 
-function searchPropertyResult<T extends LanguageCodes, TResult>(
-  properties: ReadonlyArray<SearchableProperty<T>>,
-  options: Pick<PropertyOptions, "includeNestedProperties">,
-  findDirectResult: (
-    properties: ReadonlyArray<SearchableProperty<T>>,
-  ) => TResult | null,
-  transformNestedResult?: (result: TResult) => TResult | null,
-): TResult | null {
-  const directResult = findDirectResult(properties);
-  if (directResult !== null) {
-    return directResult;
+/**
+ * Compile a selector into a predicate over one property
+ *
+ * The label is normalized once here rather than once per candidate property.
+ */
+function createPropertyPredicate<T extends LanguageCodes>(
+  selector: PropertySelector<T>,
+): (property: SearchableProperty<T>) => boolean {
+  if ("uuid" in selector) {
+    const { uuid } = selector;
+
+    return (property) => property.variable.uuid === uuid;
   }
 
-  if (!options.includeNestedProperties) {
+  const normalizedLabel = normalizePropertyVariableLabel(selector.label);
+  const hasMatchingLabel = (property: SearchableProperty<T>): boolean =>
+    normalizePropertyVariableLabel(getPropertyVariableLabel(property)) ===
+    normalizedLabel;
+
+  if ("values" in selector) {
+    const { values } = selector;
+
+    return (property) =>
+      hasMatchingLabel(property) && deepEqual(property.values, values);
+  }
+
+  if ("valueContents" in selector) {
+    const { valueContents } = selector;
+
+    return (property) =>
+      hasMatchingLabel(property) &&
+      hasEqualPropertyValueContents(property, valueContents);
+  }
+
+  if ("value" in selector) {
+    const { value } = selector;
+
+    return (property) =>
+      hasMatchingLabel(property) && hasPropertyValue(property, value);
+  }
+
+  if ("valueContent" in selector) {
+    const { valueContent } = selector;
+
+    return (property) =>
+      hasMatchingLabel(property) &&
+      hasPropertyValueContent(property, valueContent);
+  }
+
+  return hasMatchingLabel;
+}
+
+/**
+ * Find the first property matching a predicate, descending when asked to
+ *
+ * Every property at one level is tested before descending, so a match on the
+ * item's own properties always wins over one on a nested property.
+ */
+function findProperty<T extends LanguageCodes>(
+  properties: ReadonlyArray<SearchableProperty<T>>,
+  isMatch: (property: SearchableProperty<T>) => boolean,
+  shouldIncludeNestedProperties: boolean,
+): SearchableProperty<T> | null {
+  for (const property of properties) {
+    if (isMatch(property)) {
+      return property;
+    }
+  }
+
+  if (!shouldIncludeNestedProperties) {
     return null;
   }
 
@@ -141,92 +207,40 @@ function searchPropertyResult<T extends LanguageCodes, TResult>(
       continue;
     }
 
-    const nestedResult = searchPropertyResult(
-      property.properties,
-      options,
-      findDirectResult,
-      transformNestedResult,
-    );
-    if (nestedResult === null) {
-      continue;
-    }
-
-    const transformedResult =
-      transformNestedResult != null
-        ? transformNestedResult(nestedResult)
-        : nestedResult;
-    if (transformedResult !== null) {
-      return transformedResult;
+    const nestedProperty = findProperty(property.properties, isMatch, true);
+    if (nestedProperty !== null) {
+      return nestedProperty;
     }
   }
 
   return null;
 }
 
-function getPropertyValuesResult<T extends LanguageCodes>(
-  values: ReadonlyArray<PropertyValueContent<T>>,
-  shouldLimitToLeafPropertyValues: boolean,
-  shouldCopyValuesWhenUnfiltered: boolean,
+function getLeafPropertyValues<T extends LanguageCodes>(
+  propertyValues: ReadonlyArray<PropertyValueContent<T>>,
 ): Array<PropertyValueContent<T>> {
-  if (shouldLimitToLeafPropertyValues) {
-    return getLeafPropertyValues(values);
+  const leafPropertyValues: Array<PropertyValueContent<T>> = [];
+  for (const value of propertyValues) {
+    if (value.hierarchy.isLeaf) {
+      leafPropertyValues.push(value);
+    }
   }
 
-  if (shouldCopyValuesWhenUnfiltered) {
-    return clonePropertyValues(values);
-  }
-
-  return [...values];
+  return leafPropertyValues;
 }
 
-function clonePropertyValues<T extends LanguageCodes>(
+/**
+ * Project a property's values, copying so callers cannot mutate the source
+ */
+function projectPropertyValues<T extends LanguageCodes>(
   values: ReadonlyArray<PropertyValueContent<T>>,
+  shouldLimitToLeafPropertyValues: boolean,
 ): Array<PropertyValueContent<T>> {
-  return Array.from(values, (value) => ({ ...value }));
-}
+  const projectedValues = shouldLimitToLeafPropertyValues
+    ? getLeafPropertyValues(values)
+    : values;
 
-function getNormalizedProperty<
-  T extends LanguageCodes,
-  TProperty extends SearchableProperty<T>,
->(
-  property: TProperty,
-  shouldLimitToLeafPropertyValues: boolean,
-  transformValues?: (
-    values: Array<PropertyValueContent<T>>,
-  ) => Array<PropertyValueContent<T>>,
-): TProperty {
-  if (!shouldLimitToLeafPropertyValues) {
-    return property;
-  }
-
-  const values = getLeafPropertyValues(property.values);
-
-  return {
-    ...property,
-    values: transformValues != null ? transformValues(values) : values,
-  };
-}
-
-function getFirstPropertyValueResult<T extends LanguageCodes>(
-  values: ReadonlyArray<PropertyValueContent<T>>,
-  shouldLimitToLeafPropertyValues: boolean,
-): PropertyValueContent<T> | null {
-  if (shouldLimitToLeafPropertyValues) {
-    return getLeafPropertyValues(values)[0] ?? null;
-  }
-
-  return values[0] ?? null;
-}
-
-function getFirstPropertyValueContentResult<T extends LanguageCodes>(
-  values: ReadonlyArray<PropertyValueContent<T>>,
-  shouldLimitToLeafPropertyValues: boolean,
-): PropertyContent<T> | null {
-  if (shouldLimitToLeafPropertyValues) {
-    return getLeafPropertyValues(values)[0]?.content ?? null;
-  }
-
-  return values[0]?.content ?? null;
+  return Array.from(projectedValues, (value) => ({ ...value }));
 }
 
 function visitProperties<T extends LanguageCodes>(
@@ -248,741 +262,116 @@ function visitProperties<T extends LanguageCodes>(
 }
 
 /**
- * Finds a property by its variable UUID in an array of properties.
+ * Find the property a selector names
  *
- * @param properties - Array of properties to search through
- * @param variableUuid - The property variable UUID to search for
- * @param options - Search options, including whether to include nested properties
- * @returns The matching Property object, or null if not found
+ * The property is returned exactly as it was found, so its `values` are
+ * whatever the item carries and `limitToLeafPropertyValues` does not apply.
+ * Use {@link getPropertyValues} when leaf filtering matters.
+ * @param properties - The properties to search
+ * @param selector - Which property to look for
+ * @param options - Search options
+ * @param options.includeNestedProperties - Whether to descend into nested properties
+ * @returns The matching property, or null when there is none
  */
-export function getPropertyByVariableUuid<
+export function getProperty<
   T extends LanguageCodes = LanguageCodes,
+  TProperty extends PropertyLike<T> = PropertyLike<T>,
 >(
-  properties: ReadonlyArray<Property<T>>,
-  variableUuid: string,
-  options?: PropertyOptions,
-): Property<T> | null;
-export function getPropertyByVariableUuid<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SetItemProperty<T>>,
-  variableUuid: string,
-  options?: PropertyOptions,
-): SetItemProperty<T> | null;
-export function getPropertyByVariableUuid<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SimplifiedProperty<T>>,
-  variableUuid: string,
-  options?: PropertyOptions,
-): SimplifiedProperty<T> | null;
-export function getPropertyByVariableUuid<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SetItemSimplifiedProperty<T>>,
-  variableUuid: string,
-  options?: PropertyOptions,
-): SetItemSimplifiedProperty<T> | null;
-export function getPropertyByVariableUuid<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SearchableProperty<T>>,
-  variableUuid: string,
+  properties: ReadonlyArray<TProperty>,
+  selector: PropertySelector<T>,
   options: PropertyOptions = DEFAULT_OPTIONS,
-): SearchableProperty<T> | null {
+): TProperty | null {
   const { includeNestedProperties } = withDefaultOptions(options);
 
-  return searchPropertyResult(
+  return findProperty(
     properties,
-    { includeNestedProperties },
-    (currentProperties) =>
-      findPropertyByVariableUuid(currentProperties, variableUuid),
-  );
+    createPropertyPredicate(selector),
+    includeNestedProperties,
+  ) as TProperty | null;
 }
 
 /**
- * Retrieves all values for a property with the given variable UUID.
- *
- * @param properties - Array of properties to search through
- * @param variableUuid - The property variable UUID to search for
- * @param options - Search options, including whether to include nested properties
- * @returns Array of property values, or null if property not found
+ * Read every value of the property a selector names
+ * @param properties - The properties to search
+ * @param selector - Which property to look for
+ * @param options - Search options
+ * @param options.includeNestedProperties - Whether to descend into nested properties
+ * @param options.limitToLeafPropertyValues - Whether to keep only leaf values
+ * @returns The values, or null when no property matched
  */
-export function getPropertyValuesByVariableUuid<
-  T extends LanguageCodes = LanguageCodes,
->(
+export function getPropertyValues<T extends LanguageCodes = LanguageCodes>(
   properties: ReadonlyArray<SearchableProperty<T>>,
-  variableUuid: string,
+  selector: PropertySelector<T>,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): Array<PropertyValueContent<T>> | null {
   const { includeNestedProperties, limitToLeafPropertyValues } =
     withDefaultOptions(options);
-
-  return searchPropertyResult(
+  const property = findProperty(
     properties,
-    { includeNestedProperties },
-    (currentProperties) => {
-      const property = findPropertyByVariableUuid(
-        currentProperties,
-        variableUuid,
-      );
-      if (property == null) {
-        return null;
-      }
-
-      return getPropertyValuesResult(
-        property.values,
-        limitToLeafPropertyValues,
-        true,
-      );
-    },
-    (nestedResult) =>
-      getPropertyValuesResult(nestedResult, limitToLeafPropertyValues, true),
+    createPropertyPredicate(selector),
+    includeNestedProperties,
   );
+
+  return property == null
+    ? null
+    : projectPropertyValues(property.values, limitToLeafPropertyValues);
 }
 
 /**
- * Retrieves all value contents for a property with the given variable UUID.
- *
- * @param properties - Array of properties to search through
- * @param variableUuid - The property variable UUID to search for
- * @param options - Search options, including whether to include nested properties
- * @returns Array of property value contents, or null if property not found
+ * Read the first value of the property a selector names
+ * @param properties - The properties to search
+ * @param selector - Which property to look for
+ * @param options - Search options
+ * @param options.includeNestedProperties - Whether to descend into nested properties
+ * @param options.limitToLeafPropertyValues - Whether to keep only leaf values
+ * @returns The first value, or null when no property matched or it has none
  */
-export function getPropertyValueContentsByVariableUuid<
-  T extends LanguageCodes = LanguageCodes,
->(
+export function getPropertyValue<T extends LanguageCodes = LanguageCodes>(
   properties: ReadonlyArray<SearchableProperty<T>>,
-  variableUuid: string,
-  options: PropertyOptions = DEFAULT_OPTIONS,
-): Array<PropertyContent<T>> | null {
-  const { includeNestedProperties, limitToLeafPropertyValues } =
-    withDefaultOptions(options);
-
-  return searchPropertyResult(
-    properties,
-    { includeNestedProperties },
-    (currentProperties) => {
-      const property = findPropertyByVariableUuid(
-        currentProperties,
-        variableUuid,
-      );
-      if (property == null) {
-        return null;
-      }
-
-      const valueContents: Array<PropertyContent<T>> = Array.from(
-        getPropertyValuesResult(
-          property.values,
-          limitToLeafPropertyValues,
-          false,
-        ),
-        (value) => value.content,
-      );
-
-      return valueContents;
-    },
-  );
-}
-
-/**
- * Gets the first value of a property with the given variable UUID.
- *
- * @param properties - Array of properties to search through
- * @param variableUuid - The property variable UUID to search for
- * @param options - Search options, including whether to include nested properties
- * @returns The first property value, or null if property not found
- */
-export function getPropertyValueByVariableUuid<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SearchableProperty<T>>,
-  variableUuid: string,
+  selector: PropertySelector<T>,
   options: PropertyOptions = DEFAULT_OPTIONS,
 ): PropertyValueContent<T> | null {
-  const { includeNestedProperties, limitToLeafPropertyValues } =
-    withDefaultOptions(options);
-
-  return searchPropertyResult(
-    properties,
-    { includeNestedProperties },
-    (currentProperties) => {
-      const values = getPropertyValuesByVariableUuid<T>(
-        currentProperties,
-        variableUuid,
-        { includeNestedProperties: false, limitToLeafPropertyValues },
-      );
-      if (values === null || values.length === 0) {
-        return null;
-      }
-
-      return getFirstPropertyValueResult(values, limitToLeafPropertyValues);
-    },
-    (nestedResult) =>
-      getFirstPropertyValueResult([nestedResult], limitToLeafPropertyValues),
-  );
-}
-
-/**
- * Gets the first value content of a property with the given variable UUID.
- *
- * @param properties - Array of properties to search through
- * @param variableUuid - The property variable UUID to search for
- * @param options - Search options, including whether to include nested properties
- * @returns The first property value content, or null if property not found
- */
-export function getPropertyValueContentByVariableUuid<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SearchableProperty<T>>,
-  variableUuid: string,
-  options: PropertyOptions = DEFAULT_OPTIONS,
-): PropertyContent<T> | null {
-  const { includeNestedProperties, limitToLeafPropertyValues } =
-    withDefaultOptions(options);
-
-  return searchPropertyResult(
-    properties,
-    { includeNestedProperties },
-    (currentProperties) => {
-      const values = getPropertyValuesByVariableUuid<T>(
-        currentProperties,
-        variableUuid,
-        { includeNestedProperties: false, limitToLeafPropertyValues },
-      );
-      if (values === null || values.length === 0) {
-        return null;
-      }
-
-      return getFirstPropertyValueContentResult(
-        values,
-        limitToLeafPropertyValues,
-      );
-    },
-  );
-}
-
-/**
- * Finds a property by its variable label in an array of properties.
- *
- * @param properties - Array of properties to search through
- * @param variableLabel - The property variable label to search for
- * @param options - Search options, including whether to include nested properties
- * @returns The matching Property object, or null if not found
- */
-export function getPropertyByVariableLabel<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<Property<T>>,
-  variableLabel: string,
-  options?: PropertyOptions,
-): Property<T> | null;
-export function getPropertyByVariableLabel<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SetItemProperty<T>>,
-  variableLabel: string,
-  options?: PropertyOptions,
-): SetItemProperty<T> | null;
-export function getPropertyByVariableLabel<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SimplifiedProperty<T>>,
-  variableLabel: string,
-  options?: PropertyOptions,
-): SimplifiedProperty<T> | null;
-export function getPropertyByVariableLabel<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SetItemSimplifiedProperty<T>>,
-  variableLabel: string,
-  options?: PropertyOptions,
-): SetItemSimplifiedProperty<T> | null;
-export function getPropertyByVariableLabel<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SearchableProperty<T>>,
-  variableLabel: string,
-  options: PropertyOptions = DEFAULT_OPTIONS,
-): SearchableProperty<T> | null {
-  const { includeNestedProperties } = withDefaultOptions(options);
-
-  return searchPropertyResult(
-    properties,
-    { includeNestedProperties },
-    (currentProperties) =>
-      findPropertyByVariableLabel(currentProperties, variableLabel),
-  );
-}
-
-/**
- * Finds a property by its variable label and all values.
- *
- * @param properties - Array of properties to search through
- * @param variableLabel - The property variable label to search for
- * @param values - The property values to search for
- * @param options - Search options, including whether to include nested properties
- * @returns The matching Property object, or null if not found or all values do not match
- */
-export function getPropertyByVariableLabelAndValues<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<Property<T>>,
-  variableLabel: string,
-  values: ReadonlyArray<PropertyValueContent<T>>,
-  options?: PropertyOptions,
-): Property<T> | null;
-export function getPropertyByVariableLabelAndValues<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SetItemProperty<T>>,
-  variableLabel: string,
-  values: ReadonlyArray<PropertyValueContent<T>>,
-  options?: PropertyOptions,
-): SetItemProperty<T> | null;
-export function getPropertyByVariableLabelAndValues<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SimplifiedProperty<T>>,
-  variableLabel: string,
-  values: ReadonlyArray<PropertyValueContent<T>>,
-  options?: PropertyOptions,
-): SimplifiedProperty<T> | null;
-export function getPropertyByVariableLabelAndValues<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SetItemSimplifiedProperty<T>>,
-  variableLabel: string,
-  values: ReadonlyArray<PropertyValueContent<T>>,
-  options?: PropertyOptions,
-): SetItemSimplifiedProperty<T> | null;
-export function getPropertyByVariableLabelAndValues<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SearchableProperty<T>>,
-  variableLabel: string,
-  values: ReadonlyArray<PropertyValueContent<T>>,
-  options: PropertyOptions = DEFAULT_OPTIONS,
-): SearchableProperty<T> | null {
-  const { includeNestedProperties, limitToLeafPropertyValues } =
-    withDefaultOptions(options);
-
-  return searchPropertyResult(
-    properties,
-    { includeNestedProperties },
-    (currentProperties) => {
-      for (const property of currentProperties) {
-        if (
-          getPropertyVariableLabel(property) === variableLabel &&
-          deepEqual(property.values, values)
-        ) {
-          return getNormalizedProperty(property, limitToLeafPropertyValues);
-        }
-      }
-
-      return null;
-    },
-    (nestedResult) =>
-      getNormalizedProperty(nestedResult, limitToLeafPropertyValues),
-  );
-}
-
-/**
- * Finds a property by its variable label and all value contents.
- *
- * @param properties - Array of properties to search through
- * @param variableLabel - The property variable label to search for
- * @param valueContents - The value contents to search for
- * @param options - Search options, including whether to include nested properties
- * @returns The matching Property object, or null if not found or all value contents do not match
- */
-export function getPropertyByVariableLabelAndValueContents<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<Property<T>>,
-  variableLabel: string,
-  valueContents: ReadonlyArray<PropertyContent<T>>,
-  options?: PropertyOptions,
-): Property<T> | null;
-export function getPropertyByVariableLabelAndValueContents<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SetItemProperty<T>>,
-  variableLabel: string,
-  valueContents: ReadonlyArray<PropertyContent<T>>,
-  options?: PropertyOptions,
-): SetItemProperty<T> | null;
-export function getPropertyByVariableLabelAndValueContents<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SimplifiedProperty<T>>,
-  variableLabel: string,
-  valueContents: ReadonlyArray<PropertyContent<T>>,
-  options?: PropertyOptions,
-): SimplifiedProperty<T> | null;
-export function getPropertyByVariableLabelAndValueContents<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SetItemSimplifiedProperty<T>>,
-  variableLabel: string,
-  valueContents: ReadonlyArray<PropertyContent<T>>,
-  options?: PropertyOptions,
-): SetItemSimplifiedProperty<T> | null;
-export function getPropertyByVariableLabelAndValueContents<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SearchableProperty<T>>,
-  variableLabel: string,
-  valueContents: ReadonlyArray<PropertyContent<T>>,
-  options: PropertyOptions = DEFAULT_OPTIONS,
-): SearchableProperty<T> | null {
-  const { includeNestedProperties, limitToLeafPropertyValues } =
-    withDefaultOptions(options);
-
-  return searchPropertyResult(
-    properties,
-    { includeNestedProperties },
-    (currentProperties) => {
-      for (const property of currentProperties) {
-        if (
-          getPropertyVariableLabel(property) === variableLabel &&
-          hasEqualPropertyValueContents(property, valueContents)
-        ) {
-          return getNormalizedProperty(
-            property,
-            limitToLeafPropertyValues,
-            clonePropertyValues,
-          );
-        }
-      }
-
-      return null;
-    },
-    (nestedResult) =>
-      getNormalizedProperty(nestedResult, limitToLeafPropertyValues),
-  );
-}
-
-/**
- * Finds a property by its variable label and one value.
- *
- * @param properties - Array of properties to search through
- * @param variableLabel - The property variable label to search for
- * @param value - The property value to search for
- * @param options - Search options, including whether to include nested properties
- * @returns The matching Property object, or null if not found or value does not match
- */
-export function getPropertyByVariableLabelAndValue<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<Property<T>>,
-  variableLabel: string,
-  value: PropertyValueContent<T>,
-  options?: PropertyOptions,
-): Property<T> | null;
-export function getPropertyByVariableLabelAndValue<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SetItemProperty<T>>,
-  variableLabel: string,
-  value: PropertyValueContent<T>,
-  options?: PropertyOptions,
-): SetItemProperty<T> | null;
-export function getPropertyByVariableLabelAndValue<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SimplifiedProperty<T>>,
-  variableLabel: string,
-  value: PropertyValueContent<T>,
-  options?: PropertyOptions,
-): SimplifiedProperty<T> | null;
-export function getPropertyByVariableLabelAndValue<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SetItemSimplifiedProperty<T>>,
-  variableLabel: string,
-  value: PropertyValueContent<T>,
-  options?: PropertyOptions,
-): SetItemSimplifiedProperty<T> | null;
-export function getPropertyByVariableLabelAndValue<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SearchableProperty<T>>,
-  variableLabel: string,
-  value: PropertyValueContent<T>,
-  options: PropertyOptions = DEFAULT_OPTIONS,
-): SearchableProperty<T> | null {
-  const { includeNestedProperties, limitToLeafPropertyValues } =
-    withDefaultOptions(options);
-
-  return searchPropertyResult(
-    properties,
-    { includeNestedProperties },
-    (currentProperties) => {
-      for (const property of currentProperties) {
-        if (
-          getPropertyVariableLabel(property) === variableLabel &&
-          hasPropertyValue(property, value)
-        ) {
-          return getNormalizedProperty(property, limitToLeafPropertyValues);
-        }
-      }
-
-      return null;
-    },
-    (nestedResult) =>
-      getNormalizedProperty(nestedResult, limitToLeafPropertyValues),
-  );
-}
-
-/**
- * Finds a property by its variable label and one value content.
- *
- * @param properties - Array of properties to search through
- * @param variableLabel - The property variable label to search for
- * @param valueContent - The value content to search for
- * @param options - Search options, including whether to include nested properties
- * @returns The matching Property object, or null if not found or value content does not match
- */
-export function getPropertyByVariableLabelAndValueContent<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<Property<T>>,
-  variableLabel: string,
-  valueContent: PropertyContent<T>,
-  options?: PropertyOptions,
-): Property<T> | null;
-export function getPropertyByVariableLabelAndValueContent<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SetItemProperty<T>>,
-  variableLabel: string,
-  valueContent: PropertyContent<T>,
-  options?: PropertyOptions,
-): SetItemProperty<T> | null;
-export function getPropertyByVariableLabelAndValueContent<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SimplifiedProperty<T>>,
-  variableLabel: string,
-  valueContent: PropertyContent<T>,
-  options?: PropertyOptions,
-): SimplifiedProperty<T> | null;
-export function getPropertyByVariableLabelAndValueContent<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SetItemSimplifiedProperty<T>>,
-  variableLabel: string,
-  valueContent: PropertyContent<T>,
-  options?: PropertyOptions,
-): SetItemSimplifiedProperty<T> | null;
-export function getPropertyByVariableLabelAndValueContent<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SearchableProperty<T>>,
-  variableLabel: string,
-  valueContent: PropertyContent<T>,
-  options: PropertyOptions = DEFAULT_OPTIONS,
-): SearchableProperty<T> | null {
-  const { includeNestedProperties, limitToLeafPropertyValues } =
-    withDefaultOptions(options);
-
-  return searchPropertyResult(
-    properties,
-    { includeNestedProperties },
-    (currentProperties) => {
-      for (const property of currentProperties) {
-        if (
-          getPropertyVariableLabel(property) === variableLabel &&
-          hasPropertyValueContent(property, valueContent)
-        ) {
-          return getNormalizedProperty(property, limitToLeafPropertyValues);
-        }
-      }
-
-      return null;
-    },
-    (nestedResult) =>
-      getNormalizedProperty(nestedResult, limitToLeafPropertyValues),
-  );
-}
-
-/**
- * Retrieves all values for a property with the given variable label.
- *
- * @param properties - Array of properties to search through
- * @param variableLabel - The property variable label to search for
- * @param options - Search options, including whether to include nested properties
- * @returns Array of property values, or null if property not found
- */
-export function getPropertyValuesByVariableLabel<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SearchableProperty<T>>,
-  variableLabel: string,
-  options: PropertyOptions = DEFAULT_OPTIONS,
-): Array<PropertyValueContent<T>> | null {
-  const { includeNestedProperties, limitToLeafPropertyValues } =
-    withDefaultOptions(options);
-
-  return searchPropertyResult(
-    properties,
-    { includeNestedProperties },
-    (currentProperties) => {
-      const property = findPropertyByVariableLabel(
-        currentProperties,
-        variableLabel,
-      );
-      if (property == null) {
-        return null;
-      }
-
-      return getPropertyValuesResult(
-        property.values,
-        limitToLeafPropertyValues,
-        false,
-      );
-    },
-    (nestedResult) =>
-      getPropertyValuesResult(nestedResult, limitToLeafPropertyValues, false),
-  );
-}
-
-/**
- * Gets the first value of a property with the given variable label.
- *
- * @param properties - Array of properties to search through
- * @param variableLabel - The property variable label to search for
- * @param options - Search options, including whether to include nested properties
- * @returns The first property value, or null if property not found
- */
-export function getPropertyValueByVariableLabel<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SearchableProperty<T>>,
-  variableLabel: string,
-  options: PropertyOptions = DEFAULT_OPTIONS,
-): PropertyValueContent<T> | null {
-  const { includeNestedProperties, limitToLeafPropertyValues } =
-    withDefaultOptions(options);
-
-  return searchPropertyResult(
-    properties,
-    { includeNestedProperties },
-    (currentProperties) => {
-      const values = getPropertyValuesByVariableLabel<T>(
-        currentProperties,
-        variableLabel,
-        { includeNestedProperties: false, limitToLeafPropertyValues },
-      );
-      if (values === null || values.length === 0) {
-        return null;
-      }
-
-      return getFirstPropertyValueResult(values, limitToLeafPropertyValues);
-    },
-    (nestedResult) =>
-      getFirstPropertyValueResult([nestedResult], limitToLeafPropertyValues),
-  );
-}
-
-/**
- * Gets the first value content of a property with the given variable label.
- *
- * @param properties - Array of properties to search through
- * @param variableLabel - The property variable label to search for
- * @param options - Search options, including whether to include nested properties
- * @returns The first property value content, or null if property not found
- */
-export function getPropertyValueContentByVariableLabel<
-  T extends LanguageCodes = LanguageCodes,
->(
-  properties: ReadonlyArray<SearchableProperty<T>>,
-  variableLabel: string,
-  options: PropertyOptions = DEFAULT_OPTIONS,
-): PropertyContent<T> | null {
-  const { includeNestedProperties, limitToLeafPropertyValues } =
-    withDefaultOptions(options);
-
-  return searchPropertyResult(
-    properties,
-    { includeNestedProperties },
-    (currentProperties) => {
-      const values = getPropertyValuesByVariableLabel<T>(
-        currentProperties,
-        variableLabel,
-        { includeNestedProperties: false, limitToLeafPropertyValues },
-      );
-      if (values === null || values.length === 0) {
-        return null;
-      }
-
-      return getFirstPropertyValueContentResult(
-        values,
-        limitToLeafPropertyValues,
-      );
-    },
-  );
+  return getPropertyValues(properties, selector, options)?.[0] ?? null;
 }
 
 /**
  * Gets all unique properties from an array of properties.
  *
+ * Properties are returned exactly as they were found, deduplicated by variable
+ * UUID, keeping the first occurrence.
  * @param properties - Array of properties to get unique properties from
- * @param options - Search options, including whether to include nested properties
+ * @param options - Search options
+ * @param options.includeNestedProperties - Whether to descend into nested properties
  * @returns Array of unique properties
  */
-export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
-  properties: ReadonlyArray<Property<T>>,
-  options?: PropertyOptions,
-): Array<Property<T>>;
-export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
-  properties: ReadonlyArray<SetItemProperty<T>>,
-  options?: PropertyOptions,
-): Array<SetItemProperty<T>>;
-export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
-  properties: ReadonlyArray<SimplifiedProperty<T>>,
-  options?: PropertyOptions,
-): Array<SimplifiedProperty<T>>;
-export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
-  properties: ReadonlyArray<SetItemSimplifiedProperty<T>>,
-  options?: PropertyOptions,
-): Array<SetItemSimplifiedProperty<T>>;
-export function getUniqueProperties<T extends LanguageCodes = LanguageCodes>(
-  properties: ReadonlyArray<SearchableProperty<T>>,
+export function getUniqueProperties<
+  T extends LanguageCodes = LanguageCodes,
+  TProperty extends PropertyLike<T> = PropertyLike<T>,
+>(
+  properties: ReadonlyArray<TProperty>,
   options: PropertyOptions = DEFAULT_OPTIONS,
-): Array<SearchableProperty<T>> {
-  const { includeNestedProperties, limitToLeafPropertyValues } =
-    withDefaultOptions(options);
+): Array<TProperty> {
+  const { includeNestedProperties } = withDefaultOptions(options);
   const uniqueProperties: Array<SearchableProperty<T>> = [];
+  const seenVariableUuids = new Set<string>();
 
   visitProperties(properties, includeNestedProperties, (property) => {
-    for (const uniqueProperty of uniqueProperties) {
-      if (uniqueProperty.variable.uuid === property.variable.uuid) {
-        return;
-      }
+    if (seenVariableUuids.has(property.variable.uuid)) {
+      return;
     }
 
+    seenVariableUuids.add(property.variable.uuid);
     uniqueProperties.push(property);
   });
 
-  if (limitToLeafPropertyValues) {
-    const normalizedProperties: Array<SearchableProperty<T>> = Array.from(
-      uniqueProperties,
-      (property) => getNormalizedProperty(property, limitToLeafPropertyValues),
-    );
-
-    return normalizedProperties;
-  }
-
-  return uniqueProperties;
+  return uniqueProperties as Array<TProperty>;
 }
 
 /**
  * Gets all unique property variable labels from an array of properties.
- *
  * @param properties - Array of properties to get unique property variable labels from
- * @param options - Search options, including whether to include nested properties
+ * @param options - Search options
+ * @param options.includeNestedProperties - Whether to descend into nested properties
  * @returns Array of unique property variable labels
  */
 export function getUniquePropertyVariableLabels<
@@ -993,36 +382,19 @@ export function getUniquePropertyVariableLabels<
 ): Array<string> {
   const { includeNestedProperties } = withDefaultOptions(options);
   const uniquePropertyVariableLabels: Array<string> = [];
+  const seenLabels = new Set<string>();
 
   visitProperties(properties, includeNestedProperties, (property) => {
     const variableLabel = getPropertyVariableLabel(property);
-    if (uniquePropertyVariableLabels.includes(variableLabel)) {
+    if (seenLabels.has(variableLabel)) {
       return;
     }
 
+    seenLabels.add(variableLabel);
     uniquePropertyVariableLabels.push(variableLabel);
   });
 
   return uniquePropertyVariableLabels;
-}
-
-/**
- * Get the leaf property values from an array of property values.
- *
- * @param propertyValues - The array of property values to get the leaf property values from
- * @returns The array of leaf property values
- */
-export function getLeafPropertyValues<T extends LanguageCodes = LanguageCodes>(
-  propertyValues: ReadonlyArray<PropertyValueContent<T>>,
-): Array<PropertyValueContent<T>> {
-  const leafPropertyValues: Array<PropertyValueContent<T>> = [];
-  for (const value of propertyValues) {
-    if (value.hierarchy.isLeaf) {
-      leafPropertyValues.push(value);
-    }
-  }
-
-  return leafPropertyValues;
 }
 
 function isContentMatchingFilter<T extends LanguageCodes>(
@@ -1046,17 +418,23 @@ function isContentMatchingFilter<T extends LanguageCodes>(
 }
 
 /**
- * Filters a property based on a variable label and value content criterion.
+ * Whether a property matches a variable label and value content criterion.
  *
- * @param property - The property to filter
+ * Matching is client-side and deliberately loose: string contents match on a
+ * case-insensitive substring, numbers and booleans on equality. A
+ * `variableLabel` of "all fields" matches against every property.
+ * @param property - The property to test
  * @param filter - Filter criteria containing variable label and value to match
  * @param filter.variableLabel - The variable label to filter by
  * @param filter.value - The value to filter by
- * @param options - Search options, including whether to include nested properties
+ * @param options - Search options
+ * @param options.includeNestedProperties - Whether to descend into nested properties
+ * @param options.limitToLeafPropertyValues - Whether to test only leaf values
  * @returns True if the property matches the filter criteria, false otherwise
  */
-// eslint-disable-next-line unicorn/consistent-boolean-name -- public API; renaming would be a breaking change
-export function filterProperties<T extends LanguageCodes = LanguageCodes>(
+export function isPropertyMatchingFilter<
+  T extends LanguageCodes = LanguageCodes,
+>(
   property: SearchableProperty<T>,
   filter: { variableLabel: string; value: PropertyValueContent<T> },
   options: PropertyOptions = DEFAULT_OPTIONS,
@@ -1064,19 +442,20 @@ export function filterProperties<T extends LanguageCodes = LanguageCodes>(
   const { includeNestedProperties, limitToLeafPropertyValues } =
     withDefaultOptions(options);
 
-  const isAllFields =
-    filter.variableLabel.toLocaleLowerCase("en-US") === "all fields";
+  const normalizedFilterLabel = normalizePropertyVariableLabel(
+    filter.variableLabel,
+  );
+  const isAllFields = normalizedFilterLabel === ALL_FIELDS_VARIABLE_LABEL;
 
   if (
     isAllFields ||
-    getPropertyVariableLabel(property).toLocaleLowerCase("en-US") ===
-      filter.variableLabel.toLocaleLowerCase("en-US")
+    normalizePropertyVariableLabel(getPropertyVariableLabel(property)) ===
+      normalizedFilterLabel
   ) {
-    const values = getPropertyValuesResult(
-      property.values,
-      limitToLeafPropertyValues,
-      false,
-    );
+    const values = limitToLeafPropertyValues
+      ? getLeafPropertyValues(property.values)
+      : property.values;
+
     for (const value of values) {
       if (isContentMatchingFilter(value.content, filter.value.content)) {
         return true;
@@ -1087,7 +466,7 @@ export function filterProperties<T extends LanguageCodes = LanguageCodes>(
   if (includeNestedProperties && "properties" in property) {
     for (const nestedProperty of property.properties) {
       if (
-        filterProperties(nestedProperty, filter, {
+        isPropertyMatchingFilter(nestedProperty, filter, {
           includeNestedProperties: true,
           limitToLeafPropertyValues,
         })

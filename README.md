@@ -176,11 +176,39 @@ types, query types, property getters, and small data helpers:
 
 - `Item`, `SetItem`, `ItemLink`, `Website`, `WebElementOf`,
   `WebElementComponentOf`, `WebBlockByLayout`, `Query`, and related types.
-- `getPropertyByVariableUuid`, `getPropertyValueContentByVariableUuid`,
-  `getPropertyByVariableLabel`, `getUniqueProperties`, `filterProperties`, and
-  related property helpers.
+- `getProperty`, `getPropertyValues`, `getPropertyValue`,
+  `getUniqueProperties`, `getUniquePropertyVariableLabels`, and
+  `isPropertyMatchingFilter` for reading properties off a parsed item.
 - `flattenItemProperties` and `DEFAULT_PAGE_SIZE` for common collection UI
   workflows.
+
+### Property Access
+
+Every property lookup takes a `PropertySelector`, which names a property either
+by its variable UUID or by its variable label. A label can be narrowed by the
+values the property carries.
+
+```ts
+import { getProperty, getPropertyValue, getPropertyValues } from "ochre-sdk";
+
+const properties = result.item.properties;
+
+getProperty(properties, { uuid: "<variable-uuid>" });
+getProperty(properties, { label: "Material" });
+getProperty(properties, { label: "Material", valueContent: "Ceramic" });
+
+getPropertyValues(properties, { label: "Material" });
+getPropertyValue(properties, { label: "Material" })?.content;
+```
+
+Labels are matched case-insensitively, and spaces and underscores are treated
+as hyphens, so `"Media type"`, `"media_type"` and `"media-type"` all name the
+same property.
+
+Pass `{ includeNestedProperties: true }` to descend into nested properties, and
+`{ limitToLeafPropertyValues: false }` to keep non-leaf values. Leaf filtering
+applies to `getPropertyValues` and `getPropertyValue`; `getProperty` returns a
+property exactly as the item carries it.
 
 ## Development
 

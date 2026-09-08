@@ -5,11 +5,7 @@ import type {
   PropertyValueContent,
   SimplifiedProperty,
 } from "#/types/index.js";
-import {
-  getPropertyByVariableLabel,
-  getPropertyByVariableLabelAndValueContent,
-  getPropertyValueByVariableLabel,
-} from "#/getters.js";
+import { getProperty, getPropertyValue } from "#/getters.js";
 import { multilingualFromText } from "#/parsers/helpers.js";
 
 type WebsitePropertyContent<T extends LanguageCodes> =
@@ -23,7 +19,7 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
   }
 
   property(label: string): SimplifiedProperty<T> | null {
-    return getPropertyByVariableLabel(this.sourceProperties, label);
+    return getProperty(this.sourceProperties, { label });
   }
 
   requiredProperty(label: string, message: string): SimplifiedProperty<T> {
@@ -39,15 +35,11 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
     label: string,
     value: WebsitePropertyContent<T>,
   ): SimplifiedProperty<T> | null {
-    return getPropertyByVariableLabelAndValueContent(
-      this.sourceProperties,
-      label,
-      value,
-    );
+    return getProperty(this.sourceProperties, { label, valueContent: value });
   }
 
   valueNode(label: string): PropertyValueContent<T> | null {
-    return getPropertyValueByVariableLabel(this.sourceProperties, label);
+    return getPropertyValue(this.sourceProperties, { label });
   }
 
   values(label: string): Array<PropertyValueContent<T>> {
@@ -102,6 +94,38 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
     return typeof value.content === "string"
       ? multilingualFromText(value.content, options)
       : null;
+  }
+
+  /**
+   * Overwrite a field from a labeled OCHRE property
+   *
+   * The field's current value is the default, so the caller writes the
+   * inherited default once where the object is built and names the OCHRE label
+   * once here, instead of restating both plus the field's type path.
+   * @param target - The object holding the field
+   * @param key - The field to overwrite
+   * @param label - The OCHRE property label to read
+   */
+  readInto<O extends object, K extends keyof O>(
+    target: O,
+    key: K,
+    label: string,
+  ): void {
+    target[key] = this.valueOr<O[K]>(label, target[key]);
+  }
+
+  /**
+   * Overwrite a UUID field from the UUID a labeled OCHRE property points at
+   * @param target - The object holding the field
+   * @param key - The field to overwrite
+   * @param label - The OCHRE property label to read
+   */
+  readUuidInto<O extends Record<K, string | null>, K extends keyof O>(
+    target: O,
+    key: K,
+    label: string,
+  ): void {
+    target[key] = (this.uuid(label) ?? target[key]) as O[K];
   }
 
   nested(label: string): WebsitePresentationReader<T> {

@@ -7,6 +7,9 @@ import type {
   XMLString,
 } from "#/xml/types.js";
 import {
+  getOchreItemUrl,
+  OCHRE_ENDPOINT,
+  PERMANENT_IDENTIFICATION_URL_PREFIX,
   PRESENTATION_ITEM_UUID,
   TEXT_ANNOTATION_ENTRY_PAGE_VARIANT_UUID,
   TEXT_ANNOTATION_HOVER_CARD_UUID,
@@ -16,6 +19,7 @@ import {
   TEXT_ANNOTATION_TEXT_STYLING_VARIANT_UUID,
   TEXT_ANNOTATION_UUID,
 } from "#/constants.js";
+import { normalizePropertyVariableLabel } from "#/getters.js";
 import { serializeMDXContent, serializeMDXText } from "#/parsers/mdx.js";
 import { MultilingualString } from "#/parsers/multilingual.js";
 import { renderOptionsSchema } from "#/schemas.js";
@@ -103,9 +107,21 @@ function getLinkStringProperty(
 
 export function transformPermanentIdentificationUrl(url: string): string {
   return url.replace(
-    "https://pi.lib.uchicago.edu/1001/org/ochre/",
-    "https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=",
+    PERMANENT_IDENTIFICATION_URL_PREFIX,
+    () => `${OCHRE_ENDPOINT}?uuid=`,
   );
+}
+
+/**
+ * Rewrite a permanent identification URL as a website item route
+ * @param url - The permanent identification URL
+ * @returns The item route
+ * @internal
+ */
+export function transformPermanentIdentificationUrlToItemLink(
+  url: string,
+): string {
+  return url.replace(PERMANENT_IDENTIFICATION_URL_PREFIX, "/item/");
 }
 
 /**
@@ -301,7 +317,7 @@ function createMDXComponent(
     case "documentLink": {
       returnString = `<ExternalLink${createMDXStringAttribute(
         "href",
-        `https://ochre.lib.uchicago.edu/ochre/v2/ochre.php?uuid=${uuid}&load`,
+        getOchreItemUrl(uuid ?? "null", "load"),
       )}>${text}</ExternalLink>`;
       break;
     }
@@ -406,13 +422,6 @@ function parsePropertyValueText(
   return "";
 }
 
-function normalizePropertyToken(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replaceAll(/[\s_]+/g, "-");
-}
-
 function hasMatchingPropertyLabel(
   property: XMLProperty,
   uuid: string,
@@ -423,7 +432,7 @@ function hasMatchingPropertyLabel(
     return true;
   }
 
-  const label = normalizePropertyToken(
+  const label = normalizePropertyVariableLabel(
     parseContentLikeForLanguage(property.label, options),
   );
   return tokens.includes(label);
@@ -439,7 +448,7 @@ function hasMatchingPropertyValue(
     return true;
   }
 
-  const value = normalizePropertyToken(
+  const value = normalizePropertyVariableLabel(
     parsePropertyValueText(property, options),
   );
   return tokens.includes(value);
