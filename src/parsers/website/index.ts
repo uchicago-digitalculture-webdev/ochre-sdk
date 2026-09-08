@@ -716,16 +716,17 @@ type WebElementComponentParameters<T extends ReadonlyArray<string>> = {
   context: WebsiteParseContext<T>;
 };
 
+const THREE_D_VIEWER_COMPONENT_DEFAULTS: Pick<
+  Extract<WebElementComponent, { component: "3d-viewer" }>,
+  "isInteractive" | "isControlsDisplayed"
+> = { isInteractive: true, isControlsDisplayed: true };
+
 function parse3dViewerComponent<T extends ReadonlyArray<string>>(
   parameters: WebElementComponentParameters<T>,
 ): WebElementComponent<T> {
   const { componentProperty, componentReader, elementResource, websiteLinks } =
     parameters;
 
-  type ThreeDViewerComponent = Extract<
-    WebElementComponent<T>,
-    { component: "3d-viewer" }
-  >;
   const resourceLink = findWebsiteLink(
     websiteLinks,
     "resource",
@@ -742,12 +743,12 @@ function parse3dViewerComponent<T extends ReadonlyArray<string>>(
     );
   }
 
-  const isInteractive = componentReader.valueOr<
-    ThreeDViewerComponent["isInteractive"]
-  >("is-interactive", true);
-  const isControlsDisplayed = componentReader.valueOr<
-    ThreeDViewerComponent["isControlsDisplayed"]
-  >("controls-displayed", true);
+  const properties = { ...THREE_D_VIEWER_COMPONENT_DEFAULTS };
+  componentReader.readAll(properties, {
+    isInteractive: "is-interactive",
+    isControlsDisplayed: "controls-displayed",
+  });
+  const { isInteractive, isControlsDisplayed } = properties;
 
   return {
     component: "3d-viewer",
@@ -818,16 +819,25 @@ function parseAnnotatedDocumentComponent<T extends ReadonlyArray<string>>(
   return { component: "annotated-document", linkUuid: documentLink.uuid };
 }
 
+const ANNOTATED_IMAGE_COMPONENT_DEFAULTS: Pick<
+  Extract<WebElementComponent, { component: "annotated-image" }>,
+  | "isFilterInputDisplayed"
+  | "isOptionsDisplayed"
+  | "isAnnotationHighlightsDisplayed"
+  | "isAnnotationTooltipsDisplayed"
+> = {
+  isFilterInputDisplayed: true,
+  isOptionsDisplayed: true,
+  isAnnotationHighlightsDisplayed: true,
+  isAnnotationTooltipsDisplayed: true,
+};
+
 function parseAnnotatedImageComponent<T extends ReadonlyArray<string>>(
   parameters: WebElementComponentParameters<T>,
 ): WebElementComponent<T> {
   const { componentProperty, componentReader, elementResource, websiteLinks } =
     parameters;
 
-  type AnnotatedImageComponent = Extract<
-    WebElementComponent<T>,
-    { component: "annotated-image" }
-  >;
   const imageLinks = getWebsiteLinks(websiteLinks, "resource").filter(
     (link) => link.type === "image" || link.type === "IIIF",
   );
@@ -843,18 +853,19 @@ function parseAnnotatedImageComponent<T extends ReadonlyArray<string>>(
     );
   }
 
-  const isFilterInputDisplayed = componentReader.valueOr<
-    AnnotatedImageComponent["isFilterInputDisplayed"]
-  >("filter-input-displayed", true);
-  const isOptionsDisplayed = componentReader.valueOr<
-    AnnotatedImageComponent["isOptionsDisplayed"]
-  >("options-displayed", true);
-  const isAnnotationHighlightsDisplayed = componentReader.valueOr<
-    AnnotatedImageComponent["isAnnotationHighlightsDisplayed"]
-  >("annotation-highlights-displayed", true);
-  const isAnnotationTooltipsDisplayed = componentReader.valueOr<
-    AnnotatedImageComponent["isAnnotationTooltipsDisplayed"]
-  >("annotation-tooltips-displayed", true);
+  const properties = { ...ANNOTATED_IMAGE_COMPONENT_DEFAULTS };
+  componentReader.readAll(properties, {
+    isFilterInputDisplayed: "filter-input-displayed",
+    isOptionsDisplayed: "options-displayed",
+    isAnnotationHighlightsDisplayed: "annotation-highlights-displayed",
+    isAnnotationTooltipsDisplayed: "annotation-tooltips-displayed",
+  });
+  const {
+    isFilterInputDisplayed,
+    isOptionsDisplayed,
+    isAnnotationHighlightsDisplayed,
+    isAnnotationTooltipsDisplayed,
+  } = properties;
 
   return {
     component: "annotated-image",
@@ -866,16 +877,23 @@ function parseAnnotatedImageComponent<T extends ReadonlyArray<string>>(
   };
 }
 
+const AUDIO_PLAYER_COMPONENT_DEFAULTS: Pick<
+  Extract<WebElementComponent, { component: "audio-player" }>,
+  | "isSpeedControlsDisplayed"
+  | "isVolumeControlsDisplayed"
+  | "isSeekBarDisplayed"
+> = {
+  isSpeedControlsDisplayed: true,
+  isVolumeControlsDisplayed: true,
+  isSeekBarDisplayed: true,
+};
+
 function parseAudioPlayerComponent<T extends ReadonlyArray<string>>(
   parameters: WebElementComponentParameters<T>,
 ): WebElementComponent<T> {
   const { componentProperty, componentReader, elementResource, websiteLinks } =
     parameters;
 
-  type AudioPlayerComponent = Extract<
-    WebElementComponent<T>,
-    { component: "audio-player" }
-  >;
   const audioLink = findWebsiteLink(
     websiteLinks,
     "resource",
@@ -892,15 +910,17 @@ function parseAudioPlayerComponent<T extends ReadonlyArray<string>>(
     );
   }
 
-  const isSpeedControlsDisplayed = componentReader.valueOr<
-    AudioPlayerComponent["isSpeedControlsDisplayed"]
-  >("speed-controls-displayed", true);
-  const isVolumeControlsDisplayed = componentReader.valueOr<
-    AudioPlayerComponent["isVolumeControlsDisplayed"]
-  >("volume-controls-displayed", true);
-  const isSeekBarDisplayed = componentReader.valueOr<
-    AudioPlayerComponent["isSeekBarDisplayed"]
-  >("seek-bar-displayed", true);
+  const properties = { ...AUDIO_PLAYER_COMPONENT_DEFAULTS };
+  componentReader.readAll(properties, {
+    isSpeedControlsDisplayed: "speed-controls-displayed",
+    isVolumeControlsDisplayed: "volume-controls-displayed",
+    isSeekBarDisplayed: "seek-bar-displayed",
+  });
+  const {
+    isSpeedControlsDisplayed,
+    isVolumeControlsDisplayed,
+    isSeekBarDisplayed,
+  } = properties;
 
   return {
     component: "audio-player",
@@ -1059,6 +1079,19 @@ function parseButtonComponent<T extends ReadonlyArray<string>>(
   };
 }
 
+const COLLECTION_FILTER_DEFAULTS: Extract<
+  WebElementComponent,
+  { component: "collection" }
+>["filter"] = {
+  isResultsBarDisplayed: false,
+  isInputDisplayed: false,
+  isLimitedToInputFilter: false,
+  isLimitedToLeafPropertyValues: false,
+  isSidebarDisplayed: false,
+  sidebarSort: "default",
+  isSidebarHelpTooltipsDisplayed: false,
+};
+
 function parseCollectionComponent<T extends ReadonlyArray<string>>(
   parameters: WebElementComponentParameters<T>,
 ): WebElementComponent<T> {
@@ -1082,27 +1115,16 @@ function parseCollectionComponent<T extends ReadonlyArray<string>>(
     );
   }
 
-  const isFilterResultsBarDisplayed = componentReader.valueOr<
-    CollectionComponent<T>["filter"]["isResultsBarDisplayed"]
-  >("filter-results-bar-displayed", false);
-  const isFilterInputDisplayed = componentReader.valueOr<
-    CollectionComponent<T>["filter"]["isInputDisplayed"]
-  >("filter-input-displayed", false);
-  const isFilterLimitedToInputFilter = componentReader.valueOr<
-    CollectionComponent<T>["filter"]["isLimitedToInputFilter"]
-  >("filter-limit-to-input-filter", false);
-  const isFilterLimitedToLeafPropertyValues = componentReader.valueOr<
-    CollectionComponent<T>["filter"]["isLimitedToLeafPropertyValues"]
-  >("filter-limit-to-leaf-property-values", false);
-  const isFilterSidebarDisplayed = componentReader.valueOr<
-    CollectionComponent<T>["filter"]["isSidebarDisplayed"]
-  >("filter-sidebar-displayed", false);
-  const filterSidebarSort = componentReader.valueOr<
-    CollectionComponent<T>["filter"]["sidebarSort"]
-  >("filter-sidebar-sort", "default");
-  const isFilterSidebarHelpTooltipsDisplayed = componentReader.valueOr<
-    CollectionComponent<T>["filter"]["isSidebarHelpTooltipsDisplayed"]
-  >("filter-sidebar-help-tooltips-displayed", false);
+  const filter = { ...COLLECTION_FILTER_DEFAULTS };
+  componentReader.readAll(filter, {
+    isResultsBarDisplayed: "filter-results-bar-displayed",
+    isInputDisplayed: "filter-input-displayed",
+    isLimitedToInputFilter: "filter-limit-to-input-filter",
+    isLimitedToLeafPropertyValues: "filter-limit-to-leaf-property-values",
+    isSidebarDisplayed: "filter-sidebar-displayed",
+    sidebarSort: "filter-sidebar-sort",
+    isSidebarHelpTooltipsDisplayed: "filter-sidebar-help-tooltips-displayed",
+  });
 
   const componentOptions = parseWebsiteOptions(
     elementResource.options,
@@ -1118,15 +1140,7 @@ function parseCollectionComponent<T extends ReadonlyArray<string>>(
     ...COLLECTION_PROPERTY_DEFAULTS,
     ...propertyOverrides,
     image: { ...COLLECTION_IMAGE_DEFAULTS, ...propertyOverrides.image },
-    filter: {
-      isSidebarDisplayed: isFilterSidebarDisplayed,
-      isResultsBarDisplayed: isFilterResultsBarDisplayed,
-      isInputDisplayed: isFilterInputDisplayed,
-      isLimitedToInputFilter: isFilterLimitedToInputFilter,
-      isLimitedToLeafPropertyValues: isFilterLimitedToLeafPropertyValues,
-      sidebarSort: filterSidebarSort,
-      isSidebarHelpTooltipsDisplayed: isFilterSidebarHelpTooltipsDisplayed,
-    },
+    filter,
     options: componentOptions,
   };
 }
@@ -1244,6 +1258,35 @@ function parseIiifViewerComponent<T extends ReadonlyArray<string>>(
   return { component: "iiif-viewer", linkUuid: manifestLink.uuid, variant };
 }
 
+/**
+ * The defaults an image component falls back to
+ *
+ * Annotated rather than `as const`, so each field keeps the full union its
+ * type allows and the parser can still compare against the other members.
+ */
+const IMAGE_COMPONENT_DEFAULTS: Pick<
+  Extract<WebElementComponent, { component: "image" }>,
+  | "imageQuality"
+  | "variant"
+  | "captionLayout"
+  | "isFullWidth"
+  | "isFullHeight"
+  | "captionSource"
+  | "altTextSource"
+  | "isTransparentBackground"
+  | "isCover"
+> = {
+  imageQuality: "high",
+  variant: "default",
+  captionLayout: "bottom",
+  isFullWidth: true,
+  isFullHeight: true,
+  captionSource: "name",
+  altTextSource: "name",
+  isTransparentBackground: false,
+  isCover: false,
+};
+
 function parseImageComponent<T extends ReadonlyArray<string>>(
   parameters: WebElementComponentParameters<T>,
 ): WebElementComponent<T> {
@@ -1258,10 +1301,29 @@ function parseImageComponent<T extends ReadonlyArray<string>>(
     );
   }
 
-  const imageQuality = componentReader.valueOr<ImageComponent["imageQuality"]>(
-    "image-quality",
-    "high",
-  );
+  const properties = { ...IMAGE_COMPONENT_DEFAULTS };
+  componentReader.readAll(properties, {
+    imageQuality: "image-quality",
+    variant: "variant",
+    captionLayout: "layout-caption",
+    isFullWidth: "is-full-width",
+    isFullHeight: "is-full-height",
+    captionSource: "source-caption",
+    altTextSource: "alt-text-source",
+    isTransparentBackground: "is-transparent",
+    isCover: "is-cover",
+  });
+  const {
+    imageQuality,
+    variant,
+    captionLayout,
+    isFullWidth,
+    isFullHeight,
+    captionSource,
+    altTextSource,
+    isTransparentBackground,
+    isCover,
+  } = properties;
 
   const images: Array<WebImage<T>> = Array.from(websiteLinks, (link) => ({
     uuid: link.uuid,
@@ -1272,38 +1334,8 @@ function parseImageComponent<T extends ReadonlyArray<string>>(
     quality: imageQuality,
   }));
 
-  const variant = componentReader.valueOr<ImageComponent["variant"]>(
-    "variant",
-    "default",
-  );
-  const captionLayout = componentReader.valueOr<
-    ImageComponent["captionLayout"]
-  >("layout-caption", "bottom");
-
   const width = readStringOrNumber(componentReader, "width");
   const height = readStringOrNumber(componentReader, "height");
-
-  const isFullWidth = componentReader.valueOr<ImageComponent["isFullWidth"]>(
-    "is-full-width",
-    true,
-  );
-  const isFullHeight = componentReader.valueOr<ImageComponent["isFullHeight"]>(
-    "is-full-height",
-    true,
-  );
-  const captionSource = componentReader.valueOr<
-    ImageComponent["captionSource"]
-  >("source-caption", "name");
-  const altTextSource = componentReader.valueOr<
-    ImageComponent["altTextSource"]
-  >("alt-text-source", "name");
-  const isTransparentBackground = componentReader.valueOr<
-    ImageComponent["isTransparentBackground"]
-  >("is-transparent", false);
-  const isCover = componentReader.valueOr<ImageComponent["isCover"]>(
-    "is-cover",
-    false,
-  );
   const variantReader = componentReader.nested("variant");
 
   let carouselOptions: ImageComponent["carouselOptions"] | null = null;
@@ -1383,6 +1415,21 @@ function parseImageGalleryComponent<T extends ReadonlyArray<string>>(
   };
 }
 
+const MAP_COMPONENT_DEFAULTS: Pick<
+  Extract<WebElementComponent, { component: "map" }>,
+  | "isInteractive"
+  | "isClustered"
+  | "isUsingPins"
+  | "isControlsDisplayed"
+  | "isFullHeight"
+> = {
+  isInteractive: true,
+  isClustered: false,
+  isUsingPins: false,
+  isControlsDisplayed: false,
+  isFullHeight: false,
+};
+
 function parseMapComponent<T extends ReadonlyArray<string>>(
   parameters: WebElementComponentParameters<T>,
 ): WebElementComponent<T> {
@@ -1398,18 +1445,22 @@ function parseMapComponent<T extends ReadonlyArray<string>>(
     );
   }
 
-  const isInteractive = componentReader.valueOr<MapComponent["isInteractive"]>(
-    "is-interactive",
-    true,
-  );
-  const isClustered = componentReader.valueOr<MapComponent["isClustered"]>(
-    "is-clustered",
-    false,
-  );
-  const isUsingPins = componentReader.valueOr<MapComponent["isUsingPins"]>(
-    "is-using-pins",
-    false,
-  );
+  const properties = { ...MAP_COMPONENT_DEFAULTS };
+  componentReader.readAll(properties, {
+    isInteractive: "is-interactive",
+    isClustered: "is-clustered",
+    isUsingPins: "is-using-pins",
+    isControlsDisplayed: "controls-displayed",
+    isFullHeight: "is-full-height",
+  });
+  const {
+    isInteractive,
+    isClustered,
+    isUsingPins,
+    isControlsDisplayed,
+    isFullHeight,
+  } = properties;
+
   const customBasemap =
     componentReader.value<MapComponent["customBasemap"]>("custom-basemap");
 
@@ -1428,14 +1479,6 @@ function parseMapComponent<T extends ReadonlyArray<string>>(
   if (maximumBoundsProperty !== null) {
     maximumBounds = parseBounds(String(maximumBoundsProperty));
   }
-
-  const isControlsDisplayed = componentReader.valueOr<
-    MapComponent["isControlsDisplayed"]
-  >("controls-displayed", false);
-  const isFullHeight = componentReader.valueOr<MapComponent["isFullHeight"]>(
-    "is-full-height",
-    false,
-  );
 
   return {
     component: "map",
@@ -1910,30 +1953,14 @@ function parseWebTitle<T extends ReadonlyArray<string>>(
     "title",
   );
   if (titleReader.size > 0) {
-    title.variant = titleReader.valueOr<WebTitle<T>["variant"]>(
-      "variant",
-      "default",
-    );
-
-    title.properties.isNameDisplayed = titleReader.valueOr<
-      WebTitle<T>["properties"]["isNameDisplayed"]
-    >("name-displayed", false);
-
-    title.properties.isDescriptionDisplayed = titleReader.valueOr<
-      WebTitle<T>["properties"]["isDescriptionDisplayed"]
-    >("description-displayed", false);
-
-    title.properties.isDateDisplayed = titleReader.valueOr<
-      WebTitle<T>["properties"]["isDateDisplayed"]
-    >("date-displayed", false);
-
-    title.properties.isCreatorsDisplayed = titleReader.valueOr<
-      WebTitle<T>["properties"]["isCreatorsDisplayed"]
-    >("creators-displayed", false);
-
-    title.properties.isCountDisplayed = titleReader.valueOr<
-      WebTitle<T>["properties"]["isCountDisplayed"]
-    >("count-displayed", false);
+    titleReader.readAll(title, { variant: "variant" });
+    titleReader.readAll(title.properties, {
+      isNameDisplayed: "name-displayed",
+      isDescriptionDisplayed: "description-displayed",
+      isDateDisplayed: "date-displayed",
+      isCreatorsDisplayed: "creators-displayed",
+      isCountDisplayed: "count-displayed",
+    });
   }
 
   return title;
@@ -2183,29 +2210,14 @@ function parseWebpage<T extends ReadonlyArray<string>>(
 
   const pageReader = webpageReader.nestedByValue("presentation", "page");
   if (pageReader.size > 0) {
-    returnWebpage.properties.isDisplayedInNavbar = pageReader.valueOr<
-      Webpage<T>["properties"]["isDisplayedInNavbar"]
-    >("displayed-in-navbar", true);
-
-    returnWebpage.properties.width = pageReader.valueOr<
-      Webpage<T>["properties"]["width"]
-    >("width", "default");
-
-    returnWebpage.properties.variant = pageReader.valueOr<
-      Webpage<T>["properties"]["variant"]
-    >("variant", "default");
-
-    returnWebpage.properties.isSidebarDisplayed = pageReader.valueOr<
-      Webpage<T>["properties"]["isSidebarDisplayed"]
-    >("sidebar-displayed", true);
-
-    returnWebpage.properties.isBreadcrumbsDisplayed = pageReader.valueOr<
-      Webpage<T>["properties"]["isBreadcrumbsDisplayed"]
-    >("breadcrumbs-displayed", false);
-
-    returnWebpage.properties.isNavbarSearchBarDisplayed = pageReader.valueOr<
-      Webpage<T>["properties"]["isNavbarSearchBarDisplayed"]
-    >("navbar-search-bar-displayed", true);
+    pageReader.readAll(returnWebpage.properties, {
+      isDisplayedInNavbar: "displayed-in-navbar",
+      width: "width",
+      variant: "variant",
+      isSidebarDisplayed: "sidebar-displayed",
+      isBreadcrumbsDisplayed: "breadcrumbs-displayed",
+      isNavbarSearchBarDisplayed: "navbar-search-bar-displayed",
+    });
 
     returnWebpage.properties.redirect = parseWebpageRedirect(
       pageReader.valueNode("redirect-to"),
@@ -2335,20 +2347,24 @@ function parseSidebar<T extends ReadonlyArray<string>>(
     .nestedByValue("presentation", "element")
     .nestedByValue("component", "sidebar");
 
-  return {
+  const sidebar: WebSidebar<T> = {
     isDisplayed: true,
     items,
     title: parseWebTitle(
       sidebarBaseProperties,
       parseIdentification(sidebarResource.identification, options),
     ),
-    layout: sidebarReader.valueOr<WebSidebar<T>["layout"]>("layout", "start"),
-    mobileLayout: sidebarReader.valueOr<WebSidebar<T>["mobileLayout"]>(
-      "layout-mobile",
-      "default",
-    ),
+    layout: "start",
+    mobileLayout: "default",
     cssStyles: parseResponsiveCssStyles(sidebarBaseProperties),
   };
+
+  sidebarReader.readAll(sidebar, {
+    layout: "layout",
+    mobileLayout: "layout-mobile",
+  });
+
+  return sidebar;
 }
 
 function parseWebAccordionItem<T extends ReadonlyArray<string>>(
@@ -2378,30 +2394,28 @@ function parseBlockOverwrite<T extends ReadonlyArray<string>>(
 
   type BlockOverwrite = NonNullable<WebBlock<T>["properties"]["tablet"]>;
   const properties: BlockOverwrite = {
-    layout:
-      overwriteReader.value<BlockOverwrite["layout"]>("layout") ?? undefined,
-    wrap: overwriteReader.value<BlockOverwrite["wrap"]>("wrap") ?? undefined,
-    spacing:
-      overwriteReader.value<BlockOverwrite["spacing"]>("spacing") ?? undefined,
-    gap: overwriteReader.value<BlockOverwrite["gap"]>("gap") ?? undefined,
+    layout: undefined,
+    wrap: undefined,
+    spacing: undefined,
+    gap: undefined,
     isAccordionEnabled: undefined,
     isAccordionExpandedByDefault: undefined,
     isAccordionSidebarDisplayed: undefined,
   };
 
+  overwriteReader.readAll(properties, {
+    layout: "layout",
+    wrap: "wrap",
+    spacing: "spacing",
+    gap: "gap",
+  });
+
   if (isDefaultLayoutAccordion || properties.layout === "accordion") {
-    properties.isAccordionEnabled =
-      overwriteReader.value<BlockOverwrite["isAccordionEnabled"]>(
-        "accordion-enabled",
-      ) ?? undefined;
-    properties.isAccordionExpandedByDefault =
-      overwriteReader.value<BlockOverwrite["isAccordionExpandedByDefault"]>(
-        "accordion-expanded",
-      ) ?? undefined;
-    properties.isAccordionSidebarDisplayed =
-      overwriteReader.value<BlockOverwrite["isAccordionSidebarDisplayed"]>(
-        "accordion-sidebar-displayed",
-      ) ?? undefined;
+    overwriteReader.readAll(properties, {
+      isAccordionEnabled: "accordion-enabled",
+      isAccordionExpandedByDefault: "accordion-expanded",
+      isAccordionSidebarDisplayed: "accordion-sidebar-displayed",
+    });
   }
 
   const cleanedProperties = cleanObject(properties);
@@ -2497,37 +2511,23 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
     "block",
   );
   if (blockReader.size > 0) {
-    returnBlock.properties.default.layout = blockReader.valueOr<
-      WebBlock<T>["properties"]["default"]["layout"]
-    >("layout", "vertical");
-
-    returnBlock.properties.default.wrap = blockReader.valueOr<
-      WebBlock<T>["properties"]["default"]["wrap"]
-    >("wrap", "nowrap");
+    blockReader.readAll(returnBlock.properties.default, {
+      layout: "layout",
+      wrap: "wrap",
+      spacing: "spacing",
+      gap: "gap",
+    });
 
     if (returnBlock.properties.default.layout === "accordion") {
-      returnBlock.properties.default.isAccordionEnabled = blockReader.valueOr<
-        WebBlock<T>["properties"]["default"]["isAccordionEnabled"]
-      >("accordion-enabled", true);
-
-      returnBlock.properties.default.isAccordionExpandedByDefault =
-        blockReader.valueOr<
-          WebBlock<T>["properties"]["default"]["isAccordionExpandedByDefault"]
-        >("accordion-expanded", true);
-
-      returnBlock.properties.default.isAccordionSidebarDisplayed =
-        blockReader.valueOr<
-          WebBlock<T>["properties"]["default"]["isAccordionSidebarDisplayed"]
-        >("accordion-sidebar-displayed", false);
+      returnBlock.properties.default.isAccordionEnabled = true;
+      returnBlock.properties.default.isAccordionExpandedByDefault = true;
+      returnBlock.properties.default.isAccordionSidebarDisplayed = false;
+      blockReader.readAll(returnBlock.properties.default, {
+        isAccordionEnabled: "accordion-enabled",
+        isAccordionExpandedByDefault: "accordion-expanded",
+        isAccordionSidebarDisplayed: "accordion-sidebar-displayed",
+      });
     }
-
-    returnBlock.properties.default.spacing = blockReader.valueOr<
-      WebBlock<T>["properties"]["default"]["spacing"]
-    >("spacing", null);
-
-    returnBlock.properties.default.gap = blockReader.valueOr<
-      WebBlock<T>["properties"]["default"]["gap"]
-    >("gap", null);
 
     const isDefaultLayoutAccordion =
       returnBlock.properties.default.layout === "accordion";
@@ -2580,30 +2580,11 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
   const websiteReader =
     websitePresentationReader(mainProperties).nested("presentation");
 
-  const type = websiteReader.valueOr<Website<T>["properties"]["type"]>(
-    "webUI",
-    parent?.type ?? "traditional",
-  );
-
-  const status = websiteReader.valueOr<Website<T>["properties"]["status"]>(
-    "status",
-    parent?.status ?? "development",
-  );
-
-  const versionLabel = websiteReader.valueOr<
-    Website<T>["properties"]["versionLabel"]
-  >("version-label", parent?.versionLabel ?? "release");
-
-  const privacy = websiteReader.valueOr<Website<T>["properties"]["privacy"]>(
-    "privacy",
-    parent?.privacy ?? "public",
-  );
-
   const returnProperties: Website<T>["properties"] = {
-    type,
-    status,
-    versionLabel,
-    privacy,
+    type: parent?.type ?? "traditional",
+    status: parent?.status ?? "development",
+    versionLabel: parent?.versionLabel ?? "release",
+    privacy: parent?.privacy ?? "public",
     contact: parent?.contact ?? null,
     loadingVariant: "spinner",
     theme: { isThemeToggleDisplayed: true, defaultTheme: "system" },
@@ -2685,7 +2666,13 @@ function parseWebsiteProperties<T extends ReadonlyArray<string>>(
     }
   }
 
-  websiteReader.readInto(returnProperties, "loadingVariant", "loading-variant");
+  websiteReader.readAll(returnProperties, {
+    type: "webUI",
+    status: "status",
+    versionLabel: "version-label",
+    privacy: "privacy",
+    loadingVariant: "loading-variant",
+  });
   websiteReader.readInto(
     returnProperties.theme,
     "isThemeToggleDisplayed",

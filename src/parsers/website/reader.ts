@@ -115,6 +115,29 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
   }
 
   /**
+   * Overwrite several fields from the OCHRE properties naming them
+   *
+   * The defaults object carries the shape and the fallback values, and the
+   * label map carries the OCHRE names, so a component states each property
+   * twice rather than five times: once as a default and once as a label. The
+   * field's type comes from the defaults object, so no type argument is needed.
+   * @param target - The object holding the fields, pre-filled with defaults
+   * @param labels - The OCHRE property label for each field to overwrite
+   */
+  readAll<O extends object>(
+    target: O,
+    labels: Partial<Record<keyof O, string>>,
+  ): void {
+    for (const [key, label] of Object.entries(labels) as Array<
+      [keyof O, string | undefined]
+    >) {
+      if (label != null) {
+        this.readInto(target, key, label);
+      }
+    }
+  }
+
+  /**
    * Overwrite a UUID field from the UUID a labeled OCHRE property points at
    * @param target - The object holding the field
    * @param key - The field to overwrite
