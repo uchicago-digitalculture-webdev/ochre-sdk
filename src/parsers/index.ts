@@ -1,3 +1,4 @@
+import * as v from "valibot";
 import type { ParserOptions } from "#/parsers/helpers.js";
 import type {
   BaseItem,
@@ -141,6 +142,7 @@ import {
   parseXMLString,
   transformPermanentIdentificationUrl,
 } from "#/parsers/string.js";
+import { readEntries, readProperty } from "#/reflection.js";
 import { getXMLSourceIndex } from "#/xml/metadata.js";
 
 export type { ParserOptions } from "#/parsers/helpers.js";
@@ -596,14 +598,23 @@ function getHierarchyEntryCategory(key: string): HierarchyEntryCategory | null {
   return ITEM_CATEGORY_BY_ALIAS.get(key) ?? null;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value != null;
-}
+/**
+ * A group element wrapping child resources rather than being one itself
+ *
+ * A schema rather than a hand-written predicate: `v.is` narrows to exactly what
+ * it checked, and a wrapper is distinguished from a resource by carrying no
+ * `uuid`, which the `undefined` entry states rather than leaving to a
+ * `!("uuid" in value)` test whose false branch means nothing in particular.
+ */
+const resourceWrapperSchema = v.looseObject({
+  uuid: v.undefined(),
+  resource: v.array(v.unknown()),
+});
 
 function isResourceWrapper(
   value: unknown,
 ): value is { resource: Array<unknown> } {
-  return isRecord(value) && !("uuid" in value) && Array.isArray(value.resource);
+  return v.is(resourceWrapperSchema, value);
 }
 
 function sourceOrderSort(left: HierarchyEntry, right: HierarchyEntry): number {
@@ -617,16 +628,13 @@ function sourceOrderSort(left: HierarchyEntry, right: HierarchyEntry): number {
 }
 
 function collectHierarchyEntries(
-  hierarchy: Partial<Record<string, unknown>> | undefined,
+  hierarchy: unknown,
   categories?: ReadonlyArray<HierarchyEntryCategory>,
 ): Array<HierarchyEntry> {
   const entries: Array<HierarchyEntry> = [];
-  if (hierarchy == null) {
-    return entries;
-  }
 
   let fallbackIndex = 0;
-  for (const [key, values] of Object.entries(hierarchy)) {
+  for (const [key, values] of readEntries(hierarchy)) {
     const category = getHierarchyEntryCategory(key);
     if (
       category == null ||
@@ -2330,7 +2338,7 @@ function inferTopLevelCategory(rawOchre: RawOchre): ItemCategory {
 }
 
 function getSingleTopLevelRawItem<T>(
-  items: Array<T> | null | undefined,
+  items: ReadonlyArray<T> | null | undefined,
   category: string,
 ): T {
   if (items == null || items.length === 0) {
@@ -2355,13 +2363,12 @@ function parseTopLevelItem<
   category: U,
   options: ParserOptions<T> & { containedItemCategory?: V | ReadonlyArray<V> },
 ): Item<U, V, T, "embedded"> {
-  const rawItems = rawOchre as XMLItemLinks & Record<string, unknown>;
   const entry = ITEM_CATEGORIES[category];
   const facts = ITEM_CATEGORY_FACTS[category];
 
-  let rawCategoryItems: Array<unknown> | undefined;
+  let rawCategoryItems: ReadonlyArray<unknown> | undefined;
   for (const alias of facts.aliases) {
-    const aliasItems = rawItems[alias];
+    const aliasItems = readProperty(rawOchre, alias);
     if (Array.isArray(aliasItems)) {
       rawCategoryItems = aliasItems;
       break;

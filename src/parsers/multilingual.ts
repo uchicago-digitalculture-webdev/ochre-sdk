@@ -1,5 +1,6 @@
 import { DEFAULT_LANGUAGES } from "#/constants.js";
 import { serializeMDXText } from "#/parsers/mdx.js";
+import { readProperty } from "#/reflection.js";
 
 /**
  * One text entry for a language. When OCHRE exposes multiple entries for the
@@ -199,14 +200,21 @@ function resolveDefaultLanguageOption(
   return availableLanguages[0] ?? supportedLanguages[0] ?? DEFAULT_LANGUAGES[0];
 }
 
+/**
+ * Whether a constructor argument is the module's own normalized init
+ *
+ * The assertion is earned by the brand rather than by inspecting the fields:
+ * {@link MULTILINGUAL_STRING_INTERNAL_INIT} is a module-private symbol, so no
+ * caller outside this file can produce a value carrying it, and the single
+ * producer is `fromNormalized`. That is what makes the narrowing sound; a
+ * field-by-field check would only re-state what the brand already guarantees.
+ * @param value - The constructor argument
+ * @returns True when the value carries the internal brand
+ */
 function isInternalInit<T extends ReadonlyArray<string>>(
   value: unknown,
 ): value is MultilingualStringInternalInit<T> {
-  return (
-    typeof value === "object" &&
-    value != null &&
-    Object.hasOwn(value, MULTILINGUAL_STRING_INTERNAL_INIT)
-  );
+  return readProperty(value, MULTILINGUAL_STRING_INTERNAL_INIT) === true;
 }
 
 /**

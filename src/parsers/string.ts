@@ -81,10 +81,6 @@ const MDX_RENDER_ELEMENTS = {
   underline: "u",
 } as const satisfies Record<RenderOption, string>;
 
-function isXMLRichTextLink(value: unknown): value is XMLRichTextLink {
-  return typeof value === "object" && value != null;
-}
-
 function getLinkStringProperty(
   link: XMLRichTextLink,
   property: "uuid" | "href" | "height" | "width",
@@ -868,7 +864,7 @@ function getXMLRichTextLinks(item: XMLRichTextItem): Array<XMLRichTextLink> {
     }
 
     for (const rawLink of rawLinks) {
-      if (!isXMLRichTextLink(rawLink) || isTextAnnotationMarkerLink(rawLink)) {
+      if (isTextAnnotationMarkerLink(rawLink)) {
         continue;
       }
 

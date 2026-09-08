@@ -686,9 +686,9 @@ function parseCollectionDisplayedProperties<T extends ReadonlyArray<string>>(
     return null;
   }
 
-  return property.values
-    .filter((value) => value.uuid !== null)
-    .map((value) => ({ uuid: value.uuid!, label: value.label }));
+  return property.values.flatMap((value) =>
+    value.uuid === null ? [] : [{ uuid: value.uuid, label: value.label }],
+  );
 }
 
 function readStringOrNumber<T extends ReadonlyArray<string>>(

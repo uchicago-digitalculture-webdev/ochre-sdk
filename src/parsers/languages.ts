@@ -2,11 +2,22 @@ import * as v from "valibot";
 import type { XMLMetadata } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES } from "#/constants.js";
 import { parseStringLike } from "#/parsers/helpers.js";
+import { readArrayProperty, readEntries } from "#/reflection.js";
 import { iso639_3Schema } from "#/schemas.js";
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value != null;
-}
+/**
+ * A content entry carrying a language tag
+ *
+ * A schema rather than a hand-written predicate, because this is exactly a
+ * shape check: `v.is` narrows only what it has verified, and an array or a
+ * `Date` cannot pass because neither carries a string `lang`.
+ */
+const languageTaggedContentSchema = v.looseObject({ lang: v.string() });
+
+/**
+ * The language tag OCHRE uses for content that has no language
+ */
+const UNTAGGED_LANGUAGE = "zxx";
 
 function collectContentLanguages(value: unknown, languages: Set<string>): void {
   if (Array.isArray(value)) {
@@ -16,25 +27,16 @@ function collectContentLanguages(value: unknown, languages: Set<string>): void {
     return;
   }
 
-  if (!isRecord(value)) {
-    return;
-  }
-
-  const content = value.content;
-  if (Array.isArray(content)) {
-    for (const contentItem of content) {
-      if (!isRecord(contentItem)) {
-        continue;
-      }
-
-      const language = contentItem.lang;
-      if (typeof language === "string" && language !== "zxx") {
-        languages.add(language);
-      }
+  for (const contentItem of readArrayProperty(value, "content")) {
+    if (
+      v.is(languageTaggedContentSchema, contentItem) &&
+      contentItem.lang !== UNTAGGED_LANGUAGE
+    ) {
+      languages.add(contentItem.lang);
     }
   }
 
-  for (const child of Object.values(value)) {
+  for (const [, child] of readEntries(value)) {
     collectContentLanguages(child, languages);
   }
 }

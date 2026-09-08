@@ -53,13 +53,22 @@ export function getParserOptions<T extends ReadonlyArray<string>>(
   };
 }
 
-export function cleanObject<T extends Record<string, unknown>>(
-  object: T,
-): Partial<T> {
+/**
+ * Drop the keys whose value is undefined
+ *
+ * Constrained to `object` rather than `Record<string, unknown>`, which an
+ * interface never satisfies for want of an index signature. `Object.entries`
+ * cannot be typed precisely, so the one cast that costs is here rather than at
+ * the call site.
+ * @param object - The object to clean
+ * @returns A copy carrying only the defined keys
+ */
+export function cleanObject<T extends object>(object: T): Partial<T> {
+  const entries = Object.entries(object) as Array<[keyof T, T[keyof T]]>;
   const cleaned: Partial<T> = {};
-  for (const [key, value] of Object.entries(object)) {
+  for (const [key, value] of entries) {
     if (value !== undefined) {
-      cleaned[key as keyof T] = value as T[keyof T];
+      cleaned[key] = value;
     }
   }
 

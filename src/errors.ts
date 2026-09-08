@@ -1,39 +1,30 @@
 import * as v from "valibot";
+import { isObject, readEntries } from "#/reflection.js";
 
 type SchemaValidationIssue = v.BaseIssue<unknown>;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value != null;
-}
+/**
+ * The shape a valibot issue has to have for this module to render it
+ *
+ * A schema rather than a hand-written predicate: the fields being checked are
+ * exactly a shape, and `v.is` narrows without asserting anything unchecked. An
+ * array cannot pass, because it carries none of these fields.
+ */
+const schemaValidationIssueSchema = v.looseObject({
+  kind: v.string(),
+  type: v.string(),
+  message: v.string(),
+});
 
-function isSchemaValidationIssue(
-  value: unknown,
-): value is SchemaValidationIssue {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  return (
-    typeof value.kind === "string" &&
-    typeof value.type === "string" &&
-    typeof value.message === "string"
-  );
-}
+const schemaValidationIssuesSchema = v.pipe(
+  v.array(schemaValidationIssueSchema),
+  v.minLength(1),
+);
 
 function isSchemaValidationIssues(
   value: unknown,
 ): value is ReadonlyArray<SchemaValidationIssue> {
-  if (!Array.isArray(value) || value.length === 0) {
-    return false;
-  }
-
-  for (const item of value) {
-    if (!isSchemaValidationIssue(item)) {
-      return false;
-    }
-  }
-
-  return true;
+  return v.is(schemaValidationIssuesSchema, value);
 }
 
 function getIssuePath(issue: SchemaValidationIssue): string {
@@ -127,9 +118,9 @@ function formatCauseArray(value: ReadonlyArray<unknown>): string | null {
   return values.length > 0 ? values.join(", ") : null;
 }
 
-function formatCauseRecord(value: Record<string, unknown>): string | null {
+function formatCauseRecord(value: object): string | null {
   const values: Array<string> = [];
-  for (const [key, entryValue] of Object.entries(value)) {
+  for (const [key, entryValue] of readEntries(value)) {
     const formattedEntryValue = formatPrimitiveValue(entryValue);
     if (formattedEntryValue != null) {
       values.push(`${key}: ${formattedEntryValue}`);
@@ -153,7 +144,7 @@ function formatCauseValue(value: unknown): string | null {
     return formatCauseArray(value);
   }
 
-  if (isRecord(value)) {
+  if (isObject(value)) {
     return formatCauseRecord(value);
   }
 

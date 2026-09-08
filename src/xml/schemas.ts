@@ -1,6 +1,7 @@
 /* eslint-disable ts/no-use-before-define */
 import * as v from "valibot";
 import type * as XML from "#/xml/types.js";
+import { readArrayProperty } from "#/reflection.js";
 import { isPseudoUuid } from "#/schemas.js";
 import { parseDateTime } from "#/xml/dates.js";
 
@@ -2359,19 +2360,6 @@ export const XMLDataItem: v.GenericSchema<unknown, XML.XMLDataItem> = v.union(
   "XMLDataItem: Shape error",
 );
 
-function readRecursiveChildren(
-  item: unknown,
-  childKey: string,
-): ReadonlyArray<unknown> {
-  if (typeof item !== "object" || item == null) {
-    return [];
-  }
-
-  const children = (item as Record<string, unknown>)[childKey];
-
-  return Array.isArray(children) ? children : [];
-}
-
 /**
  * Whether any child of these items has children of its own
  *
@@ -2383,8 +2371,8 @@ function hasNestedRecursiveChildren(
   childKey: string,
 ): boolean {
   for (const item of items) {
-    for (const child of readRecursiveChildren(item, childKey)) {
-      if (readRecursiveChildren(child, childKey).length > 0) {
+    for (const child of readArrayProperty(item, childKey)) {
+      if (readArrayProperty(child, childKey).length > 0) {
         return true;
       }
     }

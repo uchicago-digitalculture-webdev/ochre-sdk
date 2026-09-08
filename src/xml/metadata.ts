@@ -1,34 +1,49 @@
-import type { XMLMetaData } from "fast-xml-parser";
 import { XMLParser } from "fast-xml-parser";
+import { isObject, readEntries, readProperty } from "#/reflection.js";
 
 const XML_METADATA_SYMBOL = XMLParser.getMetaDataSymbol() as symbol;
 
-type XMLMetadataRecord = Record<symbol, XMLMetaData | undefined>;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value != null;
+/**
+ * Read the source metadata `fast-xml-parser` attaches under a symbol key
+ *
+ * Returned as `unknown`: nothing here needs to know its shape, only whether it
+ * is there, and {@link getXMLSourceIndex} narrows the one field it reads.
+ * @param value - The value to read from
+ * @returns The metadata, or undefined when there is none
+ */
+function readXMLMetadata(value: unknown): unknown {
+  return readProperty(value, XML_METADATA_SYMBOL);
 }
 
-function getXMLMetadata(value: unknown): XMLMetaData | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  return (value as XMLMetadataRecord)[XML_METADATA_SYMBOL] ?? null;
-}
-
+/**
+ * Read the offset a node started at in the source XML
+ * @param value - The parsed node
+ * @returns The offset, or null when the node carries no source metadata
+ * @internal
+ */
 export function getXMLSourceIndex(value: unknown): number | null {
-  const startIndex = getXMLMetadata(value)?.startIndex;
+  const startIndex = readProperty(readXMLMetadata(value), "startIndex");
+
   return typeof startIndex === "number" ? startIndex : null;
 }
 
+/**
+ * Re-attach the source metadata validation dropped
+ *
+ * `v.safeParse` returns a fresh object graph and does not carry over the
+ * non-enumerable symbol `fast-xml-parser` records offsets under, so it is
+ * grafted back on by walking the validated output alongside the raw input.
+ * @param output - The validated output to graft onto
+ * @param input - The raw parsed input to read metadata from
+ * @internal
+ */
 export function restoreXMLMetadata(output: unknown, input: unknown): void {
-  if (!isRecord(output) || !isRecord(input)) {
+  if (!isObject(output) || !isObject(input)) {
     return;
   }
 
-  const metadata = getXMLMetadata(input);
-  if (metadata != null) {
+  const metadata = readXMLMetadata(input);
+  if (metadata !== undefined) {
     Object.defineProperty(output, XML_METADATA_SYMBOL, {
       value: metadata,
       enumerable: false,
@@ -43,7 +58,7 @@ export function restoreXMLMetadata(output: unknown, input: unknown): void {
     return;
   }
 
-  for (const [key, outputValue] of Object.entries(output)) {
-    restoreXMLMetadata(outputValue, input[key]);
+  for (const [key, outputValue] of readEntries(output)) {
+    restoreXMLMetadata(outputValue, readProperty(input, key));
   }
 }
