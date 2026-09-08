@@ -463,10 +463,11 @@ describe("parseItem", () => {
     expect(resource.identification.label.getExactText("eng")).toBe(
       "Primary label",
     );
-    expect(resource.identification.label.getExactTexts("eng")).toStrictEqual([
-      "Primary label",
-      "Secondary label",
-    ]);
+    expect(
+      resource.identification.label
+        .getExactEntries("eng")
+        .map((entry) => entry.text),
+    ).toStrictEqual(["Primary label", "Secondary label"]);
     expect(resource.identification.label.getExactEntries("eng")).toStrictEqual([
       { text: "Primary label", richText: "Primary label", isPrimary: true },
       {

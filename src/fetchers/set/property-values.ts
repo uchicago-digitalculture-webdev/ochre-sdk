@@ -95,11 +95,20 @@ function parsePropertyValueBooleanContent(
   return rawValue.toLocaleLowerCase("en-US") === "true";
 }
 
+/**
+ * The prefix OCHRE puts on every `dataType` attribute
+ *
+ * Kept as a constant because the facet XQuery has to strip the same prefix
+ * server-side: it compares `@dataType` against the unprefixed names, so a
+ * prefixed value falls through every typed branch.
+ */
+const XML_SCHEMA_TYPE_PREFIX = "xs:";
+
 function normalizePropertyValueDataType(
   dataType: string,
 ): PropertyValueQueryItem["dataType"] {
-  const normalizedDataType = dataType.startsWith("xs:")
-    ? dataType.slice(3)
+  const normalizedDataType = dataType.startsWith(XML_SCHEMA_TYPE_PREFIX)
+    ? dataType.slice(XML_SCHEMA_TYPE_PREFIX.length)
     : dataType;
 
   switch (normalizedDataType) {
@@ -332,6 +341,12 @@ function buildXQuery(parameters: {
   )
 };
 
+declare function local:normalize-data-type($data-type) {
+  if (starts-with($data-type, ${stringLiteral(XML_SCHEMA_TYPE_PREFIX)}))
+  then substring($data-type, ${XML_SCHEMA_TYPE_PREFIX.length + 1})
+  else $data-type
+};
+
 declare function local:value-display-text($v) {
   if ($v/content)
   then string-join($v/content[@xml:lang="eng"]//text(), "")
@@ -463,7 +478,7 @@ let $_property-aggregation := xdmp:eager(
     for $v in $p/value${valueFilter}${NOT_SUPPLEMENTAL_PREDICATE}
     let $value-uuid := string($v/@uuid)
     let $raw-value := string($v/@rawValue)
-    let $data-type := string($v/@dataType)
+    let $data-type := local:normalize-data-type(string($v/@dataType))
     let $display := local:value-display-text($v)
     let $label-content := local:value-label-content($v)
     let $content := local:value-content($data-type, $raw-value, $value-uuid, $display)

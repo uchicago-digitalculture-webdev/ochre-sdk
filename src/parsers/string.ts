@@ -1034,11 +1034,10 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
               languages,
             )
         : MultilingualString.create(contentItem.lang, "", languages);
-    const content =
+    const contentText =
       rendering === "plain"
         ? linkContent.getExactText(contentItem.lang)
         : linkContent.getExactRichText(contentItem.lang);
-    const contentText = content ?? "";
 
     result += renderRichTextLink(
       item,
@@ -1058,13 +1057,14 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
  * @param item - XML-based rich text item to parse
  * @param options - Options for parsing
  * @param options.languages - Languages of the content
+ * @param options.defaultLanguage - The language the dataset declares as its default
  * @returns Plain and rich formatted strings
  *
  * @internal
  */
 export function parseXMLContent<V extends ReadonlyArray<string>>(
   item: XMLContent,
-  options: { languages: V },
+  options: { languages: V; defaultLanguage?: V[number] },
 ): MultilingualString<V> {
   const { languages } = options;
   const aliases = extractAliases(item) ?? [];
@@ -1082,7 +1082,10 @@ export function parseXMLContent<V extends ReadonlyArray<string>>(
   }
 
   if (Object.keys(content).length > 0) {
-    return MultilingualString.fromEntries(content, languages, { aliases });
+    return MultilingualString.fromEntries(content, languages, {
+      aliases,
+      defaultLanguage: options.defaultLanguage,
+    });
   }
 
   for (const contentItem of item.content) {
@@ -1103,10 +1106,14 @@ export function parseXMLContent<V extends ReadonlyArray<string>>(
 
     return MultilingualString.fromEntries(fallbackContent, languages, {
       aliases,
+      defaultLanguage: options.defaultLanguage,
     });
   }
 
-  return MultilingualString.empty(languages, { aliases });
+  return MultilingualString.empty(languages, {
+    aliases,
+    defaultLanguage: options.defaultLanguage,
+  });
 }
 
 function parseXMLContentItem<V extends ReadonlyArray<string>>(

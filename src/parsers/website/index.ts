@@ -3017,8 +3017,8 @@ export function parseWebsite<
   const rawOchre = data.result.ochre;
   const metadataLanguages = parseMetadataLanguages(rawOchre);
   const languages = resolveLanguages(options?.languages, metadataLanguages);
-  const parserOptions: ParserOptions<T> = { languages };
   const defaultLanguage = resolveDefaultLanguage(rawOchre, languages);
+  const parserOptions: ParserOptions<T> = { languages, defaultLanguage };
   const websiteTree = rawOchre.tree[0];
   if (websiteTree == null) {
     throw new Error("Website tree not found", { cause: data });

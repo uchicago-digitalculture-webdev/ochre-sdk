@@ -22,6 +22,13 @@ export type MultilingualStringJSON<
 > = {
   content: Partial<Record<T[number], Array<MultilingualStringEntry>>>;
   aliases: Array<string>;
+  /**
+   * The language reads fall back to first
+   *
+   * Optional so payloads written before it existed still parse; when absent the
+   * first available language is used, which is what the old shape implied.
+   */
+  defaultLanguage?: string;
 };
 
 export type MultilingualStringObject<
@@ -179,6 +186,19 @@ function getImplicitLanguages(
   return languages.length > 0 ? languages : [...DEFAULT_LANGUAGES];
 }
 
+/**
+ * Pick the language reads should fall back to first
+ * @param availableLanguages - The languages carrying content, in order
+ * @param supportedLanguages - Every language the string was created for
+ * @returns The default language
+ */
+function resolveDefaultLanguageOption(
+  availableLanguages: ReadonlyArray<string>,
+  supportedLanguages: ReadonlyArray<string>,
+): string {
+  return availableLanguages[0] ?? supportedLanguages[0] ?? DEFAULT_LANGUAGES[0];
+}
+
 function isInternalInit<T extends ReadonlyArray<string>>(
   value: unknown,
 ): value is MultilingualStringInternalInit<T> {
@@ -276,8 +296,7 @@ export class MultilingualString<
       const defaultOptions: Required<MultilingualOptions> = {
         defaultLanguage:
           options.defaultLanguage ??
-          availableLanguages[0] ??
-          actualLanguages[0]!,
+          resolveDefaultLanguageOption(availableLanguages, actualLanguages),
         availableLanguages: actualLanguages,
         aliases: normalizeAliases(options.aliases),
       };
@@ -305,7 +324,8 @@ export class MultilingualString<
     );
     const defaultOptions: Required<MultilingualOptions> = {
       defaultLanguage:
-        options.defaultLanguage ?? availableLanguages[0] ?? languages[0]!,
+        options.defaultLanguage ??
+        resolveDefaultLanguageOption(availableLanguages, languages),
       availableLanguages: languages,
       aliases: normalizeAliases(options.aliases),
     };
@@ -397,7 +417,11 @@ export class MultilingualString<
     const content = json.content as Partial<
       Record<string, ReadonlyArray<MultilingualStringInput>>
     >;
-    const mergedOptions = { ...options, aliases: json.aliases };
+    const mergedOptions = {
+      defaultLanguage: json.defaultLanguage,
+      ...options,
+      aliases: json.aliases,
+    };
 
     if (languages === undefined) {
       return this.fromEntries(content, undefined, mergedOptions);
@@ -454,8 +478,40 @@ export class MultilingualString<
     this._aliases = parsed._aliases;
   }
 
-  private getPrimaryEntry(language: T[number]): MultilingualStringEntry | null {
-    const entries = this._content[language] ?? [];
+  /**
+   * Resolve the entries to read for a language
+   *
+   * The fallback order is requested language, then the dataset's default
+   * language, then the first language that has any content. This is the only
+   * place that order is written down; every reader below is a projection of it.
+   */
+  private resolveEntries(
+    language: T[number] | undefined,
+    isExact: boolean,
+  ): ReadonlyArray<MultilingualStringEntry> {
+    const candidateLanguages: Array<T[number] | undefined> = isExact
+      ? [language]
+      : [language, this._options.defaultLanguage, ...this._availableLanguages];
+
+    for (const candidateLanguage of candidateLanguages) {
+      if (candidateLanguage == null) {
+        continue;
+      }
+
+      const entries = this._content[candidateLanguage] ?? [];
+      if (entries.length > 0) {
+        return entries;
+      }
+    }
+
+    return [];
+  }
+
+  private resolvePrimaryEntry(
+    language: T[number] | undefined,
+    isExact: boolean,
+  ): MultilingualStringEntry | null {
+    const entries = this.resolveEntries(language, isExact);
     for (const entry of entries) {
       if (entry.isPrimary) {
         return entry;
@@ -466,290 +522,108 @@ export class MultilingualString<
   }
 
   /**
-   * Get text in a specific language with automatic fallback
+   * Get text in a specific language, falling back when it has none
    */
   getText(language?: T[number]): string {
-    if (language == null) {
-      const defaultEntry = this.getPrimaryEntry(this._options.defaultLanguage);
-      if (defaultEntry != null) return defaultEntry.text;
-    }
-
-    if (language != null) {
-      const requestedEntry = this.getPrimaryEntry(language);
-      if (requestedEntry != null) return requestedEntry.text;
-    }
-
-    const defaultEntry = this.getPrimaryEntry(this._options.defaultLanguage);
-    if (defaultEntry != null) return defaultEntry.text;
-
-    for (const availableLanguage of this._availableLanguages) {
-      const entry = this.getPrimaryEntry(availableLanguage);
-      if (entry != null) return entry.text;
-    }
-
-    return "";
+    return this.resolvePrimaryEntry(language, false)?.text ?? "";
   }
 
   /**
-   * Get rich text in a specific language with automatic fallback
+   * Get rich text in a specific language, falling back when it has none
    */
   getRichText(language?: T[number]): string {
-    if (language == null) {
-      const defaultEntry = this.getPrimaryEntry(this._options.defaultLanguage);
-      if (defaultEntry != null) return defaultEntry.richText;
-    }
-
-    if (language != null) {
-      const requestedEntry = this.getPrimaryEntry(language);
-      if (requestedEntry != null) return requestedEntry.richText;
-    }
-
-    const defaultEntry = this.getPrimaryEntry(this._options.defaultLanguage);
-    if (defaultEntry != null) return defaultEntry.richText;
-
-    for (const availableLanguage of this._availableLanguages) {
-      const entry = this.getPrimaryEntry(availableLanguage);
-      if (entry != null) return entry.richText;
-    }
-
-    return "";
+    return this.resolvePrimaryEntry(language, false)?.richText ?? "";
   }
 
   /**
-   * Get primary text in a specific language without fallback
+   * Get text in a specific language, with no fallback
    */
-  getExactText(language: T[number]): string | null {
-    return this.getPrimaryEntry(language)?.text ?? null;
+  getExactText(language: T[number]): string {
+    return this.resolvePrimaryEntry(language, true)?.text ?? "";
   }
 
   /**
-   * Get primary rich text in a specific language without fallback
+   * Get rich text in a specific language, with no fallback
    */
-  getExactRichText(language: T[number]): string | null {
-    return this.getPrimaryEntry(language)?.richText ?? null;
+  getExactRichText(language: T[number]): string {
+    return this.resolvePrimaryEntry(language, true)?.richText ?? "";
   }
 
   /**
-   * Get all text entries in a specific language without fallback
-   */
-  getExactTexts(language: T[number]): Array<string> {
-    const texts: Array<string> = Array.from(
-      this._content[language] ?? [],
-      (entry) => entry.text,
-    );
-
-    return texts;
-  }
-
-  /**
-   * Get all rich text entries in a specific language without fallback
-   */
-  getExactRichTexts(language: T[number]): Array<string> {
-    const texts: Array<string> = Array.from(
-      this._content[language] ?? [],
-      (entry) => entry.richText,
-    );
-
-    return texts;
-  }
-
-  /**
-   * Get all text entries in a specific language with fallback
-   */
-  getTexts(language?: T[number]): Array<string> {
-    if (language != null && (this._content[language]?.length ?? 0) > 0) {
-      return this.getExactTexts(language);
-    }
-
-    const defaultLanguage = this._options.defaultLanguage as T[number];
-    if ((this._content[defaultLanguage]?.length ?? 0) > 0) {
-      return this.getExactTexts(defaultLanguage);
-    }
-
-    const firstLanguage = this._availableLanguages[0];
-    return firstLanguage == null ? [] : this.getExactTexts(firstLanguage);
-  }
-
-  /**
-   * Get all rich text entries in a specific language with fallback
-   */
-  getRichTexts(language?: T[number]): Array<string> {
-    if (language != null && (this._content[language]?.length ?? 0) > 0) {
-      return this.getExactRichTexts(language);
-    }
-
-    const defaultLanguage = this._options.defaultLanguage as T[number];
-    if ((this._content[defaultLanguage]?.length ?? 0) > 0) {
-      return this.getExactRichTexts(defaultLanguage);
-    }
-
-    const firstLanguage = this._availableLanguages[0];
-    return firstLanguage == null ? [] : this.getExactRichTexts(firstLanguage);
-  }
-
-  /**
-   * Get all entries in a specific language without fallback
+   * Get every entry for a specific language, with no fallback
    */
   getExactEntries(language: T[number]): Array<MultilingualStringEntry> {
-    const entries: Array<MultilingualStringEntry> = Array.from(
-      this._content[language] ?? [],
-      (entry) => ({
-        text: entry.text,
-        richText: entry.richText,
-        isPrimary: entry.isPrimary,
-      }),
-    );
-
-    return entries;
+    return Array.from(this.resolveEntries(language, true), (entry) => ({
+      ...entry,
+    }));
   }
 
   /**
-   * Get all entries in a specific language with fallback
-   */
-  getEntries(language?: T[number]): Array<MultilingualStringEntry> {
-    if (language != null && (this._content[language]?.length ?? 0) > 0) {
-      return this.getExactEntries(language);
-    }
-
-    const defaultLanguage = this._options.defaultLanguage as T[number];
-    if ((this._content[defaultLanguage]?.length ?? 0) > 0) {
-      return this.getExactEntries(defaultLanguage);
-    }
-
-    const firstLanguage = this._availableLanguages[0];
-    return firstLanguage == null ? [] : this.getExactEntries(firstLanguage);
-  }
-
-  /**
-   * Get aliases carried by OCHRE as zxx content
+   * Get the alias values OCHRE carries as `zxx` content
    */
   getAliases(): Array<string> {
     return [...this._aliases];
   }
 
   /**
-   * Check if text exists for a specific language
+   * Get the languages that actually carry content
    */
-  hasLanguage(language: T[number]): boolean {
-    return (this._content[language]?.length ?? 0) > 0;
+  getAvailableLanguages(): Array<T[number]> {
+    return [...this._availableLanguages];
   }
 
   /**
-   * Check if aliases exist
-   */
-  hasAliases(): boolean {
-    return this._aliases.length > 0;
-  }
-
-  /**
-   * Get all available languages
-   */
-  getAvailableLanguages(): ReadonlyArray<T[number]> {
-    return this._availableLanguages;
-  }
-
-  /**
-   * Get all supported languages (the full language array passed to constructor)
-   */
-  getSupportedLanguages(): T {
-    return this._options.availableLanguages as T;
-  }
-
-  /**
-   * Check if the multilingual string is empty (no content in any language)
-   */
-  isEmpty(): boolean {
-    return this._availableLanguages.length === 0;
-  }
-
-  /**
-   * Check if the multilingual string has any content
-   */
-  hasContent(): boolean {
-    for (const language of this._availableLanguages) {
-      const entries = this._content[language] ?? [];
-      for (const entry of entries) {
-        if (entry.text.trim().length > 0 || entry.richText.trim().length > 0) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Get the default language
+   * Get the language reads fall back to before trying the rest
    */
   getDefaultLanguage(): T[number] {
     return this._options.defaultLanguage;
   }
 
   /**
-   * Add or update the primary text for a language (returns new instance)
+   * Set the text for a language, or append another entry to it
+   * @param language - The language to write
+   * @param text - The text to write
+   * @param options - Write options
+   * @param options.shouldAppend - Append as an additional entry instead of replacing
+   * @returns A new multilingual string
    */
-  withText(
+  with(
     language: T[number],
     text: MultilingualStringInput,
+    options: { shouldAppend?: boolean } = {},
   ): MultilingualString<T> {
     const newContent = cloneContent(this._content);
-    newContent[language] = entriesFromTexts([text]);
-    const newAvailableLanguages = getLanguagesWithEntries(
-      newContent,
-      this._options.availableLanguages as ReadonlyArray<T[number]>,
-    );
+    newContent[language] =
+      options.shouldAppend === true
+        ? normalizePrimary([
+            ...(newContent[language] ?? []),
+            { ...normalizeInputText(text), isPrimary: false },
+          ])
+        : entriesFromTexts([text]);
 
     return MultilingualString.fromNormalized(
       newContent,
       this._options,
-      newAvailableLanguages,
+      getLanguagesWithEntries(
+        newContent,
+        this._options.availableLanguages as ReadonlyArray<T[number]>,
+      ),
     );
   }
 
   /**
-   * Add another text entry for a language (returns new instance)
+   * Remove the content for a language
+   *
+   * When the removed language was the default, the default moves to the first
+   * language that still has content, so reads keep resolving.
+   * @param language - The language to remove
+   * @returns A new multilingual string
    */
-  withEntry(
-    language: T[number],
-    text: MultilingualStringInput,
-  ): MultilingualString<T> {
-    const newContent = cloneContent(this._content);
-    const existingEntries = newContent[language] ?? [];
-    newContent[language] = normalizePrimary([
-      ...existingEntries,
-      { ...normalizeInputText(text), isPrimary: false },
-    ]);
-    const newAvailableLanguages = getLanguagesWithEntries(
-      newContent,
-      this._options.availableLanguages as ReadonlyArray<T[number]>,
-    );
-
-    return MultilingualString.fromNormalized(
-      newContent,
-      this._options,
-      newAvailableLanguages,
-    );
-  }
-
-  /**
-   * Replace aliases (returns new instance)
-   */
-  withAliases(aliases: ReadonlyArray<string>): MultilingualString<T> {
-    return MultilingualString.fromNormalized(
-      this._content,
-      { ...this._options, aliases: normalizeAliases(aliases) },
-      this._availableLanguages,
-    );
-  }
-
-  /**
-   * Remove text for a language (returns new instance)
-   */
-  withoutLanguage(language: T[number]): MultilingualString<T> {
+  without(language: T[number]): MultilingualString<T> {
+    const currentContent = cloneContent(this._content);
     const newContent: Partial<
       Record<T[number], Array<MultilingualStringEntry>>
     > = {};
-    const currentContent = cloneContent(this._content);
     for (const supportedLanguage of this._options
       .availableLanguages as ReadonlyArray<T[number]>) {
       if (supportedLanguage !== language) {
@@ -763,93 +637,36 @@ export class MultilingualString<
       newContent,
       this._options.availableLanguages as ReadonlyArray<T[number]>,
     );
-    const newDefaultLanguage =
-      this._options.defaultLanguage === language
-        ? (newAvailableLanguages[0] ?? this._options.availableLanguages[0])
-        : this._options.defaultLanguage;
 
     return MultilingualString.fromNormalized(
       newContent,
-      { ...this._options, defaultLanguage: newDefaultLanguage! },
+      {
+        ...this._options,
+        defaultLanguage:
+          this._options.defaultLanguage === language
+            ? resolveDefaultLanguageOption(
+                newAvailableLanguages,
+                this._options.availableLanguages,
+              )
+            : this._options.defaultLanguage,
+      },
       newAvailableLanguages,
     );
   }
 
   /**
-   * Transform all language versions (returns new instance)
-   */
-  map(
-    function_: (text: string, language: T[number]) => string,
-  ): MultilingualString<T> {
-    const newContent: Partial<
-      Record<T[number], Array<MultilingualStringEntry>>
-    > = {};
-    for (const language of this._availableLanguages) {
-      const mappedEntries: Array<MultilingualStringEntry> = Array.from(
-        this._content[language] ?? [],
-        (entry) => ({
-          text: function_(entry.text, language),
-          richText: function_(entry.richText, language),
-          isPrimary: entry.isPrimary,
-        }),
-      );
-      newContent[language] = normalizePrimary(mappedEntries);
-    }
-
-    return MultilingualString.fromNormalized(
-      newContent,
-      this._options,
-      this._availableLanguages,
-    );
-  }
-
-  /**
-   * Filter languages based on predicate (returns new instance)
-   */
-  filter(
-    shouldInclude: (text: string, language: T[number]) => boolean,
-  ): MultilingualString<T> {
-    const newContent: Partial<
-      Record<T[number], Array<MultilingualStringEntry>>
-    > = {};
-
-    for (const language of this._availableLanguages) {
-      const entries: Array<MultilingualStringEntry> = [];
-      const languageEntries = this._content[language] ?? [];
-      for (const entry of languageEntries) {
-        if (shouldInclude(entry.text, language)) {
-          entries.push(entry);
-        }
-      }
-      newContent[language] = normalizePrimary(entries);
-    }
-
-    const newAvailableLanguages = getLanguagesWithEntries(
-      newContent,
-      this._options.availableLanguages as ReadonlyArray<T[number]>,
-    );
-    const defaultLanguage = this._options.defaultLanguage as T[number];
-    const newDefaultLanguage =
-      (newContent[defaultLanguage]?.length ?? 0) > 0
-        ? this._options.defaultLanguage
-        : (newAvailableLanguages[0] ?? this._options.availableLanguages[0]);
-
-    return MultilingualString.fromNormalized(
-      newContent,
-      { ...this._options, defaultLanguage: newDefaultLanguage! },
-      newAvailableLanguages,
-    );
-  }
-
-  /**
-   * Get the string representation (uses default language)
+   * Get the string representation, using the default language
    */
   toString(): string {
     return this.getText();
   }
 
   /**
-   * Get JSON representation
+   * Get the JSON representation
+   *
+   * Carries `defaultLanguage`, because it is not derivable from the content:
+   * without it {@link MultilingualString.fromJSON} would fall back to the first
+   * available language and `getText()` would resolve differently.
    */
   toJSON(): MultilingualStringJSON<T> {
     const content: Partial<Record<T[number], Array<MultilingualStringEntry>>> =
@@ -858,6 +675,10 @@ export class MultilingualString<
       content[language] = this.getExactEntries(language);
     }
 
-    return { content, aliases: this.getAliases() };
+    return {
+      content,
+      aliases: this.getAliases(),
+      defaultLanguage: this._options.defaultLanguage,
+    };
   }
 }

@@ -139,23 +139,30 @@ const XMLRichTextEnvelope = {
   ),
 };
 
-const XMLString: v.GenericSchema<unknown, XMLStringType> = v.lazy(() =>
-  v.object(
-    {
-      payload: v.optional(
-        v.string("XMLString: payload is string and optional"),
-      ),
-      rend: v.optional(v.string("XMLString: rend is string and optional")),
-      whitespace: v.optional(
-        v.string("XMLString: whitespace is string and optional"),
-      ),
-      ...XMLRichTextEnvelope,
-      string: v.optional(
-        v.array(XMLString, "XMLString: string is array of XMLString"),
-      ),
-    },
-    "XMLString: Shape error",
+/**
+ * The entries every string-like OCHRE element carries
+ *
+ * Spread rather than re-listed by the shapes that embed a string envelope, so
+ * a shape cannot declare the envelope in its type and forget to validate it.
+ */
+const XMLStringEntries = {
+  payload: v.optional(v.string("XMLString: payload is string and optional")),
+  rend: v.optional(v.string("XMLString: rend is string and optional")),
+  whitespace: v.optional(
+    v.string("XMLString: whitespace is string and optional"),
   ),
+  ...XMLRichTextEnvelope,
+  string: v.optional(
+    v.array(
+      v.lazy(() => XMLString),
+      "XMLString: string is array of XMLString",
+    ),
+  ),
+};
+
+const XMLString: v.GenericSchema<unknown, XMLStringType> = v.object(
+  XMLStringEntries,
+  "XMLString: Shape error",
 );
 
 const XMLContent = v.object(
@@ -341,6 +348,7 @@ const XMLMetadata: v.GenericSchema<unknown, XMLMetadataType> = v.object({
 
 const XMLLicense: v.GenericSchema<unknown, XMLLicenseType> = v.object(
   {
+    ...XMLStringEntries,
     payload: v.string("XMLLicense: payload is string and required"),
     target: v.optional(
       v.pipe(
@@ -646,12 +654,8 @@ const XMLImageMap: v.GenericSchema<unknown, XMLImageMapType> = v.object(
 
 const XMLNote: v.GenericSchema<unknown, XMLNoteType> = v.object(
   {
+    ...XMLStringEntries,
     content: v.optional(XMLContent.entries.content),
-    payload: v.optional(v.string("XMLNote: payload is string and optional")),
-    rend: v.optional(v.string("XMLNote: rend is string and optional")),
-    whitespace: v.optional(
-      v.string("XMLNote: whitespace is string and optional"),
-    ),
     noteNo: XMLOptionalNumber,
     title: v.optional(v.string("XMLNote: title is string and optional")),
     date: v.optional(customDateTime("XMLNote: date is not a valid datetime")),
@@ -1201,6 +1205,7 @@ const XMLHeading: v.GenericSchema<unknown, XMLHeadingType> = v.intersect([
 const XMLTree: v.GenericSchema<unknown, XMLTreeType> = v.object(
   {
     ...XMLBaseItem.entries,
+    type: v.optional(v.string("XMLTree: type is string and optional")),
     date: v.optional(
       v.union([
         customDateTime("XMLTree: date is not a valid datetime"),
@@ -1431,6 +1436,7 @@ const XMLInterpretation: v.GenericSchema<unknown, XMLInterpretationType> =
 const XMLConcept: v.GenericSchema<unknown, XMLConceptType> = v.object(
   {
     ...XMLBaseItem.entries,
+    status: v.optional(v.literal("live", "XMLConcept: status is live")),
     image: v.optional(XMLImage),
     interpretations: v.optional(
       v.object({ interpretation: v.array(XMLInterpretation) }),
@@ -2062,6 +2068,15 @@ const XMLWebsiteTree: v.GenericSchema<unknown, XMLWebsiteTreeType> = v.lazy(
           ]),
         ),
         links: v.optional(v.lazy(() => XMLLink)),
+        reverseLinks: v.optional(
+          v.union([
+            v.lazy(() => XMLLink),
+            v.lazy(() => XMLDataItem),
+            v.array(
+              v.union([v.lazy(() => XMLLink), v.lazy(() => XMLDataItem)]),
+            ),
+          ]),
+        ),
         notes: v.optional(v.object({ note: v.array(XMLNote) })),
         bibliographies: v.optional(
           v.object({ bibliography: v.array(v.lazy(() => XMLBibliography)) }),

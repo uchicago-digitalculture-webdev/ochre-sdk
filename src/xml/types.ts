@@ -199,6 +199,7 @@ export type XMLNote = Partial<XMLContent> &
   XMLString & {
     noteNo?: number;
     title?: string;
+    date?: Date;
     authors?: { author: Array<XMLPerson> };
   };
 

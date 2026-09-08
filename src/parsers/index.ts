@@ -1337,14 +1337,7 @@ function parseEmbeddedItemEntry<T extends ReadonlyArray<string>>(
 ): Item<ItemCategory, SetItemCategory, T, "embedded"> | null {
   const parse = ITEM_CATEGORIES[entry.category].parseEmbedded;
 
-  return parse == null
-    ? null
-    : (parse(entry.item, options) as Item<
-        ItemCategory,
-        SetItemCategory,
-        T,
-        "embedded"
-      >);
+  return parse == null ? null : parse(entry.item, options);
 }
 
 function parseItemHierarchy<T extends ReadonlyArray<string>>(
@@ -1381,7 +1374,7 @@ function parseSetItemHierarchy<T extends ReadonlyArray<string>>(
     const parse = ITEM_CATEGORIES[entry.category].parseSetItem;
 
     if (parse != null) {
-      items.push(parse(entry.item, options) as SetItem<SetItemCategory, T>);
+      items.push(parse(entry.item, options));
     }
   }
 
@@ -1708,7 +1701,7 @@ export function parseLinks<T extends ReadonlyArray<string>>(
     const parse = ITEM_CATEGORIES[entry.category].parseLink;
 
     if (parse != null) {
-      links.push(parse(entry.item, options) as ItemLinks<T>[number]);
+      links.push(parse(entry.item, options));
     }
   }
 
@@ -2664,10 +2657,12 @@ export function parseItem(
   const rawOchre = rawData.result.ochre;
   const metadataLanguages = parseMetadataLanguages(rawOchre);
   const languagesToUse = resolveLanguages(options.languages, metadataLanguages);
+  const defaultLanguage = resolveDefaultLanguage(rawOchre, languagesToUse);
   const parserOptions: ParserOptions<ReadonlyArray<string>> & {
     containedItemCategory?: ContainedItemCategoryOption<ItemCategory>;
   } = {
     languages: languagesToUse,
+    defaultLanguage,
     containedItemCategory: options.containedItemCategory,
   };
   const inferredCategory =
@@ -2684,7 +2679,6 @@ export function parseItem(
       );
     }
   }
-  const defaultLanguage = resolveDefaultLanguage(rawOchre, languagesToUse);
   const belongsTo = {
     uuid: rawOchre.uuidBelongsTo,
     abbreviation: rawOchre.belongsTo,

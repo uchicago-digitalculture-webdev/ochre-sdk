@@ -28,7 +28,17 @@ export type FetchLanguages<
     ? TLanguages
     : ReadonlyArray<string>;
 
-export type ParserOptions<T extends ReadonlyArray<string>> = { languages: T };
+export type ParserOptions<T extends ReadonlyArray<string>> = {
+  languages: T;
+  /**
+   * The language the dataset declares as its default
+   *
+   * Threaded into every {@link MultilingualString} so a read with no language
+   * resolves to the dataset's default rather than whichever language happens to
+   * come first in the payload.
+   */
+  defaultLanguage?: T[number];
+};
 
 const FALLBACK_PARSER_OPTIONS: ParserOptions<ReadonlyArray<string>> = {
   languages: DEFAULT_LANGUAGES,
@@ -37,7 +47,10 @@ const FALLBACK_PARSER_OPTIONS: ParserOptions<ReadonlyArray<string>> = {
 export function getParserOptions<T extends ReadonlyArray<string>>(
   options: ParserOptions<T>,
 ): ParserOptions<T> {
-  return { languages: options.languages };
+  return {
+    languages: options.languages,
+    defaultLanguage: options.defaultLanguage,
+  };
 }
 
 export function cleanObject<T extends Record<string, unknown>>(
@@ -97,7 +110,9 @@ export function multilingualFromText<T extends ReadonlyArray<string>>(
     content[language as T[number]] = text;
   }
 
-  return MultilingualString.fromObject(content, options.languages);
+  return MultilingualString.fromObject(content, options.languages, {
+    defaultLanguage: options.defaultLanguage,
+  });
 }
 
 export function parseContentLike<T extends ReadonlyArray<string>>(
@@ -116,7 +131,10 @@ export function parseContentLike<T extends ReadonlyArray<string>>(
     return multilingualFromText(parseXMLString(value), options);
   }
 
-  return parseXMLContent<T>(value, { languages: options.languages });
+  return parseXMLContent<T>(value, {
+    languages: options.languages,
+    defaultLanguage: options.defaultLanguage,
+  });
 }
 
 export function parseRequiredContentLike<T extends ReadonlyArray<string>>(
@@ -125,7 +143,9 @@ export function parseRequiredContentLike<T extends ReadonlyArray<string>>(
 ): MultilingualString<T> {
   return (
     parseContentLike(value, options) ??
-    MultilingualString.empty(options.languages)
+    MultilingualString.empty(options.languages, {
+      defaultLanguage: options.defaultLanguage,
+    })
   );
 }
 
@@ -149,7 +169,10 @@ export function parseStringContent(
   }
 
   if (isXMLContent(value)) {
-    return parseXMLContent(value, { languages: options.languages }).getText();
+    return parseXMLContent(value, {
+      languages: options.languages,
+      defaultLanguage: options.defaultLanguage,
+    }).getText();
   }
 
   return parseXMLString(value).text;
