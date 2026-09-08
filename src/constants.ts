@@ -82,6 +82,11 @@ export const XML_PARSER_OPTIONS: X2jOptions = {
 
 export const DEFAULT_LANGUAGES = ["eng"] as const;
 
+/**
+ * The default page size to use for fetching paginated items
+ */
+export const DEFAULT_PAGE_SIZE = 48;
+
 export const OCHRE_ENDPOINT =
   "https://ochre.lib.uchicago.edu/ochre/v2/ochre.php";
 

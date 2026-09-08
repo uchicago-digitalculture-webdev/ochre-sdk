@@ -30,11 +30,6 @@ type BibliographyPropertySource<T extends LanguageCodes> = {
 };
 
 /**
- * The default page size to use for fetching paginated items
- */
-export const DEFAULT_PAGE_SIZE = 48;
-
-/**
  * Flatten the properties of an item
  * @param item - The item whose properties to flatten
  * @returns The item with the properties flattened

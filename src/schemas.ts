@@ -7,7 +7,7 @@ import type {
   SetItemsSort,
 } from "#/types/index.js";
 import type { WebElementComponent } from "#/types/website.js";
-import { DEFAULT_PAGE_SIZE } from "#/helpers.js";
+import { DEFAULT_PAGE_SIZE } from "#/constants.js";
 import { isPseudoUuid } from "#/utilities.js";
 
 const positiveNumber = (message: string): v.GenericSchema<unknown, number> =>

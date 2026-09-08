@@ -7,9 +7,9 @@ import type {
   License,
   Metadata,
   Person,
-  Prettify,
   QueryablePropertyValueDataType,
 } from "#/types/index.js";
+import type { Prettify } from "#/types/utilities.js";
 
 /**
  * Represents a context tree level item with a variable and value

@@ -113,7 +113,14 @@ import type {
   XMLText,
   XMLTree,
 } from "#/xml/types.js";
-import { ITEM_CATEGORY_ALIASES } from "#/categories.js";
+import {
+  CONTEXT_CATEGORY_ALIASES,
+  isHeadingItemCategory,
+  ITEM_CATEGORY_BY_ALIAS,
+  ITEM_CATEGORY_FACTS,
+  normalizeItemCategory,
+  SET_ITEM_CATEGORIES,
+} from "#/categories.js";
 import {
   getParserOptions,
   multilingualFromText,
@@ -237,15 +244,6 @@ type RegistryEmbeddedOptions = EmbeddedItemParserOptions<ReadonlyArray<string>>;
  * table now: a category is whatever has a row here.
  */
 type ItemCategoryEntry = {
-  /** The element names OCHRE serves this category under, including aliases */
-  aliases: ReadonlyArray<string>;
-  /** The name used in "not found" and "expected one" errors */
-  label: string;
-  isTreeItem: boolean;
-  isSetItem: boolean;
-  isHeadingItem: boolean;
-  /** Whether an item of this category can appear in an item's context path */
-  isContextItem: boolean;
   parseEmbedded:
     | ((item: unknown, options: RegistryEmbeddedOptions) => unknown)
     | null;
@@ -259,12 +257,6 @@ type ItemCategoryEntry = {
 
 const ITEM_CATEGORIES = {
   tree: {
-    aliases: ITEM_CATEGORY_ALIASES.tree,
-    label: "tree",
-    isTreeItem: false,
-    isSetItem: true,
-    isHeadingItem: false,
-    isContextItem: false,
     parseEmbedded: (item, options) =>
       parseTree(item as XMLTree, {
         ...options,
@@ -277,12 +269,6 @@ const ITEM_CATEGORIES = {
       parseTreeItemLink(item as XMLLinkedTree, options),
   },
   bibliography: {
-    aliases: ITEM_CATEGORY_ALIASES.bibliography,
-    label: "bibliography",
-    isTreeItem: true,
-    isSetItem: true,
-    isHeadingItem: false,
-    isContextItem: true,
     parseEmbedded: (item, options) =>
       parseBibliography(item as XMLBibliography, options),
     parseSetItem: (item, options) =>
@@ -291,12 +277,6 @@ const ITEM_CATEGORIES = {
       parseBibliographyItemLink(item as XMLLinkedBibliography, options),
   },
   concept: {
-    aliases: ITEM_CATEGORY_ALIASES.concept,
-    label: "concept",
-    isTreeItem: true,
-    isSetItem: true,
-    isHeadingItem: false,
-    isContextItem: true,
     parseEmbedded: (item, options) => parseConcept(item as XMLConcept, options),
     parseSetItem: (item, options) =>
       parseSetConcept(item as XMLConcept, options),
@@ -304,12 +284,6 @@ const ITEM_CATEGORIES = {
       parseConceptItemLink(item as XMLLinkedConcept, options),
   },
   spatialUnit: {
-    aliases: ITEM_CATEGORY_ALIASES.spatialUnit,
-    label: "spatial unit",
-    isTreeItem: true,
-    isSetItem: true,
-    isHeadingItem: false,
-    isContextItem: true,
     parseEmbedded: (item, options) =>
       parseSpatialUnit(item as XMLSpatialUnit, options),
     parseSetItem: (item, options) =>
@@ -318,24 +292,12 @@ const ITEM_CATEGORIES = {
       parseSpatialUnitItemLink(item as XMLLinkedSpatialUnit, options),
   },
   period: {
-    aliases: ITEM_CATEGORY_ALIASES.period,
-    label: "period",
-    isTreeItem: true,
-    isSetItem: true,
-    isHeadingItem: false,
-    isContextItem: true,
     parseEmbedded: (item, options) => parsePeriod(item as XMLPeriod, options),
     parseSetItem: (item, options) => parseSetPeriod(item as XMLPeriod, options),
     parseLink: (item, options) =>
       parsePeriodItemLink(item as XMLLinkedPeriod, options),
   },
   person: {
-    aliases: ITEM_CATEGORY_ALIASES.person,
-    label: "person",
-    isTreeItem: true,
-    isSetItem: true,
-    isHeadingItem: true,
-    isContextItem: false,
     parseEmbedded: (item, options) => parsePerson(item as XMLPerson, options),
     parseSetItem: (item, options) => {
       const person = item as XMLPerson;
@@ -349,12 +311,6 @@ const ITEM_CATEGORIES = {
       parsePersonItemLink(item as XMLLinkedPerson, options),
   },
   propertyVariable: {
-    aliases: ITEM_CATEGORY_ALIASES.propertyVariable,
-    label: "property variable",
-    isTreeItem: true,
-    isSetItem: true,
-    isHeadingItem: true,
-    isContextItem: true,
     parseEmbedded: (item, options) =>
       parsePropertyVariable(item as XMLPropertyVariable, options),
     parseSetItem: (item, options) =>
@@ -363,12 +319,6 @@ const ITEM_CATEGORIES = {
       parsePropertyVariableItemLink(item as XMLLinkedPropertyVariable, options),
   },
   propertyValue: {
-    aliases: ITEM_CATEGORY_ALIASES.propertyValue,
-    label: "property value",
-    isTreeItem: true,
-    isSetItem: true,
-    isHeadingItem: true,
-    isContextItem: true,
     parseEmbedded: (item, options) =>
       parsePropertyValue(item as XMLPropertyValueItem, options),
     parseSetItem: (item, options) => {
@@ -383,12 +333,6 @@ const ITEM_CATEGORIES = {
       parsePropertyValueItemLink(item as XMLLinkedPropertyValue, options),
   },
   resource: {
-    aliases: ITEM_CATEGORY_ALIASES.resource,
-    label: "resource",
-    isTreeItem: true,
-    isSetItem: true,
-    isHeadingItem: true,
-    isContextItem: true,
     parseEmbedded: (item, options) =>
       parseResource(item as XMLResource, options),
     parseSetItem: (item, options) =>
@@ -397,93 +341,25 @@ const ITEM_CATEGORIES = {
       parseResourceItemLink(item as XMLLinkedResource, options),
   },
   text: {
-    aliases: ITEM_CATEGORY_ALIASES.text,
-    label: "text",
-    isTreeItem: true,
-    isSetItem: true,
-    isHeadingItem: true,
-    isContextItem: true,
     parseEmbedded: (item, options) => parseText(item as XMLText, options),
     parseSetItem: (item, options) => parseText(item as XMLText, options),
     parseLink: (item, options) =>
       parseTextItemLink(item as XMLLinkedText, options),
   },
   set: {
-    aliases: ITEM_CATEGORY_ALIASES.set,
-    label: "set",
-    isTreeItem: true,
-    isSetItem: true,
-    isHeadingItem: true,
-    isContextItem: false,
     parseEmbedded: (item, options) => parseSet(item as XMLSet, options),
     parseSetItem: (item, options) => parseSetSet(item as XMLSet, options),
     parseLink: (item, options) =>
       parseSetItemLink(item as XMLLinkedSet, options),
   },
   dictionaryUnit: {
-    aliases: ITEM_CATEGORY_ALIASES.dictionaryUnit,
-    label: "dictionary unit",
-    isTreeItem: false,
-    isSetItem: false,
-    isHeadingItem: false,
-    isContextItem: false,
     parseEmbedded: null,
     parseSetItem: null,
     parseLink: (item, options) =>
       parseDictionaryUnitItemLink(item as XMLDictionaryUnit, options),
   },
-  heading: {
-    aliases: ["heading"],
-    label: "heading",
-    isTreeItem: false,
-    isSetItem: false,
-    isHeadingItem: false,
-    isContextItem: false,
-    parseEmbedded: null,
-    parseSetItem: null,
-    parseLink: null,
-  },
+  heading: { parseEmbedded: null, parseSetItem: null, parseLink: null },
 } as const satisfies Record<HierarchyEntryCategory, ItemCategoryEntry>;
-
-const ITEM_CATEGORY_BY_ALIAS: ReadonlyMap<string, HierarchyEntryCategory> =
-  new Map(
-    Object.entries(ITEM_CATEGORIES).flatMap(([category, entry]) =>
-      entry.aliases.map(
-        (alias) => [alias, category as HierarchyEntryCategory] as const,
-      ),
-    ),
-  );
-
-function getItemCategoriesWhere(
-  isIncluded: (entry: ItemCategoryEntry) => boolean,
-): Array<ItemCategory> {
-  const categories: Array<ItemCategory> = [];
-  for (const [category, entry] of Object.entries(ITEM_CATEGORIES)) {
-    if (isIncluded(entry)) {
-      categories.push(category as ItemCategory);
-    }
-  }
-
-  return categories;
-}
-
-const SET_ITEM_CATEGORIES = getItemCategoriesWhere((entry) => entry.isSetItem);
-
-const HEADING_ITEM_CATEGORIES = getItemCategoriesWhere(
-  (entry) => entry.isHeadingItem,
-) as Array<HeadingItemCategory>;
-
-const CONTEXT_CATEGORY_MAPPINGS: ReadonlyArray<{
-  raw: Exclude<keyof XMLContextItem, "project" | "tree" | "displayPath">;
-  parsed: ContextItemCategory;
-}> = Object.entries(ITEM_CATEGORIES).flatMap(([category, entry]) =>
-  entry.isContextItem
-    ? entry.aliases.map((alias) => ({
-        raw: alias,
-        parsed: category as ContextItemCategory,
-      }))
-    : [],
-);
 
 const PROPERTY_DATA_TYPES = [
   "string",
@@ -567,12 +443,18 @@ function parseContextNode(
     node.heading.push(parseContextItem(heading));
   }
 
-  for (const { raw, parsed } of CONTEXT_CATEGORY_MAPPINGS) {
-    const contextValues = rawContextItem[raw] ?? [];
+  for (const { alias, category } of CONTEXT_CATEGORY_ALIASES) {
+    const contextValues =
+      rawContextItem[
+        alias as Exclude<
+          keyof XMLContextItem,
+          "project" | "tree" | "displayPath"
+        >
+      ] ?? [];
     for (const contextValue of contextValues) {
-      const parsedItems = node[parsed] ?? [];
+      const parsedItems = node[category] ?? [];
       parsedItems.push(parseContextItem(contextValue));
-      node[parsed] = parsedItems;
+      node[category] = parsedItems;
     }
   }
 
@@ -647,7 +529,7 @@ function parseEvent<T extends ReadonlyArray<string>>(
         ? null
         : {
             uuid: rawEvent.other.uuid ?? null,
-            category: normalizeCategory(rawEvent.other.category),
+            category: normalizeItemCategory(rawEvent.other.category),
             label: parseRequiredContentLike(rawEvent.other, options),
           },
   };
@@ -698,25 +580,6 @@ function parseBaseItem<U extends ItemCategory, T extends ReadonlyArray<string>>(
     description: parseContentLike(rawItem.description, options),
     events,
   };
-}
-
-function normalizeCategory(category: string | undefined): ItemCategory | null {
-  if (category == null) {
-    return null;
-  }
-
-  const normalizedCategory = ITEM_CATEGORY_BY_ALIAS.get(category);
-
-  return normalizedCategory != null &&
-    SET_ITEM_CATEGORIES.includes(normalizedCategory as SetItemCategory)
-    ? (normalizedCategory as ItemCategory)
-    : null;
-}
-
-function isHeadingItemCategory(
-  category: TreeItemCategory,
-): category is HeadingItemCategory {
-  return HEADING_ITEM_CATEGORIES.includes(category as HeadingItemCategory);
 }
 
 function pushCategory(
@@ -1384,7 +1247,7 @@ function parseSetItemHierarchy<T extends ReadonlyArray<string>>(
 function normalizeTreeLinkItemsCategory(
   type: string | undefined,
 ): TreeItemCategory | null {
-  const category = normalizeCategory(type);
+  const category = normalizeItemCategory(type);
   if (category === "tree" || category == null) {
     return null;
   }
@@ -1395,7 +1258,7 @@ function normalizeTreeLinkItemsCategory(
 function normalizeSetLinkItemsCategory(
   type: string | undefined,
 ): Array<SetItemCategory> | null {
-  const category = normalizeCategory(type);
+  const category = normalizeItemCategory(type);
   return category == null ? null : [category];
 }
 
@@ -2435,7 +2298,7 @@ export function parseMetadata<T extends ReadonlyArray<string>>(
               metadataOptions,
             ),
             category:
-              normalizeCategory(rawMetadata.item.category) ??
+              normalizeItemCategory(rawMetadata.item.category) ??
               rawMetadata.item.category,
             type: rawMetadata.item.type,
             maxLength: rawMetadata.item.maxLength ?? null,
@@ -2491,9 +2354,10 @@ function parseTopLevelItem<
 ): Item<U, V, T, "embedded"> {
   const rawItems = rawOchre as XMLItemLinks & Record<string, unknown>;
   const entry = ITEM_CATEGORIES[category];
+  const facts = ITEM_CATEGORY_FACTS[category];
 
   let rawCategoryItems: Array<unknown> | undefined;
-  for (const alias of entry.aliases) {
+  for (const alias of facts.aliases) {
     const aliasItems = rawItems[alias];
     if (Array.isArray(aliasItems)) {
       rawCategoryItems = aliasItems;
@@ -2502,7 +2366,7 @@ function parseTopLevelItem<
   }
 
   const parsedItem = entry.parseEmbedded(
-    getSingleTopLevelRawItem(rawCategoryItems, entry.label),
+    getSingleTopLevelRawItem(rawCategoryItems, facts.label),
     options,
   );
 
@@ -2666,7 +2530,7 @@ export function parseItem(
     containedItemCategory: options.containedItemCategory,
   };
   const inferredCategory =
-    normalizeCategory(rawOchre.metadata.item?.category) ??
+    normalizeItemCategory(rawOchre.metadata.item?.category) ??
     inferTopLevelCategory(rawOchre);
   let category = inferredCategory;
   if (options.category != null) {

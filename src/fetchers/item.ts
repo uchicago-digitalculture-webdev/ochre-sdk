@@ -20,10 +20,7 @@ import {
 } from "#/categories.js";
 import { requestOchre } from "#/fetchers/request.js";
 import { parseItem } from "#/parsers/index.js";
-import {
-  parseLanguages,
-  parseRequestedLanguages,
-} from "#/parsers/languages.js";
+import { parseRequestedLanguages } from "#/parsers/languages.js";
 import { parseWebpageView } from "#/parsers/website/index.js";
 import { uuidSchema } from "#/schemas.js";
 import {
@@ -133,31 +130,6 @@ function omitEmbeddedItems(
   const { items: _items, ...itemWithoutEmbeddedItems } = item;
 
   return itemWithoutEmbeddedItems;
-}
-
-/**
- * Defines a reusable languages tuple with validation and literal type inference.
- *
- * Inline arrays can be passed directly to fetchItem:
- * `fetchItem(uuid, { languages: ["eng", "spa"] })`.
- *
- * Use this helper when the language set is stored separately:
- * `const languages = defineLanguages("eng", "spa")`.
- */
-export function defineLanguages<const TLanguages extends ReadonlyArray<string>>(
-  ...languages: TLanguages
-): TLanguages {
-  return parseLanguages(languages);
-}
-
-/**
- * @deprecated Pass inline language arrays directly to fetchItem, or use
- * defineLanguages("eng", "spa") for reusable language tuples.
- */
-export function withLanguages<const TLanguages extends ReadonlyArray<string>>(
-  languages: TLanguages,
-): TLanguages {
-  return parseLanguages(languages);
 }
 
 /**

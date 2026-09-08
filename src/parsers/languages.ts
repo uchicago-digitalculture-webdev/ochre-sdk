@@ -56,6 +56,21 @@ export function parseLanguages<const T extends ReadonlyArray<string>>(
 }
 
 /**
+ * Define a reusable languages tuple with validation and literal type inference
+ *
+ * Inline arrays can be passed directly to a fetcher
+ * (`fetchItem(uuid, { languages: ["eng", "spa"] })`); use this when the
+ * language set is stored separately.
+ * @param languages - The language codes to validate
+ * @returns The same tuple, with its literal types intact
+ */
+export function defineLanguages<const TLanguages extends ReadonlyArray<string>>(
+  ...languages: TLanguages
+): TLanguages {
+  return parseLanguages(languages);
+}
+
+/**
  * Validate an optional caller-supplied language tuple
  * @param languages - The language codes to validate, or undefined
  * @returns The validated codes, or an empty array when none were requested

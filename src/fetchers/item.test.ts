@@ -39,9 +39,10 @@ import type {
   XMLTree,
 } from "#/xml/types.js";
 import { XML_PARSER_OPTIONS } from "#/constants.js";
-import { defineLanguages, fetchItem } from "#/fetchers/item.js";
+import { fetchItem } from "#/fetchers/item.js";
 import { MultilingualString } from "#/index.js";
 import { parseItem } from "#/parsers/index.js";
+import { defineLanguages } from "#/parsers/languages.js";
 import {
   extractAliases,
   parseXMLContent,
