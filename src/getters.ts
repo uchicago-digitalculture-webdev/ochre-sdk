@@ -216,7 +216,17 @@ function findProperty<T extends LanguageCodes>(
   return null;
 }
 
-function getLeafPropertyValues<T extends LanguageCodes>(
+/**
+ * Keep only the leaf values from an array of property values
+ *
+ * OCHRE property values form a hierarchy, and a value with children is usually
+ * a grouping rather than something to show. This asks that of a values array
+ * the caller already holds; the same filter is available on the lookups
+ * through `limitToLeafPropertyValues`.
+ * @param propertyValues - The values to filter
+ * @returns The values that have no children
+ */
+export function getLeafPropertyValues<T extends LanguageCodes = LanguageCodes>(
   propertyValues: ReadonlyArray<PropertyValueContent<T>>,
 ): Array<PropertyValueContent<T>> {
   const leafPropertyValues: Array<PropertyValueContent<T>> = [];

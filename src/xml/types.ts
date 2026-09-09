@@ -784,3 +784,8 @@ export type XMLWebsiteData = {
     };
   };
 };
+
+export type XMLHeadingItemCategory = Exclude<
+  XMLItemCategory,
+  "tree" | "bibliography" | "spatialUnit" | "concept" | "period"
+>;

@@ -2,6 +2,7 @@ import type { MultilingualString } from "#/parsers/multilingual.js";
 import type {
   Bibliography,
   Identification,
+  ItemCategory,
   LanguageCodes,
   License,
   Metadata,
@@ -608,3 +609,14 @@ export type ProtectedWebsite<T extends LanguageCodes = LanguageCodes> = {
   identification: Identification<T>;
   properties: { privacy: "password" | "credentials-ochre" };
 };
+
+export type AccordionWebBlock<T extends LanguageCodes = LanguageCodes> =
+  WebBlock<T, "accordion">;
+
+/**
+ * Represents a stylesheet item with its UUID and category
+ */
+export type StylesheetCategory = Extract<
+  ItemCategory,
+  "propertyVariable" | "propertyValue"
+>;

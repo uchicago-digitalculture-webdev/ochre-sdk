@@ -9,6 +9,7 @@ export { fetchSetPropertyValues } from "#/fetchers/set/property-values.js";
 export { fetchWebsiteMetadata } from "#/fetchers/website-metadata.js";
 export { fetchWebsite } from "#/fetchers/website.js";
 export {
+  getLeafPropertyValues,
   getProperty,
   getPropertyValue,
   getPropertyValues,
