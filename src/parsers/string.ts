@@ -105,6 +105,16 @@ function getLinkStringProperty(
   }
 }
 
+/**
+ * Rewrite a permanent identification URL as an OCHRE API endpoint
+ *
+ * The counterpart of {@link transformPermanentIdentificationUrlToItemLink}:
+ * the same prefix becomes an API call here and a route into a consuming
+ * website there, so which one a caller wants depends on who reads the result.
+ * @param url - The permanent identification URL
+ * @returns The API URL
+ * @internal
+ */
 export function transformPermanentIdentificationUrl(url: string): string {
   return url.replace(
     PERMANENT_IDENTIFICATION_URL_PREFIX,

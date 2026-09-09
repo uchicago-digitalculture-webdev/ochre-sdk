@@ -11,11 +11,50 @@ import { multilingualFromText } from "#/parsers/helpers.js";
 type WebsitePropertyContent<T extends LanguageCodes> =
   PropertyValueContent<T>["content"];
 
+/**
+ * The fields of an object that hold a UUID, which are the only ones
+ * {@link WebsitePresentationReader.readAllUuids} can write
+ */
+type UuidKeys<O> = {
+  [K in keyof O]-?: O[K] extends string | null ? K : never;
+}[keyof O];
+
+/**
+ * Reads a website's presentation properties
+ *
+ * OCHRE stores everything a website declares about itself as labeled property
+ * values nested under a "presentation" property, so every read is "find the
+ * property with this label, then take its first value". This owns that walk
+ * and the coercions that go with it, and hands back readers for nested levels
+ * so the caller never touches the raw property array.
+ */
 export class WebsitePresentationReader<T extends LanguageCodes> {
   private readonly sourceProperties: ReadonlyArray<SimplifiedProperty<T>>;
 
   constructor(sourceProperties: ReadonlyArray<SimplifiedProperty<T>>) {
     this.sourceProperties = sourceProperties;
+  }
+
+  private propertyByValue(
+    label: string,
+    value: WebsitePropertyContent<T>,
+  ): SimplifiedProperty<T> | null {
+    return getProperty(this.sourceProperties, { label, valueContent: value });
+  }
+
+  /**
+   * Overwrite one field from a labeled OCHRE property
+   *
+   * Private because {@link readAll} covers every caller: a single-field read
+   * is a one-entry label map, and going through the map keeps the field's type
+   * coming from the target rather than from a type argument.
+   */
+  private readOne<O extends object, K extends keyof O>(
+    target: O,
+    key: K,
+    label: string,
+  ): void {
+    target[key] = this.valueOr<O[K]>(label, target[key]);
   }
 
   property(label: string): SimplifiedProperty<T> | null {
@@ -31,19 +70,8 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
     return property;
   }
 
-  propertyByValue(
-    label: string,
-    value: WebsitePropertyContent<T>,
-  ): SimplifiedProperty<T> | null {
-    return getProperty(this.sourceProperties, { label, valueContent: value });
-  }
-
   valueNode(label: string): PropertyValueContent<T> | null {
     return getPropertyValue(this.sourceProperties, { label });
-  }
-
-  values(label: string): Array<PropertyValueContent<T>> {
-    return this.property(label)?.values ?? [];
   }
 
   value<U = WebsitePropertyContent<T>>(label: string): U | null {
@@ -55,23 +83,23 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
     return this.value<U>(label) ?? fallback;
   }
 
+  /**
+   * Read a property whose field is a string but whose OCHRE value may not be
+   *
+   * OCHRE types a dimension like "width" from what was entered, so the same
+   * property arrives as `"50%"` on one resource and `50` on another. Anything
+   * that is neither is treated as unset rather than stringified, so a stray
+   * boolean does not become the literal text "true".
+   * @param label - The OCHRE property label to read
+   * @returns The string, or null when the property is unset or not string-like
+   */
   stringValue(label: string): string | null {
     const value = this.value<WebsitePropertyContent<T>>(label);
-    return value == null ? null : value.toString();
-  }
-
-  numberValue(label: string): number | null {
-    const value = this.value<WebsitePropertyContent<T>>(label);
-    if (typeof value === "number") {
+    if (typeof value === "string") {
       return value;
     }
 
-    if (typeof value !== "string" || value.trim() === "") {
-      return null;
-    }
-
-    const parsedValue = Number(value);
-    return Number.isNaN(parsedValue) ? null : parsedValue;
+    return typeof value === "number" ? value.toString() : null;
   }
 
   uuid(label: string): string | null {
@@ -97,24 +125,6 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
   }
 
   /**
-   * Overwrite a field from a labeled OCHRE property
-   *
-   * The field's current value is the default, so the caller writes the
-   * inherited default once where the object is built and names the OCHRE label
-   * once here, instead of restating both plus the field's type path.
-   * @param target - The object holding the field
-   * @param key - The field to overwrite
-   * @param label - The OCHRE property label to read
-   */
-  readInto<O extends object, K extends keyof O>(
-    target: O,
-    key: K,
-    label: string,
-  ): void {
-    target[key] = this.valueOr<O[K]>(label, target[key]);
-  }
-
-  /**
    * Overwrite several fields from the OCHRE properties naming them
    *
    * The defaults object carries the shape and the fallback values, and the
@@ -132,23 +142,31 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
       [keyof O, string | undefined]
     >) {
       if (label != null) {
-        this.readInto(target, key, label);
+        this.readOne(target, key, label);
       }
     }
   }
 
   /**
-   * Overwrite a UUID field from the UUID a labeled OCHRE property points at
-   * @param target - The object holding the field
-   * @param key - The field to overwrite
-   * @param label - The OCHRE property label to read
+   * Overwrite several UUID fields from the UUIDs labeled OCHRE properties
+   * point at
+   *
+   * The same shape as {@link readAll}, for the fields that take the value's
+   * target rather than its content.
+   * @param target - The object holding the fields, pre-filled with defaults
+   * @param labels - The OCHRE property label for each field to overwrite
    */
-  readUuidInto<O extends Record<K, string | null>, K extends keyof O>(
+  readAllUuids<O extends object>(
     target: O,
-    key: K,
-    label: string,
+    labels: Partial<Record<UuidKeys<O>, string>>,
   ): void {
-    target[key] = (this.uuid(label) ?? target[key]) as O[K];
+    for (const [key, label] of Object.entries(labels) as Array<
+      [UuidKeys<O>, string | undefined]
+    >) {
+      if (label != null) {
+        target[key] = (this.uuid(label) ?? target[key]) as O[UuidKeys<O>];
+      }
+    }
   }
 
   nested(label: string): WebsitePresentationReader<T> {
@@ -168,10 +186,6 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
 
   get size(): number {
     return this.sourceProperties.length;
-  }
-
-  get properties(): ReadonlyArray<SimplifiedProperty<T>> {
-    return this.sourceProperties;
   }
 }
 

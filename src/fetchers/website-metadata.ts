@@ -18,10 +18,7 @@ import {
   resolveLanguages,
 } from "#/parsers/languages.js";
 import { websitePresentationReader } from "#/parsers/website/reader.js";
-import {
-  SEGMENT_UNIQUE_SLUG_PREFIX_PATTERN,
-  WEBSITE_PAGE_SLUG_SEPARATOR,
-} from "#/parsers/website/slug.js";
+import { WEBSITE_WALK_DECLARATIONS } from "#/parsers/website/walk.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
 import { compileOchreQuery, stringLiteral } from "#/xquery.js";
 
@@ -102,37 +99,9 @@ function buildXQuery(parameters: {
 }): string {
   return compileOchreQuery({
     declarations: [
-      `declare function local:resource-items($resources) {
-  for $resource in $resources
-  return
-    if ($resource/segments) then $resource
-    else if ($resource/identification) then $resource
-    else local:resource-items($resource/resource)
-};
-
-declare function local:presentation($resource) {
-  string(($resource/properties/property[label/string() = "presentation"]/value)[1])
-};
-
-declare function local:clean-slug($slug) {
-  replace(string($slug), ${stringLiteral(SEGMENT_UNIQUE_SLUG_PREFIX_PATTERN)}, "")
-};
-
-declare function local:page-slug($resource, $slug-prefix) {
-  let $slug := local:clean-slug($resource/@slug)
-  return
-    if ($slug-prefix = "") then $slug
-    else if ($slug = "") then $slug-prefix
-    else concat($slug-prefix, ${stringLiteral(WEBSITE_PAGE_SLUG_SEPARATOR)}, $slug)
-};
-
+      `${WEBSITE_WALK_DECLARATIONS}
 declare function local:matches-page-slug($resource, $target-slug, $slug-prefix) {
   local:page-slug($resource, $slug-prefix) = $target-slug
-};
-
-declare function local:page-child-slug-prefix($resource, $slug-prefix) {
-  if ($slug-prefix = "") then ""
-  else local:page-slug($resource, $slug-prefix)
 };
 
 declare function local:metadata-page($resource) {
