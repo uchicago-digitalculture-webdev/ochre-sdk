@@ -32,12 +32,49 @@ function resolveSignal(
 }
 
 /**
+ * Turn an OCHRE XML response into validated data
+ *
+ * The XML parser, the schema check and the metadata graft are one step: the
+ * graft has to follow validation because `v.safeParse` drops the
+ * non-enumerable source offsets `fast-xml-parser` records, and skipping it
+ * leaves a value that is the right shape but has lost its source order. Kept
+ * separate from the request so a caller holding an XML string, such as a test,
+ * gets exactly what the network path produces.
+ * @param parameters - The decode parameters
+ * @param parameters.xml - The raw XML response body
+ * @param parameters.schema - The schema the response must satisfy
+ * @param parameters.label - What is being decoded, used in failure messages
+ * @param parameters.checkRawData - Guard run against the parsed XML before validation
+ * @returns The validated response, with XML source metadata restored
+ * @throws When the guard rejects or validation fails
+ * @internal
+ */
+export function decodeOchreResponse<TOutput>(parameters: {
+  xml: string;
+  schema: v.GenericSchema<unknown, TOutput>;
+  label: string;
+  checkRawData?: (data: unknown) => void;
+}): TOutput {
+  const { xml, schema, label, checkRawData } = parameters;
+
+  const data = xmlParser.parse(xml) as unknown;
+
+  checkRawData?.(data);
+
+  const { success, issues, output } = v.safeParse(schema, data);
+  if (!success) {
+    throw createSchemaValidationError(`Failed to parse ${label}`, issues);
+  }
+  restoreXMLMetadata(output, data);
+
+  return output;
+}
+
+/**
  * Post an XQuery to the OCHRE API and validate the response
  *
- * Owns every fact about talking to OCHRE: the endpoint, the request shape, the
- * failure policy, the XML parser, and the metadata graft that has to follow
- * validation because `v.safeParse` drops the non-enumerable source offsets
- * `fast-xml-parser` records.
+ * Owns every fact about talking to OCHRE: the endpoint, the request shape and
+ * the failure policy. Decoding the body is {@link decodeOchreResponse}.
  * @param parameters - The request parameters
  * @param parameters.xquery - The XQuery to post
  * @param parameters.schema - The schema the response must satisfy
@@ -70,17 +107,12 @@ export async function requestOchre<TOutput>(parameters: {
     );
   }
 
-  const data = xmlParser.parse(await response.text()) as unknown;
-
-  checkRawData?.(data);
-
-  const { success, issues, output } = v.safeParse(schema, data);
-  if (!success) {
-    throw createSchemaValidationError(`Failed to parse ${label}`, issues);
-  }
-  restoreXMLMetadata(output, data);
-
-  return output;
+  return decodeOchreResponse({
+    xml: await response.text(),
+    schema,
+    label,
+    checkRawData,
+  });
 }
 
 /**

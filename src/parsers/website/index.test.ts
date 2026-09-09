@@ -7,6 +7,7 @@ import type {
   XMLString,
 } from "#/xml/types.js";
 import { fetchWebsite } from "#/fetchers/website.js";
+import { ochreFixtureFetch } from "#/fixtures.js";
 import { parseWebsite } from "#/parsers/website/index.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
 
@@ -404,25 +405,18 @@ describe("parseWebsite", () => {
 
 describe("fetchWebsite", () => {
   it("fetches Website XML by normalized abbreviation and parses it", async () => {
-    let requestedUrl = "";
-    let requestedBody = "";
+    const mock = ochreFixtureFetch(minimalWebsiteXML());
 
-    const result = await fetchWebsite(" TEST-WEBSITE ", {
-      fetch: async (input, init) => {
-        requestedUrl = input.toString();
-        requestedBody = String(init?.body ?? "");
-        return new Response(minimalWebsiteXML());
-      },
-    });
+    const result = await fetchWebsite(" TEST-WEBSITE ", { fetch: mock.fetch });
 
     expect(result.error).toBeNull();
     if (result.website == null) {
       throw new Error("Expected fetchWebsite to parse the XML response");
     }
 
-    expect(requestedBody).toContain('"test-website"');
-    expect(requestedBody).toContain("local:omit-supplemental(");
-    expect(requestedUrl).toContain("xsl=none");
+    expect(mock.requests[0]!.body).toContain('"test-website"');
+    expect(mock.requests[0]!.body).toContain("local:omit-supplemental(");
+    expect(mock.requests[0]!.url).toContain("xsl=none");
     expect(result.website.uuid).toBe(UUID.website);
     expect(result.website.items[0]?.type).toBe("page");
     expect(result.protectedWebsite).toBeNull();
