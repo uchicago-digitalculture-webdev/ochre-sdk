@@ -84,6 +84,34 @@ title.getExactText("tur");
 title.getAvailableLanguages();
 ```
 
+Reads come in three widths. `getText` and `getRichText` resolve one entry through the language fallback, `getExactText` and `getExactRichText` skip the fallback, and `getEntries`, `getTexts` and `getExactTexts` return every entry when OCHRE carried more than one for a language.
+
+Two questions look alike and are not the same. `isEmpty()` asks whether any language carries an entry at all. `hasContent()` asks whether any entry in any language holds text that is not whitespace, which is what a caller deciding whether to render something wants, because OCHRE does serve fields holding a single blank entry.
+
+```ts
+title.isEmpty();
+title.hasContent();
+title.hasLanguage("tur");
+title.hasAliases();
+
+title.getAvailableLanguages(); // languages that carry content
+title.getSupportedLanguages(); // languages the string was built to hold
+```
+
+Writes return a new string and never mutate the original.
+
+```ts
+title.with("tur", "Başlık");
+title.with("tur", "another entry", { shouldAppend: true });
+title.without("tur");
+title.withAliases(["ABC"]);
+
+title.mapText((text) => text.trim());
+title.filterEntries((entry) => entry.isPrimary);
+```
+
+`mapText` runs against plain text and rebuilds each entry's rich text from the result, so a transform cannot corrupt the markup OCHRE wrote. A transform that needs to keep or rewrite markup returns `{ text, richText }` instead of a string.
+
 For reusable language tuples, use `defineLanguages` to keep runtime validation
 and literal TypeScript inference together.
 
@@ -177,8 +205,9 @@ types, query types, property getters, and small data helpers:
 - `Item`, `SetItem`, `ItemLink`, `Website`, `WebElementOf`,
   `WebElementComponentOf`, `WebBlockByLayout`, `Query`, and related types.
 - `getProperty`, `getPropertyValues`, `getPropertyValue`,
-  `getUniqueProperties`, `getUniquePropertyVariableLabels`, and
-  `isPropertyMatchingFilter` for reading properties off a parsed item.
+  `getUniqueProperties`, `getUniquePropertyVariableLabels`,
+  `isPropertyMatchingFilter`, and `getLeafPropertyValues` for reading
+  properties off a parsed item.
 - `flattenItemProperties` and `DEFAULT_PAGE_SIZE` for common collection UI
   workflows.
 

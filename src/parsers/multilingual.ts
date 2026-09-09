@@ -567,6 +567,46 @@ export class MultilingualString<
   }
 
   /**
+   * Get every entry for a language, falling back when it has none
+   *
+   * The multi-entry counterpart of {@link MultilingualString.getText}: OCHRE
+   * can carry several entries for one language, and this returns all of them
+   * rather than only the primary. Each entry carries both `text` and
+   * `richText`, so a caller rendering a rich field reads them from here.
+   * @param language - The language to read, or undefined for the default
+   * @returns The entries, or an empty array when no language has any
+   */
+  getEntries(language?: T[number]): Array<MultilingualStringEntry> {
+    return Array.from(this.resolveEntries(language, false), (entry) => ({
+      ...entry,
+    }));
+  }
+
+  /**
+   * Get the text of every entry for a language, falling back when it has none
+   * @param language - The language to read, or undefined for the default
+   * @returns The texts, or an empty array when no language has any
+   */
+  getTexts(language?: T[number]): Array<string> {
+    return Array.from(
+      this.resolveEntries(language, false),
+      (entry) => entry.text,
+    );
+  }
+
+  /**
+   * Get the text of every entry for a language, with no fallback
+   * @param language - The language to read
+   * @returns The texts, or an empty array when that language has none
+   */
+  getExactTexts(language: T[number]): Array<string> {
+    return Array.from(
+      this.resolveEntries(language, true),
+      (entry) => entry.text,
+    );
+  }
+
+  /**
    * Get the alias values OCHRE carries as `zxx` content
    */
   getAliases(): Array<string> {
@@ -585,6 +625,70 @@ export class MultilingualString<
    */
   getDefaultLanguage(): T[number] {
     return this._options.defaultLanguage;
+  }
+
+  /**
+   * Get every language this string was built to hold
+   *
+   * The configured language list, which is not the same question as
+   * {@link MultilingualString.getAvailableLanguages}: that one answers which
+   * languages actually carry content, and is a subset of this.
+   * @returns The supported languages
+   */
+  getSupportedLanguages(): Array<T[number]> {
+    return [...this._options.availableLanguages] as Array<T[number]>;
+  }
+
+  /**
+   * Whether any language carries an entry
+   *
+   * Answers the structural question. A language whose only entry is blank
+   * still counts here; {@link MultilingualString.hasContent} is the question
+   * about text. Aliases are not entries, so a string carrying only aliases is
+   * empty by this measure and {@link MultilingualString.hasAliases} is true.
+   * @returns True when no language carries an entry
+   */
+  isEmpty(): boolean {
+    return this._availableLanguages.length === 0;
+  }
+
+  /**
+   * Whether any entry in any language carries text that is not whitespace
+   *
+   * Deliberately not the negation of {@link MultilingualString.isEmpty}, which
+   * only asks whether entries exist. OCHRE does serve fields holding a single
+   * whitespace entry, so a caller deciding whether to render something wants
+   * this one, and it looks at every entry rather than only the primary.
+   * @returns True when some entry has non-whitespace text
+   */
+  hasContent(): boolean {
+    for (const language of this._availableLanguages) {
+      const entries = this._content[language] ?? [];
+      for (const entry of entries) {
+        if (entry.text.trim() !== "") {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Whether a specific language carries an entry, with no fallback
+   * @param language - The language to test
+   * @returns True when that language carries at least one entry
+   */
+  hasLanguage(language: T[number]): boolean {
+    return (this._content[language]?.length ?? 0) > 0;
+  }
+
+  /**
+   * Whether OCHRE carried any `zxx` alias values for this string
+   * @returns True when there is at least one alias
+   */
+  hasAliases(): boolean {
+    return this._aliases.length > 0;
   }
 
   /**
@@ -657,6 +761,116 @@ export class MultilingualString<
                 this._options.availableLanguages,
               )
             : this._options.defaultLanguage,
+      },
+      newAvailableLanguages,
+    );
+  }
+
+  /**
+   * Replace the alias values
+   *
+   * Aliases are the `zxx` content OCHRE carries alongside a field's languages,
+   * so they are set as a whole rather than per language. Empty strings are
+   * dropped, matching how they are read from a payload.
+   * @param aliases - The aliases to carry
+   * @returns A new multilingual string
+   */
+  withAliases(aliases: ReadonlyArray<string>): MultilingualString<T> {
+    return MultilingualString.fromNormalized(
+      cloneContent(this._content),
+      { ...this._options, aliases: normalizeAliases(aliases) },
+      this._availableLanguages,
+    );
+  }
+
+  /**
+   * Transform the text of every entry in every language
+   *
+   * Replaces the old `map`, which corrupted rich text: it wrote the
+   * transformed plain text and left the entry's `richText` to be re-derived,
+   * so a transform such as uppercasing turned `<InternalLink uuid="abc">` into
+   * markup OCHRE never wrote. The transform here runs against plain text only,
+   * and the entry's rich text is rebuilt from the result, so the two can never
+   * disagree.
+   *
+   * A transform that needs to keep or rewrite markup returns
+   * `{ text, richText }` instead of a string, and both are used verbatim.
+   * @param transform - Produces the new text for one entry
+   * @returns A new multilingual string
+   */
+  mapText(
+    transform: (text: string, language: T[number]) => MultilingualStringInput,
+  ): MultilingualString<T> {
+    const newContent: Partial<
+      Record<T[number], Array<MultilingualStringEntry>>
+    > = {};
+
+    for (const language of this._availableLanguages) {
+      const currentEntries = this._content[language] ?? [];
+      newContent[language] = normalizePrimary(
+        Array.from(currentEntries, (entry) => ({
+          ...normalizeInputText(transform(entry.text, language)),
+          isPrimary: entry.isPrimary,
+        })),
+      );
+    }
+
+    return MultilingualString.fromNormalized(
+      newContent,
+      this._options,
+      this._availableLanguages,
+    );
+  }
+
+  /**
+   * Keep only the entries a predicate accepts
+   *
+   * The callback receives the whole entry rather than just its text, so it
+   * can also test `richText` and `isPrimary`. Dropping every entry of a
+   * language removes that language, and when that was the default the default
+   * moves to the first language that still has content, so reads keep
+   * resolving.
+   * @param shouldKeep - Whether to keep one entry
+   * @returns A new multilingual string
+   */
+  filterEntries(
+    shouldKeep: (
+      entry: MultilingualStringEntry,
+      language: T[number],
+    ) => boolean,
+  ): MultilingualString<T> {
+    const newContent: Partial<
+      Record<T[number], Array<MultilingualStringEntry>>
+    > = {};
+
+    for (const language of this._availableLanguages) {
+      const currentEntries = this._content[language] ?? [];
+      const entries: Array<MultilingualStringEntry> = [];
+      for (const entry of currentEntries) {
+        if (shouldKeep({ ...entry }, language)) {
+          entries.push({ ...entry });
+        }
+      }
+      newContent[language] = normalizePrimary(entries);
+    }
+
+    const newAvailableLanguages = getLanguagesWithEntries(
+      newContent,
+      this._options.availableLanguages as ReadonlyArray<T[number]>,
+    );
+
+    return MultilingualString.fromNormalized(
+      newContent,
+      {
+        ...this._options,
+        defaultLanguage: newAvailableLanguages.includes(
+          this._options.defaultLanguage as T[number],
+        )
+          ? this._options.defaultLanguage
+          : resolveDefaultLanguageOption(
+              newAvailableLanguages,
+              this._options.availableLanguages,
+            ),
       },
       newAvailableLanguages,
     );
