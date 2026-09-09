@@ -2,7 +2,7 @@
 
 One file per decision that a future reader would otherwise re-litigate. These exist because the reasons were previously recorded only in commit bodies, which meant every architecture review had to re-derive them from `git log` before it could avoid re-proposing work that had already been reasoned through and rejected.
 
-Record a decision here when the reason is durable and specific to this codebase. Skip it when the reason is "not worth it right now" or self-evident from the code.
+Record a decision here when the reason is durable and specific to this codebase. Skip it when the reason is "not worth it right now" or self-evident from the code. For what the OCHRE words mean, see [CONTEXT.md](../../CONTEXT.md).
 
 | ADR                                                      | Decision                                                                 |
 | -------------------------------------------------------- | ------------------------------------------------------------------------ |
