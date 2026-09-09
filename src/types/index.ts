@@ -101,14 +101,6 @@ export type HeadingItemCategory = Exclude<
 >;
 
 /**
- * The category of items that expose recursive subitem structures.
- */
-export type RecursiveItemCategory = Exclude<
-  ItemCategory,
-  "tree" | "person" | "propertyVariable" | "propertyValue" | "set"
->;
-
-/**
  *  The category names that can appear in OCHRE context paths
  */
 export type ContextItemCategory = Exclude<
@@ -438,10 +430,6 @@ export type PropertyLike<T extends LanguageCodes = LanguageCodes> =
   | SimplifiedProperty<T>
   | SetItemSimplifiedProperty<T>;
 
-export type ItemProperty<T extends LanguageCodes = LanguageCodes> =
-  | Property<T>
-  | SetItemProperty<T>;
-
 export type PropertyValueDataType = PropertyValueContent["dataType"];
 
 export type QueryablePropertyValueDataType = Exclude<
@@ -718,24 +706,6 @@ export type ItemWithoutEmbeddedItems<
                 ? Prettify<Omit<Resource<T, W>, "items">>
                 : never
   : never;
-
-export type TopLevelItem<
-  U extends ItemCategory = ItemCategory,
-  V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
-  T extends LanguageCodes = LanguageCodes,
-> = Item<U, V, T, "topLevel">;
-
-export type EmbeddedItem<
-  U extends ItemCategory = ItemCategory,
-  V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
-  T extends LanguageCodes = LanguageCodes,
-> = Item<U, V, T, "embedded">;
-
-export type AnyItem<
-  U extends ItemCategory = ItemCategory,
-  V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
-  T extends LanguageCodes = LanguageCodes,
-> = Item<U, V, T, ItemPayloadKind>;
 
 /**
  *  Heading in OCHRE
@@ -1103,98 +1073,6 @@ export type Section<T extends LanguageCodes = LanguageCodes> = {
   identification: Identification<T>;
   project: { identification: Identification<T> } | null;
 };
-
-export type EmbeddedTree<
-  U extends TreeItemCategory = TreeItemCategory,
-  T extends LanguageCodes = LanguageCodes,
-> = Tree<U, T, "embedded">;
-
-export type AnyTree<
-  U extends TreeItemCategory = TreeItemCategory,
-  T extends LanguageCodes = LanguageCodes,
-> = Tree<U, T, ItemPayloadKind>;
-
-export type EmbeddedSet<
-  U extends SetItemCategory = SetItemCategory,
-  T extends LanguageCodes = LanguageCodes,
-> = Set<U, T, "embedded">;
-
-export type AnySet<
-  U extends SetItemCategory = SetItemCategory,
-  T extends LanguageCodes = LanguageCodes,
-> = Set<U, T, ItemPayloadKind>;
-
-export type EmbeddedBibliography<T extends LanguageCodes = LanguageCodes> =
-  Bibliography<T, "embedded">;
-
-export type AnyBibliography<T extends LanguageCodes = LanguageCodes> =
-  Bibliography<T, ItemPayloadKind>;
-
-export type EmbeddedConcept<T extends LanguageCodes = LanguageCodes> = Concept<
-  T,
-  "embedded"
->;
-
-export type AnyConcept<T extends LanguageCodes = LanguageCodes> = Concept<
-  T,
-  ItemPayloadKind
->;
-
-export type EmbeddedSpatialUnit<T extends LanguageCodes = LanguageCodes> =
-  SpatialUnit<T, "embedded">;
-
-export type AnySpatialUnit<T extends LanguageCodes = LanguageCodes> =
-  SpatialUnit<T, ItemPayloadKind>;
-
-export type EmbeddedPeriod<T extends LanguageCodes = LanguageCodes> = Period<
-  T,
-  "embedded"
->;
-
-export type AnyPeriod<T extends LanguageCodes = LanguageCodes> = Period<
-  T,
-  ItemPayloadKind
->;
-
-export type EmbeddedPerson<T extends LanguageCodes = LanguageCodes> = Person<
-  T,
-  "embedded"
->;
-
-export type AnyPerson<T extends LanguageCodes = LanguageCodes> = Person<
-  T,
-  ItemPayloadKind
->;
-
-export type EmbeddedPropertyVariable<T extends LanguageCodes = LanguageCodes> =
-  PropertyVariable<T, "embedded">;
-
-export type AnyPropertyVariable<T extends LanguageCodes = LanguageCodes> =
-  PropertyVariable<T, ItemPayloadKind>;
-
-export type EmbeddedPropertyValue<T extends LanguageCodes = LanguageCodes> =
-  PropertyValue<T, "embedded">;
-
-export type AnyPropertyValue<T extends LanguageCodes = LanguageCodes> =
-  PropertyValue<T, ItemPayloadKind>;
-
-export type EmbeddedResource<T extends LanguageCodes = LanguageCodes> =
-  Resource<T, "embedded">;
-
-export type AnyResource<T extends LanguageCodes = LanguageCodes> = Resource<
-  T,
-  ItemPayloadKind
->;
-
-export type EmbeddedText<T extends LanguageCodes = LanguageCodes> = Text<
-  T,
-  "embedded"
->;
-
-export type AnyText<T extends LanguageCodes = LanguageCodes> = Text<
-  T,
-  ItemPayloadKind
->;
 
 /**
  * Represents a gallery with its identification, project identification, resources and max length

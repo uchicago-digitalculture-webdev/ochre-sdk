@@ -2,7 +2,6 @@ import type { MultilingualString } from "#/parsers/multilingual.js";
 import type {
   Bibliography,
   Identification,
-  ItemCategory,
   LanguageCodes,
   License,
   Metadata,
@@ -84,14 +83,6 @@ export type WebOptions<T extends LanguageCodes = LanguageCodes> = {
   contextTree: ContextTree<T> | null;
   labels: { title: MultilingualString<T> | null };
 };
-
-/**
- * Represents a stylesheet item with its UUID and category
- */
-export type StylesheetCategory = Extract<
-  ItemCategory,
-  "propertyVariable" | "propertyValue"
->;
 
 /**
  * The style overrides for each viewport a website presentation targets
@@ -599,9 +590,6 @@ export type WebBlockByLayout<
   U extends WebBlockLayout = WebBlockLayout,
   T extends LanguageCodes = LanguageCodes,
 > = WebBlock<T, U>;
-
-export type AccordionWebBlock<T extends LanguageCodes = LanguageCodes> =
-  WebBlock<T, "accordion">;
 
 export type WebsiteMetadata<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;

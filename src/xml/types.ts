@@ -13,11 +13,6 @@ export type XMLItemCategory =
   | "resource"
   | "set";
 
-export type XMLHeadingItemCategory = Exclude<
-  XMLItemCategory,
-  "tree" | "bibliography" | "spatialUnit" | "concept" | "period"
->;
-
 export type XMLRecursiveItemCategory = Exclude<
   XMLItemCategory,
   "tree" | "person" | "propertyVariable" | "propertyValue" | "set"
