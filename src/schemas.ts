@@ -271,6 +271,10 @@ const setItemsSortSchema = v.optional(
       language: defaultString("eng"),
     }),
     v.strictObject({
+      target: v.literal("date"),
+      direction: sortDirectionSchema,
+    }),
+    v.strictObject({
       target: v.literal("propertyValue"),
       propertyVariableUuid: uuidSchema,
       dataType: v.picklist([
@@ -329,11 +333,7 @@ export const itemOcrDataParametersSchema = v.object({
  * Schema for validating Set items parameters
  * @internal
  */
-export const setItemsParametersSchema = v.object({
-  setScopeUuids: v.pipe(
-    v.array(uuidSchema),
-    v.minLength(1, "At least one set scope UUID is required"),
-  ),
+const containerItemsParametersEntries = {
   belongsToCollectionScopeUuids: v.optional(v.array(uuidSchema), []),
   queries: setQueriesSchema,
   sort: setItemsSortSchema,
@@ -342,4 +342,20 @@ export const setItemsParametersSchema = v.object({
     positiveNumber("Page size must be positive"),
     DEFAULT_PAGE_SIZE,
   ),
+};
+
+export const setItemsParametersSchema = v.object({
+  setScopeUuids: v.pipe(
+    v.array(uuidSchema),
+    v.minLength(1, "At least one set scope UUID is required"),
+  ),
+  ...containerItemsParametersEntries,
+});
+
+export const treeItemsParametersSchema = v.object({
+  treeScopeUuids: v.pipe(
+    v.array(uuidSchema),
+    v.minLength(1, "At least one tree scope UUID is required"),
+  ),
+  ...containerItemsParametersEntries,
 });

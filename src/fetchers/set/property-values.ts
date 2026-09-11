@@ -15,7 +15,7 @@ import { requestOchre } from "#/fetchers/request.js";
 import { MultilingualString } from "#/parsers/multilingual.js";
 import { parseXMLContent } from "#/parsers/string.js";
 import {
-  compileSetItemsQuery,
+  compileContainerItemsQuery,
   getItemFilterQueries,
   getPropertyFacetSelectors,
 } from "#/query.js";
@@ -549,8 +549,9 @@ let $period-values :=
     return queryBlocks;
   }
 
-  const xquery = compileSetItemsQuery({
-    setScopeUuids,
+  const xquery = compileContainerItemsQuery({
+    container: "set",
+    scopeUuids: setScopeUuids,
     belongsToCollectionScopeUuids,
     queries: getItemFilterQueries(queries),
     declarations: xqueryDeclarations,

@@ -66,6 +66,9 @@ present and `error` is `null`; on failure, the parsed value is `null` and
   style, collection, and item-page configuration.
 - `fetchSetItems(params, containedItemCategories, options)` fetches paginated
   Set search results with typed query and sort support.
+- `fetchTreeItems(params, containedItemCategories, options)` is the same for a
+  Tree, and is how to read a Tree too large to fetch whole. Items nested under
+  headings come back flat, in document order.
 - `fetchSetPropertyValues(params, options)` fetches Set property-value facets
   and optional bibliography/period attribute facets for the same query model.
 
@@ -148,6 +151,23 @@ const result = await fetchSetItems(
 
 Use `fetchSetPropertyValues` with the same query shape when you need facet data
 for a filtered result set.
+
+`fetchTreeItems` takes the same `Query` tree and the same sort options, because
+both fetchers compile the same query model against their container's searchable
+path. The difference is what the payload carries: OCHRE publishes Tree items as
+identification-only stubs unless the Tree is published with item properties, so
+a `property` query or a `propertyValue` sort only works on a Tree that carries
+them.
+
+```ts
+import { fetchTreeItems } from "ochre-sdk";
+
+const result = await fetchTreeItems(
+  { treeScopeUuids: ["<tree-uuid>"], sort: { target: "title" }, page: 1 },
+  ["concept"],
+  { languages: ["eng"] },
+);
+```
 
 ### OCR Text Queries
 

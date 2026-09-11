@@ -6,6 +6,7 @@ export { fetchItemOcrData } from "#/fetchers/item-ocr-data.js";
 export { fetchItem } from "#/fetchers/item.js";
 export { fetchSetItems } from "#/fetchers/set/items.js";
 export { fetchSetPropertyValues } from "#/fetchers/set/property-values.js";
+export { fetchTreeItems } from "#/fetchers/tree/items.js";
 export { fetchWebsiteMetadata } from "#/fetchers/website-metadata.js";
 export { fetchWebsite } from "#/fetchers/website.js";
 export {

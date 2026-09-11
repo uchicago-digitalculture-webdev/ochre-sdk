@@ -718,7 +718,11 @@ const XMLBaseItem = v.object(
     availability: v.optional(v.object({ license: XMLLicense })),
     copyright: v.optional(v.union([XMLContent, XMLString])),
     watermark: v.optional(v.union([XMLContent, XMLString])),
-    identification: XMLIdentification,
+    // OCHRE serves items that carry no label at all, so an absent
+    // identification is data rather than a malformed payload. Defaulting it
+    // here rather than widening the type keeps every reader unchanged: an
+    // empty content array parses to an empty label.
+    identification: v.optional(XMLIdentification, { label: { content: [] } }),
     context: v.optional(XMLContext),
     creators: v.optional(
       v.object(
@@ -1090,6 +1094,9 @@ const XMLHeading = v.intersect([
         ),
       }),
     ),
+    // A heading that carries no items at all: last so a heading that does
+    // carry them matches its own branch first.
+    v.object({}),
   ]),
 ]);
 

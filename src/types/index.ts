@@ -1111,6 +1111,12 @@ export type SetItemsSortDirection = "asc" | "desc";
 export type SetItemsSort =
   | { target: "none" }
   | { target: "title"; direction?: SetItemsSortDirection; language?: string }
+  /**
+   * Sort on the item's own date, falling back to its first interpretation's
+   * date. A Concept carries no date of its own and dates its interpretations
+   * instead, so the two together are the one date an item has.
+   */
+  | { target: "date"; direction?: SetItemsSortDirection }
   | {
       target: "propertyValue";
       propertyVariableUuid: string;

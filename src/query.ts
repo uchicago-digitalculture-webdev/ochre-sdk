@@ -1958,24 +1958,41 @@ export function buildBelongsToCollectionQueryExpression(
  * @returns The prolog declaring the query helpers, and the `let` clauses binding `$items`
  */
 const ITEMS_VARIABLE = "$items";
-const SET_SCOPE_VARIABLE = "$setScopeUuids";
 
 /**
- * The XQuery path a Set item search runs over
+ * The scope variable and searchable path of each item container
  *
- * The path has to stay inline in `cts:search`: binding it to a variable first
+ * A path has to stay inline in `cts:search`: binding it to a variable first
  * materializes the sequence and makes every query `XDMP-UNSEARCHABLE`, even a
- * plain word query. It references {@link SET_SCOPE_VARIABLE}, which
- * {@link compileSetItemsQuery} declares.
+ * plain word query. Each references its own scope variable, which
+ * {@link compileContainerItemsQuery} declares.
+ *
+ * A Tree nests its items under headings to any depth, so its path walks the
+ * descendant axis and then keeps only the nodes a heading or `items` holds
+ * directly, which is what distinguishes an item from the elements inside one.
+ * Excluding `heading` matters twice: a heading is not an item, and searching
+ * over headings would match every item under a heading whose own text matches.
+ * The union form `items/(* | heading/*)` is deliberately not used, because
+ * MarkLogic rejects a union as `XDMP-UNSEARCHABLE`.
  */
-const SET_ITEMS_EXPRESSION = `doc()/ochre/set[@uuid = ${SET_SCOPE_VARIABLE}]/items/*`;
+const ITEMS_CONTAINERS = {
+  set: {
+    scopeVariable: "$setScopeUuids",
+    itemsExpression: "doc()/ochre/set[@uuid = $setScopeUuids]/items/*",
+  },
+  tree: {
+    scopeVariable: "$treeScopeUuids",
+    itemsExpression:
+      "doc()/ochre/tree[@uuid = $treeScopeUuids]/items/descendant::*[not(self::heading)][parent::items or parent::heading]",
+  },
+} as const;
 
 /**
  * Compile a query tree into the clauses that bind the matching Set items
  *
  * The returned `itemsClause` binds {@link ITEMS_VARIABLE} and has to be placed
  * inside an XQuery body, with `prolog` declared ahead of it.
- * {@link compileSetItemsQuery} does both and is what fetchers should use;
+ * {@link compileContainerItemsQuery} does both and is what fetchers should use;
  * this is exposed for tests that assert on the compiled CTS.
  * @param parameters - The plan parameters
  * @param parameters.queries - The query tree to compile, or null to match every item
@@ -2052,15 +2069,22 @@ export function buildQueryPlan(parameters: {
 }
 
 /**
- * Compile a Set item query into a complete XQuery document
+ * The OCHRE item containers a paginated item query can run over
+ */
+export type ItemsContainer = keyof typeof ITEMS_CONTAINERS;
+
+/**
+ * Compile an item query over a Set or a Tree into a complete XQuery document
  *
  * Owns everything a caller would otherwise have to know and restate: the
- * version declaration, the Set scope variable, the supplemental-stripping
- * prolog, the inline searchable path, where the compiled helper prolog goes and
- * that it is only declared when non-empty, the `<ochre>` wrapper, and the name
- * of the variable holding the matching items. The body receives that name.
+ * version declaration, the scope variable, the supplemental-stripping prolog,
+ * the inline searchable path for the container, where the compiled helper
+ * prolog goes and that it is only declared when non-empty, the `<ochre>`
+ * wrapper, and the name of the variable holding the matching items. The body
+ * receives that name, so it is identical for either container.
  * @param parameters - The query parameters
- * @param parameters.setScopeUuids - The Set scope UUIDs to search within
+ * @param parameters.container - Whether the scope UUIDs name Sets or Trees
+ * @param parameters.scopeUuids - The container UUIDs to search within
  * @param parameters.belongsToCollectionScopeUuids - Collection scope UUIDs to narrow to
  * @param parameters.queries - The query tree to compile, or null to match every item
  * @param parameters.declarations - Extra prolog declarations, placed before the compiled prolog
@@ -2068,24 +2092,28 @@ export function buildQueryPlan(parameters: {
  * @returns A complete XQuery document
  * @internal
  */
-export function compileSetItemsQuery(parameters: {
-  setScopeUuids: ReadonlyArray<string>;
+export function compileContainerItemsQuery(parameters: {
+  container: ItemsContainer;
+  scopeUuids: ReadonlyArray<string>;
   belongsToCollectionScopeUuids: ReadonlyArray<string>;
   queries: Query | null;
   declarations?: ReadonlyArray<string>;
   body: (context: OchreQueryContext & { items: string }) => string;
 }): string {
   const {
-    setScopeUuids,
+    container,
+    scopeUuids,
     belongsToCollectionScopeUuids,
     queries,
     declarations = [],
     body,
   } = parameters;
 
+  const { scopeVariable, itemsExpression } = ITEMS_CONTAINERS[container];
+
   const plan = buildQueryPlan({
     queries,
-    baseItemsExpression: SET_ITEMS_EXPRESSION,
+    baseItemsExpression: itemsExpression,
     scopeQueryExpression: buildBelongsToCollectionQueryExpression(
       belongsToCollectionScopeUuids,
       BELONGS_TO_COLLECTION_UUID,
@@ -2095,7 +2123,7 @@ export function compileSetItemsQuery(parameters: {
   return compileOchreQuery({
     declarations: [
       ...declarations,
-      `declare variable ${SET_SCOPE_VARIABLE} := (${Array.from(setScopeUuids, (uuid) => stringLiteral(uuid)).join(", ")});`,
+      `declare variable ${scopeVariable} := (${Array.from(scopeUuids, (uuid) => stringLiteral(uuid)).join(", ")});`,
       ...(plan.prolog === "" ? [] : [plan.prolog]),
     ],
     body: (context) => `<ochre>{
