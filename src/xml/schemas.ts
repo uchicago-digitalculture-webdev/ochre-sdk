@@ -2185,11 +2185,23 @@ const XMLWebsiteSegment = v.lazy(() =>
   ),
 );
 
+/**
+ * A website resource item
+ *
+ * The member order is load-bearing, because a union returns its first match
+ * and every member is an object schema, which drops the keys its own shape
+ * does not name. {@link XMLWebsiteSegment} goes first: every entry on
+ * {@link XMLWebsiteResource} other than `uuid` is optional, so a segment
+ * wrapper satisfies that schema too and would come back without its
+ * `segments`. {@link XMLWebsiteResourceGroup} goes last for the mirror
+ * reason, since a resource holding children satisfies the group shape and
+ * would lose its own slug and properties.
+ */
 const XMLWebsiteResourceItem: v.GenericSchema<
   unknown,
   XML.XMLWebsiteResourceItem
 > = v.lazy(() =>
-  v.union([XMLWebsiteResource, XMLWebsiteResourceGroup, XMLWebsiteSegment]),
+  v.union([XMLWebsiteSegment, XMLWebsiteResource, XMLWebsiteResourceGroup]),
 );
 
 const XMLWebsiteResource: v.GenericSchema<unknown, XML.XMLWebsiteResource> =

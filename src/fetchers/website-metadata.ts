@@ -129,7 +129,10 @@ declare function local:matching-pages($resources, $target-slug, $slug-prefix) {
     return local:matching-pages(
       local:resource-items($segment/items/resource),
       $target-slug,
-      $page-slug
+      local:prefix-slug(
+        $segment/identification/abbreviation/content/string,
+        $page-slug
+      )
     )
   )
 };

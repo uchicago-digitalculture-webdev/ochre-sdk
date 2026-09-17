@@ -88,20 +88,27 @@ export function childSlugPrefix(
  * The XQuery counterpart of {@link cleanWebsitePageSlug},
  * {@link prefixSlug} and {@link childSlugPrefix}
  *
- * Declares `local:clean-slug`, `local:page-slug` and
+ * Declares `local:clean-slug`, `local:prefix-slug`, `local:page-slug` and
  * `local:page-child-slug-prefix`. "No prefix" is the empty string here.
+ * `local:prefix-slug` takes a slug value rather than a resource, because a
+ * segment's own slug comes from its abbreviation instead of a `@slug`
+ * attribute.
  * @internal
  */
 export const WEBSITE_PAGE_SLUG_DECLARATIONS = `declare function local:clean-slug($slug) {
   replace(string($slug), ${stringLiteral(SEGMENT_UNIQUE_SLUG_PREFIX_PATTERN)}, "")
 };
 
-declare function local:page-slug($resource, $slug-prefix) {
-  let $slug := local:clean-slug($resource/@slug)
+declare function local:prefix-slug($slug, $slug-prefix) {
+  let $slug-string := string(($slug)[1])
   return
-    if ($slug-prefix = "") then $slug
-    else if ($slug = "") then $slug-prefix
-    else concat($slug-prefix, ${stringLiteral(WEBSITE_PAGE_SLUG_SEPARATOR)}, $slug)
+    if ($slug-prefix = "") then $slug-string
+    else if ($slug-string = "") then $slug-prefix
+    else concat($slug-prefix, ${stringLiteral(WEBSITE_PAGE_SLUG_SEPARATOR)}, $slug-string)
+};
+
+declare function local:page-slug($resource, $slug-prefix) {
+  local:prefix-slug(local:clean-slug($resource/@slug), $slug-prefix)
 };
 
 declare function local:page-child-slug-prefix($resource, $slug-prefix) {
