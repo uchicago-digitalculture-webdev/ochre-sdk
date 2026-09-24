@@ -1005,13 +1005,15 @@ function buildOcrValueQueryExpression(parameters: {
 }
 
 /**
- * Compile an OCR text search into a query over the `<ocr>` layer of a Resource
- * document
+ * Compile an OCR text search into a query over the `<ocr>` layers of a
+ * Resource document
  *
- * Each word node in that layer holds a single OCR word in its `CONTENT`
+ * Each word node in a layer holds a single OCR word in its `CONTENT`
  * attribute, so `includes` matches every search term as a word inside that
- * attribute anywhere in the layer, and `exact` requires every term to equal a
- * whole `CONTENT` value.
+ * attribute, and `exact` requires every term to equal a whole `CONTENT` value.
+ * A Resource carries one layer per page, so each term is its own element query
+ * and the terms may fall on different pages, which is also all the indexes can
+ * tell apart.
  *
  * The conjunction is only an index narrowing for `exact`. Attribute values
  * carry no word positions, so `cts:near-query` over them silently degenerates
@@ -1021,41 +1023,25 @@ function buildOcrValueQueryExpression(parameters: {
  */
 function buildOcrQueryExpression(query: OcrQuery): string {
   const { value, matchMode, isCaseSensitive } = query;
-
-  if (matchMode === "exact") {
-    const terms = tokenizeOcrExactValue(value);
-
-    if (terms.length === 0) {
-      return "cts:false-query()";
-    }
-
-    return buildNestedElementQuery(
-      [OCR_LAYER_ELEMENT_NAME],
-      buildAndCtsQueryExpressionInternal(
-        Array.from(terms, (term) =>
-          buildOcrValueQueryExpression({
-            value: searchValue(term),
-            isCaseSensitive,
-          }),
-        ),
-      ),
-    );
-  }
-
-  const terms = tokenizeIncludesSearchValue({ value, isCaseSensitive });
+  const terms =
+    matchMode === "exact"
+      ? tokenizeOcrExactValue(value)
+      : tokenizeIncludesSearchValue({ value, isCaseSensitive });
 
   if (terms.length === 0) {
     return "cts:false-query()";
   }
 
-  return buildNestedElementQuery(
-    [OCR_LAYER_ELEMENT_NAME],
-    buildAndCtsQueryExpressionInternal(
-      Array.from(terms, (term) =>
-        buildOcrWordQueryExpression({
-          value: searchValue(term),
-          isCaseSensitive,
-        }),
+  const buildTermQueryExpression =
+    matchMode === "exact"
+      ? buildOcrValueQueryExpression
+      : buildOcrWordQueryExpression;
+
+  return buildAndCtsQueryExpressionInternal(
+    Array.from(terms, (term) =>
+      buildNestedElementQuery(
+        [OCR_LAYER_ELEMENT_NAME],
+        buildTermQueryExpression({ value: searchValue(term), isCaseSensitive }),
       ),
     ),
   );
@@ -1126,18 +1112,25 @@ function registerOcrBinding(
     queryExpression,
     `cts:document-query(${context.baseItemsExpression}/@uuid/string())`,
   ]);
-  const searchExpression = `cts:search(/ochre/resource, ${scopedQueryExpression})`;
   const phraseHelperName =
     phraseTerms.length > 1 ? registerOcrPhraseHelper(context) : null;
+  // A path step over the matches loads every page's OCR layer at once
+  // (`XDMP-EXPNTREECACHEFULL`). The indexes resolve a case-insensitive
+  // `includes` exactly, and a URI is its UUID, so it reads the URI lexicon. The
+  // rest iterate the search, and only the phrase helper's exact check can skip
+  // the filter.
   context.ocrBindings.push({
     name,
     expression:
       queryExpression === "cts:false-query()"
         ? "()"
-        : phraseHelperName == null
-          ? `${searchExpression}/@uuid/string()`
-          : `for $ocrResource in ${searchExpression}
+        : phraseHelperName != null
+          ? `for $ocrResource in cts:search(/ochre/resource, ${scopedQueryExpression}, "unfiltered")
     where ${phraseHelperName}($ocrResource, (${phraseTerms.map((term) => stringLiteral(term)).join(", ")}), ${query.isCaseSensitive ? "true()" : "false()"})
+    return string($ocrResource/@uuid)`
+          : query.matchMode === "includes" && !query.isCaseSensitive
+            ? `cts:uris((), (), ${scopedQueryExpression})`
+            : `for $ocrResource in cts:search(/ochre/resource, ${scopedQueryExpression})
     return string($ocrResource/@uuid)`,
   });
 

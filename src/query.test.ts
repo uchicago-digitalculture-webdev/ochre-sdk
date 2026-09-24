@@ -310,10 +310,9 @@ describe("ocr target queries", () => {
     const itemsClause = compiledItemsClause(ocrQuery);
 
     expectContainsAll(itemsClause, [
-      'let $ocrItemUuids1 := cts:search(/ochre/resource, cts:and-query((cts:element-query(xs:QName("ocr"), cts:element-attribute-word-query(',
+      'let $ocrItemUuids1 := cts:uris((), (), cts:and-query((cts:element-query(xs:QName("ocr"), cts:element-attribute-word-query(',
       'xs:QName("CONTENT"), "cappaert"',
       `cts:document-query(${BASE_ITEMS_EXPRESSION}/@uuid/string())`,
-      ")/@uuid/string()",
       `let $items := ${BASE_ITEMS_EXPRESSION}[@uuid = $ocrItemUuids1]`,
     ]);
     expectContainsNone(itemsClause, [QUERY_BINDING, '"unstemmed"']);
@@ -327,7 +326,7 @@ describe("ocr target queries", () => {
     });
 
     expectContainsAll(itemsClause, [
-      "cts:and-query((cts:element-attribute-value-query(",
+      'cts:and-query((cts:element-query(xs:QName("ocr"), cts:element-attribute-value-query(',
       'xs:QName("CONTENT"), "THE"',
       'xs:QName("CONTENT"), "COLLEGE"',
       'where local:ocrHasPhrase($ocrResource, ("THE", "COLLEGE"), false())',
@@ -400,7 +399,7 @@ describe("ocr target queries", () => {
     });
 
     expectContainsAll(postedBody, [
-      "let $ocrItemUuids1 := cts:search(/ochre/resource,",
+      "let $ocrItemUuids1 := cts:uris((), (),",
       `let $items := ${BASE_ITEMS_EXPRESSION}[@uuid = $ocrItemUuids1]`,
       `label/@uuid = "${MEDIA_TYPE_UUID}"`,
     ]);
