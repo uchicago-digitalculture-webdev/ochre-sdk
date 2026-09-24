@@ -25,7 +25,11 @@ import { parseRequestedLanguages } from "#/parsers/languages.js";
 import { parseWebpageView } from "#/parsers/website/index.js";
 import { uuidSchema } from "#/schemas.js";
 import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
-import { compileOchreQuery, stringLiteral } from "#/xquery.js";
+import {
+  compileOchreQuery,
+  OCHRE_RESPONSE_PADDING,
+  stringLiteral,
+} from "#/xquery.js";
 
 type FetchItemResult<TItem> = Promise<
   | { item: TItem; error: null; detailedError: null }
@@ -102,7 +106,7 @@ ${ITEM_CATEGORIES_WITH_EMBEDDED_ITEMS.map((category) => `  $ochre/${category}`).
   return compileOchreQuery({
     body: ({ omitSupplemental }) => `${letClauses.join("\n")}
 return
-  if (empty($ochre)) then ()
+  if (empty($ochre)) then <ochre>${OCHRE_RESPONSE_PADDING}</ochre>
   else element ochre {
     $ochre/@*,
     ${omitSupplemental(itemNodesExpression)}

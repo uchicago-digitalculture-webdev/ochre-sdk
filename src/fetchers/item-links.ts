@@ -20,7 +20,11 @@ import {
 } from "#/parsers/languages.js";
 import { uuidSchema } from "#/schemas.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
-import { compileOchreQuery, stringLiteral } from "#/xquery.js";
+import {
+  compileOchreQuery,
+  OCHRE_RESPONSE_PADDING,
+  stringLiteral,
+} from "#/xquery.js";
 
 /**
  * Build an XQuery string to fetch linked items from the OCHRE API.
@@ -48,7 +52,7 @@ function buildXQuery(uuid: string): string {
   return compileOchreQuery({
     body: ({
       omitSupplemental,
-    }) => `<ochre>{let $item-uuid := ${stringLiteral(uuid)}
+    }) => `<ochre>${OCHRE_RESPONSE_PADDING}{let $item-uuid := ${stringLiteral(uuid)}
 
 let $source-items := (
 ${OCHRE_COLLECTION_CATEGORIES.map((category) => `  fn:collection("ochre/${category}")/ochre[@uuid = $item-uuid]/${category}`).join(",\n")}

@@ -6,7 +6,7 @@ import { getErrorOutput } from "#/errors.js";
 import { requestOchre } from "#/fetchers/request.js";
 import { buildOcrWordPath } from "#/ocr.js";
 import { itemOcrDataParametersSchema } from "#/schemas.js";
-import { stringLiteral } from "#/xquery.js";
+import { OCHRE_RESPONSE_PADDING, stringLiteral } from "#/xquery.js";
 
 const OCR_STRING_VERTEX_REGEX =
   /\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/g;
@@ -98,10 +98,8 @@ function parseOcrStringVertices(
  * these elements and may serve them in a namespace. A plain `//ocr//string`
  * name test silently matches nothing in either of those cases.
  *
- * The matches are wrapped in an `<ocrStrings>` element rather than returned
- * directly under `<ochre>`: the API collapses an `<ochre>` element that has no
- * element children down to a bare `<ochre/>`, which would drop the `found`
- * flag and make "no such item" indistinguishable from "no matches".
+ * The matches are wrapped in an `<ocrStrings>` element carrying a `found`
+ * flag, which tells "no such item" apart from "no matches".
  * @param parameters - The parameters for the fetch
  * @param parameters.uuid - The UUID of the OCHRE item to read the OCR layer of
  * @param parameters.terms - The whitespace-separated search terms to match against, already lowercased for case-insensitive matching
@@ -143,7 +141,7 @@ let $ocrStrings :=
     height="{string($string/@HEIGHT)}"
     vertices="{string($string/@VERTICES)}"/>
 
-return <ochre><ocrStrings found="{exists($ochre)}">{$ocrStrings}</ocrStrings></ochre>`;
+return <ochre>${OCHRE_RESPONSE_PADDING}<ocrStrings found="{exists($ochre)}">{$ocrStrings}</ocrStrings></ochre>`;
 }
 
 /**

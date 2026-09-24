@@ -15,7 +15,11 @@ import {
 } from "#/parsers/languages.js";
 import { gallerySchema } from "#/schemas.js";
 import { XMLGalleryData as XMLGalleryDataSchema } from "#/xml/schemas.js";
-import { compileOchreQuery, stringLiteral } from "#/xquery.js";
+import {
+  compileOchreQuery,
+  OCHRE_RESPONSE_PADDING,
+  stringLiteral,
+} from "#/xquery.js";
 
 function buildXQuery(parameters: {
   uuid: string;
@@ -28,7 +32,7 @@ function buildXQuery(parameters: {
   const filterLiteral = stringLiteral(filter?.trim() ?? "");
 
   return compileOchreQuery({
-    body: ({ omitSupplemental }) => `<ochre>{
+    body: ({ omitSupplemental }) => `<ochre>${OCHRE_RESPONSE_PADDING}{
   for $q in doc()/ochre[@uuid=${stringLiteral(uuid)}]
   let $filter := ${filterLiteral}
   let $resources := $q//items/resource

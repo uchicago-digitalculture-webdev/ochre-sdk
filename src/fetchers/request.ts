@@ -46,7 +46,7 @@ function resolveSignal(
  * @param parameters.label - What is being decoded, used in failure messages
  * @param parameters.checkRawData - Guard run against the parsed XML before validation
  * @returns The validated response, with XML source metadata restored
- * @throws When the guard rejects or validation fails
+ * @throws When the query failed on the server, the guard rejects, or validation fails
  * @internal
  */
 export function decodeOchreResponse<TOutput>(parameters: {
@@ -56,6 +56,12 @@ export function decodeOchreResponse<TOutput>(parameters: {
   checkRawData?: (data: unknown) => void;
 }): TOutput {
   const { xml, schema, label, checkRawData } = parameters;
+
+  if (xml.trim() === "<result><ochre/></result>") {
+    throw new Error(
+      `Failed to fetch ${label}: the OCHRE API could not run the query`,
+    );
+  }
 
   const data = xmlParser.parse(xml) as unknown;
 

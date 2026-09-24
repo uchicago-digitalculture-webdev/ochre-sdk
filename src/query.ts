@@ -12,7 +12,11 @@ import {
   OCR_WORD_CONTENT_ATTRIBUTE,
   OCR_WORD_QNAMES,
 } from "#/ocr.js";
-import { compileOchreQuery, stringLiteral } from "#/xquery.js";
+import {
+  compileOchreQuery,
+  OCHRE_RESPONSE_PADDING,
+  stringLiteral,
+} from "#/xquery.js";
 
 const CTS_INCLUDES_STOP_WORDS = new Set<string>([
   "and",
@@ -2119,7 +2123,7 @@ export function compileContainerItemsQuery(parameters: {
       `declare variable ${scopeVariable} := (${Array.from(scopeUuids, (uuid) => stringLiteral(uuid)).join(", ")});`,
       ...(plan.prolog === "" ? [] : [plan.prolog]),
     ],
-    body: (context) => `<ochre>{
+    body: (context) => `<ochre>${OCHRE_RESPONSE_PADDING}{
 ${plan.itemsClause}
 ${body({ ...context, items: plan.itemsVariable })}
 }</ochre>`,

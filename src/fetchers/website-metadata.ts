@@ -20,7 +20,11 @@ import {
 import { websitePresentationReader } from "#/parsers/website/reader.js";
 import { WEBSITE_WALK_DECLARATIONS } from "#/parsers/website/walk.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
-import { compileOchreQuery, stringLiteral } from "#/xquery.js";
+import {
+  compileOchreQuery,
+  OCHRE_RESPONSE_PADDING,
+  stringLiteral,
+} from "#/xquery.js";
 
 /**
  * The presentation properties the metadata projection carries
@@ -174,6 +178,7 @@ return
     $website/@belongsTo,
     $website/@publicationDateTime,
     $website/@languages,
+    ${OCHRE_RESPONSE_PADDING},
     ${omitSupplemental(`(
       $website/metadata,
       local:metadata-tree($website/tree[1], $target-slug, "")

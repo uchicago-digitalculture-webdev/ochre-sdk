@@ -21,7 +21,11 @@ import {
 } from "#/parsers/languages.js";
 import { uuidSchema } from "#/schemas.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
-import { compileOchreQuery, stringLiteral } from "#/xquery.js";
+import {
+  compileOchreQuery,
+  OCHRE_RESPONSE_PADDING,
+  stringLiteral,
+} from "#/xquery.js";
 
 type FetchItemChildrenResult<TItems> = Promise<
   | { items: TItems; error: null; detailedError: null }
@@ -104,7 +108,7 @@ let $children :=
   else if ($category = "resource") then $item/resource
   else ()
 return
-  <ochre>
+  <ochre>${OCHRE_RESPONSE_PADDING}
     <items>{${omitSupplemental("$children")}}</items>
   </ochre>`,
   });

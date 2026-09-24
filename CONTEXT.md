@@ -66,8 +66,10 @@ A **stylesheet** attaches CSS to a property variable or to one property value, s
 
 A **collection** in the MarkLogic sense is where documents of one category live, which is what makes a category-scoped query cheap and an unscoped one slow.
 
+The **failure response** is the bare `<result><ochre/></result>` the XQuery endpoint sends, with a 200 status, when a query throws. It sends the exact same bytes when a query succeeds but the `<ochre>` element it returns holds fewer than 25 characters, so an empty result and a failed query look identical unless the query pads its output. Only a single `<ochre>` root survives, and attributes on it do not count toward the 25.
+
 **supplemental** marks nodes that should not be returned to a consumer. The marker can sit at any depth, so stripping it means walking the whole subtree. The OCR layer is marked supplemental and is deliberately read without stripping, because reading it is the entire point of asking for it.
 
-An **OCR layer** is the positioned text recognized from a scanned page, stored as ALTO. OCHRE varies the casing of the element names and serves them both in the ALTO namespace and in no namespace at all, so any selector over the layer has to accept every combination. A word's text is in an attribute rather than in the element's content.
+An **OCR layer** is the positioned text recognized from a scanned page, stored as ALTO. OCHRE varies the casing of the element names and serves them both in the ALTO namespace and in no namespace at all, so any selector over the layer has to accept every combination. A word's text is in an attribute rather than in the element's content. A multi-page Resource carries one layer per page, on the page Resources nested inside it, so a single document holds many layers.
 
 A **permanent identification URL** is the citable `pi.lib.uchicago.edu` address of an item. It is a stable identifier rather than a page, so a consumer rewrites it: to an API endpoint when it wants the data, and to a route when it wants somewhere for a reader to click.

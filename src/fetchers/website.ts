@@ -6,7 +6,11 @@ import { isOchreJsonAccepted, requestOchre } from "#/fetchers/request.js";
 import { parseLanguages } from "#/parsers/languages.js";
 import { parseWebsite } from "#/parsers/website/index.js";
 import { XMLWebsiteData as XMLWebsiteDataSchema } from "#/xml/schemas.js";
-import { compileOchreQuery, stringLiteral } from "#/xquery.js";
+import {
+  compileOchreQuery,
+  OCHRE_RESPONSE_PADDING,
+  stringLiteral,
+} from "#/xquery.js";
 
 async function areWebsiteCredentialsValid(
   uuid: string,
@@ -34,8 +38,10 @@ async function areWebsiteCredentialsValid(
 function buildXQuery(abbreviation: string): string {
   return compileOchreQuery({
     body: ({ omitSupplemental }) =>
-      `for $ochre in collection("ochre/tree")/ochre[tree/identification/abbreviation/content/string = ${stringLiteral(abbreviation)}]
-return element ochre { $ochre/@*, ${omitSupplemental("$ochre/node()")} }`,
+      `let $ochre := collection("ochre/tree")/ochre[tree/identification/abbreviation/content/string = ${stringLiteral(abbreviation)}][1]
+return
+  if (empty($ochre)) then <ochre>${OCHRE_RESPONSE_PADDING}</ochre>
+  else element ochre { $ochre/@*, ${omitSupplemental("$ochre/node()")} }`,
   });
 }
 

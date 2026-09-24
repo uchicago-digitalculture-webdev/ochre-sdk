@@ -10,6 +10,19 @@ export function stringLiteral(value: string): string {
 }
 
 /**
+ * A comment every query puts inside the `<ochre>` element it returns
+ *
+ * The API answers a failed query with a bare `<result><ochre/></result>`, and
+ * sends the same response whenever the returned `<ochre>` element holds fewer
+ * than 25 characters. Padding keeps an empty or not-found result above that
+ * cutoff, so the bare response only ever means failure. The XML parser drops
+ * comments, so no schema sees it.
+ * @internal
+ */
+export const OCHRE_RESPONSE_PADDING =
+  "<!--ochre-sdk: keeps an empty result distinct from a failed query-->";
+
+/**
  * XQuery prolog declaring `local:omit-supplemental`, which drops every element
  * carrying `supplemental="true"` from a node sequence, at any depth.
  *
