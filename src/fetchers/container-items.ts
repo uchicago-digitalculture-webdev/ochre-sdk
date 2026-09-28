@@ -140,8 +140,8 @@ function buildPropertyValueTypedSortKeyExpression(parameters: {
     case "date": {
       return `(for $v in ${propertyValuePath}
         let $candidate := normalize-space(string($v/@rawValue))
-        where $candidate castable as xs:date
-        return xs:date($candidate))[1]`;
+        where $candidate castable as xs:date or $candidate castable as xs:dateTime
+        return if ($candidate castable as xs:date) then xs:date($candidate) else xs:date(xs:dateTime($candidate)))[1]`;
     }
     case "dateTime": {
       return `(for $v in ${propertyValuePath}
