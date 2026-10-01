@@ -1,6 +1,6 @@
 import type { MultilingualString } from "#/parsers/multilingual.js";
 import type { Prettify } from "#/types/utilities.js";
-import type { Webpage } from "#/types/website.js";
+import type { Style, Webpage } from "#/types/website.js";
 
 /**
  * Language-code tuple or array used by OCHRE multilingual fields.
@@ -742,6 +742,28 @@ export type Tree<
 >;
 
 /**
+ *  Property of a Set style in OCHRE, with the look its values take
+ */
+export type SetStyleProperty<T extends LanguageCodes = LanguageCodes> =
+  Prettify<
+    Omit<Property<T>, "properties"> & {
+      properties: Array<SetStyleProperty<T>>;
+      styles: Array<Style>;
+    }
+  >;
+
+/**
+ *  Style of a Set in OCHRE
+ */
+export type SetStyle<T extends LanguageCodes = LanguageCodes> = {
+  date: Date | null;
+  title: MultilingualString<T> | null;
+  content: MultilingualString<T> | null;
+  authors: Array<Person<T, "embedded">>;
+  properties: Array<SetStyleProperty<T>>;
+};
+
+/**
  *  Set in OCHRE
  */
 export type Set<
@@ -757,6 +779,7 @@ export type Set<
     reverseLinks: ItemLinks<T>;
     notes: Array<Note<T>>;
     properties: Array<Property<T>>;
+    styles: Array<SetStyle<T>>;
     items: Array<SetItem<U, T>>;
   }
 >;

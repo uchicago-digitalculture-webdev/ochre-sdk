@@ -53,6 +53,8 @@ import type {
   SetPeriod,
   SetResource,
   SetSpatialUnit,
+  SetStyle,
+  SetStyleProperty,
   SetTree,
   SimplifiedProperty,
   SpatialUnit,
@@ -60,7 +62,7 @@ import type {
   Tree,
   TreeItemCategory,
 } from "#/types/index.js";
-import type { Webpage } from "#/types/website.js";
+import type { Style, Webpage } from "#/types/website.js";
 import type {
   XMLBaseItem,
   XMLBibliography,
@@ -108,6 +110,7 @@ import type {
   XMLSection,
   XMLSet,
   XMLSetItems,
+  XMLSetStyle,
   XMLSimplifiedProperty,
   XMLSpatialUnit,
   XMLString,
@@ -1809,6 +1812,59 @@ function parseTree<
   };
 }
 
+function parseSetStyleProperty<T extends ReadonlyArray<string>>(
+  rawProperty: XMLProperty,
+  options: ParserOptions<T>,
+): SetStyleProperty<T> {
+  const declarations = rawProperty.styleProperties?.payload.split(";") ?? [];
+  const styles: Array<Style> = [];
+  for (const declaration of declarations) {
+    const separatorIndex = declaration.indexOf("=");
+    const label = (
+      separatorIndex === -1 ? declaration : declaration.slice(0, separatorIndex)
+    ).trim();
+    if (label === "") {
+      continue;
+    }
+
+    styles.push({
+      label,
+      value:
+        separatorIndex === -1
+          ? ""
+          : declaration.slice(separatorIndex + 1).trim(),
+    });
+  }
+
+  return {
+    ...parseProperty(rawProperty, options),
+    properties: Array.from(rawProperty.property ?? [], (property) =>
+      parseSetStyleProperty(property, options),
+    ),
+    styles,
+  };
+}
+
+function parseSetStyle<T extends ReadonlyArray<string>>(
+  rawStyle: XMLSetStyle,
+  options: ParserOptions<T>,
+): SetStyle<T> {
+  return {
+    date: rawStyle.date ?? null,
+    title: parseNoteTitle(rawStyle, options),
+    content:
+      rawStyle.content == null
+        ? null
+        : parseRequiredContentLike(rawStyle as XMLContent, options),
+    authors: Array.from(rawStyle.authors?.author ?? [], (author) =>
+      parsePerson(author, options),
+    ),
+    properties: Array.from(rawStyle.properties?.property ?? [], (property) =>
+      parseSetStyleProperty(property, options),
+    ),
+  };
+}
+
 function parseSet<
   U extends SetItemCategory = SetItemCategory,
   T extends ReadonlyArray<string> = ReadonlyArray<string>,
@@ -1832,6 +1888,9 @@ function parseSet<
     reverseLinks: parseReverseLinks(rawSet.reverseLinks, childOptions),
     notes: parseNotes(rawSet.notes, childOptions),
     properties: parseProperties(rawSet.properties, childOptions),
+    styles: Array.from(rawSet.styles?.style ?? [], (style) =>
+      parseSetStyle(style, childOptions),
+    ),
     items: parseSetItemHierarchy(
       rawSet.items,
       childOptions,

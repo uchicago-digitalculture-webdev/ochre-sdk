@@ -685,6 +685,16 @@ const XMLProperty: v.GenericSchema<unknown, XML.XMLProperty> = v.lazy(() =>
         ),
       ),
       comment: v.optional(XMLContent),
+      styleProperties: v.optional(
+        v.object(
+          {
+            payload: v.string(
+              "XMLProperty: styleProperties payload is string and required",
+            ),
+          },
+          "XMLProperty: styleProperties is object with payload",
+        ),
+      ),
       property: v.optional(
         v.array(XMLProperty, "XMLProperty: property is array of XMLProperty"),
       ),
@@ -1230,6 +1240,32 @@ const XMLTree = v.object(
   "XMLTree: Shape error",
 );
 
+const XMLSetStyle = v.object(
+  {
+    content: v.optional(XMLContent.entries.content),
+    date: v.optional(
+      customDateTime("XMLSetStyle: date is not a valid datetime"),
+    ),
+    authors: v.optional(
+      v.object(
+        {
+          author: v.array(
+            v.lazy((): v.GenericSchema<unknown, XML.XMLPerson> => XMLPerson),
+          ),
+        },
+        "XMLSetStyle: authors is object with author array of XMLPerson",
+      ),
+    ),
+    properties: v.optional(
+      v.object(
+        { property: v.array(XMLProperty) },
+        "XMLSetStyle: properties is object with property array of XMLProperty",
+      ),
+    ),
+  },
+  "XMLSetStyle: Shape error",
+);
+
 const XMLSet = v.object(
   {
     ...XMLBaseItem.entries,
@@ -1255,6 +1291,12 @@ const XMLSet = v.object(
     ),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
+    styles: v.optional(
+      v.object(
+        { style: v.array(XMLSetStyle) },
+        "XMLSet: styles is object with style array of XMLSetStyle",
+      ),
+    ),
     items: v.optional(
       v.object({
         tree: v.optional(
@@ -2755,6 +2797,7 @@ type _SchemaAssertions = AssertAllTrue<
     SchemaMatchesType<typeof XMLLinkedBibliography, XML.XMLLinkedBibliography>,
     SchemaMatchesType<typeof XMLHeading, XML.XMLHeading>,
     SchemaMatchesType<typeof XMLTree, XML.XMLTree>,
+    SchemaMatchesType<typeof XMLSetStyle, XML.XMLSetStyle>,
     SchemaMatchesType<typeof XMLSet, XML.XMLSet>,
     SchemaMatchesType<typeof XMLBibliography, XML.XMLBibliography>,
     SchemaMatchesType<typeof XMLInterpretation, XML.XMLInterpretation>,

@@ -227,6 +227,7 @@ export type XMLProperty = {
     }
   >;
   comment?: XMLContent;
+  styleProperties?: { payload: string };
   property?: Array<XMLProperty>;
 };
 
@@ -650,6 +651,12 @@ export type XMLWebsiteTree = Omit<XMLTree, "items" | "properties"> & {
   items?: { resource?: Array<XMLWebsiteResourceItem> };
 };
 
+export type XMLSetStyle = Partial<XMLContent> & {
+  date?: Date;
+  authors?: { author: Array<XMLPerson> };
+  properties?: { property: Array<XMLProperty> };
+};
+
 export type XMLSet = XMLBaseItem & {
   type?: string;
   suppressBlanks?: boolean;
@@ -658,6 +665,7 @@ export type XMLSet = XMLBaseItem & {
   reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;
   notes?: { note: Array<XMLNote> };
   properties?: { property: Array<XMLProperty> };
+  styles?: { style: Array<XMLSetStyle> };
   items?: {
     tree?: Array<XMLTree>;
     bibliography?: Array<XMLBibliography>;

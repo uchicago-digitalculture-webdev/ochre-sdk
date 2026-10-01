@@ -38,6 +38,8 @@ A value whose `dataType` is **IDREF** points at a propertyValue item rather than
 
 A **facet** is a count of how many items in a Set carry a given property value, which is what drives filter sidebars. Facets are grouped by the canonical value a property stands for, which OCHRE has to decide before it can count.
 
+A Set can carry **styles**, which give the items holding a property value a look, such as the fill color of their shape on a map. Each style lists properties naming the variable and value it applies to, and each such property holds its look as **styleProperties**: one string of `;`-separated `key=value` pairs, such as `polygonFillPattern=Hollow;polygonFillColor=#AF8406`. A style property can nest like any other, and a nested one can carry a look of its own.
+
 ## Multilingual text
 
 Almost every human-readable field is multilingual. OCHRE serves it as **content**, a list of entries tagged with a language code, each holding one or more **strings**. When a language has several entries the first is primary, and the rest are aliases.
