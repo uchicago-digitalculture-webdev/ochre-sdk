@@ -769,7 +769,7 @@ export type XMLSetItemLocation = {
   category: string;
   identification: XMLIdentification;
   coordinates?: XMLCoordinates;
-  value?: Array<{ variable: string; uuid: string }>;
+  value?: Array<{ variable: string; uuid: string } & XMLContent>;
 };
 
 export type XMLSetItemLocationsData = {

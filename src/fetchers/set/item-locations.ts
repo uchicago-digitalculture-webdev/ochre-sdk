@@ -8,6 +8,7 @@ import type { Query, SetItemLocation } from "#/types/index.js";
 import { normalizeItemCategory } from "#/categories.js";
 import { getErrorOutput } from "#/errors.js";
 import { requestOchre } from "#/fetchers/request.js";
+import { parseRequiredContentLike } from "#/parsers/helpers.js";
 import { parseCoordinates, parseIdentification } from "#/parsers/index.js";
 import {
   parseRequestedLanguages,
@@ -92,7 +93,7 @@ export async function fetchSetItemLocations(
       $item/identification,
       $item/coordinates,
       for $value in $item//properties//property[label/@uuid = $propertyVariableUuids]/value[@uuid]
-      return <value variable="{$value/../label/@uuid}" uuid="{$value/@uuid}"/>
+      return <value variable="{$value/../label/@uuid}" uuid="{$value/@uuid}">{$value/content}</value>
     }</itemLocation>
   }</items>`,
       }),
@@ -130,6 +131,7 @@ export async function fetchSetItemLocations(
         propertyValues.push({
           variableUuid: value.variable,
           valueUuid: value.uuid,
+          label: parseRequiredContentLike(value, { languages }),
         });
       }
 

@@ -2658,17 +2658,20 @@ const XMLSetItemLocation = v.object(
     coordinates: v.optional(XMLCoordinates),
     value: v.optional(
       v.array(
-        v.object(
-          {
-            variable: v.string(
-              "XMLSetItemLocation: value variable is string and required",
-            ),
-            uuid: v.string(
-              "XMLSetItemLocation: value uuid is string and required",
-            ),
-          },
-          "XMLSetItemLocation: value is object with variable and uuid",
-        ),
+        v.intersect([
+          v.object(
+            {
+              variable: v.string(
+                "XMLSetItemLocation: value variable is string and required",
+              ),
+              uuid: v.string(
+                "XMLSetItemLocation: value uuid is string and required",
+              ),
+            },
+            "XMLSetItemLocation: value is object with variable and uuid",
+          ),
+          XMLContent,
+        ]),
       ),
     ),
   },

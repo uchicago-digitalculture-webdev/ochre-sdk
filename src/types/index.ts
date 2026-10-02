@@ -861,7 +861,11 @@ export type SetItemLocation<T extends LanguageCodes = LanguageCodes> = {
   category: SetItemCategory;
   identification: Identification<T>;
   coordinates: Array<Coordinates<T>>;
-  propertyValues: Array<{ variableUuid: string; valueUuid: string }>;
+  propertyValues: Array<{
+    variableUuid: string;
+    valueUuid: string;
+    label: MultilingualString<T>;
+  }>;
 };
 
 /**
