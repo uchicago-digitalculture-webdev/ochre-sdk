@@ -111,6 +111,27 @@ const XMLContent = v.object(
   "XMLContent: Shape error",
 );
 
+const XMLOptionalContent = v.optional(
+  v.pipe(
+    v.union(
+      [
+        XMLContent,
+        v.object(
+          {
+            payload: v.literal(
+              "",
+              "XMLOptionalContent: payload is an empty string",
+            ),
+          },
+          "XMLOptionalContent: empty element is object with empty payload",
+        ),
+      ],
+      "XMLOptionalContent: content is XMLContent or an empty element",
+    ),
+    v.transform((content) => ("content" in content ? content : undefined)),
+  ),
+);
+
 const XMLNumber = v.pipe(
   v.union([v.string("XMLNumber: string is string and required"), XMLString]),
   v.check(isXMLNumber, "XMLNumber: string is not a number"),
@@ -385,7 +406,7 @@ const XMLEvent = v.object(
         "XMLEvent: location is object with uuid",
       ),
     ),
-    comment: v.optional(XMLContent),
+    comment: XMLOptionalContent,
     label: XMLContent,
     other: v.optional(
       v.object(
@@ -684,7 +705,7 @@ const XMLProperty: v.GenericSchema<unknown, XML.XMLProperty> = v.lazy(() =>
           "XMLProperty: value is array of objects with payload",
         ),
       ),
-      comment: v.optional(XMLContent),
+      comment: XMLOptionalContent,
       styleProperties: v.optional(
         v.object(
           {
@@ -744,7 +765,7 @@ const XMLBaseItem = v.object(
         "XMLBaseItem: creators is object with creator array of XMLPerson",
       ),
     ),
-    description: v.optional(XMLContent),
+    description: XMLOptionalContent,
     events: v.optional(
       v.object(
         { event: v.array(XMLEvent) },
@@ -1873,7 +1894,7 @@ const XMLResource = v.object(
     width: XMLOptionalNumber,
     image: v.optional(XMLImage),
     imagemap: v.optional(XMLImageMap),
-    document: v.optional(XMLContent),
+    document: XMLOptionalContent,
     coordinates: v.optional(XMLCoordinates),
     periods: v.optional(v.object({ period: v.array(XMLPeriod) })),
     links: v.optional(
@@ -2062,7 +2083,7 @@ const XMLWebsiteContextLevel = v.intersect([
 
 const XMLWebsiteContextItemEntries = {
   identification: XMLIdentification,
-  description: v.optional(XMLContent),
+  description: XMLOptionalContent,
   levels: v.optional(
     v.object(
       { level: v.array(XMLWebsiteContextLevel) },
@@ -2280,7 +2301,7 @@ const XMLWebsiteResource: v.GenericSchema<unknown, XML.XMLWebsiteResource> =
         width: XMLOptionalNumber,
         image: v.optional(XMLImage),
         imagemap: v.optional(XMLImageMap),
-        document: v.optional(XMLContent),
+        document: XMLOptionalContent,
         coordinates: v.optional(XMLCoordinates),
         periods: v.optional(v.object({ period: v.array(XMLPeriod) })),
         links: v.optional(
