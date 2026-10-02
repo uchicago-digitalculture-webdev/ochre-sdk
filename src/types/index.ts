@@ -1158,6 +1158,16 @@ export type SetItemsSort =
       dataType: QueryablePropertyValueDataType;
       direction?: SetItemsSortDirection;
       language?: string;
+    }
+  /**
+   * Sort on the distance from a point, using an item's first point or, failing
+   * that, the center of its first plane. Items without coordinates sort last.
+   */
+  | {
+      target: "distance";
+      latitude: number;
+      longitude: number;
+      direction?: SetItemsSortDirection;
     };
 
 /**

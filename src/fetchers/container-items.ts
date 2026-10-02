@@ -183,6 +183,20 @@ function buildOrderedItemsClause(sort: SetItemsSort): string {
       return $item`;
   }
 
+  if (sort.target === "distance") {
+    const longitudeScale = Math.cos((sort.latitude * Math.PI) / 180);
+
+    return `let $orderedItems :=
+    for $item at $position in $items
+      let $point := ($item/coordinates/coord[@type = "point"][@latitude castable as xs:double][@longitude castable as xs:double])[1]
+      let $plane := ($item/coordinates/coord[@type = "plane"][minimum/@latitude castable as xs:double][minimum/@longitude castable as xs:double][maximum/@latitude castable as xs:double][maximum/@longitude castable as xs:double])[1]
+      let $latitude := if (exists($point)) then xs:double($point/@latitude) else if (exists($plane)) then (xs:double($plane/minimum/@latitude) + xs:double($plane/maximum/@latitude)) div 2 else ()
+      let $longitude := if (exists($point)) then xs:double($point/@longitude) else if (exists($plane)) then (xs:double($plane/minimum/@longitude) + xs:double($plane/maximum/@longitude)) div 2 else ()
+      let $sortKey := if (exists($latitude)) then ($latitude - ${sort.latitude}) * ($latitude - ${sort.latitude}) + ($longitude - ${sort.longitude}) * ($longitude - ${sort.longitude}) * ${longitudeScale * longitudeScale} else ()
+      stable order by ${buildTypedOrderByClause(direction)}
+      return $item`;
+  }
+
   if (sort.target === "date") {
     return `let $orderedItems :=
     for $item at $position in $items

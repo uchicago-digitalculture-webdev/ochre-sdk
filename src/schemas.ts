@@ -290,6 +290,12 @@ const setItemsSortSchema = v.optional(
       direction: sortDirectionSchema,
       language: defaultString("eng"),
     }),
+    v.strictObject({
+      target: v.literal("distance"),
+      latitude: v.pipe(v.number(), v.minValue(-90), v.maxValue(90)),
+      longitude: v.pipe(v.number(), v.minValue(-180), v.maxValue(180)),
+      direction: sortDirectionSchema,
+    }),
   ]),
   { target: "none" },
 ) satisfies v.GenericSchema<unknown, SetItemsSort>;

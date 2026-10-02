@@ -156,6 +156,10 @@ const result = await fetchSetItems(
 Use `fetchSetPropertyValues` with the same query shape when you need facet data
 for a filtered result set.
 
+Sort by distance from a point with `{ target: "distance", latitude, longitude }`.
+Items are ordered by their first point, or the center of their first plane, and
+items without coordinates come last.
+
 `fetchTreeItems` takes the same `Query` tree and the same sort options, because
 both fetchers compile the same query model against their container's searchable
 path. The difference is what the payload carries: OCHRE publishes Tree items as
