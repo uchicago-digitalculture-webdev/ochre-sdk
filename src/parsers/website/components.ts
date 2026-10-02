@@ -531,6 +531,7 @@ const COLLECTION_FILTER_DEFAULTS: Extract<
 >["filter"] = {
   isResultsBarDisplayed: false,
   isInputDisplayed: false,
+  isMapDisplayed: false,
   isLimitedToInputFilter: false,
   isLimitedToLeafPropertyValues: false,
   isSidebarDisplayed: false,
@@ -565,6 +566,7 @@ function parseCollectionComponent<T extends ReadonlyArray<string>>(
   componentReader.readAll(filter, {
     isResultsBarDisplayed: "filter-results-bar-displayed",
     isInputDisplayed: "filter-input-displayed",
+    isMapDisplayed: "filter-map-displayed",
     isLimitedToInputFilter: "filter-limit-to-input-filter",
     isLimitedToLeafPropertyValues: "filter-limit-to-leaf-property-values",
     isSidebarDisplayed: "filter-sidebar-displayed",

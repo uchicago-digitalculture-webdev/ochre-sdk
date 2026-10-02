@@ -402,6 +402,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
         isSidebarDisplayed: boolean;
         isResultsBarDisplayed: boolean;
         isInputDisplayed: boolean;
+        isMapDisplayed: boolean;
         isLimitedToInputFilter: boolean;
         isLimitedToLeafPropertyValues: boolean;
         sidebarSort: "default" | "alphabetical";
