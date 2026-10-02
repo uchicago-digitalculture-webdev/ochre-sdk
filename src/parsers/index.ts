@@ -872,7 +872,7 @@ function parseCoordinate<T extends ReadonlyArray<string>>(
   }
 }
 
-function parseCoordinates<T extends ReadonlyArray<string>>(
+export function parseCoordinates<T extends ReadonlyArray<string>>(
   rawCoordinates: XMLCoordinates | undefined,
   options: ParserOptions<T>,
 ): Array<Coordinates<T>> {

@@ -2650,6 +2650,56 @@ export const XMLSetItemsData: v.GenericSchema<unknown, XML.XMLSetItemsData> =
     "XMLSetItemsData: Shape error",
   );
 
+const XMLSetItemLocation = v.object(
+  {
+    uuid: v.string("XMLSetItemLocation: uuid is string and required"),
+    category: v.string("XMLSetItemLocation: category is string and required"),
+    identification: XMLIdentification,
+    coordinates: v.optional(XMLCoordinates),
+    value: v.optional(
+      v.array(
+        v.object(
+          {
+            variable: v.string(
+              "XMLSetItemLocation: value variable is string and required",
+            ),
+            uuid: v.string(
+              "XMLSetItemLocation: value uuid is string and required",
+            ),
+          },
+          "XMLSetItemLocation: value is object with variable and uuid",
+        ),
+      ),
+    ),
+  },
+  "XMLSetItemLocation: Shape error",
+);
+
+export const XMLSetItemLocationsData = v.object(
+  {
+    result: v.object({
+      ochre: v.object(
+        {
+          items: v.object(
+            {
+              totalCount: XMLNumber,
+              itemLocation: v.optional(
+                v.array(
+                  XMLSetItemLocation,
+                  "XMLSetItemLocationsData: itemLocation is array of XMLSetItemLocation",
+                ),
+              ),
+            },
+            "XMLSetItemLocationsData: items is object with totalCount",
+          ),
+        },
+        "XMLSetItemLocationsData: ochre",
+      ),
+    }),
+  },
+  "XMLSetItemLocationsData: Shape error",
+);
+
 export const XMLData: v.GenericSchema<unknown, XML.XMLData> = v.object(
   {
     result: v.object({
@@ -2819,6 +2869,11 @@ type _SchemaAssertions = AssertAllTrue<
     SchemaMatchesType<typeof XMLHeading, XML.XMLHeading>,
     SchemaMatchesType<typeof XMLTree, XML.XMLTree>,
     SchemaMatchesType<typeof XMLSetStyle, XML.XMLSetStyle>,
+    SchemaMatchesType<typeof XMLSetItemLocation, XML.XMLSetItemLocation>,
+    SchemaMatchesType<
+      typeof XMLSetItemLocationsData,
+      XML.XMLSetItemLocationsData
+    >,
     SchemaMatchesType<typeof XMLSet, XML.XMLSet>,
     SchemaMatchesType<typeof XMLBibliography, XML.XMLBibliography>,
     SchemaMatchesType<typeof XMLInterpretation, XML.XMLInterpretation>,

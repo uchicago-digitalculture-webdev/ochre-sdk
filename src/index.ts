@@ -4,6 +4,7 @@ export { fetchItemChildren } from "#/fetchers/item-children.js";
 export { fetchItemLinks } from "#/fetchers/item-links.js";
 export { fetchItemOcrData } from "#/fetchers/item-ocr-data.js";
 export { fetchItem } from "#/fetchers/item.js";
+export { fetchSetItemLocations } from "#/fetchers/set/item-locations.js";
 export { fetchSetItems } from "#/fetchers/set/items.js";
 export { fetchSetPropertyValues } from "#/fetchers/set/property-values.js";
 export { fetchTreeItems } from "#/fetchers/tree/items.js";

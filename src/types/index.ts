@@ -853,6 +853,18 @@ export type SetItem<
                       : never;
 
 /**
+ * The location of a Set item, without its properties, for drawing and ordering
+ * every match of a query at once
+ */
+export type SetItemLocation<T extends LanguageCodes = LanguageCodes> = {
+  uuid: string;
+  category: SetItemCategory;
+  identification: Identification<T>;
+  coordinates: Array<Coordinates<T>>;
+  propertyValues: Array<{ variableUuid: string; valueUuid: string }>;
+};
+
+/**
  *  Person in OCHRE
  */
 export type Person<

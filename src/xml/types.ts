@@ -764,6 +764,22 @@ export type XMLSetItems = XMLItemLinks & {
 
 export type XMLSetItemsData = { result: { ochre: { items: XMLSetItems } } };
 
+export type XMLSetItemLocation = {
+  uuid: string;
+  category: string;
+  identification: XMLIdentification;
+  coordinates?: XMLCoordinates;
+  value?: Array<{ variable: string; uuid: string }>;
+};
+
+export type XMLSetItemLocationsData = {
+  result: {
+    ochre: {
+      items: { totalCount: number; itemLocation?: Array<XMLSetItemLocation> };
+    };
+  };
+};
+
 export type XMLData = {
   result: {
     ochre: {

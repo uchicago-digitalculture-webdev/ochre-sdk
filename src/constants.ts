@@ -41,6 +41,7 @@ export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
   "scope",
   "level",
   "style",
+  "itemLocation",
   "flattenContexts",
   "suppressContexts",
   "filterContexts",

@@ -352,6 +352,20 @@ export const setItemsParametersSchema = v.object({
   ...containerItemsParametersEntries,
 });
 
+/**
+ * Schema for validating the parameters of the Set item locations fetching function
+ * @internal
+ */
+export const setItemLocationsParametersSchema = v.object({
+  setScopeUuids: v.pipe(
+    v.array(uuidSchema),
+    v.minLength(1, "At least one set scope UUID is required"),
+  ),
+  belongsToCollectionScopeUuids: v.optional(v.array(uuidSchema), []),
+  queries: setQueriesSchema,
+  propertyVariableUuids: v.optional(v.array(uuidSchema), []),
+});
+
 export const treeItemsParametersSchema = v.object({
   treeScopeUuids: v.pipe(
     v.array(uuidSchema),

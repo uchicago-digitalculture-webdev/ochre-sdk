@@ -66,6 +66,10 @@ present and `error` is `null`; on failure, the parsed value is `null` and
   style, collection, and item-page configuration.
 - `fetchSetItems(params, containedItemCategories, options)` fetches paginated
   Set search results with typed query and sort support.
+- `fetchSetItemLocations(params, options)` fetches the identification,
+  coordinates and chosen property values of every Set item matching a query,
+  without paging, for drawing all results on a map while a list pages through
+  them.
 - `fetchTreeItems(params, containedItemCategories, options)` is the same for a
   Tree, and is how to read a Tree too large to fetch whole. Items nested under
   headings come back flat, in document order.
