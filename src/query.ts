@@ -489,11 +489,9 @@ function buildAndCtsQueryExpression(
 }
 
 function buildContentLanguageQuery(language: string): string {
-  return buildPlainElementAttributeValueQueryExpression({
-    elementName: "content",
-    attributeName: "xml:lang",
-    value: searchValue(language),
-  });
+  const languageValue = searchValue(language);
+
+  return `cts:element-attribute-value-query(xs:QName("content"), xs:QName("xml:lang"), ${languageValue.expression}, fn:concat("lang=", ${languageValue.expression}))`;
 }
 
 function buildPropertyLabelQuery(propertyVariable: string): string {

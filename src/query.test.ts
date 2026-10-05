@@ -171,7 +171,7 @@ describe("content target queries", () => {
       }
 
       expectContainsAll(queryText, [
-        'cts:element-attribute-value-query(xs:QName("content"), xs:QName("xml:lang"), "eng")',
+        'cts:element-attribute-value-query(xs:QName("content"), xs:QName("xml:lang"), "eng", fn:concat("lang=", "eng"))',
         'cts:word-query("fortification"',
         "local:queryHelper1()",
       ]);
