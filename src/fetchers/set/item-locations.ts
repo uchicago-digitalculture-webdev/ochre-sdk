@@ -22,7 +22,7 @@ import { stringLiteral } from "#/xquery.js";
 /**
  * Fetches the location of every Set item that matches a query, without paging
  *
- * Each item carries only its identification, its coordinates and the values of
+ * Each item carries only its identification, its publication date, its coordinates and the values of
  * the requested property variables (inherited values included), which is what a
  * map needs to draw and colour every match while a list pages through the same
  * query with {@link fetchSetItems}.
@@ -90,6 +90,7 @@ export async function fetchSetItemLocations(
   return <items totalCount="{count(${items})}">{
     for $item in ${items}
     return <itemLocation uuid="{$item/@uuid}" category="{local-name($item)}">{
+      $item/@publicationDateTime,
       $item/identification,
       $item/coordinates,
       for $value in $item//properties//property[label/@uuid = $propertyVariableUuids]/value[@uuid]
@@ -138,6 +139,7 @@ export async function fetchSetItemLocations(
       itemsByUuid.set(itemLocation.uuid, {
         uuid: itemLocation.uuid,
         category,
+        publicationDateTime: itemLocation.publicationDateTime ?? null,
         identification: parseIdentification(itemLocation.identification, {
           languages,
         }),
