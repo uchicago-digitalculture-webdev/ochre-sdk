@@ -319,6 +319,7 @@ export const setPropertyValuesParametersSchema = v.object({
     { bibliographies: false, periods: false },
   ),
   isLimitedToLeafPropertyValues: defaultBoolean(false),
+  language: defaultString("eng"),
 });
 
 /**

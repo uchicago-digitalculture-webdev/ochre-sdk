@@ -297,6 +297,7 @@ const responseSchema = v.object({
  * @param parameters.attributes.bibliographies - Whether to return values for bibliographies
  * @param parameters.attributes.periods - Whether to return values for periods
  * @param parameters.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
+ * @param parameters.language - Language of the text value, bibliography, and period labels that facets are keyed by (defaults to `"eng"`)
  * @returns An XQuery string
  */
 function buildXQuery(parameters: {
@@ -306,6 +307,7 @@ function buildXQuery(parameters: {
   propertyFacetSelectors: Array<PropertyFacetSelector>;
   attributes: { bibliographies: boolean; periods: boolean };
   isLimitedToLeafPropertyValues: boolean;
+  language: string;
 }): string {
   const {
     setScopeUuids,
@@ -314,7 +316,10 @@ function buildXQuery(parameters: {
     propertyFacetSelectors,
     attributes,
     isLimitedToLeafPropertyValues,
+    language,
   } = parameters;
+
+  const languageLiteral = stringLiteral(language);
 
   const valueFilter = isLimitedToLeafPropertyValues ? "[not(@i)]" : "";
   const returnedSequences: Array<string> = [];
@@ -337,7 +342,7 @@ declare function local:normalize-data-type($data-type) {
 
 declare function local:value-display-text($v) {
   if ($v/content)
-  then string-join($v/content[@xml:lang="eng"]//text(), "")
+  then string-join($v/content[@xml:lang=${languageLiteral}]//text(), "")
   else string($v)
 };
 
@@ -511,7 +516,7 @@ let $_bibliography-aggregation := xdmp:eager(
   let $seen := map:map()
   return
     for $bibliography in $item/bibliographies/bibliography${notSupplemental}
-    let $label := string-join($bibliography/identification/label/content[@xml:lang="eng"]//text(), "")
+    let $label := string-join($bibliography/identification/label/content[@xml:lang=${languageLiteral}]//text(), "")
     where string-length($label) gt 0
     return local:add-attribute-facet($bibliography-counts, $seen, $label)
 )
@@ -532,7 +537,7 @@ let $_period-aggregation := xdmp:eager(
   let $seen := map:map()
   return
     for $period in $item/periods/period${notSupplemental}
-    let $label := string-join($period/identification/label/content[@xml:lang="eng"]//text(), "")
+    let $label := string-join($period/identification/label/content[@xml:lang=${languageLiteral}]//text(), "")
     where string-length($label) gt 0
     return local:add-attribute-facet($period-counts, $seen, $label)
 )
@@ -684,6 +689,7 @@ function collectAttributeValues(
  * @param parameters.attributes.bibliographies - Whether to return values for bibliographies
  * @param parameters.attributes.periods - Whether to return values for periods
  * @param parameters.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
+ * @param parameters.language - Language of the text value, bibliography, and period labels that facets are keyed by (defaults to `"eng"`)
  * @param options - Options for the fetch
  * @param options.fetch - The fetch function to use
  * @returns Parsed Set property values and requested attribute values.
@@ -695,6 +701,7 @@ export async function fetchSetPropertyValues(
     queries?: Query | null;
     attributes?: { bibliographies: boolean; periods: boolean };
     isLimitedToLeafPropertyValues?: boolean;
+    language?: string;
   },
   options?: OchreRequestOptions,
 ): Promise<
@@ -726,6 +733,7 @@ export async function fetchSetPropertyValues(
       queries,
       attributes,
       isLimitedToLeafPropertyValues,
+      language,
     } = v.parse(setPropertyValuesParametersSchema, parameters);
     const propertyFacetSelectors = getPropertyFacetSelectors(queries);
 
@@ -750,6 +758,7 @@ export async function fetchSetPropertyValues(
       propertyFacetSelectors,
       attributes,
       isLimitedToLeafPropertyValues,
+      language,
     });
 
     const output = await requestOchre({
