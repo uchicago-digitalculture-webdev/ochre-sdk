@@ -1136,8 +1136,15 @@ export type PropertyValueQueryItem = {
 
 /**
  * Represents a grouped Set attribute value query item
+ *
+ * `content` is the label in the requested language, which facet queries match
+ * on; `label` carries the label in every language for display.
  */
-export type SetAttributeValueQueryItem = { count: number; content: string };
+export type SetAttributeValueQueryItem = {
+  count: number;
+  content: string;
+  label: MultilingualString | null;
+};
 
 /**
  * Represents sorting direction for Set items

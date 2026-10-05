@@ -248,18 +248,14 @@ const attributeValueQueryItemSchema = v.pipe(
   v.object({
     attributeType: v.picklist(["bibliographies", "periods"]),
     count: countSchema,
-    content: v.optional(v.string()),
-    payload: v.optional(v.string()),
+    key: v.optional(v.string()),
+    content: v.optional(v.array(propertyValueLabelContentSchema)),
   }),
   v.transform((value): ParsedAttributeValueItem => ({
     attributeType: value.attributeType,
     count: value.count,
-    content:
-      value.content != null && value.content !== ""
-        ? value.content
-        : value.payload != null && value.payload !== ""
-          ? value.payload
-          : null,
+    content: value.key != null && value.key !== "" ? value.key : null,
+    label: parsePropertyValueLabel(value.content, value.key),
   })),
 );
 
@@ -509,46 +505,41 @@ let $property-values :=
       returnedSequences.push("$property-values");
     }
 
-    if (attributes.bibliographies) {
-      queryBlocks.push(`let $bibliography-counts := map:map()
-let $_bibliography-aggregation := xdmp:eager(
+    for (const [attributeType, attributePath] of [
+      ["bibliographies", "bibliographies/bibliography"],
+      ["periods", "periods/period"],
+    ] as const) {
+      if (!attributes[attributeType]) {
+        continue;
+      }
+
+      queryBlocks.push(`let $${attributeType}-counts := map:map()
+let $${attributeType}-labels := map:map()
+let $_${attributeType}-aggregation := xdmp:eager(
   for $item in ${items}
   let $seen := map:map()
   return
-    for $bibliography in $item/bibliographies/bibliography${notSupplemental}
-    let $label := string-join($bibliography/identification/label/content[@xml:lang=${languageLiteral}]//text(), "")
-    where string-length($label) gt 0
-    return local:add-attribute-facet($bibliography-counts, $seen, $label)
+    for $attribute in $item/${attributePath}${notSupplemental}
+    let $label := $attribute/identification/label
+    let $key := string-join($label/content[@xml:lang=${languageLiteral}]//text(), "")
+    where string-length($key) gt 0
+    return (
+      if (empty(map:get($${attributeType}-labels, $key)))
+      then map:put($${attributeType}-labels, $key, local:value-label-content($label))
+      else (),
+      local:add-attribute-facet($${attributeType}-counts, $seen, $key)
+    )
 )
 
-let $bibliography-values :=
+let $${attributeType}-values :=
   (
-    $_bibliography-aggregation,
-    for $label in map:keys($bibliography-counts)
-    return <attributeValue attributeType="bibliographies" count="{map:get($bibliography-counts, $label)}" content="{$label}" />
+    $_${attributeType}-aggregation,
+    for $key in map:keys($${attributeType}-counts)
+    return <attributeValue attributeType="${attributeType}" count="{map:get($${attributeType}-counts, $key)}" key="{$key}">{
+      map:get($${attributeType}-labels, $key)
+    }</attributeValue>
   )`);
-      returnedSequences.push("$bibliography-values");
-    }
-
-    if (attributes.periods) {
-      queryBlocks.push(`let $period-counts := map:map()
-let $_period-aggregation := xdmp:eager(
-  for $item in ${items}
-  let $seen := map:map()
-  return
-    for $period in $item/periods/period${notSupplemental}
-    let $label := string-join($period/identification/label/content[@xml:lang=${languageLiteral}]//text(), "")
-    where string-length($label) gt 0
-    return local:add-attribute-facet($period-counts, $seen, $label)
-)
-
-let $period-values :=
-  (
-    $_period-aggregation,
-    for $label in map:keys($period-counts)
-    return <attributeValue attributeType="periods" count="{map:get($period-counts, $label)}" content="{$label}" />
-  )`);
-      returnedSequences.push("$period-values");
+      returnedSequences.push(`$${attributeType}-values`);
     }
 
     return queryBlocks;
@@ -673,6 +664,7 @@ function collectAttributeValues(
     attributeValuesByType[attributeValue.attributeType].push({
       count: attributeValue.count,
       content: attributeValue.content,
+      label: attributeValue.label,
     });
   }
 

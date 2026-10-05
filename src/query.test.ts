@@ -1127,8 +1127,8 @@ describe("fetchSetPropertyValues query assembly", () => {
     expectContainsAll(postedBody, [
       'attributeType="bibliographies"',
       'attributeType="periods"',
-      "$bibliography-values",
-      "$period-values",
+      "$bibliographies-values",
+      "$periods-values",
     ]);
   });
 });
