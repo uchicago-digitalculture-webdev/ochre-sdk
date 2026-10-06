@@ -15,7 +15,7 @@ import {
 } from "#/parsers/languages.js";
 import { compileContainerItemsQuery } from "#/query.js";
 import { XMLSetItemsData as XMLSetItemsDataSchema } from "#/xml/schemas.js";
-import { stringLiteral } from "#/xquery.js";
+import { getContentLanguage, stringLiteral } from "#/xquery.js";
 
 type SortWithDirection = Exclude<SetItemsSort, { target: "none" }>;
 type PropertyValueSort = Extract<SetItemsSort, { target: "propertyValue" }>;
@@ -281,6 +281,7 @@ export async function fetchContainerItems(parameters: {
       scopeUuids,
       belongsToCollectionScopeUuids,
       queries,
+      contentLanguage: getContentLanguage(options),
       body: ({
         items,
         omitSupplemental,

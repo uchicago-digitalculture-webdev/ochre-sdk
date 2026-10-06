@@ -17,7 +17,7 @@ import {
 import { compileContainerItemsQuery } from "#/query.js";
 import { setItemLocationsParametersSchema } from "#/schemas.js";
 import { XMLSetItemLocationsData as XMLSetItemLocationsDataSchema } from "#/xml/schemas.js";
-import { stringLiteral } from "#/xquery.js";
+import { getContentLanguage, stringLiteral } from "#/xquery.js";
 
 /**
  * Fetches the location of every Set item that matches a query, without paging
@@ -83,6 +83,7 @@ export async function fetchSetItemLocations(
         scopeUuids: setScopeUuids,
         belongsToCollectionScopeUuids,
         queries,
+        contentLanguage: getContentLanguage(options),
         body: ({
           items,
         }) => `  let $propertyVariableUuids := (${Array.from(propertyVariableUuids, (uuid) => stringLiteral(uuid)).join(", ")})

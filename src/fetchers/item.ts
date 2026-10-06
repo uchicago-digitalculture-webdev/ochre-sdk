@@ -12,6 +12,7 @@ import type {
   ItemWithoutEmbeddedItems,
   SetItemCategory,
 } from "#/types/index.js";
+import type { OchreContentLanguage } from "#/xquery.js";
 import {
   isItemCategoryWithEmbeddedItems,
   isItemContainerCategory,
@@ -27,6 +28,7 @@ import { uuidSchema } from "#/schemas.js";
 import { XMLData as XMLDataSchema } from "#/xml/schemas.js";
 import {
   compileOchreQuery,
+  getContentLanguage,
   OCHRE_RESPONSE_PADDING,
   stringLiteral,
 } from "#/xquery.js";
@@ -76,13 +78,15 @@ function assertItemCategoryAllowed(
  * @param parameters - The parameters for the fetch
  * @param parameters.uuid - The UUID of the OCHRE item to fetch
  * @param parameters.shouldOmitEmbeddedItems - Whether to drop the embedded item hierarchy
+ * @param parameters.contentLanguage - Keep only this language of every multilingual field
  * @returns An XQuery string
  */
 function buildXQuery(parameters: {
   uuid: string;
   shouldOmitEmbeddedItems: boolean;
+  contentLanguage: OchreContentLanguage | null;
 }): string {
-  const { uuid, shouldOmitEmbeddedItems } = parameters;
+  const { uuid, shouldOmitEmbeddedItems, contentLanguage } = parameters;
 
   const letClauses = [`let $ochre := doc(${stringLiteral(uuid)})/ochre`];
   let itemNodesExpression = "$ochre/node()";
@@ -104,6 +108,7 @@ ${ITEM_CATEGORIES_WITH_EMBEDDED_ITEMS.map((category) => `  $ochre/${category}`).
   }
 
   return compileOchreQuery({
+    contentLanguage,
     body: ({ omitSupplemental }) => `${letClauses.join("\n")}
 return
   if (empty($ochre)) then <ochre>${OCHRE_RESPONSE_PADDING}</ochre>
@@ -280,7 +285,11 @@ export async function fetchItem(
     const languages = parseRequestedLanguages(options?.languages);
 
     const output = await requestOchre({
-      xquery: buildXQuery({ uuid: parsedUuid, shouldOmitEmbeddedItems }),
+      xquery: buildXQuery({
+        uuid: parsedUuid,
+        shouldOmitEmbeddedItems,
+        contentLanguage: getContentLanguage(options),
+      }),
       schema: XMLDataSchema,
       label: "OCHRE item",
       options,

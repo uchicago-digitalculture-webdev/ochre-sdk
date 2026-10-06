@@ -7,6 +7,7 @@ import type {
   ItemCategory,
   ItemContainerCategory,
 } from "#/types/index.js";
+import type { OchreContentLanguage } from "#/xquery.js";
 import {
   ITEM_CATEGORY_ALIASES,
   OCHRE_COLLECTION_CATEGORIES,
@@ -22,6 +23,7 @@ import { uuidSchema } from "#/schemas.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
 import {
   compileOchreQuery,
+  getContentLanguage,
   OCHRE_RESPONSE_PADDING,
   stringLiteral,
 } from "#/xquery.js";
@@ -32,7 +34,10 @@ import {
  * @param uuid - The UUID of the OCHRE item whose links should be fetched
  * @returns An XQuery string
  */
-function buildXQuery(uuid: string): string {
+function buildXQuery(
+  uuid: string,
+  contentLanguage: OchreContentLanguage | null,
+): string {
   const linkedItemBranches = OCHRE_COLLECTION_CATEGORIES.map((category) => {
     const aliasTest = ITEM_CATEGORY_ALIASES[category]
       .map((alias) => `$category = ${stringLiteral(alias)}`)
@@ -50,6 +55,7 @@ function buildXQuery(uuid: string): string {
         else ()`;
 
   return compileOchreQuery({
+    contentLanguage,
     body: ({
       omitSupplemental,
     }) => `<ochre>${OCHRE_RESPONSE_PADDING}{let $item-uuid := ${stringLiteral(uuid)}
@@ -126,7 +132,7 @@ export async function fetchItemLinks(
     const requestedLanguages = parseRequestedLanguages(options?.languages);
 
     const output = await requestOchre({
-      xquery: buildXQuery(parsedUuid),
+      xquery: buildXQuery(parsedUuid, getContentLanguage(options)),
       schema: XMLItemLinksDataSchema,
       label: "OCHRE item links",
       options,

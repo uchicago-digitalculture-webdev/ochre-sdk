@@ -4,7 +4,7 @@ import type {
   QueryGroup,
   QueryLeaf,
 } from "#/types/index.js";
-import type { OchreQueryContext } from "#/xquery.js";
+import type { OchreContentLanguage, OchreQueryContext } from "#/xquery.js";
 import { BELONGS_TO_COLLECTION_UUID } from "#/constants.js";
 import {
   buildOcrWordPath,
@@ -62,6 +62,7 @@ type ItemsSearchPlan = {
   kind: "search";
   itemPredicates: Array<string>;
   queryExpressions: Array<string>;
+  resultPredicates: Array<string>;
 };
 
 type ItemsPlan =
@@ -84,21 +85,15 @@ type ParameterizedQueryHelperRegistration = {
   call: (valueExpression: string) => string;
 };
 
-const CONTENT_TARGET_CONTENT_ELEMENT_PATHS: Record<
+const CONTENT_TARGET_FIELD_ELEMENT_PATHS: Record<
   ContentTextTarget,
   Array<string>
 > = {
-  title: ["identification", "label", "content"],
-  description: ["description", "content"],
-  image: ["image", "identification", "label", "content"],
-  periods: ["periods", "period", "identification", "label", "content"],
-  bibliography: [
-    "bibliographies",
-    "bibliography",
-    "identification",
-    "label",
-    "content",
-  ],
+  title: ["identification", "label"],
+  description: ["description"],
+  image: ["image", "identification", "label"],
+  periods: ["periods", "period", "identification", "label"],
+  bibliography: ["bibliographies", "bibliography", "identification", "label"],
 };
 
 /**
@@ -512,65 +507,97 @@ function buildValueNotIdReferenceQuery(): string {
   );
 }
 
+/**
+ * Match a field's `content` in a language, falling back to another language
+ * only for fields that carry no content in the first one
+ *
+ * Placed inside the field element (a label, a note, a property value), so the
+ * missing-language check is scoped to that one field. Without a distinct
+ * fallback it is the single-language query this always compiled to.
+ */
+function buildLocalizedContentQueryExpression(parameters: {
+  language: string;
+  fallbackLanguage?: string;
+  buildMatchQuery: (contentLanguage: string) => string;
+}): string {
+  const { language, fallbackLanguage, buildMatchQuery } = parameters;
+
+  function buildContentQuery(contentLanguage: string): string {
+    return buildNestedElementQuery(
+      ["content"],
+      buildAndCtsQueryExpressionInternal([
+        buildContentLanguageQuery(contentLanguage),
+        buildMatchQuery(contentLanguage),
+      ]),
+    );
+  }
+
+  if (fallbackLanguage == null || fallbackLanguage === language) {
+    return buildContentQuery(language);
+  }
+
+  return buildOrCtsQueryExpressionInternal([
+    buildContentQuery(language),
+    buildAndCtsQueryExpressionInternal([
+      buildNotCtsQueryExpression(
+        buildNestedElementQuery(
+          ["content"],
+          buildContentLanguageQuery(language),
+        ),
+      ),
+      buildContentQuery(fallbackLanguage),
+    ]),
+  ]);
+}
+
 function buildRichTextContentQueryExpression(parameters: {
   value: QuerySearchValue;
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
   language: string;
+  fallbackLanguage?: string;
 }): string {
-  const { value, matchMode, isCaseSensitive, language } = parameters;
+  const { value, matchMode, isCaseSensitive, language, fallbackLanguage } =
+    parameters;
 
-  return buildAndCtsQueryExpressionInternal([
-    buildContentLanguageQuery(language),
-    matchMode === "exact"
-      ? buildRichTextExactQueryExpression({ value, isCaseSensitive, language })
-      : buildCtsWordQueryExpression({
-          value,
-          matchMode,
-          isCaseSensitive,
-          queryFamily: "text",
-          language,
-        }),
-  ]);
-}
-
-function buildValueContentInnerQuery(parameters: {
-  language: string;
-  value: QuerySearchValue;
-  matchMode: QueryMatchMode;
-  isCaseSensitive: boolean;
-}): string {
-  const { language, value, matchMode, isCaseSensitive } = parameters;
-
-  return buildNestedElementQuery(
-    ["content"],
-    buildRichTextContentQueryExpression({
-      language,
-      value,
-      matchMode,
-      isCaseSensitive,
-    }),
-  );
+  return buildLocalizedContentQueryExpression({
+    language,
+    fallbackLanguage,
+    buildMatchQuery: (contentLanguage) =>
+      matchMode === "exact"
+        ? buildRichTextExactQueryExpression({
+            value,
+            isCaseSensitive,
+            language: contentLanguage,
+          })
+        : buildCtsWordQueryExpression({
+            value,
+            matchMode,
+            isCaseSensitive,
+            queryFamily: "text",
+            language: contentLanguage,
+          }),
+  });
 }
 
 function buildValueContentExactInnerQuery(parameters: {
   language: string;
+  fallbackLanguage?: string;
   value: QuerySearchValue;
   isCaseSensitive: boolean;
 }): string {
-  const { language, value, isCaseSensitive } = parameters;
+  const { language, fallbackLanguage, value, isCaseSensitive } = parameters;
 
-  return buildNestedElementQuery(
-    ["content"],
-    buildAndCtsQueryExpressionInternal([
-      buildContentLanguageQuery(language),
+  return buildLocalizedContentQueryExpression({
+    language,
+    fallbackLanguage,
+    buildMatchQuery: () =>
       buildCtsElementValueQueryExpression({
         elementName: "string",
         value,
         isCaseSensitive,
       }),
-    ]),
-  );
+  });
 }
 
 function buildValueDirectTextInnerQuery(parameters: {
@@ -633,16 +660,19 @@ function buildNotesQueryExpression(parameters: {
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
   language: string;
+  fallbackLanguage?: string;
 }): string {
-  const { value, matchMode, isCaseSensitive, language } = parameters;
+  const { value, matchMode, isCaseSensitive, language, fallbackLanguage } =
+    parameters;
 
   return buildNestedElementQuery(
-    ["notes", "note", "content"],
+    ["notes", "note"],
     buildRichTextContentQueryExpression({
       value,
       matchMode,
       isCaseSensitive,
       language,
+      fallbackLanguage,
     }),
   );
 }
@@ -653,17 +683,25 @@ function buildContentTargetQueryExpression(parameters: {
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
   language: string;
+  fallbackLanguage?: string;
 }): string {
-  const { target, value, matchMode, isCaseSensitive, language } = parameters;
-  const contentElementPath = CONTENT_TARGET_CONTENT_ELEMENT_PATHS[target];
+  const {
+    target,
+    value,
+    matchMode,
+    isCaseSensitive,
+    language,
+    fallbackLanguage,
+  } = parameters;
 
   return buildNestedElementQuery(
-    contentElementPath,
+    CONTENT_TARGET_FIELD_ELEMENT_PATHS[target],
     buildRichTextContentQueryExpression({
       value,
       matchMode,
       isCaseSensitive,
       language,
+      fallbackLanguage,
     }),
   );
 }
@@ -791,6 +829,7 @@ function buildPropertyStringQueryExpression(parameters: {
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
   language: string;
+  fallbackLanguage?: string;
 }): string {
   const {
     propertyVariable,
@@ -799,6 +838,7 @@ function buildPropertyStringQueryExpression(parameters: {
     matchMode,
     isCaseSensitive,
     language,
+    fallbackLanguage,
   } = parameters;
 
   return buildPropertyTextMatchQueryExpression({
@@ -806,9 +846,15 @@ function buildPropertyStringQueryExpression(parameters: {
     propertyRelation,
     contentQueryExpression:
       matchMode === "exact"
-        ? buildValueContentExactInnerQuery({ language, value, isCaseSensitive })
-        : buildValueContentInnerQuery({
+        ? buildValueContentExactInnerQuery({
             language,
+            fallbackLanguage,
+            value,
+            isCaseSensitive,
+          })
+        : buildRichTextContentQueryExpression({
+            language,
+            fallbackLanguage,
             value,
             matchMode,
             isCaseSensitive,
@@ -865,8 +911,9 @@ function buildPropertyAllQueryExpression(parameters: {
     propertyVariable: query.propertyVariable,
     propertyRelation: query.propertyRelation,
     valueFilters: [buildValueNotIdReferenceQuery()],
-    contentQueryExpression: buildValueContentInnerQuery({
+    contentQueryExpression: buildRichTextContentQueryExpression({
       language: query.language,
+      fallbackLanguage: query.fallbackLanguage,
       value,
       matchMode,
       isCaseSensitive: query.isCaseSensitive,
@@ -940,8 +987,10 @@ function buildItemStringQueryExpression(parameters: {
   matchMode: QueryMatchMode;
   isCaseSensitive: boolean;
   language: string;
+  fallbackLanguage?: string;
 }): string {
-  const { value, matchMode, isCaseSensitive, language } = parameters;
+  const { value, matchMode, isCaseSensitive, language, fallbackLanguage } =
+    parameters;
 
   return buildOrCtsQueryExpressionInternal([
     buildContentTargetQueryExpression({
@@ -950,12 +999,14 @@ function buildItemStringQueryExpression(parameters: {
       matchMode,
       isCaseSensitive,
       language,
+      fallbackLanguage,
     }),
     buildPropertyStringQueryExpression({
       value,
       matchMode,
       isCaseSensitive,
       language,
+      fallbackLanguage,
     }),
   ]);
 }
@@ -1170,6 +1221,7 @@ function buildLeafValueQueryExpression(parameters: {
         matchMode,
         isCaseSensitive: query.isCaseSensitive,
         language: query.language,
+        fallbackLanguage: query.fallbackLanguage,
       });
     }
     case "notes": {
@@ -1178,6 +1230,7 @@ function buildLeafValueQueryExpression(parameters: {
         matchMode,
         isCaseSensitive: query.isCaseSensitive,
         language: query.language,
+        fallbackLanguage: query.fallbackLanguage,
       });
     }
     case "title":
@@ -1191,6 +1244,7 @@ function buildLeafValueQueryExpression(parameters: {
         matchMode,
         isCaseSensitive: query.isCaseSensitive,
         language: query.language,
+        fallbackLanguage: query.fallbackLanguage,
       });
     }
     case "property": {
@@ -1213,6 +1267,7 @@ function buildLeafValueQueryExpression(parameters: {
             matchMode,
             isCaseSensitive: query.isCaseSensitive,
             language: query.language,
+            fallbackLanguage: query.fallbackLanguage,
           });
         }
         case "integer":
@@ -1328,6 +1383,7 @@ function getLeafHelperKey(parameters: {
         value,
         query.isCaseSensitive ? "case-sensitive" : "case-insensitive",
         query.language,
+        query.fallbackLanguage ?? "",
       ].join("|");
     }
     case "property": {
@@ -1341,6 +1397,7 @@ function getLeafHelperKey(parameters: {
         value,
         query.isCaseSensitive ? "case-sensitive" : "case-insensitive",
         query.language,
+        query.fallbackLanguage ?? "",
       ].join("|");
     }
   }
@@ -1386,6 +1443,7 @@ function getIncludesLeafHelperKey(parameters: {
         query.target,
         query.isCaseSensitive ? "case-sensitive" : "case-insensitive",
         query.language,
+        query.fallbackLanguage ?? "",
         isWildcarded ? "wildcarded" : "unwildcarded",
         isStemmed ? "stemmed" : "unstemmed",
       ].join("|");
@@ -1399,6 +1457,7 @@ function getIncludesLeafHelperKey(parameters: {
         query.propertyRelation ?? "",
         query.isCaseSensitive ? "case-sensitive" : "case-insensitive",
         query.language,
+        query.fallbackLanguage ?? "",
         isWildcarded ? "wildcarded" : "unwildcarded",
         isStemmed ? "stemmed" : "unstemmed",
       ].join("|");
@@ -1563,7 +1622,12 @@ function getCompatibleIncludesGroupLeaves(
   const leafQueries: Array<CtsQueryLeaf> = [];
 
   for (const childQuery of query.or) {
-    if (!isQueryLeaf(childQuery) || childQuery.target === "ocr") {
+    if (
+      !isQueryLeaf(childQuery) ||
+      childQuery.target === "ocr" ||
+      (childQuery.fallbackLanguage != null &&
+        childQuery.fallbackLanguage !== childQuery.language)
+    ) {
       return null;
     }
 
@@ -1690,6 +1754,30 @@ function buildCtsItemsPlan(queryExpression: string): ItemsSearchPlan {
     kind: "search",
     itemPredicates: [],
     queryExpressions: [queryExpression],
+    resultPredicates: [],
+  };
+}
+
+/**
+ * Plan a leaf that falls back to a second language for fields missing the first
+ *
+ * The strict query needs a `cts:not-query` scoped to one field, which CTS
+ * resolves against the Set's single fragment and so rules out every item the
+ * moment any item holds the first language. The search therefore runs a
+ * superset (the leaf in either language), and `cts:contains` then applies the
+ * strict query to each matched item projection, where the negation is exact.
+ */
+function buildFallbackItemsPlan(parameters: {
+  supersetQueryExpression: string;
+  strictQueryExpression: string;
+}): ItemsSearchPlan {
+  const { supersetQueryExpression, strictQueryExpression } = parameters;
+
+  return {
+    kind: "search",
+    itemPredicates: [],
+    queryExpressions: [supersetQueryExpression],
+    resultPredicates: [`[cts:contains(., ${strictQueryExpression})]`],
   };
 }
 
@@ -1708,6 +1796,7 @@ function buildNegatedItemsPlan(queryExpression: string): ItemsSearchPlan {
     kind: "search",
     itemPredicates: [`[not(cts:contains(., ${queryExpression}))]`],
     queryExpressions: [],
+    resultPredicates: [],
   };
 }
 
@@ -1733,6 +1822,17 @@ function flattenItemsPlans(
   return flattenedPlans;
 }
 
+function appendUniquePredicates(
+  predicates: Array<string>,
+  addedPredicates: ReadonlyArray<string>,
+): void {
+  for (const predicate of addedPredicates) {
+    if (!predicates.includes(predicate)) {
+      predicates.push(predicate);
+    }
+  }
+}
+
 /**
  * Fold the children of an `and` group into one plan
  *
@@ -1745,6 +1845,7 @@ function buildAndItemsPlan(childPlans: Array<ItemsPlan>): ItemsPlan {
     kind: "search",
     itemPredicates: [],
     queryExpressions: [],
+    resultPredicates: [],
   };
   const unfoldablePlans: Array<ItemsPlan> = [];
 
@@ -1754,11 +1855,11 @@ function buildAndItemsPlan(childPlans: Array<ItemsPlan>): ItemsPlan {
       continue;
     }
 
-    for (const itemPredicate of childPlan.itemPredicates) {
-      if (!mergedPlan.itemPredicates.includes(itemPredicate)) {
-        mergedPlan.itemPredicates.push(itemPredicate);
-      }
-    }
+    appendUniquePredicates(mergedPlan.itemPredicates, childPlan.itemPredicates);
+    appendUniquePredicates(
+      mergedPlan.resultPredicates,
+      childPlan.resultPredicates,
+    );
 
     mergedPlan.queryExpressions.push(...childPlan.queryExpressions);
   }
@@ -1769,7 +1870,8 @@ function buildAndItemsPlan(childPlans: Array<ItemsPlan>): ItemsPlan {
 
   const intersectedPlans =
     mergedPlan.itemPredicates.length === 0 &&
-    mergedPlan.queryExpressions.length === 0
+    mergedPlan.queryExpressions.length === 0 &&
+    mergedPlan.resultPredicates.length === 0
       ? unfoldablePlans
       : [mergedPlan, ...unfoldablePlans];
 
@@ -1789,7 +1891,11 @@ function buildOrItemsPlan(childPlans: Array<ItemsPlan>): ItemsPlan {
   const unionedPlans: Array<ItemsPlan> = [];
 
   for (const childPlan of flattenItemsPlans(childPlans, "union")) {
-    if (childPlan.kind === "search" && childPlan.itemPredicates.length === 0) {
+    if (
+      childPlan.kind === "search" &&
+      childPlan.itemPredicates.length === 0 &&
+      childPlan.resultPredicates.length === 0
+    ) {
       mergedQueryExpressions.push(
         buildAndCtsQueryExpressionInternal(childPlan.queryExpressions),
       );
@@ -1806,6 +1912,7 @@ function buildOrItemsPlan(childPlans: Array<ItemsPlan>): ItemsPlan {
       queryExpressions: [
         buildOrCtsQueryExpressionInternal(mergedQueryExpressions),
       ],
+      resultPredicates: [],
     });
   }
 
@@ -1834,14 +1941,37 @@ function buildItemsPlan(
             : `[@uuid = ${bindingName}]`,
         ],
         queryExpressions: [],
+        resultPredicates: [],
       };
     }
 
     const queryExpression = buildLeafQueryExpression(context, query);
 
-    return query.isNegated === true
-      ? buildNegatedItemsPlan(queryExpression)
-      : buildCtsItemsPlan(queryExpression);
+    if (query.isNegated === true) {
+      return buildNegatedItemsPlan(queryExpression);
+    }
+
+    if (
+      query.fallbackLanguage == null ||
+      query.fallbackLanguage === query.language
+    ) {
+      return buildCtsItemsPlan(queryExpression);
+    }
+
+    return buildFallbackItemsPlan({
+      supersetQueryExpression: buildOrCtsQueryExpressionInternal([
+        buildLeafQueryExpression(context, {
+          ...query,
+          fallbackLanguage: undefined,
+        }),
+        buildLeafQueryExpression(context, {
+          ...query,
+          language: query.fallbackLanguage,
+          fallbackLanguage: undefined,
+        }),
+      ]),
+      strictQueryExpression: queryExpression,
+    });
   }
 
   const optimizedIncludesGroupQueries = getCompatibleIncludesGroupLeaves(query);
@@ -1886,10 +2016,14 @@ function buildItemsPlanExpression(parameters: {
   if (plan.kind === "search") {
     const itemsExpression = `${baseItemsExpression}${plan.itemPredicates.join("")}`;
     const queryName = queryNamesByPlan.get(plan);
+    const searchedExpression =
+      queryName == null
+        ? itemsExpression
+        : `cts:search(${itemsExpression}, ${queryName})`;
 
-    return queryName == null
-      ? itemsExpression
-      : `cts:search(${itemsExpression}, ${queryName})`;
+    return plan.resultPredicates.length === 0
+      ? searchedExpression
+      : `(${searchedExpression})${plan.resultPredicates.join("")}`;
   }
 
   const childExpressions = Array.from(plan.children, (childPlan) =>
@@ -2011,7 +2145,12 @@ export function buildQueryPlan(parameters: {
   const context = createQueryCompilerContext(baseItemsExpression);
   const plan: ItemsPlan =
     queries == null
-      ? { kind: "search", itemPredicates: [], queryExpressions: [] }
+      ? {
+          kind: "search",
+          itemPredicates: [],
+          queryExpressions: [],
+          resultPredicates: [],
+        }
       : buildItemsPlan(context, queries);
   const searchPlans: Array<ItemsSearchPlan> = [];
   collectItemsSearchPlans(plan, searchPlans);
@@ -2084,6 +2223,7 @@ export type ItemsContainer = keyof typeof ITEMS_CONTAINERS;
  * @param parameters.queries - The query tree to compile, or null to match every item
  * @param parameters.declarations - Extra prolog declarations, placed before the compiled prolog
  * @param parameters.body - Builds the body from the name of the variable holding the items
+ * @param parameters.contentLanguage - Keep only this language of every multilingual field in the result
  * @returns A complete XQuery document
  * @internal
  */
@@ -2094,6 +2234,7 @@ export function compileContainerItemsQuery(parameters: {
   queries: Query | null;
   declarations?: ReadonlyArray<string>;
   body: (context: OchreQueryContext & { items: string }) => string;
+  contentLanguage?: OchreContentLanguage | null;
 }): string {
   const {
     container,
@@ -2102,6 +2243,7 @@ export function compileContainerItemsQuery(parameters: {
     queries,
     declarations = [],
     body,
+    contentLanguage,
   } = parameters;
 
   const { scopeVariable, itemsExpression } = ITEMS_CONTAINERS[container];
@@ -2125,6 +2267,7 @@ export function compileContainerItemsQuery(parameters: {
 ${plan.itemsClause}
 ${body({ ...context, items: plan.itemsVariable })}
 }</ochre>`,
+    contentLanguage,
   });
 }
 

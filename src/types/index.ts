@@ -1192,6 +1192,10 @@ export type SetItemsSort =
  * layer holds a single OCR word, so `includes` matches every search term as its
  * own word and `exact` matches the terms as an adjacent run of whole words. OCR
  * text carries no language, so `ocr` leaves take no `language`.
+ *
+ * `fallbackLanguage` searches a field in that language only when the field has
+ * no content in `language`, so a match follows the text a reader of `language`
+ * is shown. Leave it unset to search `language` alone.
  */
 export type QueryLeaf =
   | {
@@ -1205,6 +1209,7 @@ export type QueryLeaf =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
+      fallbackLanguage?: string;
       isNegated?: boolean;
     }
   | {
@@ -1218,6 +1223,7 @@ export type QueryLeaf =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
+      fallbackLanguage?: string;
       isNegated?: boolean;
     }
   | {
@@ -1231,6 +1237,7 @@ export type QueryLeaf =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
+      fallbackLanguage?: string;
       isNegated?: boolean;
     }
   | {
@@ -1244,6 +1251,7 @@ export type QueryLeaf =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
+      fallbackLanguage?: string;
       isNegated?: boolean;
     }
   | {
@@ -1255,6 +1263,7 @@ export type QueryLeaf =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
+      fallbackLanguage?: string;
       isNegated?: boolean;
     }
   | {
@@ -1263,6 +1272,7 @@ export type QueryLeaf =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
+      fallbackLanguage?: string;
       isNegated?: boolean;
     }
   | {
@@ -1284,6 +1294,7 @@ export type QueryLeaf =
       matchMode: "includes" | "exact";
       isCaseSensitive: boolean;
       language: string;
+      fallbackLanguage?: string;
       isNegated?: boolean;
     };
 

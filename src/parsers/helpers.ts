@@ -13,6 +13,17 @@ export type FetchBaseOptions<
   TLanguages extends ReadonlyArray<string> | undefined = undefined,
 > = {
   languages?: TLanguages;
+  /**
+   * Fetch only this language of every multilingual field, instead of every
+   * language OCHRE holds. A field without it keeps its `fallbackLanguage`
+   * content, else its content in any language; aliases are always kept.
+   */
+  language?: string;
+  /**
+   * The language shown for fields that have no `language` content, typically
+   * the website's default language (defaults to `"eng"`)
+   */
+  fallbackLanguage?: string;
   fetch?: FetchFunction;
   signal?: AbortSignal;
   timeoutMilliseconds?: number;

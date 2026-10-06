@@ -11,6 +11,7 @@ import type {
   SetItemCategory,
   TreeItemCategory,
 } from "#/types/index.js";
+import type { OchreContentLanguage } from "#/xquery.js";
 import { OCHRE_COLLECTION_CATEGORIES } from "#/categories.js";
 import { getErrorOutput } from "#/errors.js";
 import { requestOchre } from "#/fetchers/request.js";
@@ -23,6 +24,7 @@ import { uuidSchema } from "#/schemas.js";
 import { XMLItemLinksData as XMLItemLinksDataSchema } from "#/xml/schemas.js";
 import {
   compileOchreQuery,
+  getContentLanguage,
   OCHRE_RESPONSE_PADDING,
   stringLiteral,
 } from "#/xquery.js";
@@ -55,6 +57,7 @@ type ItemChildrenPayloadKind<U extends ItemCategory> = U extends "tree" | "set"
 function buildXQuery(
   uuid: string,
   category: ItemCategoryOption | undefined,
+  contentLanguage: OchreContentLanguage | null,
 ): string {
   const categories: ReadonlyArray<ItemCategory> =
     category == null
@@ -69,6 +72,7 @@ function buildXQuery(
   );
 
   return compileOchreQuery({
+    contentLanguage,
     declarations: [
       `declare function local:item-children($nodes as node()*) as node()* {
   for $node in $nodes
@@ -193,7 +197,11 @@ export async function fetchItemChildren(
     const requestedLanguages = parseRequestedLanguages(options?.languages);
 
     const output = await requestOchre({
-      xquery: buildXQuery(parsedUuid, options?.category),
+      xquery: buildXQuery(
+        parsedUuid,
+        options?.category,
+        getContentLanguage(options),
+      ),
       schema: XMLItemLinksDataSchema,
       label: "OCHRE item children",
       options,

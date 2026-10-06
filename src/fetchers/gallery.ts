@@ -6,6 +6,7 @@ import type {
   FetchRuntimeOptions,
 } from "#/parsers/helpers.js";
 import type { Gallery } from "#/types/index.js";
+import type { OchreContentLanguage } from "#/xquery.js";
 import { getErrorOutput } from "#/errors.js";
 import { requestOchre } from "#/fetchers/request.js";
 import { parseGallery } from "#/parsers/index.js";
@@ -17,6 +18,7 @@ import { gallerySchema } from "#/schemas.js";
 import { XMLGalleryData as XMLGalleryDataSchema } from "#/xml/schemas.js";
 import {
   compileOchreQuery,
+  getContentLanguage,
   OCHRE_RESPONSE_PADDING,
   stringLiteral,
 } from "#/xquery.js";
@@ -26,12 +28,14 @@ function buildXQuery(parameters: {
   filter: string | undefined;
   page: number;
   perPage: number;
+  contentLanguage: OchreContentLanguage | null;
 }): string {
-  const { uuid, filter, page, perPage } = parameters;
+  const { uuid, filter, page, perPage, contentLanguage } = parameters;
   const start = (page - 1) * perPage + 1;
   const filterLiteral = stringLiteral(filter?.trim() ?? "");
 
   return compileOchreQuery({
+    contentLanguage,
     body: ({ omitSupplemental }) => `<ochre>${OCHRE_RESPONSE_PADDING}{
   for $q in doc()/ochre[@uuid=${stringLiteral(uuid)}]
   let $filter := ${filterLiteral}
@@ -94,7 +98,13 @@ export async function fetchGallery(
     const requestedLanguages = parseRequestedLanguages(options?.languages);
 
     const output = await requestOchre({
-      xquery: buildXQuery({ uuid, filter, page, perPage }),
+      xquery: buildXQuery({
+        uuid,
+        filter,
+        page,
+        perPage,
+        contentLanguage: getContentLanguage(options),
+      }),
       schema: XMLGalleryDataSchema,
       label: "OCHRE gallery",
       options,

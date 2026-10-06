@@ -127,6 +127,7 @@ const standardQueryFields = {
   matchMode: v.picklist(["includes", "exact"]),
   isCaseSensitive: v.boolean(),
   language: defaultString("eng"),
+  fallbackLanguage: v.optional(v.string()),
   isNegated: defaultBoolean(false),
 } as const;
 

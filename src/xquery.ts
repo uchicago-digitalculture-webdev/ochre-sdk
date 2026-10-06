@@ -1,3 +1,5 @@
+import { DEFAULT_LANGUAGES } from "#/constants.js";
+
 /**
  * Build a string literal for an XQuery string
  * @param value - The string value to escape
@@ -51,6 +53,79 @@ const SUPPLEMENTAL_XQUERY_PROLOG = `declare function local:omit-supplemental($no
 };`;
 
 /**
+ * XQuery prolog declaring `local:select-language`, which keeps one language of
+ * every multilingual field in a node sequence
+ *
+ * A field's `content` children are reduced to the one in `$language`, else the
+ * one in `$fallback`, else the first in any language, which is the choice the
+ * API's own `lang` parameter makes. `zxx` content is always kept, since it holds
+ * a field's aliases rather than a translation; the API's `lang` parameter drops
+ * it, which is why the SDK selects languages itself. Leaf elements are
+ * returned by reference; testing for multilingual descendants before copying a
+ * subtree measured slower than copying it.
+ */
+const LANGUAGE_XQUERY_PROLOG = `declare function local:select-language($nodes as node()*, $language as xs:string, $fallback as xs:string) as node()* {
+  for $node in $nodes
+  return
+    typeswitch ($node)
+    case element() return
+      if (empty($node/*))
+      then $node
+      else
+        let $contents := $node/content[@xml:lang]
+        let $selected :=
+          if (empty($contents))
+          then ()
+          else (
+            $contents[@xml:lang = $language],
+            $contents[@xml:lang = $fallback],
+            $contents[@xml:lang != "zxx"]
+          )[1]
+        return element { node-name($node) } {
+          $node/@*,
+          for $child in $node/node()
+          return
+            if ($child instance of element(content) and exists($child/@xml:lang))
+            then
+              if ($child is $selected or $child/@xml:lang = "zxx")
+              then $child
+              else ()
+            else local:select-language($child, $language, $fallback)
+        }
+    default return $node
+};`;
+
+/**
+ * Which language a query should return, and what to show where it is missing
+ */
+export type OchreContentLanguage = {
+  language: string;
+  fallbackLanguage: string;
+};
+
+/**
+ * Resolve the content language a fetch asked for
+ * @param options - The fetch options
+ * @param options.language - The language to keep
+ * @param options.fallbackLanguage - The language shown where `language` is missing
+ * @returns The content language, or null to keep every language
+ * @internal
+ */
+export function getContentLanguage(options?: {
+  language?: string;
+  fallbackLanguage?: string;
+}): OchreContentLanguage | null {
+  if (options?.language == null) {
+    return null;
+  }
+
+  return {
+    language: options.language,
+    fallbackLanguage: options.fallbackLanguage ?? DEFAULT_LANGUAGES[0],
+  };
+}
+
+/**
  * What a query body can ask the surrounding document for
  *
  * Handed to the body rather than imported by it, so a body cannot reference a
@@ -84,25 +159,36 @@ const NOT_SUPPLEMENTAL_PREDICATE =
  * @param parameters - The document parameters
  * @param parameters.declarations - Prolog declarations, emitted in order before the supplemental helper
  * @param parameters.body - Builds the query body
+ * @param parameters.contentLanguage - Keep only this language of every multilingual field in the result
  * @returns A complete XQuery document
  * @internal
  */
 export function compileOchreQuery(parameters: {
   declarations?: ReadonlyArray<string>;
   body: (context: OchreQueryContext) => string;
+  contentLanguage?: OchreContentLanguage | null;
 }): string {
-  const { declarations = [], body } = parameters;
+  const { declarations = [], body, contentLanguage } = parameters;
 
   const prologDeclarations: Array<string> = [
     'xquery version "1.0-ml";',
     ...declarations,
     SUPPLEMENTAL_XQUERY_PROLOG,
+    ...(contentLanguage == null ? [] : [LANGUAGE_XQUERY_PROLOG]),
   ];
+
+  const bodyExpression = body({
+    omitSupplemental: (expression) => `local:omit-supplemental(${expression})`,
+    notSupplemental: NOT_SUPPLEMENTAL_PREDICATE,
+  });
 
   return `${prologDeclarations.join("\n\n")}
 
-${body({
-  omitSupplemental: (expression) => `local:omit-supplemental(${expression})`,
-  notSupplemental: NOT_SUPPLEMENTAL_PREDICATE,
-})}`;
+${
+  contentLanguage == null
+    ? bodyExpression
+    : `local:select-language((
+${bodyExpression}
+), ${stringLiteral(contentLanguage.language)}, ${stringLiteral(contentLanguage.fallbackLanguage)})`
+}`;
 }
