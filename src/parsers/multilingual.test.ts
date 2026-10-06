@@ -25,7 +25,7 @@ describe("hasContent and isEmpty", () => {
   it("finds text carried by a non-primary entry", () => {
     const value = build({ eng: ["", "Second"] });
 
-    expect(value.getText()).toBe("");
+    expect(value.getText(value.getDefaultLanguage())).toBe("");
     expect(value.hasContent()).toBe(true);
   });
 
@@ -73,11 +73,15 @@ describe("multi-entry reads", () => {
   it("returns every entry for the resolved language", () => {
     const value = build({ eng: ["First", "Second"] });
 
-    expect(value.getTexts()).toStrictEqual(["First", "Second"]);
-    expect(value.getEntries().map((entry) => entry.isPrimary)).toStrictEqual([
-      true,
-      false,
+    expect(value.getTexts(value.getDefaultLanguage())).toStrictEqual([
+      "First",
+      "Second",
     ]);
+    expect(
+      value
+        .getEntries(value.getDefaultLanguage())
+        .map((entry) => entry.isPrimary),
+    ).toStrictEqual([true, false]);
   });
 
   it("falls back to a language that has content", () => {
@@ -94,8 +98,10 @@ describe("multi-entry reads", () => {
   it("carries rich text alongside plain text on every entry", () => {
     const value = build({ eng: ["*One*", "Two"] });
 
-    expect(value.getEntries()[0]?.richText).toBe(value.getRichText());
-    expect(value.getEntries()).toHaveLength(2);
+    expect(value.getEntries(value.getDefaultLanguage())[0]?.richText).toBe(
+      value.getRichText(value.getDefaultLanguage()),
+    );
+    expect(value.getEntries(value.getDefaultLanguage())).toHaveLength(2);
   });
 });
 
@@ -116,9 +122,13 @@ describe("mapText", () => {
 
     const mapped = value.mapText((text) => text.toLocaleUpperCase("en-US"));
 
-    expect(mapped.getText()).toBe("LINKED CALLOUT");
-    expect(mapped.getRichText()).not.toContain("INTERNALLINK");
-    expect(mapped.getRichText()).not.toContain("UUID");
+    expect(mapped.getText(mapped.getDefaultLanguage())).toBe("LINKED CALLOUT");
+    expect(mapped.getRichText(mapped.getDefaultLanguage())).not.toContain(
+      "INTERNALLINK",
+    );
+    expect(mapped.getRichText(mapped.getDefaultLanguage())).not.toContain(
+      "UUID",
+    );
   });
 
   it("uses both fields when the transform supplies them", () => {
@@ -129,8 +139,10 @@ describe("mapText", () => {
       richText: `<em>${text}</em>`,
     }));
 
-    expect(mapped.getText()).toBe("ONE");
-    expect(mapped.getRichText()).toBe("<em>one</em>");
+    expect(mapped.getText(mapped.getDefaultLanguage())).toBe("ONE");
+    expect(mapped.getRichText(mapped.getDefaultLanguage())).toBe(
+      "<em>one</em>",
+    );
   });
 
   it("keeps every language, entry count and primary flag", () => {
@@ -141,14 +153,16 @@ describe("mapText", () => {
     expect(mapped.getAvailableLanguages()).toStrictEqual(["eng", "spa"]);
     expect(mapped.getExactTexts("eng")).toStrictEqual(["a!", "b!"]);
     expect(mapped.getExactTexts("spa")).toStrictEqual(["c!"]);
-    expect(mapped.getEntries()[0]?.isPrimary).toBe(true);
+    expect(mapped.getEntries(mapped.getDefaultLanguage())[0]?.isPrimary).toBe(
+      true,
+    );
   });
 
   it("leaves the original untouched", () => {
     const value = build({ eng: ["one"] });
     value.mapText(() => "changed");
 
-    expect(value.getText()).toBe("one");
+    expect(value.getText(value.getDefaultLanguage())).toBe("one");
   });
 });
 
@@ -159,7 +173,9 @@ describe("filterEntries", () => {
     const filtered = value.filterEntries((entry) => entry.text === "keep");
 
     expect(filtered.getExactTexts("eng")).toStrictEqual(["keep"]);
-    expect(filtered.getEntries()[0]?.isPrimary).toBe(true);
+    expect(
+      filtered.getEntries(filtered.getDefaultLanguage())[0]?.isPrimary,
+    ).toBe(true);
   });
 
   it("moves the default language when it loses every entry", () => {
@@ -172,7 +188,7 @@ describe("filterEntries", () => {
 
     expect(filtered.hasLanguage("eng")).toBe(false);
     expect(filtered.getDefaultLanguage()).toBe("spa");
-    expect(filtered.getText()).toBe("keep");
+    expect(filtered.getText(filtered.getDefaultLanguage())).toBe("keep");
   });
 
   it("keeps the default language when it still has an entry", () => {
@@ -192,7 +208,7 @@ describe("filterEntries", () => {
     const filtered = value.filterEntries(() => false);
 
     expect(filtered.isEmpty()).toBe(true);
-    expect(filtered.getText()).toBe("");
+    expect(filtered.getText(filtered.getDefaultLanguage())).toBe("");
   });
 
   it("sees rich text and the primary flag, not just the text", () => {
@@ -222,7 +238,7 @@ describe("withAliases", () => {
 
     const updated = value.withAliases(["A"]);
 
-    expect(updated.getText()).toBe("uno");
+    expect(updated.getText(updated.getDefaultLanguage())).toBe("uno");
     expect(updated.getDefaultLanguage()).toBe("spa");
     expect(updated.getAvailableLanguages()).toStrictEqual(["eng", "spa"]);
   });
@@ -233,7 +249,7 @@ describe("withAliases", () => {
     const restored = MultilingualString.fromJSON(value.toJSON(), LANGUAGES);
 
     expect(restored.getAliases()).toStrictEqual(["A"]);
-    expect(restored.getText()).toBe("one");
+    expect(restored.getText(restored.getDefaultLanguage())).toBe("one");
     expect(restored.getDefaultLanguage()).toBe("eng");
   });
 });

@@ -532,14 +532,14 @@ export class MultilingualString<
   /**
    * Get text in a specific language, falling back when it has none
    */
-  getText(language?: T[number]): string {
+  getText(language: T[number]): string {
     return this.resolvePrimaryEntry(language, false)?.text ?? "";
   }
 
   /**
    * Get rich text in a specific language, falling back when it has none
    */
-  getRichText(language?: T[number]): string {
+  getRichText(language: T[number]): string {
     return this.resolvePrimaryEntry(language, false)?.richText ?? "";
   }
 
@@ -573,10 +573,10 @@ export class MultilingualString<
    * can carry several entries for one language, and this returns all of them
    * rather than only the primary. Each entry carries both `text` and
    * `richText`, so a caller rendering a rich field reads them from here.
-   * @param language - The language to read, or undefined for the default
+   * @param language - The language to read
    * @returns The entries, or an empty array when no language has any
    */
-  getEntries(language?: T[number]): Array<MultilingualStringEntry> {
+  getEntries(language: T[number]): Array<MultilingualStringEntry> {
     return Array.from(this.resolveEntries(language, false), (entry) => ({
       ...entry,
     }));
@@ -584,10 +584,10 @@ export class MultilingualString<
 
   /**
    * Get the text of every entry for a language, falling back when it has none
-   * @param language - The language to read, or undefined for the default
+   * @param language - The language to read
    * @returns The texts, or an empty array when no language has any
    */
-  getTexts(language?: T[number]): Array<string> {
+  getTexts(language: T[number]): Array<string> {
     return Array.from(
       this.resolveEntries(language, false),
       (entry) => entry.text,
@@ -874,13 +874,6 @@ export class MultilingualString<
       },
       newAvailableLanguages,
     );
-  }
-
-  /**
-   * Get the string representation, using the default language
-   */
-  toString(): string {
-    return this.getText();
   }
 
   /**

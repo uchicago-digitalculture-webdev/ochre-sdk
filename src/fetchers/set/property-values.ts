@@ -123,8 +123,8 @@ function sortPropertyValues(
       return b.count - a.count;
     }
 
-    const label = a.label?.getText() ?? null;
-    const otherLabel = b.label?.getText() ?? null;
+    const label = a.label?.getText(a.label.getDefaultLanguage()) ?? null;
+    const otherLabel = b.label?.getText(b.label.getDefaultLanguage()) ?? null;
     if (label !== otherLabel) {
       return label?.localeCompare(otherLabel ?? "") ?? 0;
     }

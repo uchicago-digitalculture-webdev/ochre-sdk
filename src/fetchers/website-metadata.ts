@@ -55,7 +55,9 @@ function parseWebsiteMetadata<T extends ReadonlyArray<string>>(
     websiteTree.identification,
     options,
   );
-  const websiteName = identification.label.getText().trim();
+  const websiteName = identification.label
+    .getText(identification.label.getDefaultLanguage())
+    .trim();
   const metadataDescription = (
     parseStringLike(rawOchre.metadata.description) ?? ""
   ).trim();

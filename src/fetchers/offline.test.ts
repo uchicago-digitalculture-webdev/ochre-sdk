@@ -165,7 +165,7 @@ describe("fetchWebsiteMetadata", () => {
 
     expect(result.error).toBeNull();
     expect(result.websiteMetadata?.uuid).toBe(ITEM_UUID);
-    expect(result.websiteMetadata?.webpageTitle?.getText()).toBe("About");
+    expect(result.websiteMetadata?.webpageTitle?.getText("eng")).toBe("About");
 
     const body = mock.requests[0]!.body;
     expect(body).toContain('let $target-slug := "docs/about"');

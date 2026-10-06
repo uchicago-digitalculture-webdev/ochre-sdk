@@ -173,7 +173,8 @@ export function parseContentLikeText<T extends ReadonlyArray<string>>(
   value: XMLContent | XMLString | undefined,
   options: ParserOptions<T>,
 ): string {
-  return parseContentLike(value, options)?.getText().trim() ?? "";
+  const content = parseContentLike(value, options);
+  return content?.getText(content.getDefaultLanguage()).trim() ?? "";
 }
 
 export function parseStringContent(
@@ -189,10 +190,11 @@ export function parseStringContent(
   }
 
   if (isXMLContent(value)) {
-    return parseXMLContent(value, {
+    const content = parseXMLContent(value, {
       languages: options.languages,
       defaultLanguage: options.defaultLanguage,
-    }).getText();
+    });
+    return content.getText(content.getDefaultLanguage());
   }
 
   return parseXMLString(value).text;

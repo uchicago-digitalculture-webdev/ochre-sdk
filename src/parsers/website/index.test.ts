@@ -363,7 +363,7 @@ describe("parseWebsite", () => {
       abbreviation: "TEST",
     });
     expect(website.properties.options.scopes?.[0]?.uuid).toBe(UUID.scope);
-    expect(website.properties.options.labels.title?.getText()).toBe(
+    expect(website.properties.options.labels.title?.getText("eng")).toBe(
       "Browse title",
     );
     expect(website.properties.options.stylesheets.properties[0]).toMatchObject({
@@ -397,7 +397,7 @@ describe("parseWebsite", () => {
     }
 
     expect(element.variant).toStrictEqual({ name: "banner" });
-    expect(element.content.getRichText()).toContain(
+    expect(element.content.getRichText("eng")).toContain(
       '<ExternalLink href="https://example.com/resource">Linked callout</ExternalLink>',
     );
   });
@@ -431,7 +431,7 @@ describe("fetchWebsite", () => {
     expect(result.protectedWebsite).not.toBeNull();
     expect(result.protectedWebsite?.uuid).toBe(UUID.website);
     expect(result.protectedWebsite?.properties.privacy).toBe("password");
-    expect(result.protectedWebsite?.identification.label.getText()).toBe(
+    expect(result.protectedWebsite?.identification.label.getText("eng")).toBe(
       "Protected Site",
     );
     expect(mock.calls).toHaveLength(1);

@@ -210,7 +210,9 @@ describe("parseItem", () => {
     expect(tree.properties[0]?.variable.publicationDateTime).toStrictEqual(
       PUBLICATION_DATE,
     );
-    expect(tree.properties[0]?.variable.label.getText()).toBe("presentation");
+    expect(tree.properties[0]?.variable.label.getText("eng")).toBe(
+      "presentation",
+    );
     expect(tree.properties[0]?.values[0]?.content).toBe("website");
     const firstTreeItem = tree.items[0];
     expect(

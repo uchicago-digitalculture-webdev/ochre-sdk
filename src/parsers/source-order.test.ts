@@ -66,7 +66,7 @@ describe("source order", () => {
       "resource",
     ]);
     expect(
-      Array.from(set.items, (item) => item.identification.label.getText()),
+      Array.from(set.items, (item) => item.identification.label.getText("eng")),
     ).toStrictEqual(["First", "Second", "Third"]);
   });
 

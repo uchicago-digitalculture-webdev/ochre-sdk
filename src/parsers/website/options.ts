@@ -210,7 +210,9 @@ export function parseWebsiteOptions<T extends ReadonlyArray<string>>(
 
   const notes = parseNotes(rawOptions?.notes, options);
   for (const note of notes) {
-    if (note.title?.getText() !== "Title label") {
+    if (
+      note.title?.getText(note.title.getDefaultLanguage()) !== "Title label"
+    ) {
       continue;
     }
 

@@ -647,7 +647,7 @@ function expectPropertyFieldsMatchRaw(
   expect(
     parsedProperty.variable.publicationDateTime?.toISOString() ?? null,
   ).toBe(rawProperty.label.publicationDateTime?.toISOString() ?? null);
-  expect(parsedProperty.variable.label.getText()).toBe(
+  expect(parsedProperty.variable.label.getText("eng")).toBe(
     parseContentLikeForTest(rawProperty.label),
   );
   expect(parsedProperty.variable.relation).toBe(

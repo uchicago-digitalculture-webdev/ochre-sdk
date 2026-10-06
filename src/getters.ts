@@ -83,7 +83,9 @@ function getPropertyVariableLabel<T extends LanguageCodes>(
 ): string {
   return typeof property.variable.label === "string"
     ? property.variable.label
-    : property.variable.label.getText();
+    : property.variable.label.getText(
+        property.variable.label.getDefaultLanguage(),
+      );
 }
 
 function hasPropertyValue<T extends LanguageCodes>(

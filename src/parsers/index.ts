@@ -1042,7 +1042,7 @@ function parsePropertyValueContent<T extends ReadonlyArray<string>>(
         : null;
   const contentText = readPropertyValueText(
     value,
-    () => rawLabel?.getText() ?? null,
+    () => rawLabel?.getText(rawLabel.getDefaultLanguage()) ?? null,
   );
   const common = {
     hierarchy: {
