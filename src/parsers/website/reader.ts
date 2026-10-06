@@ -184,6 +184,20 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
     );
   }
 
+  nestedAllByValue(
+    label: string,
+    value: WebsitePropertyContent<T>,
+  ): Array<WebsitePresentationReader<T>> {
+    const readers: Array<WebsitePresentationReader<T>> = [];
+    for (const property of this.sourceProperties) {
+      if (getProperty([property], { label, valueContent: value }) != null) {
+        readers.push(new WebsitePresentationReader(property.properties));
+      }
+    }
+
+    return readers;
+  }
+
   get size(): number {
     return this.sourceProperties.length;
   }

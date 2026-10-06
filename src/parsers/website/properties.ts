@@ -87,6 +87,7 @@ export function parseWebsiteProperties<T extends ReadonlyArray<string>>(
         parent?.itemPage.isPersistentIdentifierDisplayed ?? true,
       iiifViewer: parent?.itemPage.iiifViewer ?? "universal-viewer",
     },
+    relations: { variant: parent?.relations.variant ?? "list" },
     options: {
       contextTree: parent?.options.contextTree ?? null,
       scopes: parent?.options.scopes ?? null,
@@ -144,7 +145,10 @@ export function parseWebsiteProperties<T extends ReadonlyArray<string>>(
     logoUuid: "footer-logo",
   });
 
-  const itemPageReader = websiteReader.nestedByValue("page-type", "item-page");
+  const itemPageReader = websiteReader.nestedByValue(
+    "customize-special",
+    "item-page",
+  );
   if (itemPageReader.size > 0) {
     const itemPageSections = [
       ["description", "description"],
@@ -180,6 +184,10 @@ export function parseWebsiteProperties<T extends ReadonlyArray<string>>(
       iiifViewer: "item-page-iiif-viewer",
     });
   }
+
+  websiteReader
+    .nestedByValue("customize-special", "relations")
+    .readAll(returnProperties.relations, { variant: "variant" });
 
   if (websiteTree.options != null) {
     const parsedOptions = parseWebsiteOptions(websiteTree.options, options);

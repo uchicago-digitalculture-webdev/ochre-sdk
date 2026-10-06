@@ -117,6 +117,16 @@ export type WebSectionVariant =
   | "tabular";
 
 /**
+ * How a website displays an item's related items
+ */
+export type WebRelationVariant =
+  | "list"
+  | "dropdown-list"
+  | "grid"
+  | "gallery"
+  | "inline";
+
+/**
  * The IIIF viewer a website renders images with
  */
 export type WebIiifViewer = "universal-viewer" | "clover";
@@ -253,6 +263,7 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
       isPersistentIdentifierDisplayed: boolean;
       iiifViewer: WebIiifViewer;
     };
+    relations: { variant: WebRelationVariant };
     options: Prettify<
       WebOptions<T> & { stylesheets: { properties: Array<StylesheetItem> } }
     >;
@@ -383,6 +394,11 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
         uuid: string;
         label: MultilingualString<T> | null;
       }> | null;
+      relations: Array<{
+        uuid: string;
+        label: MultilingualString<T> | null;
+        variant: WebRelationVariant | null;
+      }>;
       variant: "slide" | "table" | "card" | "tile" | "showcase";
       paginationVariant: "default" | "numeric";
       loadingVariant: WebLoadingVariant;

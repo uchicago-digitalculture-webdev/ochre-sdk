@@ -156,6 +156,32 @@ function parseCollectionDisplayedProperties<T extends ReadonlyArray<string>>(
 }
 
 /**
+ * Parses the "customize-special" "relations" properties, each pairing the
+ * property variables it links with "use-property" with a display "variant".
+ */
+function parseCollectionRelations<T extends ReadonlyArray<string>>(
+  reader: WebsitePresentationReader<T>,
+): CollectionComponent<T>["relations"] {
+  const relations: CollectionComponent<T>["relations"] = [];
+  const relationReaders = reader.nestedAllByValue(
+    "customize-special",
+    "relations",
+  );
+  for (const relationReader of relationReaders) {
+    const variant =
+      relationReader.value<
+        CollectionComponent<T>["relations"][number]["variant"]
+      >("variant");
+    const properties = parseCollectionDisplayedProperties(relationReader) ?? [];
+    for (const property of properties) {
+      relations.push({ ...property, variant });
+    }
+  }
+
+  return relations;
+}
+
+/**
  * What every component parser is handed
  *
  * `pageSlugs` is the only thing the component, element and block parsers read
@@ -585,6 +611,7 @@ function parseCollectionComponent<T extends ReadonlyArray<string>>(
     component: "collection",
     linkUuids: setLinks.map((link) => link.uuid),
     displayedProperties: parseCollectionDisplayedProperties(componentReader),
+    relations: parseCollectionRelations(componentReader),
     ...COLLECTION_PROPERTY_DEFAULTS,
     ...propertyOverrides,
     image: { ...COLLECTION_IMAGE_DEFAULTS, ...propertyOverrides.image },
@@ -1081,6 +1108,11 @@ function parseQueryComponent<T extends ReadonlyArray<string>>(
     parseCollectionDisplayedProperties(componentReader);
   if (displayedProperties != null) {
     collectionProperties.displayedProperties = displayedProperties;
+  }
+
+  const relations = parseCollectionRelations(overrideReader);
+  if (relations.length > 0) {
+    collectionProperties.relations = relations;
   }
 
   return {
