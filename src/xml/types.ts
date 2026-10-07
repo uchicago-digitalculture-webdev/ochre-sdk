@@ -790,7 +790,6 @@ export type XMLData = {
       publicationDateTime: Date;
       metadata: XMLMetadata;
       persistentUrl?: string;
-      languages?: string;
     } & XMLDataItem;
   };
 };
@@ -804,7 +803,6 @@ export type XMLWebsiteData = {
       publicationDateTime: Date;
       metadata: XMLMetadata;
       persistentUrl?: string;
-      languages?: string;
       tree: Array<XMLWebsiteTree>;
     };
   };

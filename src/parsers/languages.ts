@@ -113,13 +113,11 @@ export function resolveContentLanguages(
  * Read the languages a dataset declares in its metadata
  * @param rawOchre - The raw OCHRE payload root
  * @param rawOchre.metadata - The payload metadata declaring the languages
- * @param rawOchre.languages - The semicolon-separated fallback language list
  * @returns The declared languages, falling back to {@link DEFAULT_LANGUAGES}
  * @internal
  */
 export function parseMetadataLanguages(rawOchre: {
   metadata: XMLMetadata;
-  languages?: string;
 }): Array<string> {
   const languages: Array<string> = [];
 
@@ -128,18 +126,6 @@ export function parseMetadataLanguages(rawOchre: {
     const parsedLanguage = parseStringLike(language);
     if (parsedLanguage != null) {
       languages.push(parsedLanguage);
-    }
-  }
-
-  if (languages.length > 0) {
-    return languages;
-  }
-
-  if (rawOchre.languages != null) {
-    for (const language of rawOchre.languages.split(";")) {
-      if (language !== "") {
-        languages.push(language);
-      }
     }
   }
 

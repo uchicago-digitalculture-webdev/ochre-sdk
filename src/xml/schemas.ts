@@ -2736,11 +2736,8 @@ export const XMLData: v.GenericSchema<unknown, XML.XMLData> = v.object(
                 v.url("XMLData: persistentUrl is not a valid URL"),
               ),
             ),
-            languages: v.optional(
-              v.string("XMLData: languages is string and optional"),
-            ),
           },
-          "XMLData: ochre is object with uuid, belongsTo, uuidBelongsTo, publicationDateTime, metadata, and languages",
+          "XMLData: ochre is object with uuid, belongsTo, uuidBelongsTo, publicationDateTime, and metadata",
         ),
         XMLTopLevelDataItem,
       ]),
@@ -2783,9 +2780,6 @@ export const XMLWebsiteData = v.object(
                 ),
                 v.url("XMLWebsiteData: persistentUrl is not a valid URL"),
               ),
-            ),
-            languages: v.optional(
-              v.string("XMLWebsiteData: languages is string and optional"),
             ),
             tree: v.array(XMLWebsiteTree),
           },
