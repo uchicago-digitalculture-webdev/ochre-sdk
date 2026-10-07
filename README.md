@@ -100,10 +100,13 @@ title.isEmpty();
 title.hasContent();
 title.hasLanguage("tur");
 title.hasAliases();
+title.isNonLinguistic();
 
 title.getAvailableLanguages(); // languages that carry content
 title.getSupportedLanguages(); // languages the string was built to hold
 ```
+
+OCHRE publishes `zxx` content in two senses, and the string tells them apart by the only thing that distinguishes them: whether another language stands beside it. Beside a field's languages, `zxx` content names the same thing again, so it is read as aliases (`getAliases()`). Standing alone, it is the text itself in no language, such as an identifier, so it is read as non-linguistic text: `isNonLinguistic()` is true, every language reads it through `getText`, and it has no aliases. Every string, however it is built or edited, follows the same rule, so adding a language to a non-linguistic string turns its text into aliases, as the same content would be read.
 
 Writes return a new string and never mutate the original.
 

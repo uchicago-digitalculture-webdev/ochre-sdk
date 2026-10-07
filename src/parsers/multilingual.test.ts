@@ -44,12 +44,14 @@ describe("hasContent and isEmpty", () => {
     expect(value.hasContent()).toBe(false);
   });
 
-  it("treats a string carrying only aliases as empty", () => {
+  it("reads aliases with no language beside them as non-linguistic text", () => {
     const value = build({}, { aliases: ["ABC"] });
 
-    expect(value.isEmpty()).toBe(true);
-    expect(value.hasContent()).toBe(false);
-    expect(value.hasAliases()).toBe(true);
+    expect(value.isEmpty()).toBe(false);
+    expect(value.hasContent()).toBe(true);
+    expect(value.hasAliases()).toBe(false);
+    expect(value.isNonLinguistic()).toBe(true);
+    expect(value.getText("spa")).toBe("ABC");
   });
 });
 

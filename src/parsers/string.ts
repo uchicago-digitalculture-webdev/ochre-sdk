@@ -1105,8 +1105,17 @@ export function parseXMLContent<V extends ReadonlyArray<string>>(
     });
   }
 
+  const nonLinguistic: Array<MultilingualStringText> = [];
+  for (const contentItem of item.content) {
+    if (contentItem.lang === "zxx") {
+      nonLinguistic.push(
+        parseXMLContentItem(contentItem, { languages: ["zxx"] as const }),
+      );
+    }
+  }
+
   return MultilingualString.empty(languages, {
-    aliases,
+    nonLinguistic,
     defaultLanguage: options.defaultLanguage,
   });
 }
@@ -1146,6 +1155,9 @@ function parseXMLContentItem<V extends ReadonlyArray<string>>(
 
 /**
  * Extracts alias strings from XMLContent where lang="zxx"
+ *
+ * They are aliases only beside another language; parseXMLContent reads
+ * `zxx` content standing alone as non-linguistic text instead.
  * @param content - The XMLContent to extract aliases from
  * @returns Array of alias strings, or null if none found
  *

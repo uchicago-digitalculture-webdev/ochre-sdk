@@ -24,6 +24,13 @@ export type MultilingualStringJSON<
   content: Partial<Record<T[number], Array<MultilingualStringEntry>>>;
   aliases: Array<string>;
   /**
+   * Text in no language, read from `zxx` content that has no other language
+   * beside it
+   *
+   * Optional so payloads written before it existed still parse.
+   */
+  nonLinguistic?: Array<MultilingualStringEntry>;
+  /**
    * The language reads fall back to first
    *
    * Optional so payloads written before it existed still parse; when absent the
@@ -53,10 +60,18 @@ export type MultilingualOptions = {
   */
   availableLanguages?: ReadonlyArray<string>;
   /**
-  Alias values carried by OCHRE as zxx content
+  Alternative names, which OCHRE publishes as zxx content beside a field's
+  languages
   */
   aliases?: ReadonlyArray<string>;
+  /**
+  Text in no language, such as an identifier or a code, which OCHRE publishes
+  as zxx content with no other language beside it
+  */
+  nonLinguistic?: ReadonlyArray<MultilingualStringInput>;
 };
+
+type StoredOptions = Required<Omit<MultilingualOptions, "nonLinguistic">>;
 
 type MultilingualContent<T extends ReadonlyArray<string>> = Partial<
   Record<T[number], ReadonlyArray<MultilingualStringEntry>>
@@ -69,8 +84,9 @@ const MULTILINGUAL_STRING_INTERNAL_INIT = Symbol(
 type MultilingualStringInternalInit<T extends ReadonlyArray<string>> = {
   readonly [MULTILINGUAL_STRING_INTERNAL_INIT]: true;
   content: MultilingualContent<T>;
-  options: Required<MultilingualOptions>;
+  options: StoredOptions;
   availableLanguages: ReadonlyArray<T[number]>;
+  nonLinguistic: ReadonlyArray<MultilingualStringEntry>;
 };
 
 function normalizeInputText(
@@ -96,6 +112,42 @@ function normalizeAliases(
   }
 
   return normalizedAliases;
+}
+
+/**
+ * Apply the rule OCHRE publishes `zxx` content by
+ *
+ * `zxx` content beside a field's languages names the same thing again, so it
+ * is aliases; `zxx` content with no language beside it is the text itself,
+ * in no language. Normalizing every string through this keeps the two
+ * readings from ever coexisting, whichever way a string was built or edited.
+ * @param hasLanguages - Whether any language carries an entry
+ * @param aliases - The aliases the string would carry
+ * @param nonLinguistic - The non-linguistic entries the string would carry
+ * @returns The aliases and non-linguistic entries to store
+ */
+function normalizeUntaggedText(
+  hasLanguages: boolean,
+  aliases: ReadonlyArray<string>,
+  nonLinguistic: ReadonlyArray<MultilingualStringEntry>,
+): { aliases: Array<string>; nonLinguistic: Array<MultilingualStringEntry> } {
+  if (hasLanguages) {
+    return {
+      aliases: normalizeAliases([
+        ...aliases,
+        ...Array.from(nonLinguistic, (entry) => entry.text),
+      ]),
+      nonLinguistic: [],
+    };
+  }
+
+  return {
+    aliases: [],
+    nonLinguistic: normalizePrimary([
+      ...nonLinguistic,
+      ...entriesFromTexts(normalizeAliases(aliases)),
+    ]),
+  };
 }
 
 function entriesFromTexts(
@@ -225,14 +277,22 @@ export class MultilingualString<
 > {
   private static fromNormalized<U extends ReadonlyArray<string>>(
     content: MultilingualContent<U>,
-    options: Required<MultilingualOptions>,
+    options: StoredOptions,
     availableLanguages: ReadonlyArray<U[number]>,
+    nonLinguistic: ReadonlyArray<MultilingualStringEntry>,
   ): MultilingualString<U> {
+    const untaggedText = normalizeUntaggedText(
+      availableLanguages.length > 0,
+      options.aliases,
+      nonLinguistic,
+    );
+
     return new MultilingualString<U>({
       [MULTILINGUAL_STRING_INTERNAL_INIT]: true,
       content,
-      options,
+      options: { ...options, aliases: untaggedText.aliases },
       availableLanguages,
+      nonLinguistic: untaggedText.nonLinguistic,
     });
   }
 
@@ -301,7 +361,7 @@ export class MultilingualString<
         normalizedContent,
         actualLanguages,
       );
-      const defaultOptions: Required<MultilingualOptions> = {
+      const defaultOptions: StoredOptions = {
         defaultLanguage:
           options.defaultLanguage ??
           resolveDefaultLanguageOption(availableLanguages, actualLanguages),
@@ -313,6 +373,7 @@ export class MultilingualString<
         normalizedContent,
         defaultOptions,
         availableLanguages,
+        entriesFromTexts(options.nonLinguistic ?? []),
       );
     }
 
@@ -330,7 +391,7 @@ export class MultilingualString<
       normalizedContent,
       languages,
     );
-    const defaultOptions: Required<MultilingualOptions> = {
+    const defaultOptions: StoredOptions = {
       defaultLanguage:
         options.defaultLanguage ??
         resolveDefaultLanguageOption(availableLanguages, languages),
@@ -342,6 +403,7 @@ export class MultilingualString<
       normalizedContent,
       defaultOptions,
       availableLanguages,
+      entriesFromTexts(options.nonLinguistic ?? []),
     );
   }
 
@@ -410,17 +472,17 @@ export class MultilingualString<
   static fromJSON<U extends ReadonlyArray<string>>(
     json: MultilingualStringJSON<U>,
     languages: U,
-    options?: Omit<MultilingualOptions, "aliases">,
+    options?: Omit<MultilingualOptions, "aliases" | "nonLinguistic">,
   ): MultilingualString<U>;
   static fromJSON(
     json: MultilingualStringJSON,
     languages?: undefined,
-    options?: Omit<MultilingualOptions, "aliases">,
+    options?: Omit<MultilingualOptions, "aliases" | "nonLinguistic">,
   ): MultilingualString<ReadonlyArray<string>>;
   static fromJSON<U extends ReadonlyArray<string>>(
     json: MultilingualStringJSON | MultilingualStringJSON<U>,
     languages?: U,
-    options: Omit<MultilingualOptions, "aliases"> = {},
+    options: Omit<MultilingualOptions, "aliases" | "nonLinguistic"> = {},
   ): MultilingualString<U> | MultilingualString<ReadonlyArray<string>> {
     const content = json.content as Partial<
       Record<string, ReadonlyArray<MultilingualStringInput>>
@@ -429,6 +491,7 @@ export class MultilingualString<
       defaultLanguage: json.defaultLanguage,
       ...options,
       aliases: json.aliases,
+      nonLinguistic: json.nonLinguistic,
     };
 
     if (languages === undefined) {
@@ -439,9 +502,10 @@ export class MultilingualString<
   }
 
   private readonly _content: Readonly<MultilingualContent<T>>;
-  private readonly _options: Required<MultilingualOptions>;
+  private readonly _options: StoredOptions;
   private readonly _availableLanguages: ReadonlyArray<T[number]>;
   private readonly _aliases: ReadonlyArray<string>;
+  private readonly _nonLinguistic: ReadonlyArray<MultilingualStringEntry>;
 
   /**
    * Create a new multilingual string from an object of language codes to text.
@@ -472,6 +536,9 @@ export class MultilingualString<
       this._options = Object.freeze({ ...content.options });
       this._availableLanguages = Object.freeze([...content.availableLanguages]);
       this._aliases = Object.freeze([...content.options.aliases]);
+      this._nonLinguistic = Object.freeze(
+        normalizePrimary(content.nonLinguistic),
+      );
       return;
     }
 
@@ -484,6 +551,7 @@ export class MultilingualString<
     this._options = parsed._options;
     this._availableLanguages = parsed._availableLanguages;
     this._aliases = parsed._aliases;
+    this._nonLinguistic = parsed._nonLinguistic;
   }
 
   /**
@@ -492,6 +560,8 @@ export class MultilingualString<
    * The fallback order is requested language, then the dataset's default
    * language, then the first language that has any content. This is the only
    * place that order is written down; every reader below is a projection of it.
+   * Non-linguistic text is the same in every language, so it answers every
+   * read, exact ones included.
    */
   private resolveEntries(
     language: T[number] | undefined,
@@ -512,7 +582,7 @@ export class MultilingualString<
       }
     }
 
-    return [];
+    return this._nonLinguistic;
   }
 
   private resolvePrimaryEntry(
@@ -607,14 +677,20 @@ export class MultilingualString<
   }
 
   /**
-   * Get the alias values OCHRE carries as `zxx` content
+   * Get the alternative names OCHRE publishes as `zxx` content beside the
+   * string's languages
+   *
+   * A non-linguistic string has none: its `zxx` content is the text itself.
    */
   getAliases(): Array<string> {
     return [...this._aliases];
   }
 
   /**
-   * Get the languages that actually carry content
+   * Get the languages that carry language-specific content
+   *
+   * A non-linguistic string has none, although every language reads its text;
+   * {@link MultilingualString.isNonLinguistic} tells the two apart.
    */
   getAvailableLanguages(): Array<T[number]> {
     return [...this._availableLanguages];
@@ -644,12 +720,28 @@ export class MultilingualString<
    *
    * Answers the structural question. A language whose only entry is blank
    * still counts here; {@link MultilingualString.hasContent} is the question
-   * about text. Aliases are not entries, so a string carrying only aliases is
-   * empty by this measure and {@link MultilingualString.hasAliases} is true.
-   * @returns True when no language carries an entry
+   * about text. Non-linguistic text counts as an entry; aliases never stand
+   * without one, since `zxx` content alone is read as non-linguistic text.
+   * @returns True when no language carries an entry and there is no
+   * non-linguistic text
    */
   isEmpty(): boolean {
-    return this._availableLanguages.length === 0;
+    return (
+      this._availableLanguages.length === 0 && this._nonLinguistic.length === 0
+    );
+  }
+
+  /**
+   * Whether the string is text in no language, such as an identifier or a code
+   *
+   * OCHRE publishes this as `zxx` content with no other language beside it.
+   * Its text answers every language, so a caller that needs to know whether
+   * text was written in a language, to set an HTML `lang` attribute or to
+   * leave it out of a translation check, asks this.
+   * @returns True when the string holds non-linguistic text
+   */
+  isNonLinguistic(): boolean {
+    return this._nonLinguistic.length > 0;
   }
 
   /**
@@ -671,20 +763,32 @@ export class MultilingualString<
       }
     }
 
+    for (const entry of this._nonLinguistic) {
+      if (entry.text.trim() !== "") {
+        return true;
+      }
+    }
+
     return false;
   }
 
   /**
-   * Whether a specific language carries an entry, with no fallback
+   * Whether a specific language reads an entry, with no fallback
+   *
+   * True for every language when the string is non-linguistic, matching the
+   * exact readers, which return non-linguistic text for any language.
    * @param language - The language to test
    * @returns True when that language carries at least one entry
    */
   hasLanguage(language: T[number]): boolean {
-    return (this._content[language]?.length ?? 0) > 0;
+    return (
+      (this._content[language]?.length ?? 0) > 0 ||
+      this._nonLinguistic.length > 0
+    );
   }
 
   /**
-   * Whether OCHRE carried any `zxx` alias values for this string
+   * Whether OCHRE published any alternative names for this string
    * @returns True when there is at least one alias
    */
   hasAliases(): boolean {
@@ -720,6 +824,7 @@ export class MultilingualString<
         newContent,
         this._options.availableLanguages as ReadonlyArray<T[number]>,
       ),
+      this._nonLinguistic,
     );
   }
 
@@ -763,15 +868,18 @@ export class MultilingualString<
             : this._options.defaultLanguage,
       },
       newAvailableLanguages,
+      this._nonLinguistic,
     );
   }
 
   /**
    * Replace the alias values
    *
-   * Aliases are the `zxx` content OCHRE carries alongside a field's languages,
+   * Aliases are the `zxx` content OCHRE publishes beside a field's languages,
    * so they are set as a whole rather than per language. Empty strings are
-   * dropped, matching how they are read from a payload.
+   * dropped, matching how they are read from a payload, and on a string with
+   * no language they become its non-linguistic text, as the same content
+   * would be read.
    * @param aliases - The aliases to carry
    * @returns A new multilingual string
    */
@@ -780,6 +888,7 @@ export class MultilingualString<
       cloneContent(this._content),
       { ...this._options, aliases: normalizeAliases(aliases) },
       this._availableLanguages,
+      this._nonLinguistic,
     );
   }
 
@@ -795,11 +904,15 @@ export class MultilingualString<
    *
    * A transform that needs to keep or rewrite markup returns
    * `{ text, richText }` instead of a string, and both are used verbatim.
+   * Non-linguistic text is transformed too, with `null` as its language.
    * @param transform - Produces the new text for one entry
    * @returns A new multilingual string
    */
   mapText(
-    transform: (text: string, language: T[number]) => MultilingualStringInput,
+    transform: (
+      text: string,
+      language: T[number] | null,
+    ) => MultilingualStringInput,
   ): MultilingualString<T> {
     const newContent: Partial<
       Record<T[number], Array<MultilingualStringEntry>>
@@ -819,6 +932,10 @@ export class MultilingualString<
       newContent,
       this._options,
       this._availableLanguages,
+      Array.from(this._nonLinguistic, (entry) => ({
+        ...normalizeInputText(transform(entry.text, null)),
+        isPrimary: entry.isPrimary,
+      })),
     );
   }
 
@@ -829,14 +946,15 @@ export class MultilingualString<
    * can also test `richText` and `isPrimary`. Dropping every entry of a
    * language removes that language, and when that was the default the default
    * moves to the first language that still has content, so reads keep
-   * resolving.
+   * resolving. Non-linguistic entries are tested too, with `null` as their
+   * language.
    * @param shouldKeep - Whether to keep one entry
    * @returns A new multilingual string
    */
   filterEntries(
     shouldKeep: (
       entry: MultilingualStringEntry,
-      language: T[number],
+      language: T[number] | null,
     ) => boolean,
   ): MultilingualString<T> {
     const newContent: Partial<
@@ -873,6 +991,7 @@ export class MultilingualString<
             ),
       },
       newAvailableLanguages,
+      this._nonLinguistic.filter((entry) => shouldKeep({ ...entry }, null)),
     );
   }
 
@@ -893,6 +1012,7 @@ export class MultilingualString<
     return {
       content,
       aliases: this.getAliases(),
+      nonLinguistic: Array.from(this._nonLinguistic, (entry) => ({ ...entry })),
       defaultLanguage: this._options.defaultLanguage,
     };
   }
