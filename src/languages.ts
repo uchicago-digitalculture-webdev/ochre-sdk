@@ -20,7 +20,6 @@ export type OchreLanguageKind =
  * - `iso639-2t`: the terminology ISO 639-2 code, which OCHRE uses for Dutch
  * - `iso639-3`: the ISO 639-3 identifier, for languages ISO 639-2 has no
  *   code for
- * - `bcp47`: a BCP 47 tag (`zh-Latn-pinyin`)
  * - `ochre`: a code of OCHRE's own, which may collide with an unrelated
  *   ISO 639-3 language (`lmc` is OCHRE's Late Middle Chinese, ISO's Limilngan)
  */
@@ -28,7 +27,6 @@ export type OchreLanguageStandard =
   | "iso639-2b"
   | "iso639-2t"
   | "iso639-3"
-  | "bcp47"
   | "ochre";
 
 /**
@@ -332,10 +330,10 @@ export const OCHRE_LANGUAGES = {
     iso639_3: "guj",
     bcp47: "gu",
   },
-  "zh-Latn-pinyin": {
+  pinyin: {
     name: "Hanyu Pinyin",
     kind: "transliteration",
-    standard: "bcp47",
+    standard: "ochre",
     iso639_3: "cmn",
     bcp47: "zh-Latn-pinyin",
   },
