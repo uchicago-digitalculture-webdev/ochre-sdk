@@ -129,6 +129,20 @@ const languages = defineLanguages("eng", "tur");
 const result = await fetchWebsite("uchicago-node", { languages });
 ```
 
+## Language Codes
+
+OCHRE publishes ISO 639-2/B language codes, the Library of Congress MARC convention, and every language the SDK reads or accepts uses them: the bibliographic code wherever ISO 639-2 has one (`per` for Persian, not ISO 639-3 `fas`; `fre`, `chi`, `ger`), the ISO 639-3 identifier where it has none (`yua`, `lzh`), and a few codes of its own for transliterations and vocabularies (`ota-xlt`, `rel`), some of which collide with unrelated ISO 639-3 languages. Requests in any other code are rejected, with the OCHRE code to use when one exists.
+
+`OCHRE_LANGUAGES` maps every code OCHRE publishes to its name, what it tags (a `language`, a `transliteration`, a `vocabulary` or `non-linguistic` content), its ISO 639-3 identifier and the BCP 47 tag to give `Intl` or an HTML `lang` attribute. Either standard is `null` when none fits.
+
+```ts
+import { getOchreLanguage, getOchreLanguageCode } from "ochre-sdk";
+
+getOchreLanguage("per"); // { name: "Persian", kind: "language", iso639_3: "fas", bcp47: "fa" }
+getOchreLanguage("ota-xlt")?.bcp47; // "ota-Latn-t-ota-arab"
+getOchreLanguageCode("fas"); // "per"
+```
+
 ## Set Queries
 
 Set fetchers accept a recursive `Query` tree. Leaf queries can target full text,

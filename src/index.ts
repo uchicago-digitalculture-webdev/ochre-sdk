@@ -22,6 +22,17 @@ export {
 } from "#/getters.js";
 export type { PropertyOptions, PropertySelector } from "#/getters.js";
 export { flattenItemProperties } from "#/helpers.js";
+export {
+  getOchreLanguage,
+  getOchreLanguageCode,
+  isOchreLanguageCode,
+  OCHRE_LANGUAGES,
+} from "#/languages.js";
+export type {
+  OchreLanguage,
+  OchreLanguageCode,
+  OchreLanguageKind,
+} from "#/languages.js";
 export { defineLanguages } from "#/parsers/languages.js";
 export { MultilingualString } from "#/parsers/multilingual.js";
 export type {

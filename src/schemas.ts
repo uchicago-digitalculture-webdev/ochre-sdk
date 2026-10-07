@@ -8,6 +8,7 @@ import type {
 } from "#/types/index.js";
 import type { WebElementComponent } from "#/types/website.js";
 import { DEFAULT_PAGE_SIZE } from "#/constants.js";
+import { getOchreLanguageCode, isOchreLanguageCode } from "#/languages.js";
 
 const PSEUDO_UUID_REGEX = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
 
@@ -42,12 +43,22 @@ export const uuidSchema = v.pipe(
 );
 
 /**
- * Schema for validating language codes
+ * Schema for validating OCHRE language codes
+ *
+ * Rejects standard codes OCHRE does not store, naming the OCHRE code to use
+ * instead (`per` for ISO 639-3 `fas`).
  * @internal
  */
-export const iso639_3Schema = v.pipe(
+export const ochreLanguageCodeSchema = v.pipe(
   v.string("Language code must be a string"),
-  v.regex(/^[a-z]{3}$/, "Language code must be exactly 3 lowercase letters"),
+  v.check(isOchreLanguageCode, (issue) => {
+    const input = issue.input;
+    const ochreCode = getOchreLanguageCode(input);
+
+    return ochreCode == null
+      ? `Unknown OCHRE language code "${input}"`
+      : `Unknown OCHRE language code "${input}"; OCHRE stores this language as "${ochreCode}"`;
+  }),
 );
 
 /**

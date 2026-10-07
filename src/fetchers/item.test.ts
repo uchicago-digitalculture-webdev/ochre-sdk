@@ -1354,7 +1354,7 @@ describe("fetchItem", () => {
     expect(languages).toStrictEqual(["eng", "spa"]);
     expectTypeOf(languages).toEqualTypeOf<readonly ["eng", "spa"]>();
     expect(() => defineLanguages("english")).toThrow(
-      "Language code must be exactly 3 lowercase letters",
+      'Unknown OCHRE language code "english"',
     );
   });
 

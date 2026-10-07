@@ -3,7 +3,7 @@ import type { XMLMetadata } from "#/xml/types.js";
 import { DEFAULT_LANGUAGES } from "#/constants.js";
 import { parseStringLike } from "#/parsers/helpers.js";
 import { readArrayProperty, readEntries } from "#/reflection.js";
-import { iso639_3Schema } from "#/schemas.js";
+import { ochreLanguageCodeSchema } from "#/schemas.js";
 
 /**
  * A content entry carrying a language tag
@@ -51,7 +51,7 @@ export function parseLanguages<const T extends ReadonlyArray<string>>(
   languages: T,
 ): T {
   for (const language of languages) {
-    v.parse(iso639_3Schema, language);
+    v.parse(ochreLanguageCodeSchema, language);
   }
 
   return languages;
