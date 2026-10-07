@@ -134,7 +134,7 @@ const result = await fetchWebsite("uchicago-node", { languages });
 
 ## Language Codes
 
-OCHRE publishes ISO 639-2/B language codes, the Library of Congress MARC convention, and every language the SDK reads or accepts uses them: the bibliographic code wherever ISO 639-2 has one (`per` for Persian, not ISO 639-3 `fas`; `fre`, `chi`, `ger`), the ISO 639-3 identifier where it has none (`yua`, `lzh`), and a few codes of its own for transliterations and vocabularies (`ota-xlt`, `rel`), some of which collide with unrelated ISO 639-3 languages. Requests in any other code are rejected, with the OCHRE code to use when one exists.
+OCHRE publishes ISO 639-2 language codes in their bibliographic (B) form, the Library of Congress MARC convention, and every language the SDK reads or accepts uses them: `per` for Persian, not ISO 639-3 `fas`, and likewise `fre`, `chi` and `ger`. There are three exceptions: the ISO 639-3 identifier where ISO 639-2 has no code (`yua`, `lzh`), the terminology (T) form for Dutch (`nld`, not `dut`), and a few codes of OCHRE's own for transliterations and vocabularies (`ota-xlt`, `rel`), some of which collide with unrelated ISO 639-3 languages. Requests in any other code are rejected, with the OCHRE code to use when one exists.
 
 `OCHRE_LANGUAGES` maps every code OCHRE publishes to its name, what it tags (a `language`, a `transliteration`, a `vocabulary` or `non-linguistic` content), its ISO 639-3 identifier and the BCP 47 tag to give `Intl` or an HTML `lang` attribute. Either standard is `null` when none fits.
 

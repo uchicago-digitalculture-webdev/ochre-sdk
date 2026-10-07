@@ -41,13 +41,14 @@ export type OchreLanguage = {
  * Every language code OCHRE publishes, mapped to the ISO 639-3 and BCP 47
  * codes it stands for
  *
- * OCHRE publishes ISO 639-2/B codes, the Library of Congress MARC
- * convention: the bibliographic code wherever ISO 639-2 has one (`per`,
- * not ISO 639-3 `fas`), the ISO 639-3 identifier where it has none
- * (`yua`), and a few codes of its own (`ota-xlt`, `rel`), some of which
- * collide with unrelated ISO 639-3 languages. Key everything by these codes,
- * because they are what OCHRE serves, and convert through this table when a
- * standard code is needed.
+ * OCHRE publishes ISO 639-2 codes in their bibliographic (B) form, the
+ * Library of Congress MARC convention (`per`, not ISO 639-3 `fas`), with
+ * three exceptions: the ISO 639-3 identifier where ISO 639-2 has no code
+ * (`yua`), the terminology (T) form for Dutch (`nld`, not `dut`), and codes
+ * of its own for transliterations and vocabularies (`ota-xlt`, `rel`), some
+ * of which collide with unrelated ISO 639-3 languages. Key everything by
+ * these codes, because they are what OCHRE serves, and convert through this
+ * table when a standard code is needed.
  */
 export const OCHRE_LANGUAGES = {
   akk: { name: "Akkadian", kind: "language", iso639_3: "akk", bcp47: "akk" },
