@@ -57,7 +57,7 @@ export const ochreLanguageCodeSchema = v.pipe(
 
     return ochreCode == null
       ? `Unknown OCHRE language code "${input}"`
-      : `Unknown OCHRE language code "${input}"; OCHRE stores this language as "${ochreCode}"`;
+      : `Unknown OCHRE language code "${input}"; OCHRE publishes this language as "${ochreCode}"`;
   }),
 );
 

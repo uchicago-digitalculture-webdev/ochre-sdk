@@ -32,6 +32,7 @@ export type {
   OchreLanguage,
   OchreLanguageCode,
   OchreLanguageKind,
+  OchreLanguageStandard,
 } from "#/languages.js";
 export { defineLanguages } from "#/parsers/languages.js";
 export { MultilingualString } from "#/parsers/multilingual.js";
