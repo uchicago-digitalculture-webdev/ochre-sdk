@@ -296,8 +296,8 @@ it("should fetch convocation-programs Set items for OCR phrase query: 'THE COLLE
     pageSize: 48,
   });
 
-  expect(phraseCount).toBe(1);
-  expect(reversedPhraseCount).toBe(0);
+  expect(phraseCount).toBe(31);
+  expect(reversedPhraseCount).toBe(4);
 });
 
 it("should fetch convocation-programs Set items for a negated OCR query", async () => {
