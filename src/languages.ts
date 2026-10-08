@@ -21,7 +21,7 @@ export type OchreLanguageKind =
  * - `iso639-3`: the ISO 639-3 identifier, for languages ISO 639-2 has no
  *   code for
  * - `ochre`: a code of OCHRE's own, which may collide with an unrelated
- *   ISO 639-3 language (`lmc` is OCHRE's Late Middle Chinese, ISO's Limilngan)
+ *   ISO 639-3 language (`rel` is OCHRE's relator vocabulary, ISO's Rendille)
  */
 export type OchreLanguageStandard =
   | "iso639-2b"
@@ -406,13 +406,6 @@ export const OCHRE_LANGUAGES = {
     standard: "iso639-2b",
     iso639_3: "kor",
     bcp47: "ko",
-  },
-  lmc: {
-    name: "Late Middle Chinese",
-    kind: "language",
-    standard: "ochre",
-    iso639_3: "ltc",
-    bcp47: "ltc",
   },
   lat: {
     name: "Latin",
