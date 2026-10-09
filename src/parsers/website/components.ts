@@ -953,6 +953,7 @@ function parseMapComponent<T extends ReadonlyArray<string>>(
   return {
     component: "map",
     linkUuid: mapLink.uuid,
+    boundElementUuid: componentReader.uuid("bound-element"),
     customBasemap,
     initialBounds,
     maximumBounds,

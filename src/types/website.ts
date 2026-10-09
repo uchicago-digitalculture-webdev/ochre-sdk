@@ -462,6 +462,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
   | {
       component: "map";
       linkUuid: string;
+      boundElementUuid: string | null;
       customBasemap: string | null;
       initialBounds: [[number, number], [number, number]] | null;
       maximumBounds: [[number, number], [number, number]] | null;
