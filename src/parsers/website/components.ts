@@ -15,6 +15,7 @@ import type {
   WebTitle,
 } from "#/types/website.js";
 import type { XMLWebsiteResource } from "#/xml/types.js";
+import { normalizeItemCategory } from "#/categories.js";
 import { parseStringContent } from "#/parsers/helpers.js";
 import {
   parseBibliographyList,
@@ -278,6 +279,25 @@ function parseAdvancedSearchComponent<T extends ReadonlyArray<string>>(
     );
   }
 
+  const prominentPropertyVariable = componentReader.valueNode(
+    "prominent-property-variable",
+  );
+  if (
+    prominentPropertyVariable != null &&
+    (prominentPropertyVariable.uuid == null ||
+      normalizeItemCategory(prominentPropertyVariable.category ?? undefined) !==
+        "propertyVariable")
+  ) {
+    throw new Error(
+      formatComponentError(
+        "Prominent property variable must link to a property variable",
+        "advanced-search",
+        elementResource,
+      ),
+      { cause: prominentPropertyVariable },
+    );
+  }
+
   const filter = { ...ADVANCED_SEARCH_FILTER_DEFAULTS };
   componentReader.readAll(filter, {
     sidebarSort: "filter-sidebar-sort",
@@ -289,6 +309,7 @@ function parseAdvancedSearchComponent<T extends ReadonlyArray<string>>(
     component: "advanced-search",
     boundElementUuid: boundElementPropertyUuid,
     href,
+    prominentPropertyVariableUuid: prominentPropertyVariable?.uuid ?? null,
     filter,
     options: parseWebsiteOptions(elementResource.options, options),
   };

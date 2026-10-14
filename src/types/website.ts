@@ -344,6 +344,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       component: "advanced-search";
       boundElementUuid: string | null;
       href: string | null;
+      prominentPropertyVariableUuid: string | null;
       filter: {
         sidebarSort: "default" | "alphabetical";
         isSidebarHelpTooltipsDisplayed: boolean;
