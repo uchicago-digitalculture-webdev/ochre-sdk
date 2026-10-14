@@ -246,8 +246,8 @@ const ADVANCED_SEARCH_FILTER_DEFAULTS: Extract<
   { component: "advanced-search" }
 >["filter"] = {
   sidebarSort: "default",
-  isSidebarHelpTooltipsDisplayed: false,
-  isSidebarResultCountsDisplayed: false,
+  isSidebarHelpTooltipsDisplayed: true,
+  isSidebarResultCountsDisplayed: true,
 };
 
 function parseAdvancedSearchComponent<T extends ReadonlyArray<string>>(
@@ -579,8 +579,8 @@ const COLLECTION_FILTER_DEFAULTS: Extract<
   isLimitedToLeafPropertyValues: false,
   isSidebarDisplayed: false,
   sidebarSort: "default",
-  isSidebarHelpTooltipsDisplayed: false,
-  isSidebarResultCountsDisplayed: false,
+  isSidebarHelpTooltipsDisplayed: true,
+  isSidebarResultCountsDisplayed: true,
 };
 
 function parseCollectionComponent<T extends ReadonlyArray<string>>(
