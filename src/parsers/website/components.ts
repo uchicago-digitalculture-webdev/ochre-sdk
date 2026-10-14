@@ -911,12 +911,14 @@ const MAP_COMPONENT_DEFAULTS: Pick<
   | "isUsingPins"
   | "isControlsDisplayed"
   | "isFullHeight"
+  | "isMapCenterSortOptionDisplayed"
 > = {
   isInteractive: true,
   isClustered: false,
   isUsingPins: false,
   isControlsDisplayed: false,
   isFullHeight: false,
+  isMapCenterSortOptionDisplayed: false,
 };
 
 function parseMapComponent<T extends ReadonlyArray<string>>(
@@ -941,14 +943,8 @@ function parseMapComponent<T extends ReadonlyArray<string>>(
     isUsingPins: "is-using-pins",
     isControlsDisplayed: "controls-displayed",
     isFullHeight: "is-full-height",
+    isMapCenterSortOptionDisplayed: "map-center-sort-option-displayed",
   });
-  const {
-    isInteractive,
-    isClustered,
-    isUsingPins,
-    isControlsDisplayed,
-    isFullHeight,
-  } = properties;
 
   const customBasemap =
     componentReader.value<MapComponent["customBasemap"]>("custom-basemap");
@@ -976,11 +972,7 @@ function parseMapComponent<T extends ReadonlyArray<string>>(
     customBasemap,
     initialBounds,
     maximumBounds,
-    isInteractive,
-    isClustered,
-    isUsingPins,
-    isControlsDisplayed,
-    isFullHeight,
+    ...properties,
   };
 }
 

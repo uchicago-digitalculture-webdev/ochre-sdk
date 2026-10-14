@@ -477,6 +477,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       isClustered: boolean;
       isUsingPins: boolean;
       isFullHeight: boolean;
+      isMapCenterSortOptionDisplayed: boolean;
     }
   | {
       component: "query";
