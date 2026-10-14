@@ -563,6 +563,7 @@ const COLLECTION_FILTER_DEFAULTS: Extract<
   isSidebarDisplayed: false,
   sidebarSort: "default",
   isSidebarHelpTooltipsDisplayed: false,
+  isSidebarResultCountsDisplayed: false,
 };
 
 function parseCollectionComponent<T extends ReadonlyArray<string>>(
@@ -598,6 +599,7 @@ function parseCollectionComponent<T extends ReadonlyArray<string>>(
     isSidebarDisplayed: "filter-sidebar-displayed",
     sidebarSort: "filter-sidebar-sort",
     isSidebarHelpTooltipsDisplayed: "filter-sidebar-help-tooltips-displayed",
+    isSidebarResultCountsDisplayed: "filter-sidebar-result-counts-displayed",
   });
 
   const componentOptions = parseWebsiteOptions(
