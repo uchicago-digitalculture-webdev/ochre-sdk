@@ -344,6 +344,11 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       component: "advanced-search";
       boundElementUuid: string | null;
       href: string | null;
+      filter: {
+        sidebarSort: "default" | "alphabetical";
+        isSidebarHelpTooltipsDisplayed: boolean;
+        isSidebarResultCountsDisplayed: boolean;
+      };
       options: WebOptions<T>;
     }
   | { component: "annotated-document"; linkUuid: string }

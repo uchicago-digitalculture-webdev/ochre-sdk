@@ -241,6 +241,15 @@ function parse3dViewerComponent<T extends ReadonlyArray<string>>(
   };
 }
 
+const ADVANCED_SEARCH_FILTER_DEFAULTS: Extract<
+  WebElementComponent,
+  { component: "advanced-search" }
+>["filter"] = {
+  sidebarSort: "default",
+  isSidebarHelpTooltipsDisplayed: false,
+  isSidebarResultCountsDisplayed: false,
+};
+
 function parseAdvancedSearchComponent<T extends ReadonlyArray<string>>(
   parameters: WebElementComponentParameters<T>,
 ): WebElementComponent<T> {
@@ -269,10 +278,18 @@ function parseAdvancedSearchComponent<T extends ReadonlyArray<string>>(
     );
   }
 
+  const filter = { ...ADVANCED_SEARCH_FILTER_DEFAULTS };
+  componentReader.readAll(filter, {
+    sidebarSort: "filter-sidebar-sort",
+    isSidebarHelpTooltipsDisplayed: "filter-sidebar-help-tooltips-displayed",
+    isSidebarResultCountsDisplayed: "filter-sidebar-result-counts-displayed",
+  });
+
   return {
     component: "advanced-search",
     boundElementUuid: boundElementPropertyUuid,
     href,
+    filter,
     options: parseWebsiteOptions(elementResource.options, options),
   };
 }
