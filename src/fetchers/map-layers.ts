@@ -35,6 +35,7 @@ const REGEX_FEATURE_SERVER = /\/FeatureServer(?:\/\d+)?\/?$/i;
 const REGEX_MAP_SERVER = /\/MapServer(?:\/\d+)?\/?$/i;
 const REGEX_IMAGE_SERVER = /\/ImageServer\/?$/i;
 const REGEX_TRAILING_SLASH = /\/$/;
+const REGEX_ARCGIS_SOAP_SERVICES = /\/arcgis\/services\//i;
 
 /**
  * Classify the href of a webpage Resource as a geospatial web service
@@ -85,6 +86,10 @@ function parseServiceLayer(
   }
 
   const baseUrl = `${url.origin}${url.pathname.replace(REGEX_TRAILING_SLASH, "")}`;
+  const restUrl = baseUrl.replace(
+    REGEX_ARCGIS_SOAP_SERVICES,
+    "/arcgis/rest/services/",
+  );
   if (service === "wmts") {
     return { type: "wmts", url: baseUrl };
   }
@@ -95,13 +100,13 @@ function parseServiceLayer(
     return { type: "wms", url: baseUrl };
   }
   if (REGEX_FEATURE_SERVER.test(url.pathname)) {
-    return { type: "arcgis-feature", url: baseUrl };
+    return { type: "arcgis-feature", url: restUrl };
   }
   if (REGEX_MAP_SERVER.test(url.pathname)) {
-    return { type: "arcgis-map", url: baseUrl };
+    return { type: "arcgis-map", url: restUrl };
   }
   if (REGEX_IMAGE_SERVER.test(url.pathname)) {
-    return { type: "arcgis-image", url: baseUrl };
+    return { type: "arcgis-image", url: restUrl };
   }
 
   return null;
