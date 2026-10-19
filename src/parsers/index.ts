@@ -847,11 +847,29 @@ function parseCoordinate<T extends ReadonlyArray<string>>(
 ): Coordinates<T> {
   switch (coordinate.type) {
     case "point": {
+      const [x, y, z] = (coordinate.rawValue ?? "")
+        .split(",")
+        .map((part) => (part.trim() === "" ? NaN : Number(part)));
+
       return {
         type: "point",
         latitude: coordinate.latitude,
         longitude: coordinate.longitude,
         altitude: coordinate.altitude ?? null,
+        crs:
+          x != null &&
+          y != null &&
+          coordinate.WKID != null &&
+          coordinate.WKID !== 4326 &&
+          Number.isFinite(x) &&
+          Number.isFinite(y)
+            ? {
+                wkid: coordinate.WKID,
+                x,
+                y,
+                z: z != null && Number.isFinite(z) ? z : null,
+              }
+            : null,
         source: parseCoordinatesSource(coordinate.source, options),
       };
     }
@@ -1930,7 +1948,7 @@ function parseSetConcept<T extends ReadonlyArray<string>>(
   };
 }
 
-function parseSpatialUnitMapData(
+export function parseSpatialUnitMapData(
   mapData: XMLSpatialUnit["mapData"],
 ): SpatialUnit<ReadonlyArray<string>, "embedded">["mapData"] {
   if (mapData == null) {

@@ -267,6 +267,7 @@ export type Coordinates<T extends LanguageCodes = LanguageCodes> =
       latitude: number;
       longitude: number;
       altitude: number | null;
+      crs: { wkid: number; x: number; y: number; z: number | null } | null;
       source: CoordinatesSource<T> | null;
     }
   | {
@@ -862,12 +863,44 @@ export type SetItemLocation<T extends LanguageCodes = LanguageCodes> = {
   publicationDateTime: Date | null;
   identification: Identification<T>;
   coordinates: Array<Coordinates<T>>;
+  mapData: SpatialUnit<T>["mapData"];
   propertyValues: Array<{
     variableUuid: string;
     valueUuid: string;
     label: MultilingualString<T>;
   }>;
 };
+
+/**
+ * A layer a map draws, from a Set or Tree of OCHRE items or from a geospatial
+ * web service linked as a webpage Resource
+ */
+export type MapLayer<T extends LanguageCodes = LanguageCodes> =
+  | {
+      type: "ochre-set" | "ochre-tree";
+      uuid: string;
+      label: MultilingualString<T>;
+      wkid: number | null;
+    }
+  | {
+      type:
+        | "arcgis-feature"
+        | "arcgis-map"
+        | "arcgis-image"
+        | "wmts"
+        | "wms"
+        | "web-tile";
+      uuid: string;
+      label: MultilingualString<T>;
+      url: string;
+    }
+  | {
+      type: "arcgis-item";
+      uuid: string;
+      label: MultilingualString<T>;
+      itemId: string;
+      portalUrl: string;
+    };
 
 /**
  *  Person in OCHRE

@@ -383,6 +383,7 @@ export const setItemLocationsParametersSchema = v.object({
   belongsToCollectionScopeUuids: v.optional(v.array(uuidSchema), []),
   queries: setQueriesSchema,
   propertyVariableUuids: v.optional(v.array(uuidSchema), []),
+  isMapDataIncluded: v.optional(v.boolean(), false),
 });
 
 export const treeItemsParametersSchema = v.object({

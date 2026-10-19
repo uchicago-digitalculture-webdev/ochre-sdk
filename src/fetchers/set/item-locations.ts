@@ -9,7 +9,11 @@ import { normalizeItemCategory } from "#/categories.js";
 import { getErrorOutput } from "#/errors.js";
 import { requestOchre } from "#/fetchers/request.js";
 import { parseRequiredContentLike } from "#/parsers/helpers.js";
-import { parseCoordinates, parseIdentification } from "#/parsers/index.js";
+import {
+  parseCoordinates,
+  parseIdentification,
+  parseSpatialUnitMapData,
+} from "#/parsers/index.js";
 import {
   parseRequestedLanguages,
   resolveContentLanguages,
@@ -22,15 +26,17 @@ import { getContentLanguage, stringLiteral } from "#/xquery.js";
 /**
  * Fetches the location of every Set item that matches a query, without paging
  *
- * Each item carries only its identification, its publication date, its coordinates and the values of
- * the requested property variables (inherited values included), which is what a
- * map needs to draw and colour every match while a list pages through the same
- * query with {@link fetchSetItems}.
+ * Each item carries only its identification, its publication date, its
+ * coordinates, optionally its map polygons, and the values of the requested
+ * property variables (inherited values included), which is what a map needs to
+ * draw and color every match while a list pages through the same query with
+ * {@link fetchSetItems}.
  *
  * @param parameters - The parameters for the fetch
  * @param parameters.setScopeUuids - The Set scope UUIDs to filter by
  * @param parameters.queries - Recursive query tree used to filter matching items
  * @param parameters.propertyVariableUuids - The property variables whose values each item should carry
+ * @param parameters.isMapDataIncluded - Whether each item should carry its map polygons
  * @param options - Options for the fetch
  * @param options.fetch - The fetch function to use
  * @returns The item locations, or an error if the fetch/parse fails
@@ -42,6 +48,7 @@ export async function fetchSetItemLocations<
     setScopeUuids: Array<string>;
     queries?: Query | null;
     propertyVariableUuids?: Array<string>;
+    isMapDataIncluded?: boolean;
   },
   options?: FetchBaseOptions<TLanguages>,
 ): Promise<
@@ -58,6 +65,7 @@ export async function fetchSetItemLocations(
     setScopeUuids: Array<string>;
     queries?: Query | null;
     propertyVariableUuids?: Array<string>;
+    isMapDataIncluded?: boolean;
   },
   options?: FetchRuntimeOptions,
 ): Promise<
@@ -75,6 +83,7 @@ export async function fetchSetItemLocations(
       belongsToCollectionScopeUuids,
       queries,
       propertyVariableUuids,
+      isMapDataIncluded,
     } = v.parse(setItemLocationsParametersSchema, parameters);
 
     const output = await requestOchre({
@@ -93,7 +102,7 @@ export async function fetchSetItemLocations(
     return <itemLocation uuid="{$item/@uuid}" category="{local-name($item)}">{
       $item/@publicationDateTime,
       $item/identification,
-      $item/coordinates,
+      $item/coordinates,${isMapDataIncluded ? "\n      $item/mapData," : ""}
       for $value in $item//properties//property[label/@uuid = $propertyVariableUuids]/value[@uuid]
       return <value variable="{$value/../label/@uuid}" uuid="{$value/@uuid}">{$value/content}</value>
     }</itemLocation>
@@ -145,6 +154,7 @@ export async function fetchSetItemLocations(
           languages,
         }),
         coordinates: parseCoordinates(itemLocation.coordinates, { languages }),
+        mapData: parseSpatialUnitMapData(itemLocation.mapData),
         propertyValues,
       });
     }

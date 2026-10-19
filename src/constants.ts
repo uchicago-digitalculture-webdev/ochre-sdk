@@ -42,6 +42,8 @@ export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
   "level",
   "style",
   "itemLocation",
+  "mapSource",
+  "mapLayer",
   "flattenContexts",
   "suppressContexts",
   "filterContexts",

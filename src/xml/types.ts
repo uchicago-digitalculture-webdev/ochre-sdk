@@ -152,6 +152,8 @@ export type XMLCoordinate =
       latitude: number;
       longitude: number;
       altitude?: number;
+      WKID?: number;
+      rawValue?: string;
       source?: XMLCoordinatesSource;
     }
   | {
@@ -770,6 +772,7 @@ export type XMLSetItemLocation = {
   publicationDateTime?: Date;
   identification: XMLIdentification;
   coordinates?: XMLCoordinates;
+  mapData?: XMLSpatialUnit["mapData"];
   value?: Array<{ variable: string; uuid: string } & XMLContent>;
 };
 
@@ -779,6 +782,27 @@ export type XMLSetItemLocationsData = {
       items: { totalCount: number; itemLocation?: Array<XMLSetItemLocation> };
     };
   };
+};
+
+export type XMLMapLayer = {
+  uuid: string;
+  category: string;
+  type?: string;
+  href?: string;
+  WKID?: number;
+  identification: XMLIdentification;
+};
+
+export type XMLMapSource = {
+  uuid: string;
+  category: string;
+  WKID?: number;
+  identification: XMLIdentification;
+  mapLayer?: Array<XMLMapLayer>;
+};
+
+export type XMLMapSourcesData = {
+  result: { ochre: { mapSources: { mapSource?: Array<XMLMapSource> } } };
 };
 
 export type XMLData = {

@@ -506,6 +506,10 @@ const XMLCoordinate = v.variant(
         latitude: XMLNumber,
         longitude: XMLNumber,
         altitude: XMLOptionalNumber,
+        WKID: XMLOptionalNumber,
+        rawValue: v.optional(
+          v.string("XMLCoordinates: rawValue is string and optional"),
+        ),
         source: v.optional(XMLCoordinatesSource),
       },
       "XMLCoordinates: Shape error",
@@ -532,6 +536,20 @@ const XMLCoordinate = v.variant(
 const XMLCoordinates = v.object(
   { coord: v.array(XMLCoordinate) },
   "XMLCoordinates: Shape error",
+);
+
+const XMLMapData = v.optional(
+  v.object(
+    {
+      geoJSON: v.object({
+        multiPolygon: v.object({
+          payload: v.string("XMLMapData: multiPolygon is string and required"),
+        }),
+        EPSG: XMLNumber,
+      }),
+    },
+    "XMLMapData: mapData is object with geoJSON",
+  ),
 );
 
 const XMLImage = v.object(
@@ -1674,21 +1692,7 @@ const XMLSpatialUnit = v.object(
     ...XMLBaseItem.entries,
     image: v.optional(XMLImage),
     coordinates: v.optional(XMLCoordinates),
-    mapData: v.optional(
-      v.object(
-        {
-          geoJSON: v.object({
-            multiPolygon: v.object({
-              payload: v.string(
-                "XMLSpatialUnit: multiPolygon is string and required",
-              ),
-            }),
-            EPSG: XMLNumber,
-          }),
-        },
-        "XMLSpatialUnit: mapData is object with geoJSON",
-      ),
-    ),
+    mapData: XMLMapData,
     observations: v.optional(
       v.object({ observation: v.array(XMLObservation) }),
     ),
@@ -2661,6 +2665,7 @@ const XMLSetItemLocation = v.object(
     ),
     identification: XMLIdentification,
     coordinates: v.optional(XMLCoordinates),
+    mapData: XMLMapData,
     value: v.optional(
       v.array(
         v.intersect([
@@ -2706,6 +2711,55 @@ export const XMLSetItemLocationsData = v.object(
     }),
   },
   "XMLSetItemLocationsData: Shape error",
+);
+
+const XMLMapLayer = v.object(
+  {
+    uuid: v.string("XMLMapLayer: uuid is string and required"),
+    category: v.string("XMLMapLayer: category is string and required"),
+    type: v.optional(v.string("XMLMapLayer: type is string and optional")),
+    href: v.optional(v.string("XMLMapLayer: href is string and optional")),
+    WKID: XMLOptionalNumber,
+    identification: XMLIdentification,
+  },
+  "XMLMapLayer: Shape error",
+);
+
+const XMLMapSource = v.object(
+  {
+    uuid: v.string("XMLMapSource: uuid is string and required"),
+    category: v.string("XMLMapSource: category is string and required"),
+    WKID: XMLOptionalNumber,
+    identification: XMLIdentification,
+    mapLayer: v.optional(
+      v.array(XMLMapLayer, "XMLMapSource: mapLayer is array of XMLMapLayer"),
+    ),
+  },
+  "XMLMapSource: Shape error",
+);
+
+export const XMLMapSourcesData = v.object(
+  {
+    result: v.object({
+      ochre: v.object(
+        {
+          mapSources: v.object(
+            {
+              mapSource: v.optional(
+                v.array(
+                  XMLMapSource,
+                  "XMLMapSourcesData: mapSource is array of XMLMapSource",
+                ),
+              ),
+            },
+            "XMLMapSourcesData: mapSources is object",
+          ),
+        },
+        "XMLMapSourcesData: ochre",
+      ),
+    }),
+  },
+  "XMLMapSourcesData: Shape error",
 );
 
 export const XMLData: v.GenericSchema<unknown, XML.XMLData> = v.object(
@@ -2876,6 +2930,9 @@ type _SchemaAssertions = AssertAllTrue<
       typeof XMLSetItemLocationsData,
       XML.XMLSetItemLocationsData
     >,
+    SchemaMatchesType<typeof XMLMapLayer, XML.XMLMapLayer>,
+    SchemaMatchesType<typeof XMLMapSource, XML.XMLMapSource>,
+    SchemaMatchesType<typeof XMLMapSourcesData, XML.XMLMapSourcesData>,
     SchemaMatchesType<typeof XMLSet, XML.XMLSet>,
     SchemaMatchesType<typeof XMLBibliography, XML.XMLBibliography>,
     SchemaMatchesType<typeof XMLInterpretation, XML.XMLInterpretation>,

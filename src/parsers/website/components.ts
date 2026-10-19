@@ -949,8 +949,13 @@ function parseMapComponent<T extends ReadonlyArray<string>>(
     parameters;
 
   type MapComponent = Extract<WebElementComponent<T>, { component: "map" }>;
-  const mapLink = findWebsiteLinkByCategories(websiteLinks, ["set", "tree"]);
-  if (mapLink == null) {
+  const linkUuids: Array<string> = [];
+  for (const link of websiteLinks) {
+    if (link.category === "set" || link.category === "tree") {
+      linkUuids.push(link.uuid);
+    }
+  }
+  if (linkUuids.length === 0) {
     throw new Error(
       formatComponentError("Map link not found", "map", elementResource),
       { cause: componentProperty },
@@ -988,7 +993,7 @@ function parseMapComponent<T extends ReadonlyArray<string>>(
 
   return {
     component: "map",
-    linkUuid: mapLink.uuid,
+    linkUuids,
     boundElementUuid: componentReader.uuid("bound-element"),
     customBasemap,
     initialBounds,
