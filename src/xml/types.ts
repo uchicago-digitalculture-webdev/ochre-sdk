@@ -766,10 +766,10 @@ export type XMLSetItems = XMLItemLinks & {
 
 export type XMLSetItemsData = { result: { ochre: { items: XMLSetItems } } };
 
-export type XMLSetItemLocation = {
+export type XMLItemLocation = {
   uuid: string;
   category: string;
-  setUuid: string;
+  scopeUuid: string;
   publicationDateTime?: Date;
   identification: XMLIdentification;
   coordinates?: XMLCoordinates;
@@ -777,10 +777,10 @@ export type XMLSetItemLocation = {
   value?: Array<{ variable: string; uuid: string } & XMLContent>;
 };
 
-export type XMLSetItemLocationsData = {
+export type XMLItemLocationsData = {
   result: {
     ochre: {
-      items: { totalCount: number; itemLocation?: Array<XMLSetItemLocation> };
+      items: { totalCount: number; itemLocation?: Array<XMLItemLocation> };
     };
   };
 };

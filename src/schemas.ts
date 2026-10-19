@@ -372,19 +372,24 @@ export const setItemsParametersSchema = v.object({
 });
 
 /**
- * Schema for validating the parameters of the Set item locations fetching function
+ * Schema for validating the parameters of the item locations fetching function
  * @internal
  */
-export const setItemLocationsParametersSchema = v.object({
-  setScopeUuids: v.pipe(
-    v.array(uuidSchema),
-    v.minLength(1, "At least one set scope UUID is required"),
+export const itemLocationsParametersSchema = v.pipe(
+  v.object({
+    setScopeUuids: v.optional(v.array(uuidSchema), []),
+    treeScopeUuids: v.optional(v.array(uuidSchema), []),
+    belongsToCollectionScopeUuids: v.optional(v.array(uuidSchema), []),
+    queries: setQueriesSchema,
+    propertyVariableUuids: v.optional(v.array(uuidSchema), []),
+    isMapDataIncluded: v.optional(v.boolean(), false),
+  }),
+  v.check(
+    ({ setScopeUuids, treeScopeUuids }) =>
+      setScopeUuids.length > 0 || treeScopeUuids.length > 0,
+    "At least one Set or Tree scope UUID is required",
   ),
-  belongsToCollectionScopeUuids: v.optional(v.array(uuidSchema), []),
-  queries: setQueriesSchema,
-  propertyVariableUuids: v.optional(v.array(uuidSchema), []),
-  isMapDataIncluded: v.optional(v.boolean(), false),
-});
+);
 
 export const treeItemsParametersSchema = v.object({
   treeScopeUuids: v.pipe(

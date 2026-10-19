@@ -2654,14 +2654,14 @@ export const XMLSetItemsData: v.GenericSchema<unknown, XML.XMLSetItemsData> =
     "XMLSetItemsData: Shape error",
   );
 
-const XMLSetItemLocation = v.object(
+const XMLItemLocation = v.object(
   {
-    uuid: v.string("XMLSetItemLocation: uuid is string and required"),
-    category: v.string("XMLSetItemLocation: category is string and required"),
-    setUuid: v.string("XMLSetItemLocation: setUuid is string and required"),
+    uuid: v.string("XMLItemLocation: uuid is string and required"),
+    category: v.string("XMLItemLocation: category is string and required"),
+    scopeUuid: v.string("XMLItemLocation: scopeUuid is string and required"),
     publicationDateTime: v.optional(
       customDateTime(
-        "XMLSetItemLocation: publicationDateTime is not a valid datetime",
+        "XMLItemLocation: publicationDateTime is not a valid datetime",
       ),
     ),
     identification: XMLIdentification,
@@ -2673,23 +2673,23 @@ const XMLSetItemLocation = v.object(
           v.object(
             {
               variable: v.string(
-                "XMLSetItemLocation: value variable is string and required",
+                "XMLItemLocation: value variable is string and required",
               ),
               uuid: v.string(
-                "XMLSetItemLocation: value uuid is string and required",
+                "XMLItemLocation: value uuid is string and required",
               ),
             },
-            "XMLSetItemLocation: value is object with variable and uuid",
+            "XMLItemLocation: value is object with variable and uuid",
           ),
           XMLContent,
         ]),
       ),
     ),
   },
-  "XMLSetItemLocation: Shape error",
+  "XMLItemLocation: Shape error",
 );
 
-export const XMLSetItemLocationsData = v.object(
+export const XMLItemLocationsData = v.object(
   {
     result: v.object({
       ochre: v.object(
@@ -2699,19 +2699,19 @@ export const XMLSetItemLocationsData = v.object(
               totalCount: XMLNumber,
               itemLocation: v.optional(
                 v.array(
-                  XMLSetItemLocation,
-                  "XMLSetItemLocationsData: itemLocation is array of XMLSetItemLocation",
+                  XMLItemLocation,
+                  "XMLItemLocationsData: itemLocation is array of XMLItemLocation",
                 ),
               ),
             },
-            "XMLSetItemLocationsData: items is object with totalCount",
+            "XMLItemLocationsData: items is object with totalCount",
           ),
         },
-        "XMLSetItemLocationsData: ochre",
+        "XMLItemLocationsData: ochre",
       ),
     }),
   },
-  "XMLSetItemLocationsData: Shape error",
+  "XMLItemLocationsData: Shape error",
 );
 
 const XMLMapLayer = v.object(
@@ -2926,11 +2926,8 @@ type _SchemaAssertions = AssertAllTrue<
     SchemaMatchesType<typeof XMLHeading, XML.XMLHeading>,
     SchemaMatchesType<typeof XMLTree, XML.XMLTree>,
     SchemaMatchesType<typeof XMLSetStyle, XML.XMLSetStyle>,
-    SchemaMatchesType<typeof XMLSetItemLocation, XML.XMLSetItemLocation>,
-    SchemaMatchesType<
-      typeof XMLSetItemLocationsData,
-      XML.XMLSetItemLocationsData
-    >,
+    SchemaMatchesType<typeof XMLItemLocation, XML.XMLItemLocation>,
+    SchemaMatchesType<typeof XMLItemLocationsData, XML.XMLItemLocationsData>,
     SchemaMatchesType<typeof XMLMapLayer, XML.XMLMapLayer>,
     SchemaMatchesType<typeof XMLMapSource, XML.XMLMapSource>,
     SchemaMatchesType<typeof XMLMapSourcesData, XML.XMLMapSourcesData>,

@@ -66,7 +66,7 @@ present and `error` is `null`; on failure, the parsed value is `null` and
   style, collection, and item-page configuration.
 - `fetchSetItems(params, containedItemCategories, options)` fetches paginated
   Set search results with typed query and sort support.
-- `fetchSetItemLocations(params, options)` fetches the identification, coordinates, and chosen property values of every Set item matching a query. Each item includes the scope Sets it belongs to, which allows you to draw results on a map with one layer per Set. This fetcher does not use paging, whereas a list does.
+- `fetchItemLocations(params, options)` fetches the identification, coordinates, and chosen property values of every Set or Tree item matching a query without paging. You can pass `setScopeUuids`, `treeScopeUuids`, or both. Each item lists the scope Sets and Trees it belongs to; this allows a map to draw one layer per Set or Tree while a list pages through the same query.
 - `fetchTreeItems(params, containedItemCategories, options)` is the same for a
   Tree, and is how to read a Tree too large to fetch whole. Items nested under
   headings come back flat, in document order.

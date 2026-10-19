@@ -857,10 +857,10 @@ export type SetItem<
  * The location of a Set item, without its properties, for drawing and ordering
  * every match of a query at once
  */
-export type SetItemLocation<T extends LanguageCodes = LanguageCodes> = {
+export type ItemLocation<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   category: SetItemCategory;
-  setUuids: Array<string>;
+  scopeUuids: Array<string>;
   publicationDateTime: Date | null;
   identification: Identification<T>;
   coordinates: Array<Coordinates<T>>;
