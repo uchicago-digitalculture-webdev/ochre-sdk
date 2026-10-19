@@ -860,6 +860,7 @@ export type SetItem<
 export type SetItemLocation<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   category: SetItemCategory;
+  setUuids: Array<string>;
   publicationDateTime: Date | null;
   identification: Identification<T>;
   coordinates: Array<Coordinates<T>>;

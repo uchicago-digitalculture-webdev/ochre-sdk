@@ -26,11 +26,11 @@ import { getContentLanguage, stringLiteral } from "#/xquery.js";
 /**
  * Fetches the location of every Set item that matches a query, without paging
  *
- * Each item carries only its identification, its publication date, its
- * coordinates, optionally its map polygons, and the values of the requested
- * property variables (inherited values included), which is what a map needs to
- * draw and color every match while a list pages through the same query with
- * {@link fetchSetItems}.
+ * Each item carries only its identification, the scope Sets it belongs to, its
+ * publication date, its coordinates, optionally its map polygons, and the
+ * values of the requested property variables (inherited values included), which
+ * is what a map needs to draw, color and group every match into layers while a
+ * list pages through the same query with {@link fetchSetItems}.
  *
  * @param parameters - The parameters for the fetch
  * @param parameters.setScopeUuids - The Set scope UUIDs to filter by
@@ -99,7 +99,7 @@ export async function fetchSetItemLocations(
 
   return <items totalCount="{count(${items})}">{
     for $item in ${items}
-    return <itemLocation uuid="{$item/@uuid}" category="{local-name($item)}">{
+    return <itemLocation uuid="{$item/@uuid}" category="{local-name($item)}" setUuid="{$item/ancestor::set[1]/@uuid}">{
       $item/@publicationDateTime,
       $item/identification,
       $item/coordinates,${isMapDataIncluded ? "\n      $item/mapData," : ""}
@@ -125,7 +125,14 @@ export async function fetchSetItemLocations(
     const itemLocations = output.result.ochre.items.itemLocation ?? [];
     for (const itemLocation of itemLocations) {
       const category = normalizeItemCategory(itemLocation.category);
-      if (category == null || itemsByUuid.has(itemLocation.uuid)) {
+      const existing = itemsByUuid.get(itemLocation.uuid);
+      if (existing != null) {
+        if (!existing.setUuids.includes(itemLocation.setUuid)) {
+          existing.setUuids.push(itemLocation.setUuid);
+        }
+        continue;
+      }
+      if (category == null) {
         continue;
       }
 
@@ -149,6 +156,7 @@ export async function fetchSetItemLocations(
       itemsByUuid.set(itemLocation.uuid, {
         uuid: itemLocation.uuid,
         category,
+        setUuids: [itemLocation.setUuid],
         publicationDateTime: itemLocation.publicationDateTime ?? null,
         identification: parseIdentification(itemLocation.identification, {
           languages,

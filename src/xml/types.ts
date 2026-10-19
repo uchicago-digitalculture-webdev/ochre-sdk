@@ -769,6 +769,7 @@ export type XMLSetItemsData = { result: { ochre: { items: XMLSetItems } } };
 export type XMLSetItemLocation = {
   uuid: string;
   category: string;
+  setUuid: string;
   publicationDateTime?: Date;
   identification: XMLIdentification;
   coordinates?: XMLCoordinates;

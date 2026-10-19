@@ -2658,6 +2658,7 @@ const XMLSetItemLocation = v.object(
   {
     uuid: v.string("XMLSetItemLocation: uuid is string and required"),
     category: v.string("XMLSetItemLocation: category is string and required"),
+    setUuid: v.string("XMLSetItemLocation: setUuid is string and required"),
     publicationDateTime: v.optional(
       customDateTime(
         "XMLSetItemLocation: publicationDateTime is not a valid datetime",
