@@ -2837,6 +2837,25 @@ export const XMLWebsiteData = v.object(
               ),
             ),
             tree: v.array(XMLWebsiteTree),
+            styleLabels: v.optional(
+              v.object({
+                styleLabel: v.optional(
+                  v.array(
+                    v.intersect([
+                      v.object(
+                        {
+                          valueUuid: v.string(
+                            "XMLWebsiteData: styleLabel valueUuid is string and required",
+                          ),
+                        },
+                        "XMLWebsiteData: styleLabel is object with valueUuid",
+                      ),
+                      XMLContent,
+                    ]),
+                  ),
+                ),
+              }),
+            ),
           },
           "XMLWebsiteData: ochre is object with website tree",
         ),

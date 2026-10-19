@@ -1,4 +1,4 @@
-import type { SimplifiedProperty } from "#/types/index.js";
+import type { LanguageCodes, SimplifiedProperty } from "#/types/index.js";
 import type {
   ResponsiveStyles,
   Style,
@@ -77,10 +77,10 @@ export function emptyResponsiveStyles(): ResponsiveStyles {
  * @returns The parsed stylesheet items
  * @internal
  */
-export function parseStylesheets(
+export function parseStylesheets<T extends LanguageCodes>(
   styles: Array<XMLWebsiteStyle>,
-): Array<StylesheetItem> {
-  const parsedStyles: Array<StylesheetItem> = [];
+): Array<StylesheetItem<T>> {
+  const parsedStyles: Array<StylesheetItem<T>> = [];
 
   for (const style of styles) {
     const defaultStyles: Array<Style> = [];
@@ -113,6 +113,7 @@ export function parseStylesheets(
         uuid: style.valueUuid,
         category: "propertyValue",
         variableUuid: style.variableUuid,
+        label: null,
         icon: style.lucideIcon ?? null,
         styles: stylesByViewport,
       });

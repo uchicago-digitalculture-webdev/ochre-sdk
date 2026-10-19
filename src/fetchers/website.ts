@@ -41,7 +41,16 @@ function buildXQuery(abbreviation: string): string {
       `let $ochre := collection("ochre/tree")/ochre[tree/identification/abbreviation/content/string = ${stringLiteral(abbreviation)}][1]
 return
   if (empty($ochre)) then <ochre>${OCHRE_RESPONSE_PADDING}</ochre>
-  else element ochre { $ochre/@*, ${omitSupplemental("$ochre/node()")} }`,
+  else element ochre {
+    $ochre/@*,
+    ${omitSupplemental("$ochre/node()")},
+    <styleLabels>{
+      for $style in $ochre/tree/styleOptions/style[@valueUuid]
+      let $value := (doc()/ochre[@uuidBelongsTo = $ochre/@uuidBelongsTo]//property[label/@uuid = $style/@variableUuid]/value[@uuid = $style/@valueUuid][content])[1]
+      where exists($value)
+      return <styleLabel valueUuid="{$style/@valueUuid}">{$value/content}</styleLabel>
+    }</styleLabels>
+  }`,
   });
 }
 

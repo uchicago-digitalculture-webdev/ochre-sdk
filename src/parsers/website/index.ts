@@ -16,7 +16,11 @@ import type {
   XMLWebsiteResource,
   XMLWebsiteTree,
 } from "#/xml/types.js";
-import { cleanObject, parseLicense } from "#/parsers/helpers.js";
+import {
+  cleanObject,
+  parseLicense,
+  parseRequiredContentLike,
+} from "#/parsers/helpers.js";
 import {
   parseIdentification,
   parseLinks,
@@ -627,7 +631,7 @@ export function parseWebsite<
     throw new Error("Website tree not found", { cause: data });
   }
 
-  return parseWebsiteTree(
+  const website = parseWebsiteTree(
     websiteTree,
     parserOptions,
     {
@@ -639,4 +643,18 @@ export function parseWebsite<
     },
     "website",
   );
+
+  const styleLabels = new Map(
+    (rawOchre.styleLabels?.styleLabel ?? []).map((styleLabel) => [
+      styleLabel.valueUuid,
+      parseRequiredContentLike(styleLabel, parserOptions),
+    ]),
+  );
+  for (const stylesheet of website.properties.options.stylesheets.properties) {
+    if (stylesheet.category === "propertyValue") {
+      stylesheet.label = styleLabels.get(stylesheet.uuid) ?? null;
+    }
+  }
+
+  return website;
 }

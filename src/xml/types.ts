@@ -829,6 +829,7 @@ export type XMLWebsiteData = {
       metadata: XMLMetadata;
       persistentUrl?: string;
       tree: Array<XMLWebsiteTree>;
+      styleLabels?: { styleLabel?: Array<{ valueUuid: string } & XMLContent> };
     };
   };
 };

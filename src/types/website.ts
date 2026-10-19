@@ -136,7 +136,7 @@ export type WebIiifViewer = "universal-viewer" | "clover";
  */
 export type WebsitePrivacy = "public" | "password" | "credentials-ochre";
 
-export type StylesheetItem =
+export type StylesheetItem<T extends LanguageCodes = LanguageCodes> =
   | {
       uuid: string;
       category: "propertyVariable";
@@ -147,6 +147,7 @@ export type StylesheetItem =
       uuid: string;
       category: "propertyValue";
       variableUuid: string;
+      label: MultilingualString<T> | null;
       icon: string | null;
       styles: ResponsiveStyles;
     };
@@ -265,7 +266,7 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
     };
     relations: { variant: WebRelationVariant };
     options: Prettify<
-      WebOptions<T> & { stylesheets: { properties: Array<StylesheetItem> } }
+      WebOptions<T> & { stylesheets: { properties: Array<StylesheetItem<T>> } }
     >;
   };
 };
