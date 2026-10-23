@@ -1,4 +1,10 @@
 import type { X2jOptions } from "fast-xml-parser";
+import {
+  COMMON_HTML,
+  CURRENCY,
+  ENTITY_ACTION,
+  EntityDecoder,
+} from "@nodable/entities";
 
 export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
   "string",
@@ -68,7 +74,10 @@ export const XML_PARSER_OPTIONS: X2jOptions = {
   attributeNamePrefix: "",
   textNodeName: "payload",
   stopNodes: ["*.referenceFormatDiv", "*.citationFormatSpan"],
-  htmlEntities: true,
+  entityDecoder: new EntityDecoder({
+    namedEntities: { ...COMMON_HTML, ...CURRENCY },
+    onInputEntity: () => ENTITY_ACTION.BLOCK,
+  }),
   isArray(tagName, _, __, isAttribute) {
     if (isAttribute) {
       return false;
