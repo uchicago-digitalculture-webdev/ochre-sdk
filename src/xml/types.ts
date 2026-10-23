@@ -178,7 +178,7 @@ export type XMLImage = {
 
 export type XMLDownloadOptions = {
   option: Array<{
-    type: "highQuality" | "iiifManifest" | "document" | "ocr";
+    type: "highQuality" | "iiifManifest" | "document" | "ocr" | "mets" | "alto";
     href: string;
     fileFormat: string;
   }>;

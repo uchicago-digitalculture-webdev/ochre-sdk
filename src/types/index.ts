@@ -295,7 +295,7 @@ export type Image<T extends LanguageCodes = LanguageCodes> = {
  *  Download option of an item in OCHRE
  */
 export type DownloadOption = {
-  type: "highQuality" | "iiifManifest" | "document" | "ocr";
+  type: "highQuality" | "iiifManifest" | "document" | "ocr" | "mets" | "alto";
   href: string;
   fileFormat: string;
 };
