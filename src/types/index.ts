@@ -292,6 +292,15 @@ export type Image<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
+ *  Download option of an item in OCHRE
+ */
+export type DownloadOption = {
+  type: "highQualityImage" | "iiifManifest" | "document" | "ocr";
+  href: string;
+  fileFormat: string;
+};
+
+/**
  *  Area of an image map in OCHRE
  */
 export type ImageMapArea = {
@@ -962,6 +971,7 @@ export type Bibliography<
     citationFormatSpan: string | null;
     referenceFormatDiv: string | null;
     image: Image<T> | null;
+    downloadOptions: Array<DownloadOption>;
     sourceDocument: BibliographySourceDocument | null;
     publicationInfo: {
       publishers: Array<Person<T, "embedded">>;
@@ -1046,6 +1056,7 @@ export type Observation<T extends LanguageCodes = LanguageCodes> = {
   periods: Array<Period<T, "embedded">>;
   links: ItemLinks<T>;
   reverseLinks: ItemLinks<T>;
+  downloadOptions: Array<DownloadOption>;
   notes: Array<Note<T>>;
   properties: Array<Property<T>>;
   bibliographies: Array<Bibliography<T, "embedded">>;
@@ -1104,6 +1115,7 @@ export type Resource<
     image: Image<T> | null;
     document: MultilingualString<T> | null;
     imageMap: ImageMap | null;
+    downloadOptions: Array<DownloadOption>;
     coordinates: Array<Coordinates<T>>;
     periods: Array<Period<T, "embedded">>;
     links: ItemLinks<T>;

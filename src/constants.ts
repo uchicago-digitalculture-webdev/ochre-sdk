@@ -53,6 +53,7 @@ export const XML_ARRAY_TAGS: ReadonlyArray<string> = [
   "downloadContexts",
   "labelContexts",
   "prominentContexts",
+  "option",
 ];
 
 export const XML_PARSER_OPTIONS: X2jOptions = {

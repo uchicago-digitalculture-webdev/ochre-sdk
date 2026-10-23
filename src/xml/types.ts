@@ -176,6 +176,14 @@ export type XMLImage = {
   payload?: string;
 };
 
+export type XMLDownloadOptions = {
+  option: Array<{
+    type: "highQualityImage" | "iiifManifest" | "document" | "ocr";
+    href: string;
+    fileFormat: string;
+  }>;
+};
+
 export type XMLImageMapArea = {
   uuid: string;
   publicationDateTime?: Date;
@@ -265,6 +273,7 @@ export type XMLBibliography = Partial<XMLBaseItem> & {
     publicationDateTime?: Date;
   };
   image?: XMLImage;
+  downloadOptions?: XMLDownloadOptions;
   publicationInfo?: {
     publishers?:
       | { publisher: Array<XMLPerson> }
@@ -405,6 +414,7 @@ export type XMLObservation = {
   periods?: { period: Array<XMLPeriod> };
   links?: XMLLink;
   reverseLinks?: XMLLink | XMLDataItem | Array<XMLLink | XMLDataItem>;
+  downloadOptions?: XMLDownloadOptions;
   notes?: { note: Array<XMLNote> };
   properties?: { property: Array<XMLProperty> };
   bibliographies?: { bibliography: Array<XMLBibliography> };
@@ -481,6 +491,7 @@ export type XMLResource = XMLBaseItem & {
   width?: number;
   image?: XMLImage;
   imagemap?: XMLImageMap;
+  downloadOptions?: XMLDownloadOptions;
   document?: XMLContent;
   coordinates?: XMLCoordinates;
   periods?: { period: Array<XMLPeriod> };

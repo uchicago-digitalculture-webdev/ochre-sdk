@@ -575,6 +575,30 @@ const XMLImage = v.object(
   "XMLImage: Shape error",
 );
 
+const XMLDownloadOptions = v.object(
+  {
+    option: v.array(
+      v.object(
+        {
+          type: v.picklist(
+            ["highQualityImage", "iiifManifest", "document", "ocr"],
+            "XMLDownloadOptions: type is highQualityImage, iiifManifest, document, or ocr",
+          ),
+          href: v.pipe(
+            v.string("XMLDownloadOptions: href is string and required"),
+            v.url("XMLDownloadOptions: href is not a valid URL"),
+          ),
+          fileFormat: v.string(
+            "XMLDownloadOptions: fileFormat is string and required",
+          ),
+        },
+        "XMLDownloadOptions: option is object with type, href, and fileFormat",
+      ),
+    ),
+  },
+  "XMLDownloadOptions: Shape error",
+);
+
 const XMLImageMapArea = v.object(
   {
     uuid: v.pipe(
@@ -1456,6 +1480,7 @@ const XMLBibliography = v.object(
       ),
     ),
     image: v.optional(XMLImage),
+    downloadOptions: v.optional(XMLDownloadOptions),
     publicationInfo: v.optional(
       v.object(
         {
@@ -1678,6 +1703,7 @@ const XMLObservation = v.object(
         ),
       ]),
     ),
+    downloadOptions: v.optional(XMLDownloadOptions),
     notes: v.optional(v.object({ note: v.array(XMLNote) })),
     properties: v.optional(v.object({ property: v.array(XMLProperty) })),
     bibliographies: v.optional(
@@ -1898,6 +1924,7 @@ const XMLResource = v.object(
     width: XMLOptionalNumber,
     image: v.optional(XMLImage),
     imagemap: v.optional(XMLImageMap),
+    downloadOptions: v.optional(XMLDownloadOptions),
     document: XMLOptionalContent,
     coordinates: v.optional(XMLCoordinates),
     periods: v.optional(v.object({ period: v.array(XMLPeriod) })),

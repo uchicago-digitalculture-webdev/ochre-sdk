@@ -16,6 +16,7 @@ import type {
   ContextNode,
   Coordinates,
   CoordinatesSource,
+  DownloadOption,
   Event,
   Gallery,
   Heading,
@@ -77,6 +78,7 @@ import type {
   XMLData,
   XMLDataItem,
   XMLDictionaryUnit,
+  XMLDownloadOptions,
   XMLEvent,
   XMLGalleryData,
   XMLHeading,
@@ -793,6 +795,16 @@ function parseImage<T extends ReadonlyArray<string>>(
     fileSize: rawImage.fileSize ?? null,
     base64: rawImage.payload ?? null,
   };
+}
+
+function parseDownloadOptions(
+  rawDownloadOptions: XMLDownloadOptions | undefined,
+): Array<DownloadOption> {
+  return Array.from(rawDownloadOptions?.option ?? [], (option) => ({
+    type: option.type,
+    href: transformPermanentIdentificationUrl(option.href),
+    fileFormat: option.fileFormat,
+  }));
 }
 
 function parseHref(href: string | undefined): string | null {
@@ -1687,6 +1699,7 @@ function parseObservation<T extends ReadonlyArray<string>>(
     periods: parsePeriodList(rawObservation.periods, options),
     links: parseLinks(rawObservation.links, options),
     reverseLinks: parseReverseLinks(rawObservation.reverseLinks, options),
+    downloadOptions: parseDownloadOptions(rawObservation.downloadOptions),
     notes: parseNotes(rawObservation.notes, options),
     properties: parseProperties(rawObservation.properties, options),
     bibliographies: parseBibliographyList(
@@ -2062,6 +2075,7 @@ function parseBibliography<T extends ReadonlyArray<string>>(
     citationFormatSpan: parseStringLike(rawBibliography.citationFormatSpan),
     referenceFormatDiv: parseStringLike(rawBibliography.referenceFormatDiv),
     image: parseImage(rawBibliography.image, options),
+    downloadOptions: parseDownloadOptions(rawBibliography.downloadOptions),
     sourceDocument: parseBibliographySourceDocument(
       rawBibliography.sourceDocument,
     ),
@@ -2271,6 +2285,7 @@ function parseResource<T extends ReadonlyArray<string>>(
     image: parseImage(rawResource.image, options),
     document: parseContentLike(rawResource.document, options),
     imageMap: parseImageMap(rawResource.imagemap),
+    downloadOptions: parseDownloadOptions(rawResource.downloadOptions),
     coordinates: parseCoordinates(rawResource.coordinates, options),
     periods: parsePeriodList(rawResource.periods, options),
     links: parseLinks(rawResource.links, options),
