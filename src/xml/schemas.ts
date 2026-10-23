@@ -581,8 +581,8 @@ const XMLDownloadOptions = v.object(
       v.object(
         {
           type: v.picklist(
-            ["highQualityImage", "iiifManifest", "document", "ocr"],
-            "XMLDownloadOptions: type is highQualityImage, iiifManifest, document, or ocr",
+            ["fullQuality", "iiifManifest", "document", "ocr"],
+            "XMLDownloadOptions: type is fullQuality, iiifManifest, document, or ocr",
           ),
           href: v.pipe(
             v.string("XMLDownloadOptions: href is string and required"),
