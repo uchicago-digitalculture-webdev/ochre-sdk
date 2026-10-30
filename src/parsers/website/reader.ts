@@ -102,6 +102,25 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
     return typeof value === "number" ? value.toString() : null;
   }
 
+  stringValues(label: string): Array<string> {
+    const values: Array<string> = [];
+    for (const property of this.sourceProperties) {
+      if (getProperty([property], { label }) == null) {
+        continue;
+      }
+
+      for (const { content } of property.values) {
+        const value =
+          typeof content === "number" ? content.toString() : content;
+        if (typeof value === "string" && value.trim() !== "") {
+          values.push(value.trim());
+        }
+      }
+    }
+
+    return values;
+  }
+
   uuid(label: string): string | null {
     return this.valueNode(label)?.uuid ?? null;
   }

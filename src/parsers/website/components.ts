@@ -991,6 +991,34 @@ function parseMapComponent<T extends ReadonlyArray<string>>(
     maximumBounds = parseBounds(String(maximumBoundsProperty));
   }
 
+  const layerSettings: MapComponent["layerSettings"] = [];
+  for (const layerReader of componentReader.nestedAllByValue(
+    "customize-special",
+    "arcgis-layer",
+  )) {
+    const uuid = layerReader.uuid("use-layer");
+    if (uuid == null) {
+      continue;
+    }
+
+    const opacity = layerReader.value<number>("opacity-percent");
+    const filterFields = layerReader.stringValues("filter-field");
+    layerSettings.push({
+      uuid,
+      isBasemap: layerReader.value<boolean>("is-basemap"),
+      isDisplayedByDefault: layerReader.value<boolean>("displayed-by-default"),
+      opacity:
+        typeof opacity === "number"
+          ? Math.min(Math.max(opacity, 0), 100) / 100
+          : null,
+      ochreLinkField: layerReader.stringValue("ochre-link-field"),
+      periodField: layerReader.stringValue("period-field"),
+      periodOrder: layerReader.stringValues("period-order"),
+      filterFields: filterFields.length > 0 ? filterFields : null,
+      markerColor: layerReader.stringValue("marker-color"),
+    });
+  }
+
   return {
     component: "map",
     linkUuids,
@@ -998,6 +1026,7 @@ function parseMapComponent<T extends ReadonlyArray<string>>(
     customBasemap,
     initialBounds,
     maximumBounds,
+    layerSettings,
     ...properties,
   };
 }

@@ -474,6 +474,17 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       customBasemap: string | null;
       initialBounds: [[number, number], [number, number]] | null;
       maximumBounds: [[number, number], [number, number]] | null;
+      layerSettings: Array<{
+        uuid: string;
+        isBasemap: boolean | null;
+        isDisplayedByDefault: boolean | null;
+        opacity: number | null;
+        ochreLinkField: string | null;
+        periodField: string | null;
+        periodOrder: Array<string>;
+        filterFields: Array<string> | null;
+        markerColor: string | null;
+      }>;
       isControlsDisplayed: boolean;
       isInteractive: boolean;
       isClustered: boolean;
