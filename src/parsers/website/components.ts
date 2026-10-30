@@ -129,7 +129,12 @@ function parseCollectionPropertyOverrides<T extends ReadonlyArray<string>>(
   read("isUsingQueryParams", "is-using-query-params");
   read("isInteractive", "is-interactive");
 
-  readImage("layout", "image-layout");
+  const imageLayout = reader.value<
+    NonNullable<CollectionComponent<T>["image"]["layout"]> | "suppress"
+  >("image-layout");
+  if (imageLayout != null) {
+    imageOverrides.layout = imageLayout === "suppress" ? null : imageLayout;
+  }
   readImage("fit", "image-fit");
   readImage("alignment", "image-alignment");
   readImage("isPlaceholderDisplayed", "image-placeholder-displayed");

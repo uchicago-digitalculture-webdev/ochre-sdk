@@ -416,7 +416,7 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
       paginationVariant: "default" | "numeric";
       loadingVariant: WebLoadingVariant;
       image: {
-        layout: "top" | "bottom" | "start" | "end" | null;
+        layout: "top" | "bottom" | "start" | "end" | "thumbnail" | null;
         fit: "fill" | "fit";
         alignment: "top" | "center" | "bottom" | null;
         isPlaceholderDisplayed: boolean;
