@@ -999,7 +999,7 @@ function parseMapComponent<T extends ReadonlyArray<string>>(
   const layerSettings: MapComponent["layerSettings"] = [];
   for (const layerReader of componentReader.nestedAllByValue(
     "customize-special",
-    "arcgis-layer",
+    "map-layer",
   )) {
     const uuid = layerReader.uuid("use-layer");
     if (uuid == null) {
