@@ -269,6 +269,12 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
       WebOptions<T> & { stylesheets: { properties: Array<StylesheetItem<T>> } }
     >;
   };
+  /**
+   * The bare Map element of an OAK website, null for every other design. Its
+   * bare Collection elements are in `items` as pages hidden from the navbar,
+   * in tree order.
+   */
+  oak: { map: WebElementOf<"map", T> | null } | null;
 };
 
 export type WebsiteSegment<T extends LanguageCodes = LanguageCodes> =

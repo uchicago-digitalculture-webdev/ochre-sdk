@@ -143,6 +143,16 @@ declare function local:matching-pages($resources, $target-slug, $slug-prefix) {
   )
 };
 
+declare function local:oak-collection-pages($tree, $resources, $target-slug) {
+  if ($tree/properties/property[label/string() = "presentation"][value/string() = "website"]/property[label/string() = "webUI"]/value/string() = "oak") then
+    for $resource in $resources[local:presentation(.) = "element"]
+    let $slug := local:clean-slug($resource/@slug)
+    where string(($resource/properties/property[label/string() = "presentation"]/property[label/string() = "component"]/value)[1]) = "collection"
+      and (if ($slug != "") then $slug else string(($resource/identification/abbreviation/content/string)[1])) = $target-slug
+    return local:metadata-page($resource)
+  else ()
+};
+
 declare function local:metadata-tree($tree, $target-slug, $slug-prefix) {
   let $resources := local:resource-items($tree/items/resource)
   let $presentation-properties := $tree/properties/property[label/string() = "presentation"][value/string() = "website"]/property[label/string() = (${Object.values(
@@ -160,7 +170,8 @@ declare function local:metadata-tree($tree, $target-slug, $slug-prefix) {
           $resources[local:presentation(.) = "page"],
           $target-slug,
           $slug-prefix
-        )
+        ),
+        local:oak-collection-pages($tree, $resources, $target-slug)
       }
     }
 };

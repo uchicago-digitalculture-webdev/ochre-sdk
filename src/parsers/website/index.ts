@@ -6,6 +6,7 @@ import type {
   WebAccordionItem,
   WebBlock,
   WebBlockItem,
+  WebElementOf,
   Webpage,
   WebSidebar,
   Website,
@@ -20,6 +21,7 @@ import {
   cleanObject,
   parseLicense,
   parseRequiredContentLike,
+  parseStringContent,
 } from "#/parsers/helpers.js";
 import {
   parseIdentification,
@@ -42,8 +44,10 @@ import {
   parseWebsiteLinkTarget,
   webImageFromLink,
 } from "#/parsers/website/links.js";
+import { formatXMLWebsiteResourceMetadata } from "#/parsers/website/messages.js";
 import { parseWebsiteProperties } from "#/parsers/website/properties.js";
 import { websitePresentationReader } from "#/parsers/website/reader.js";
+import { cleanWebsitePageSlug } from "#/parsers/website/slug.js";
 import {
   emptyResponsiveStyles,
   parseResponsiveCssStyles,
@@ -155,6 +159,35 @@ function parseWebpageRedirect<T extends ReadonlyArray<string>>(
   return null;
 }
 
+function createWebpage<T extends ReadonlyArray<string>>(
+  resource: XMLWebsiteResource,
+  slug: string,
+  options: ParserOptions<T>,
+): Webpage<T> {
+  return {
+    uuid: resource.uuid,
+    type: "page",
+    title: parseIdentification(resource.identification, options).label,
+    slug,
+    publicationDateTime: resource.publicationDateTime ?? null,
+    items: [],
+    segments: [],
+    properties: {
+      width: "default",
+      variant: "default",
+      isBreadcrumbsDisplayed: false,
+      isSidebarDisplayed: true,
+      isDisplayedInNavbar: true,
+      isNavbarSearchBarDisplayed: true,
+      redirect: null,
+      backgroundImage: null,
+      sidebar: null,
+      cssStyles: emptyResponsiveStyles(),
+    },
+    webpages: [],
+  };
+}
+
 /**
  * Parses a walked page node into a standardized Webpage structure
  *
@@ -174,33 +207,7 @@ function parseWebpage<T extends ReadonlyArray<string>>(
   );
   const webpageReader = websitePresentationReader(webpageProperties);
 
-  const identification = parseIdentification(
-    webpageResource.identification,
-    options,
-  );
-
-  const returnWebpage: Webpage<T> = {
-    uuid: webpageResource.uuid,
-    type: "page",
-    title: identification.label,
-    slug: page.slug,
-    publicationDateTime: webpageResource.publicationDateTime ?? null,
-    items: [],
-    segments: [],
-    properties: {
-      width: "default",
-      variant: "default",
-      isBreadcrumbsDisplayed: false,
-      isSidebarDisplayed: true,
-      isDisplayedInNavbar: true,
-      isNavbarSearchBarDisplayed: true,
-      redirect: null,
-      backgroundImage: null,
-      sidebar: null,
-      cssStyles: emptyResponsiveStyles(),
-    },
-    webpages: [],
-  };
+  const returnWebpage = createWebpage(webpageResource, page.slug, options);
 
   const websiteLinks = parseLinks(webpageResource.links, options);
   const imageLink = findWebsiteLink(
@@ -552,6 +559,61 @@ function parseWebBlock<T extends ReadonlyArray<string>>(
   return returnBlock;
 }
 
+function parseOakWebsite<T extends ReadonlyArray<string>>(
+  resources: Array<XMLWebsiteResource>,
+  webpages: Array<Webpage<T>>,
+  options: ParserOptions<T>,
+  context: WebsiteParseContext<T>,
+): Pick<Website<T>, "items" | "oak"> {
+  const webpagesByUuid = new Map(
+    webpages.map((webpage) => [webpage.uuid, webpage]),
+  );
+  const items: Array<Webpage<T>> = [];
+  let map: WebElementOf<"map", T> | null = null;
+
+  for (const resource of resources) {
+    const webpage = webpagesByUuid.get(resource.uuid);
+    if (webpage != null) {
+      items.push(webpage);
+      continue;
+    }
+
+    const component = websitePresentationReader(
+      parseSimplifiedProperties(resource.properties, options),
+    )
+      .nestedByValue("presentation", "element")
+      .value("component");
+    if (component !== "map" && component !== "collection") {
+      continue;
+    }
+
+    const element = parseWebElement(resource, options, context.pageSlugsByUuid);
+    if (element.component === "map") {
+      map ??= element;
+      continue;
+    }
+
+    const resourceSlug = cleanWebsitePageSlug(resource.slug) ?? "";
+    const slug =
+      resourceSlug === ""
+        ? parseStringContent(resource.identification.abbreviation, options)
+        : resourceSlug;
+    if (slug === "") {
+      throw new Error(
+        `Slug not found for OAK collection (${formatXMLWebsiteResourceMetadata(resource)})`,
+        { cause: resource },
+      );
+    }
+
+    const collectionPage = createWebpage(resource, slug, options);
+    collectionPage.items = [element];
+    collectionPage.properties.isDisplayedInNavbar = false;
+    items.push(collectionPage);
+  }
+
+  return { items, oak: { map } };
+}
+
 function parseWebsiteTree<
   const T extends ReadonlyArray<string>,
   TType extends Website<T>["type"],
@@ -598,6 +660,16 @@ function parseWebsiteTree<
   const license =
     parseLicense(websiteTree.availability) ?? context.parentLicense ?? null;
 
+  const webpages = parseWebpages(pages, options, {
+    ...treeContext,
+    parentProperties: properties,
+    parentLicense: license,
+  });
+  const { items, oak } =
+    type === "website" && properties.type === "oak"
+      ? parseOakWebsite(resources, webpages, options, treeContext)
+      : { items: webpages, oak: null };
+
   return {
     uuid: websiteTree.uuid,
     type,
@@ -609,12 +681,9 @@ function parseWebsiteTree<
       ? parsePersonList(websiteTree.creators.creator, options)
       : [],
     license,
-    items: parseWebpages(pages, options, {
-      ...treeContext,
-      parentProperties: properties,
-      parentLicense: license,
-    }),
+    items,
     properties,
+    oak,
   };
 }
 
