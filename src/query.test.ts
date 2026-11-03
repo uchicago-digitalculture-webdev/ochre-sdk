@@ -496,7 +496,7 @@ describe("property target queries", () => {
     ]);
   });
 
-  it("compiles all-property text queries while excluding IDREF values", () => {
+  it("compiles all-property text queries across every value data type", () => {
     const queryText = compiledQueryText({
       target: "property",
       propertyVariable: MEDIA_TYPE_UUID,
@@ -509,11 +509,11 @@ describe("property target queries", () => {
 
     expectContainsAll(queryText, [
       `cts:element-attribute-value-query(xs:QName("label"), xs:QName("uuid"), "${MEDIA_TYPE_UUID}")`,
-      'cts:not-query(cts:element-attribute-value-query(xs:QName("value"), xs:QName("dataType"), "IDREF"))',
       "let $contentQuery :=",
       "let $rawValueQuery :=",
       "let $bareValueQuery :=",
     ]);
+    expectContainsNone(queryText, ['xs:QName("dataType")']);
   });
 
   it("compiles IDREF property queries against value UUID attributes", () => {

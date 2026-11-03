@@ -1239,6 +1239,11 @@ export type SetItemsSort =
  * own word and `exact` matches the terms as an adjacent run of whole words. OCR
  * text carries no language, so `ocr` leaves take no `language`.
  *
+ * An `IDREF` property leaf matches by identity under `exact`, where `value` is
+ * the UUID of the linked item, and by the linked item's displayed name under
+ * `includes`, which OCHRE copies into the value's `content`. The `all` data
+ * type searches the text of every value, linked names included.
+ *
  * `fallbackLanguage` searches a field in that language only when the field has
  * no content in `language`, so a match follows the text a reader of `language`
  * is shown. Leave it unset to search `language` alone.

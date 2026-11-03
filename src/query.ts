@@ -497,14 +497,12 @@ function buildPropertyLabelQuery(propertyVariable: string): string {
   });
 }
 
-function buildValueNotIdReferenceQuery(): string {
-  return buildNotCtsQueryExpression(
-    buildPlainElementAttributeValueQueryExpression({
-      elementName: "value",
-      attributeName: "dataType",
-      value: searchValue("IDREF"),
-    }),
-  );
+function buildValueIdReferenceQuery(): string {
+  return buildPlainElementAttributeValueQueryExpression({
+    elementName: "value",
+    attributeName: "dataType",
+    value: searchValue("xs:IDREF"),
+  });
 }
 
 /**
@@ -910,7 +908,6 @@ function buildPropertyAllQueryExpression(parameters: {
   return buildPropertyTextMatchQueryExpression({
     propertyVariable: query.propertyVariable,
     propertyRelation: query.propertyRelation,
-    valueFilters: [buildValueNotIdReferenceQuery()],
     contentQueryExpression: buildRichTextContentQueryExpression({
       language: query.language,
       fallbackLanguage: query.fallbackLanguage,
@@ -949,6 +946,47 @@ function buildPropertyIdReferenceQueryExpression(parameters: {
         value,
       }),
     ),
+  });
+}
+
+function buildPropertyIdReferenceTextQueryExpression(parameters: {
+  propertyVariable?: string;
+  propertyRelation?: PropertyRelation;
+  value: QuerySearchValue;
+  matchMode: QueryMatchMode;
+  isCaseSensitive: boolean;
+  language: string;
+  fallbackLanguage?: string;
+}): string {
+  const {
+    propertyVariable,
+    propertyRelation,
+    value,
+    matchMode,
+    isCaseSensitive,
+    language,
+    fallbackLanguage,
+  } = parameters;
+
+  return buildPropertyTextMatchQueryExpression({
+    propertyVariable,
+    propertyRelation,
+    valueFilters: [buildValueIdReferenceQuery()],
+    contentQueryExpression:
+      matchMode === "exact"
+        ? buildValueContentExactInnerQuery({
+            language,
+            fallbackLanguage,
+            value,
+            isCaseSensitive,
+          })
+        : buildRichTextContentQueryExpression({
+            language,
+            fallbackLanguage,
+            value,
+            matchMode,
+            isCaseSensitive,
+          }),
   });
 }
 
@@ -1253,10 +1291,22 @@ function buildLeafValueQueryExpression(parameters: {
           return buildPropertyAllQueryExpression({ query, value, matchMode });
         }
         case "IDREF": {
-          return buildPropertyIdReferenceQueryExpression({
+          if (query.matchMode === "exact") {
+            return buildPropertyIdReferenceQueryExpression({
+              propertyVariable: query.propertyVariable,
+              propertyRelation: query.propertyRelation,
+              value,
+            });
+          }
+
+          return buildPropertyIdReferenceTextQueryExpression({
             propertyVariable: query.propertyVariable,
             propertyRelation: query.propertyRelation,
             value,
+            matchMode,
+            isCaseSensitive: query.isCaseSensitive,
+            language: query.language,
+            fallbackLanguage: query.fallbackLanguage,
           });
         }
         case "string": {
@@ -1391,7 +1441,9 @@ function getLeafHelperKey(parameters: {
         "leaf",
         matchMode,
         query.target,
-        query.dataType,
+        query.dataType === "IDREF" && query.matchMode !== "exact"
+          ? "IDREF-text"
+          : query.dataType,
         query.propertyVariable ?? "",
         query.propertyRelation ?? "",
         value,
@@ -1576,28 +1628,7 @@ function getGroupableIncludesValue(query: CtsQueryLeaf): string | null {
     return null;
   }
 
-  switch (query.target) {
-    case "string":
-    case "title":
-    case "description":
-    case "image":
-    case "periods":
-    case "bibliography":
-    case "notes": {
-      return query.value;
-    }
-    case "property": {
-      if (
-        !("value" in query) ||
-        query.value == null ||
-        query.dataType === "IDREF"
-      ) {
-        return null;
-      }
-
-      return query.value;
-    }
-  }
+  return getLeafSearchValue(query);
 }
 
 function isQueryLeaf(query: Query): query is QueryLeaf {
