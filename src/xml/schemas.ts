@@ -591,8 +591,9 @@ const XMLDownloadOptions = v.object(
           fileFormat: v.string(
             "XMLDownloadOptions: fileFormat is string and required",
           ),
+          fileSize: XMLOptionalNumber,
         },
-        "XMLDownloadOptions: option is object with type, href, and fileFormat",
+        "XMLDownloadOptions: option is object with type, href, fileFormat, and optional fileSize",
       ),
     ),
   },

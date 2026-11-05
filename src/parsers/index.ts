@@ -804,6 +804,7 @@ function parseDownloadOptions(
     type: option.type,
     href: transformPermanentIdentificationUrl(option.href),
     fileFormat: option.fileFormat,
+    fileSize: option.fileSize ?? null,
   }));
 }
 

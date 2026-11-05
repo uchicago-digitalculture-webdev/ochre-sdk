@@ -298,6 +298,7 @@ export type DownloadOption = {
   type: "highQuality" | "iiifManifest" | "document" | "ocr" | "mets" | "alto";
   href: string;
   fileFormat: string;
+  fileSize: number | null;
 };
 
 /**

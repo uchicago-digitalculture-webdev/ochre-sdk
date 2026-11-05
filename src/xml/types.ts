@@ -181,6 +181,7 @@ export type XMLDownloadOptions = {
     type: "highQuality" | "iiifManifest" | "document" | "ocr" | "mets" | "alto";
     href: string;
     fileFormat: string;
+    fileSize?: number;
   }>;
 };
 
