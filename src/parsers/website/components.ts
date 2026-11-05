@@ -43,7 +43,7 @@ import { parseWebsiteOptions } from "#/parsers/website/options.js";
 import { websitePresentationReader } from "#/parsers/website/reader.js";
 import { parseResponsiveCssStyles } from "#/parsers/website/styles.js";
 import { normalizeWebsiteResources } from "#/parsers/website/walk.js";
-import { componentSchema } from "#/schemas.js";
+import { collectionVariantSchema, componentSchema } from "#/schemas.js";
 
 type CollectionComponent<T extends ReadonlyArray<string>> = Extract<
   WebElementComponent<T>,
@@ -55,7 +55,7 @@ type CollectionComponent<T extends ReadonlyArray<string>> = Extract<
  * "collection" component and the "query" component's collection overrides.
  */
 const COLLECTION_PROPERTY_DEFAULTS = {
-  variant: "slide",
+  variants: ["slide"],
   paginationVariant: "default",
   loadingVariant: "skeleton",
   minimumColumnCount: null,
@@ -84,6 +84,26 @@ const COLLECTION_IMAGE_DEFAULTS = {
 >["image"];
 
 type CollectionPropertyKey = keyof typeof COLLECTION_PROPERTY_DEFAULTS;
+
+/**
+ * Reads every "variant" value a collection accepts, in OCHRE order and without
+ * duplicates, skipping values the SDK does not know, so the first entry is the
+ * variant the collection opens with. Returns `null` when none are set.
+ */
+function parseCollectionVariants<T extends ReadonlyArray<string>>(
+  reader: WebsitePresentationReader<T>,
+): CollectionComponent<T>["variants"] | null {
+  const variants = [
+    ...new Set(
+      reader
+        .stringValues("variant")
+        .filter((value) => v.is(collectionVariantSchema, value)),
+    ),
+  ];
+  const [defaultVariant, ...otherVariants] = variants;
+
+  return defaultVariant == null ? null : [defaultVariant, ...otherVariants];
+}
 
 /**
  * Reads the collection display properties explicitly set on a reader, omitting
@@ -119,7 +139,10 @@ function parseCollectionPropertyOverrides<T extends ReadonlyArray<string>>(
     }
   }
 
-  read("variant", "variant");
+  const variants = parseCollectionVariants(reader);
+  if (variants != null) {
+    overrides.variants = variants;
+  }
   read("paginationVariant", "pagination-variant");
   read("loadingVariant", "loading-variant");
   read("minimumColumnCount", "minimum-column-count");

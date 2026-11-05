@@ -6,7 +6,10 @@ import type {
   QueryLeaf,
   SetItemsSort,
 } from "#/types/index.js";
-import type { WebElementComponent } from "#/types/website.js";
+import type {
+  WebCollectionVariant,
+  WebElementComponent,
+} from "#/types/website.js";
 import { DEFAULT_PAGE_SIZE } from "#/constants.js";
 import { getOchreLanguageCode, isOchreLanguageCode } from "#/languages.js";
 
@@ -91,6 +94,18 @@ export const componentSchema = v.picklist(
   ] as const satisfies ReadonlyArray<WebElementComponent["component"]>,
   "Invalid/unknown web element component",
 );
+
+/**
+ * Valid variants for the "collection" component
+ * @internal
+ */
+export const collectionVariantSchema = v.picklist([
+  "slide",
+  "table",
+  "card",
+  "tile",
+  "showcase",
+] as const satisfies ReadonlyArray<WebCollectionVariant>);
 
 /**
  * Schema for validating gallery parameters

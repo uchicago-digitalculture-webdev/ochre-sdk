@@ -103,6 +103,16 @@ export type WebSectionDisplay = {
 };
 
 /**
+ * How a collection displays its items
+ */
+export type WebCollectionVariant =
+  | "slide"
+  | "table"
+  | "card"
+  | "tile"
+  | "showcase";
+
+/**
  * How a website indicates that content is loading
  */
 export type WebLoadingVariant = "spinner" | "skeleton" | "animation" | "none";
@@ -412,7 +422,8 @@ export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
         label: MultilingualString<T> | null;
         variant: WebRelationVariant | null;
       }>;
-      variant: "slide" | "table" | "card" | "tile" | "showcase";
+      /** The accepted variants in OCHRE order; the first is the default */
+      variants: [WebCollectionVariant, ...Array<WebCollectionVariant>];
       paginationVariant: "default" | "numeric";
       loadingVariant: WebLoadingVariant;
       image: {
