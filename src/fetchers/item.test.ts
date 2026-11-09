@@ -63,11 +63,11 @@ const TREE_UUIDS: ReadonlyArray<string> = [
   "af34bfce-1d9f-4e7d-9c6b-5d77e176c352",
 ];
 const BIBLIOGRAPHY_UUIDS: ReadonlyArray<string> = [
-  "3ef836c8-d73b-4b84-b739-8a5ad8b99394",
-  "6ca9abf6-fdc1-4da4-a280-32268eb52eb2",
+  "1d7e9c31-fdee-47ca-8962-4f71eb99536d",
+  "32993fa4-a91f-46fc-b46e-ba89c78eb7a6",
   "0ba44014-f8d5-41d6-96fe-3020d1978d92",
   "148a3acb-ca28-47ae-92c4-d21e8fd127aa",
-  "bd30b090-9ab3-4b6c-a4fb-5733955584c7",
+  "53a6b4d9-3c5c-41b2-b623-051dd8afd50d",
 ];
 const CONCEPT_UUIDS: ReadonlyArray<string> = [
   "f4feb402-dafa-4d43-b2b8-112f620249a7",
