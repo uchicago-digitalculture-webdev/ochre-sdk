@@ -137,7 +137,16 @@ export type XMLEvent = {
   location?: XMLContent & { uuid: string; publicationDateTime?: Date };
   comment?: XMLContent;
   label: XMLContent;
-  other?: XMLContent & { uuid?: string; category?: XMLItemCategory };
+  other?: XMLContent & {
+    uuid?: string;
+    category?: XMLItemCategory;
+    publicationDateTime?: Date;
+  };
+  period?: XMLContent & {
+    uuid: string;
+    rawValue?: string;
+    publicationDateTime?: Date;
+  };
 };
 
 export type XMLCoordinatesSource =

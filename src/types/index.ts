@@ -292,8 +292,14 @@ export type Event<T extends LanguageCodes = LanguageCodes> = {
   } | null;
   other: {
     uuid: string | null;
-    category: string | null;
+    category: ItemCategory | null;
     label: MultilingualString<T>;
+    publicationDateTime: Date | null;
+  } | null;
+  period: {
+    uuid: string;
+    label: MultilingualString<T>;
+    publicationDateTime: Date | null;
   } | null;
 };
 

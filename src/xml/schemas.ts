@@ -446,8 +446,33 @@ const XMLEvent = v.object(
             ),
           ),
           category: v.optional(XMLItemCategory),
+          publicationDateTime: v.optional(
+            customDateTime(
+              "XMLEvent: publicationDateTime is not a valid datetime",
+            ),
+          ),
         },
         "XMLEvent: other is object",
+      ),
+    ),
+    period: v.optional(
+      v.object(
+        {
+          ...XMLContent.entries,
+          uuid: v.pipe(
+            v.string("XMLEvent: uuid is string and required"),
+            v.check(isPseudoUuid, "XMLEvent: uuid is not a valid pseudo-UUID"),
+          ),
+          rawValue: v.optional(
+            v.string("XMLEvent: rawValue is string and optional"),
+          ),
+          publicationDateTime: v.optional(
+            customDateTime(
+              "XMLEvent: publicationDateTime is not a valid datetime",
+            ),
+          ),
+        },
+        "XMLEvent: period is object with uuid",
       ),
     ),
   },

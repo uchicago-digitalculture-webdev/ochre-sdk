@@ -541,7 +541,9 @@ function parseEvent<T extends ReadonlyArray<string>>(
             uuid: rawEvent.other.uuid ?? null,
             category: normalizeItemCategory(rawEvent.other.category),
             label: parseRequiredContentLike(rawEvent.other, options),
+            publicationDateTime: rawEvent.other.publicationDateTime ?? null,
           },
+    period: parseEventReference(rawEvent.period, options),
   };
 }
 
