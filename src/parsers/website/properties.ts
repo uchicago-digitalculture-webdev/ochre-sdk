@@ -70,7 +70,7 @@ export function parseWebsiteProperties<T extends ReadonlyArray<string>>(
         isHeaderDisplayed: parent?.itemPage.events.isHeaderDisplayed ?? true,
         variant: parent?.itemPage.events.variant ?? "tabular",
         isFilterInputDisplayed:
-          parent?.itemPage.events.isFilterInputDisplayed ?? true,
+          parent?.itemPage.events.isFilterInputDisplayed ?? false,
       },
       periods: {
         isDisplayed: parent?.itemPage.periods.isDisplayed ?? true,
