@@ -265,6 +265,7 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
         isDisplayed: boolean;
         isHeaderDisplayed: boolean;
         variant: WebSectionVariant;
+        isFilterInputDisplayed: boolean;
       };
       periods: WebSectionDisplay;
       isPropertiesDisplayed: boolean;

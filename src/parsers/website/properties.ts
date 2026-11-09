@@ -69,6 +69,8 @@ export function parseWebsiteProperties<T extends ReadonlyArray<string>>(
         isDisplayed: parent?.itemPage.events.isDisplayed ?? true,
         isHeaderDisplayed: parent?.itemPage.events.isHeaderDisplayed ?? true,
         variant: parent?.itemPage.events.variant ?? "tabular",
+        isFilterInputDisplayed:
+          parent?.itemPage.events.isFilterInputDisplayed ?? true,
       },
       periods: {
         isDisplayed: parent?.itemPage.periods.isDisplayed ?? true,
@@ -175,6 +177,11 @@ export function parseWebsiteProperties<T extends ReadonlyArray<string>>(
     itemPageReader.readAll(returnProperties.itemPage.events, {
       variant: "item-page-events-display-variant",
     });
+    itemPageReader
+      .nestedByValue("item-page-events-display-variant", "tabular")
+      .readAll(returnProperties.itemPage.events, {
+        isFilterInputDisplayed: "filter-input-displayed",
+      });
     itemPageReader.readAll(returnProperties.itemPage, {
       isPropertyValuesGrouped: "item-page-property-values-grouped",
       isPublicationDateTimeDisplayed:
