@@ -119,9 +119,20 @@ export type XMLContextGroup = {
 
 export type XMLContext = Array<XMLContextGroup | XMLEmptyContext>;
 
+export type XMLPartialDates = {
+  year?: string;
+  month?: string;
+  day?: string;
+  endYear?: string;
+  endMonth?: string;
+  endDay?: string;
+  payload?: string;
+};
+
 export type XMLEvent = {
   dateTime?: Date;
   endDateTime?: Date;
+  partialDates?: XMLPartialDates;
   agent?: XMLContent & { uuid: string; publicationDateTime?: Date };
   location?: XMLContent & { uuid: string; publicationDateTime?: Date };
   comment?: XMLContent;

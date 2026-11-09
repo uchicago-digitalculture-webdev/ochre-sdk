@@ -364,6 +364,29 @@ const XMLContext = v.array(
   ),
 );
 
+const XMLPartialDates = v.object(
+  {
+    year: v.optional(v.string("XMLPartialDates: year is string and optional")),
+    month: v.optional(
+      v.string("XMLPartialDates: month is string and optional"),
+    ),
+    day: v.optional(v.string("XMLPartialDates: day is string and optional")),
+    endYear: v.optional(
+      v.string("XMLPartialDates: endYear is string and optional"),
+    ),
+    endMonth: v.optional(
+      v.string("XMLPartialDates: endMonth is string and optional"),
+    ),
+    endDay: v.optional(
+      v.string("XMLPartialDates: endDay is string and optional"),
+    ),
+    payload: v.optional(
+      v.string("XMLPartialDates: payload is string and optional"),
+    ),
+  },
+  "XMLPartialDates: Shape error",
+);
+
 const XMLEvent = v.object(
   {
     dateTime: v.optional(
@@ -372,6 +395,7 @@ const XMLEvent = v.object(
     endDateTime: v.optional(
       customDateTime("XMLEvent: endDateTime is not a valid datetime"),
     ),
+    partialDates: v.optional(XMLPartialDates),
     agent: v.optional(
       v.object(
         {
@@ -2945,6 +2969,7 @@ type _SchemaAssertions = AssertAllTrue<
     SchemaMatchesType<typeof XMLEmptyContext, XML.XMLEmptyContext>,
     SchemaMatchesType<typeof XMLContextGroup, XML.XMLContextGroup>,
     SchemaMatchesType<typeof XMLContext, XML.XMLContext>,
+    SchemaMatchesType<typeof XMLPartialDates, XML.XMLPartialDates>,
     SchemaMatchesType<typeof XMLEvent, XML.XMLEvent>,
     SchemaMatchesType<typeof XMLCoordinatesSource, XML.XMLCoordinatesSource>,
     SchemaMatchesType<typeof XMLCoordinates, XML.XMLCoordinates>,

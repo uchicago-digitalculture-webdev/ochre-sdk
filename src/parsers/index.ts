@@ -142,6 +142,7 @@ import {
   resolveLanguages,
 } from "#/parsers/languages.js";
 import { MultilingualString } from "#/parsers/multilingual.js";
+import { parsePartialDate } from "#/parsers/partial-date.js";
 import { readPropertyValueText } from "#/parsers/property-token.js";
 import {
   parseXMLString,
@@ -528,6 +529,7 @@ function parseEvent<T extends ReadonlyArray<string>>(
 
   return {
     date,
+    partialDate: parsePartialDate(rawEvent.partialDates),
     label: parseRequiredContentLike(rawEvent.label, options),
     comment: parseContentLike(rawEvent.comment, options),
     agent: parseEventReference(rawEvent.agent, options),

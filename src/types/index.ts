@@ -217,10 +217,67 @@ export type Context<U extends ContextItemCategory = ContextItemCategory> = {
 };
 
 /**
+ *  Qualifier of a partial date, the EDTF `?`, `~` and `%`
+ */
+export type PartialDateQualifier =
+  | "uncertain"
+  | "approximate"
+  | "uncertainAndApproximate";
+
+/**
+ *  Season of a partial date, the EDTF months 21 to 24
+ */
+export type PartialDateSeason = "spring" | "summer" | "autumn" | "winter";
+
+/**
+ *  Partial date in OCHRE
+ *
+ *  `year` has four characters, each a digit or `X` for an unspecified digit,
+ *  as in `1941` or `194X`. A date has a month or a season, never both, and a
+ *  day only with a month.
+ */
+export type PartialDateValue = {
+  year: string;
+  month: number | null;
+  season: PartialDateSeason | null;
+  day: number | null;
+  qualifier: PartialDateQualifier | null;
+};
+
+/**
+ *  Start or end of a partial date range in OCHRE
+ *
+ *  `oneOf` is a year field that lists alternative years, as in `1951/1952`.
+ *  `unparsed` keeps the fields as entered when they are not a partial date.
+ */
+export type PartialDateBound =
+  | { kind: "date"; value: PartialDateValue }
+  | { kind: "oneOf"; values: Array<PartialDateValue> }
+  | {
+      kind: "unparsed";
+      year: string | null;
+      month: string | null;
+      day: string | null;
+    };
+
+/**
+ *  Partial dates of an event in OCHRE
+ *
+ *  `edtf` is the range as an Extended Date/Time Format string, or `null` when
+ *  EDTF cannot express it
+ */
+export type PartialDate = {
+  start: PartialDateBound | null;
+  end: PartialDateBound | null;
+  edtf: string | null;
+};
+
+/**
  *  Event in OCHRE
  */
 export type Event<T extends LanguageCodes = LanguageCodes> = {
   date: Date | { start: Date; end: Date } | null;
+  partialDate: PartialDate | null;
   label: MultilingualString<T>;
   comment: MultilingualString<T> | null;
   agent: {
