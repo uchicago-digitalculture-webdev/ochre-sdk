@@ -88,6 +88,7 @@ import type {
   XMLImageMapArea,
   XMLInterpretation,
   XMLItemLinks,
+  XMLItemView,
   XMLLink,
   XMLLinkedBibliography,
   XMLLinkedConcept,
@@ -190,8 +191,8 @@ type XMLItemLinkHierarchy = Partial<{
 
 export type RawOchre = XMLData["result"]["ochre"];
 
-type ResourceViewParser<T extends ReadonlyArray<string>> = (
-  view: XMLResource["view"],
+type ItemViewParser<T extends ReadonlyArray<string>> = (
+  view: XMLItemView | undefined,
   context: Pick<Resource<T, "topLevel">, "belongsTo" | "metadata">,
 ) => Webpage<T> | null;
 
@@ -2573,7 +2574,7 @@ export function parseItem<
     category?: undefined;
     containedItemCategory?: TContainedItemCategory;
     languages: T;
-    parseResourceView?: ResourceViewParser<T>;
+    parseView?: ItemViewParser<T>;
   },
 ): Item<
   ItemCategory,
@@ -2594,7 +2595,7 @@ export function parseItem<
     category: TCategory;
     containedItemCategory?: TContainedItemCategory;
     languages: T;
-    parseResourceView?: ResourceViewParser<T>;
+    parseView?: ItemViewParser<T>;
   },
 ): Item<
   ItemCategoryFromOption<TCategory>,
@@ -2610,7 +2611,7 @@ export function parseItem(
     category?: ItemCategoryOption;
     containedItemCategory?: ContainedItemCategoryOption<ItemCategory>;
     languages: ReadonlyArray<string>;
-    parseResourceView?: ResourceViewParser<ReadonlyArray<string>>;
+    parseView?: ItemViewParser<ReadonlyArray<string>>;
   },
 ): Item<ItemCategory, SetItemCategory, ReadonlyArray<string>>;
 export function parseItem(
@@ -2619,7 +2620,7 @@ export function parseItem(
     category?: ItemCategoryOption;
     containedItemCategory?: ContainedItemCategoryOption<ItemCategory>;
     languages: ReadonlyArray<string>;
-    parseResourceView?: ResourceViewParser<ReadonlyArray<string>>;
+    parseView?: ItemViewParser<ReadonlyArray<string>>;
   },
 ): Item<ItemCategory, SetItemCategory, ReadonlyArray<string>> {
   const rawOchre = rawData.result.ochre;
@@ -2656,22 +2657,29 @@ export function parseItem(
 
   const item = parseTopLevelItem(rawOchre, category, parserOptions);
 
-  if (category === "resource") {
-    const rawResource = getSingleTopLevelRawItem(
-      "resource" in rawOchre ? rawOchre.resource : null,
-      "resource",
-    );
+  if (category === "resource" || category === "text") {
+    const rawItem =
+      category === "resource"
+        ? getSingleTopLevelRawItem(
+            "resource" in rawOchre ? rawOchre.resource : null,
+            "resource",
+          )
+        : getSingleTopLevelRawItem(
+            "text" in rawOchre ? rawOchre.text : null,
+            "text",
+          );
+    const parseView = (
+      view: XMLItemView | undefined,
+    ): Webpage<ReadonlyArray<string>> | null =>
+      options.parseView?.(view, { belongsTo, metadata }) ?? null;
 
     return {
       ...item,
       belongsTo,
       metadata,
       persistentUrl,
-      view:
-        options.parseResourceView?.(rawResource.view, {
-          belongsTo,
-          metadata,
-        }) ?? null,
+      view: parseView(rawItem.view),
+      popupView: parseView(rawItem.popupView),
     } as Item<ItemCategory, SetItemCategory, ReadonlyArray<string>>;
   }
 

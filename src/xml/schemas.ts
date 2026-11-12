@@ -1949,6 +1949,17 @@ const XMLPropertyVariable = v.object(
   "XMLPropertyVariable: Shape error",
 );
 
+const XMLItemView = v.object({
+  resource: v.optional(
+    v.array(
+      v.lazy(
+        (): v.GenericSchema<unknown, XML.XMLWebsiteResource> =>
+          XMLWebsiteResource,
+      ),
+    ),
+  ),
+});
+
 const XMLResource = v.object(
   {
     ...XMLBaseItem.entries,
@@ -2005,18 +2016,8 @@ const XMLResource = v.object(
         v.lazy((): v.GenericSchema<unknown, XML.XMLResource> => XMLResource),
       ),
     ),
-    view: v.optional(
-      v.object({
-        resource: v.optional(
-          v.array(
-            v.lazy(
-              (): v.GenericSchema<unknown, XML.XMLWebsiteResource> =>
-                XMLWebsiteResource,
-            ),
-          ),
-        ),
-      }),
-    ),
+    view: v.optional(XMLItemView),
+    popupView: v.optional(XMLItemView),
     lang: v.optional(v.string("XMLResource: lang is string and optional")),
   },
   "XMLResource: Shape error",
@@ -2110,6 +2111,8 @@ const XMLText = v.object(
         "XMLText: editions is object with edition array of XMLPerson",
       ),
     ),
+    view: v.optional(XMLItemView),
+    popupView: v.optional(XMLItemView),
   },
   "XMLText: Shape error",
 );

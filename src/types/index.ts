@@ -1160,6 +1160,13 @@ export type PropertyValue<
   }
 >;
 
+type ItemViews<
+  T extends LanguageCodes,
+  U extends ItemPayloadKind,
+> = U extends "topLevel"
+  ? { view: Webpage<T> | null; popupView: Webpage<T> | null }
+  : unknown;
+
 /**
 Resource in OCHRE
 */
@@ -1188,7 +1195,7 @@ export type Resource<
     properties: Array<Property<T>>;
     bibliographies: Array<Bibliography<T, "embedded">>;
     items: RecursiveItemChildren<U, Resource<T, RecursiveChildPayloadKind<U>>>;
-  } & (U extends "topLevel" ? { view: Webpage<T> | null } : unknown)
+  } & ItemViews<T, U>
 >;
 
 /**
@@ -1211,7 +1218,7 @@ export type Text<
     periods: Array<Period<T, "embedded">>;
     creators: Array<Person<T, "embedded">>;
     editions: Array<Person<T, "embedded">>;
-  }
+  } & ItemViews<T, U>
 >;
 
 /**

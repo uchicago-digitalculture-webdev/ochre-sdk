@@ -500,6 +500,10 @@ export type XMLPropertyValue = XMLBaseItem & {
   bibliographies?: { bibliography: Array<XMLBibliography> };
 };
 
+export type XMLItemView = { resource?: Array<XMLWebsiteResource> };
+
+type XMLItemViews = { view?: XMLItemView; popupView?: XMLItemView };
+
 export type XMLResource = XMLBaseItem & {
   lang?: string;
   type?: string;
@@ -522,8 +526,7 @@ export type XMLResource = XMLBaseItem & {
   properties?: { property: Array<XMLProperty> };
   bibliographies?: { bibliography: Array<XMLBibliography> };
   resource?: Array<XMLResource>;
-  view?: { resource?: Array<XMLWebsiteResource> };
-};
+} & XMLItemViews;
 
 export type XMLSection = {
   uuid: string;
@@ -555,7 +558,7 @@ export type XMLText = XMLBaseItem & {
     editor?: Array<XMLPerson>;
     publisher?: Array<XMLPerson>;
   };
-};
+} & XMLItemViews;
 
 export type XMLHeading = {
   name: string;
@@ -669,7 +672,7 @@ export type XMLWebsiteResourceItem =
 
 export type XMLWebsiteResource = Omit<
   XMLResource,
-  "properties" | "resource" | "view"
+  "properties" | "resource" | "view" | "popupView"
 > & {
   format?: string;
   slug?: string;

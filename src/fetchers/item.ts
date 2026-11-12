@@ -151,7 +151,7 @@ single category when it is known, or an array when the item may be any
 category in that list.
 @param options.containedItemCategory - The category of items inside the OCHRE item to fetch. Only valid for Trees and Sets. Tree accepts one category; Set accepts one category or an array.
 @param options.shouldOmitEmbeddedItems - Whether to omit the embedded item hierarchy when fetching a recursive item category. Ignored when the fetched item does not expose recursive embedded items.
-@param options.website - The website the item is shown in, whose page and component settings a resource's view starts from, as the website's own pages do
+@param options.website - The website the item is shown in, whose page and component settings a resource's or text's view and popupView start from, as the website's own pages do
 @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
 @param options.fetch - Custom fetch function to use instead of the default fetch
 @returns An object containing the parsed item
@@ -316,7 +316,7 @@ export async function fetchItem(
       category: options?.category,
       containedItemCategory: options?.containedItemCategory,
       languages,
-      parseResourceView: (view, context) =>
+      parseView: (view, context) =>
         parseWebpageView(
           view,
           { languages: context.metadata.languages },

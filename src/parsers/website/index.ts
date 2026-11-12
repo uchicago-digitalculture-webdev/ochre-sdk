@@ -14,6 +14,7 @@ import type {
   WebsiteSegment,
 } from "#/types/website.js";
 import type {
+  XMLItemView,
   XMLWebsiteData,
   XMLWebsiteResource,
   XMLWebsiteTree,
@@ -288,7 +289,7 @@ function parseWebpages<T extends ReadonlyArray<string>>(
 }
 
 export function parseWebpageView<T extends ReadonlyArray<string>>(
-  view: { resource?: Array<XMLWebsiteResource> } | undefined,
+  view: XMLItemView | undefined,
   options: ParserOptions<T>,
   context: Pick<Website<T>, "belongsTo" | "metadata">,
   website: Pick<Website<T>, "properties"> | null,
