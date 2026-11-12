@@ -12,8 +12,8 @@ const OCR_STRING_VERTEX_REGEX =
   /\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/g;
 
 /**
- * Schema for a single matched OCR string in the OCHRE API response
- */
+Schema for a single matched OCR string in the OCHRE API response
+*/
 const ocrStringSchema = v.object({
   resourceUuid: v.optional(v.string(), ""),
   content: v.optional(v.string(), ""),
@@ -25,8 +25,8 @@ const ocrStringSchema = v.object({
 });
 
 /**
- * Schema for the item OCR data OCHRE API response
- */
+Schema for the item OCR data OCHRE API response
+*/
 const responseSchema = v.object({
   result: v.object({
     ochre: v.object({
@@ -86,27 +86,27 @@ function parseOcrStringVertices(
 }
 
 /**
- * Build an XQuery string to fetch matching OCR strings from the OCHRE API
- *
- * The `<ocr>` layer is marked supplemental, so it is deliberately read without
- * the supplemental stripping the other fetchers apply. Word nodes are projected
- * at any depth, because OCHRE does not guarantee the shape of the surrounding
- * hierarchy.
- *
- * Both the container and the word nodes are matched on a case-folded
- * `local-name()` rather than a name test, because OCHRE varies the casing of
- * these elements and may serve them in a namespace. A plain `//ocr//string`
- * name test silently matches nothing in either of those cases.
- *
- * The matches are wrapped in an `<ocrStrings>` element carrying a `found`
- * flag, which tells "no such item" apart from "no matches".
- * @param parameters - The parameters for the fetch
- * @param parameters.uuid - The UUID of the OCHRE item to read the OCR layer of
- * @param parameters.terms - The whitespace-separated search terms to match against, already lowercased for case-insensitive matching
- * @param parameters.matchMode - Whether a term has to be contained in a string's content or equal it
- * @param parameters.isCaseSensitive - Whether matching is case sensitive
- * @returns An XQuery string
- */
+Build an XQuery string to fetch matching OCR strings from the OCHRE API
+
+The `<ocr>` layer is marked supplemental, so it is deliberately read without
+the supplemental stripping the other fetchers apply. Word nodes are projected
+at any depth, because OCHRE does not guarantee the shape of the surrounding
+hierarchy.
+
+Both the container and the word nodes are matched on a case-folded
+`local-name()` rather than a name test, because OCHRE varies the casing of
+these elements and may serve them in a namespace. A plain `//ocr//string`
+name test silently matches nothing in either of those cases.
+
+The matches are wrapped in an `<ocrStrings>` element carrying a `found`
+flag, which tells "no such item" apart from "no matches".
+@param parameters - The parameters for the fetch
+@param parameters.uuid - The UUID of the OCHRE item to read the OCR layer of
+@param parameters.terms - The whitespace-separated search terms to match against, already lowercased for case-insensitive matching
+@param parameters.matchMode - Whether a term has to be contained in a string's content or equal it
+@param parameters.isCaseSensitive - Whether matching is case sensitive
+@returns An XQuery string
+*/
 function buildXQuery(parameters: {
   uuid: string;
   terms: Array<string>;
@@ -145,28 +145,28 @@ return <ochre>${OCHRE_RESPONSE_PADDING}<ocrStrings found="{exists($ochre)}">{$oc
 }
 
 /**
- * Fetches and parses the OCR strings of an OCHRE item that match a search value
- *
- * Resources may carry an `<ocr>` layer whose internal hierarchy is irregular
- * and therefore not parsed. Only its word nodes are returned, wherever they
- * occur in that subtree, in document order. A word node is any element whose
- * name is `string` in any casing and any namespace, and matching reads its
- * `CONTENT` attribute rather than its text content.
- *
- * Each word node holds a single OCR word, so a multi-word search value is split
- * on whitespace and a node is returned when it matches any one term. Nested
- * child Resources are searched too, with `resourceUuid` naming the Resource
- * each match belongs to.
- *
- * @param uuid - The UUID of the OCHRE item to read the OCR layer of
- * @param value - The search value to match against each OCR string's content
- * @param options - Options for the fetch
- * @param options.matchMode - Whether a term has to be contained in a string's content ("includes", the default) or equal it ("exact")
- * @param options.isCaseSensitive - Whether matching is case sensitive, defaulting to false
- * @param options.fetch - The fetch function to use
- * @returns The matching OCR strings, an empty array when the item has no OCR
- * layer or nothing matches, and a null output on fetch/parse errors
- */
+Fetches and parses the OCR strings of an OCHRE item that match a search value
+
+Resources may carry an `<ocr>` layer whose internal hierarchy is irregular
+and therefore not parsed. Only its word nodes are returned, wherever they
+occur in that subtree, in document order. A word node is any element whose
+name is `string` in any casing and any namespace, and matching reads its
+`CONTENT` attribute rather than its text content.
+
+Each word node holds a single OCR word, so a multi-word search value is split
+on whitespace and a node is returned when it matches any one term. Nested
+child Resources are searched too, with `resourceUuid` naming the Resource
+each match belongs to.
+
+@param uuid - The UUID of the OCHRE item to read the OCR layer of
+@param value - The search value to match against each OCR string's content
+@param options - Options for the fetch
+@param options.matchMode - Whether a term has to be contained in a string's content ("includes", the default) or equal it ("exact")
+@param options.isCaseSensitive - Whether matching is case sensitive, defaulting to false
+@param options.fetch - The fetch function to use
+@returns The matching OCR strings, an empty array when the item has no OCR
+layer or nothing matches, and a null output on fetch/parse errors
+*/
 export async function fetchItemOcrData(
   uuid: string,
   value: string,

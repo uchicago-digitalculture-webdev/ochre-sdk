@@ -1,10 +1,10 @@
 /**
- * Parses raw bounds data into a standardized bounds structure
- *
- * @param bounds - Raw bounds data in OCHRE format
- * @returns Parsed bounds object
- * @internal
- */
+Parses raw bounds data into a standardized bounds structure
+
+@param bounds - Raw bounds data in OCHRE format
+@returns Parsed bounds object
+@internal
+*/
 export function parseBounds(
   bounds: string,
 ): [[number, number], [number, number]] {

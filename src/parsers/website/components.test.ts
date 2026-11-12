@@ -42,11 +42,11 @@ function property(
 }
 
 /**
- * The six-field bag every component parser takes, with nothing around it
- *
- * There is no `ochre` envelope, no website tree and no page here: narrowing
- * the parsers to the page slug map is what makes that possible.
- */
+The six-field bag every component parser takes, with nothing around it
+
+There is no `ochre` envelope, no website tree and no page here: narrowing
+the parsers to the page slug map is what makes that possible.
+*/
 function parameters(options: {
   component: string;
   componentProperties?: Array<XMLSimplifiedProperty>;

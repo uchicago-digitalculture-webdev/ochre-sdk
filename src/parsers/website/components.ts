@@ -51,9 +51,9 @@ type CollectionComponent<T extends ReadonlyArray<string>> = Extract<
 >;
 
 /**
- * Default values for a collection's display properties, shared between the
- * "collection" component and the "query" component's collection overrides.
- */
+Default values for a collection's display properties, shared between the
+"collection" component and the "query" component's collection overrides.
+*/
 const COLLECTION_PROPERTY_DEFAULTS = {
   variants: ["slide"],
   paginationVariant: "default",
@@ -69,10 +69,10 @@ const COLLECTION_PROPERTY_DEFAULTS = {
 >;
 
 /**
- * Default values for a collection's image display properties, merged separately
- * from {@link COLLECTION_PROPERTY_DEFAULTS} because overrides of the nested
- * "image" object are themselves partial.
- */
+Default values for a collection's image display properties, merged separately
+from {@link COLLECTION_PROPERTY_DEFAULTS} because overrides of the nested
+"image" object are themselves partial.
+*/
 const COLLECTION_IMAGE_DEFAULTS = {
   layout: "start",
   fit: "fit",
@@ -86,10 +86,10 @@ const COLLECTION_IMAGE_DEFAULTS = {
 type CollectionPropertyKey = keyof typeof COLLECTION_PROPERTY_DEFAULTS;
 
 /**
- * Reads every "variant" value a collection accepts, in OCHRE order and without
- * duplicates, skipping values the SDK does not know, so the first entry is the
- * variant the collection opens with. Returns `null` when none are set.
- */
+Reads every "variant" value a collection accepts, in OCHRE order and without
+duplicates, skipping values the SDK does not know, so the first entry is the
+variant the collection opens with. Returns `null` when none are set.
+*/
 function parseCollectionVariants<T extends ReadonlyArray<string>>(
   reader: WebsitePresentationReader<T>,
 ): CollectionComponent<T>["variants"] | null {
@@ -106,12 +106,12 @@ function parseCollectionVariants<T extends ReadonlyArray<string>>(
 }
 
 /**
- * Reads the collection display properties explicitly set on a reader, omitting
- * any that are unset. The "collection" component merges these over
- * {@link COLLECTION_PROPERTY_DEFAULTS} and {@link COLLECTION_IMAGE_DEFAULTS},
- * while the "query" component uses them as partial overrides for its embedded
- * collection.
- */
+Reads the collection display properties explicitly set on a reader, omitting
+any that are unset. The "collection" component merges these over
+{@link COLLECTION_PROPERTY_DEFAULTS} and {@link COLLECTION_IMAGE_DEFAULTS},
+while the "query" component uses them as partial overrides for its embedded
+collection.
+*/
 function parseCollectionPropertyOverrides<T extends ReadonlyArray<string>>(
   reader: WebsitePresentationReader<T>,
 ): Partial<Pick<CollectionComponent<T>, CollectionPropertyKey>> & {
@@ -168,9 +168,9 @@ function parseCollectionPropertyOverrides<T extends ReadonlyArray<string>>(
 }
 
 /**
- * Parses the "use-property" values defining which item properties a collection
- * displays, returning `null` when none are set.
- */
+Parses the "use-property" values defining which item properties a collection
+displays, returning `null` when none are set.
+*/
 function parseCollectionDisplayedProperties<T extends ReadonlyArray<string>>(
   reader: WebsitePresentationReader<T>,
 ): CollectionComponent<T>["displayedProperties"] {
@@ -179,15 +179,22 @@ function parseCollectionDisplayedProperties<T extends ReadonlyArray<string>>(
     return null;
   }
 
-  return property.values.flatMap((value) =>
-    value.uuid === null ? [] : [{ uuid: value.uuid, label: value.label }],
-  );
+  const displayedProperties: NonNullable<
+    CollectionComponent<T>["displayedProperties"]
+  > = [];
+  for (const value of property.values) {
+    if (value.uuid !== null) {
+      displayedProperties.push({ uuid: value.uuid, label: value.label });
+    }
+  }
+
+  return displayedProperties;
 }
 
 /**
- * Parses the "customize-special" "relations" properties, each pairing the
- * property variables it links with "use-property" with a display "variant".
- */
+Parses the "customize-special" "relations" properties, each pairing the
+property variables it links with "use-property" with a display "variant".
+*/
 function parseCollectionRelations<T extends ReadonlyArray<string>>(
   reader: WebsitePresentationReader<T>,
 ): CollectionComponent<T>["relations"] {
@@ -211,13 +218,13 @@ function parseCollectionRelations<T extends ReadonlyArray<string>>(
 }
 
 /**
- * What every component parser is handed
- *
- * `pageSlugs` is the only thing the component, element and block parsers read
- * from the enclosing website, so it is passed on its own rather than as part
- * of a wider parse context. That keeps this module reachable from a test with
- * a six-field object instead of a whole OCHRE website envelope.
- */
+What every component parser is handed
+
+`pageSlugs` is the only thing the component, element and block parsers read
+from the enclosing website, so it is passed on its own rather than as part
+of a wider parse context. That keeps this module reachable from a test with
+a six-field object instead of a whole OCHRE website envelope.
+*/
 export type WebElementComponentParameters<T extends ReadonlyArray<string>> = {
   componentProperty: SimplifiedProperty<T>;
   componentReader: WebsitePresentationReader<T>;
@@ -802,11 +809,11 @@ function parseIiifViewerComponent<T extends ReadonlyArray<string>>(
 }
 
 /**
- * The defaults an image component falls back to
- *
- * Annotated rather than `as const`, so each field keeps the full union its
- * type allows and the parser can still compare against the other members.
- */
+The defaults an image component falls back to
+
+Annotated rather than `as const`, so each field keeps the full union its
+type allows and the parser can still compare against the other members.
+*/
 const IMAGE_COMPONENT_DEFAULTS: Pick<
   Extract<WebElementComponent, { component: "image" }>,
   | "imageQuality"
@@ -1425,20 +1432,20 @@ function parseVideoComponent<T extends ReadonlyArray<string>>(
 }
 
 /**
- * Parses raw web element properties into a standardized WebElementComponent structure
- *
- * @param componentProperty - Raw component property data in OCHRE format
- * @param elementResource - Raw element resource data in OCHRE format
- * @returns Parsed WebElementComponent object
- */
+Parses raw web element properties into a standardized WebElementComponent structure
+
+@param componentProperty - Raw component property data in OCHRE format
+@param elementResource - Raw element resource data in OCHRE format
+@returns Parsed WebElementComponent object
+*/
 /**
- * The parser for each web element component, keyed by its OCHRE component name
- *
- * Every component parser takes the same {@link WebElementComponentParameters}
- * bag, so this is a table rather than a `switch`: a missing component is a type
- * error here instead of a runtime throw, and each parser can be exercised on
- * its own.
- */
+The parser for each web element component, keyed by its OCHRE component name
+
+Every component parser takes the same {@link WebElementComponentParameters}
+bag, so this is a table rather than a `switch`: a missing component is a type
+error here instead of a runtime throw, and each parser can be exercised on
+its own.
+*/
 export const WEB_ELEMENT_COMPONENT_PARSERS = {
   "3d-viewer": parse3dViewerComponent,
   "advanced-search": parseAdvancedSearchComponent,
@@ -1538,11 +1545,11 @@ export function parseWebTitle<T extends ReadonlyArray<string>>(
 }
 
 /**
- * Parses raw web element data into a standardized WebElement structure
- *
- * @param elementResource - Raw element resource data in OCHRE format
- * @returns Parsed WebElement object
- */
+Parses raw web element data into a standardized WebElement structure
+
+@param elementResource - Raw element resource data in OCHRE format
+@returns Parsed WebElement object
+*/
 export function parseWebElement<T extends ReadonlyArray<string>>(
   elementResource: XMLWebsiteResource,
   options: ParserOptions<T>,

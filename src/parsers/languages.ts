@@ -6,17 +6,17 @@ import { readArrayProperty, readEntries } from "#/reflection.js";
 import { ochreLanguageCodeSchema } from "#/schemas.js";
 
 /**
- * A content entry carrying a language tag
- *
- * A schema rather than a hand-written predicate, because this is exactly a
- * shape check: `v.is` narrows only what it has verified, and an array or a
- * `Date` cannot pass because neither carries a string `lang`.
- */
+A content entry carrying a language tag
+
+A schema rather than a hand-written predicate, because this is exactly a
+shape check: `v.is` narrows only what it has verified, and an array or a
+`Date` cannot pass because neither carries a string `lang`.
+*/
 const languageTaggedContentSchema = v.looseObject({ lang: v.string() });
 
 /**
- * The language tag OCHRE uses for content that has no language
- */
+The language tag OCHRE uses for content that has no language
+*/
 const UNTAGGED_LANGUAGE = "zxx";
 
 function collectContentLanguages(value: unknown, languages: Set<string>): void {
@@ -42,11 +42,11 @@ function collectContentLanguages(value: unknown, languages: Set<string>): void {
 }
 
 /**
- * Validate language codes while preserving literal tuple inference
- * @param languages - The language codes to validate
- * @returns The same tuple, with its literal types intact
- * @internal
- */
+Validate language codes while preserving literal tuple inference
+@param languages - The language codes to validate
+@returns The same tuple, with its literal types intact
+@internal
+*/
 export function parseLanguages<const T extends ReadonlyArray<string>>(
   languages: T,
 ): T {
@@ -58,14 +58,14 @@ export function parseLanguages<const T extends ReadonlyArray<string>>(
 }
 
 /**
- * Define a reusable languages tuple with validation and literal type inference
- *
- * Inline arrays can be passed directly to a fetcher
- * (`fetchItem(uuid, { languages: ["eng", "spa"] })`); use this when the
- * language set is stored separately.
- * @param languages - The language codes to validate
- * @returns The same tuple, with its literal types intact
- */
+Define a reusable languages tuple with validation and literal type inference
+
+Inline arrays can be passed directly to a fetcher
+(`fetchItem(uuid, { languages: ["eng", "spa"] })`); use this when the
+language set is stored separately.
+@param languages - The language codes to validate
+@returns The same tuple, with its literal types intact
+*/
 export function defineLanguages<const TLanguages extends ReadonlyArray<string>>(
   ...languages: TLanguages
 ): TLanguages {
@@ -73,11 +73,11 @@ export function defineLanguages<const TLanguages extends ReadonlyArray<string>>(
 }
 
 /**
- * Validate an optional caller-supplied language tuple
- * @param languages - The language codes to validate, or undefined
- * @returns The validated codes, or an empty array when none were requested
- * @internal
- */
+Validate an optional caller-supplied language tuple
+@param languages - The language codes to validate, or undefined
+@returns The validated codes, or an empty array when none were requested
+@internal
+*/
 export function parseRequestedLanguages(
   languages: ReadonlyArray<string> | undefined,
 ): ReadonlyArray<string> {
@@ -85,16 +85,16 @@ export function parseRequestedLanguages(
 }
 
 /**
- * Resolve which languages to parse from the content of a payload
- *
- * Requested languages win. Otherwise every `content/@xml:lang` found anywhere
- * beneath the node is used, falling back to {@link DEFAULT_LANGUAGES} when the
- * payload carries no tagged content at all.
- * @param node - The payload node to walk
- * @param requestedLanguages - The languages the caller asked for
- * @returns The languages to parse
- * @internal
- */
+Resolve which languages to parse from the content of a payload
+
+Requested languages win. Otherwise every `content/@xml:lang` found anywhere
+beneath the node is used, falling back to {@link DEFAULT_LANGUAGES} when the
+payload carries no tagged content at all.
+@param node - The payload node to walk
+@param requestedLanguages - The languages the caller asked for
+@returns The languages to parse
+@internal
+*/
 export function resolveContentLanguages(
   node: unknown,
   requestedLanguages: ReadonlyArray<string>,
@@ -110,12 +110,12 @@ export function resolveContentLanguages(
 }
 
 /**
- * Read the languages a dataset declares in its metadata
- * @param rawOchre - The raw OCHRE payload root
- * @param rawOchre.metadata - The payload metadata declaring the languages
- * @returns The declared languages, falling back to {@link DEFAULT_LANGUAGES}
- * @internal
- */
+Read the languages a dataset declares in its metadata
+@param rawOchre - The raw OCHRE payload root
+@param rawOchre.metadata - The payload metadata declaring the languages
+@returns The declared languages, falling back to {@link DEFAULT_LANGUAGES}
+@internal
+*/
 export function parseMetadataLanguages(rawOchre: {
   metadata: XMLMetadata;
 }): Array<string> {
@@ -133,13 +133,13 @@ export function parseMetadataLanguages(rawOchre: {
 }
 
 /**
- * Reconcile requested languages against the ones a dataset declares
- * @param requestedLanguages - The languages the caller asked for
- * @param metadataLanguages - The languages the dataset declares
- * @returns The languages to parse
- * @throws When a requested language is not offered by the dataset
- * @internal
- */
+Reconcile requested languages against the ones a dataset declares
+@param requestedLanguages - The languages the caller asked for
+@param metadataLanguages - The languages the dataset declares
+@returns The languages to parse
+@throws When a requested language is not offered by the dataset
+@internal
+*/
 export function resolveLanguages<T extends ReadonlyArray<string>>(
   requestedLanguages: T | undefined,
   metadataLanguages: Array<string>,
@@ -176,14 +176,14 @@ export function resolveLanguages<T extends ReadonlyArray<string>>(
 }
 
 /**
- * Pick the language a dataset treats as its default
- * @param rawOchre - The raw OCHRE payload root
- * @param rawOchre.metadata - The payload metadata declaring the default
- * @param languages - The languages being parsed
- * @returns The default language
- * @throws When `languages` is empty
- * @internal
- */
+Pick the language a dataset treats as its default
+@param rawOchre - The raw OCHRE payload root
+@param rawOchre.metadata - The payload metadata declaring the default
+@param languages - The languages being parsed
+@returns The default language
+@throws When `languages` is empty
+@internal
+*/
 export function resolveDefaultLanguage<T extends ReadonlyArray<string>>(
   rawOchre: { metadata: XMLMetadata },
   languages: T,

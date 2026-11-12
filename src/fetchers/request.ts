@@ -32,23 +32,23 @@ function resolveSignal(
 }
 
 /**
- * Turn an OCHRE XML response into validated data
- *
- * The XML parser, the schema check and the metadata graft are one step: the
- * graft has to follow validation because `v.safeParse` drops the
- * non-enumerable source offsets `fast-xml-parser` records, and skipping it
- * leaves a value that is the right shape but has lost its source order. Kept
- * separate from the request so a caller holding an XML string, such as a test,
- * gets exactly what the network path produces.
- * @param parameters - The decode parameters
- * @param parameters.xml - The raw XML response body
- * @param parameters.schema - The schema the response must satisfy
- * @param parameters.label - What is being decoded, used in failure messages
- * @param parameters.checkRawData - Guard run against the parsed XML before validation
- * @returns The validated response, with XML source metadata restored
- * @throws When the query failed on the server, the guard rejects, or validation fails
- * @internal
- */
+Turn an OCHRE XML response into validated data
+
+The XML parser, the schema check and the metadata graft are one step: the
+graft has to follow validation because `v.safeParse` drops the
+non-enumerable source offsets `fast-xml-parser` records, and skipping it
+leaves a value that is the right shape but has lost its source order. Kept
+separate from the request so a caller holding an XML string, such as a test,
+gets exactly what the network path produces.
+@param parameters - The decode parameters
+@param parameters.xml - The raw XML response body
+@param parameters.schema - The schema the response must satisfy
+@param parameters.label - What is being decoded, used in failure messages
+@param parameters.checkRawData - Guard run against the parsed XML before validation
+@returns The validated response, with XML source metadata restored
+@throws When the query failed on the server, the guard rejects, or validation fails
+@internal
+*/
 export function decodeOchreResponse<TOutput>(parameters: {
   xml: string;
   schema: v.GenericSchema<unknown, TOutput>;
@@ -77,20 +77,20 @@ export function decodeOchreResponse<TOutput>(parameters: {
 }
 
 /**
- * Post an XQuery to the OCHRE API and validate the response
- *
- * Owns every fact about talking to OCHRE: the endpoint, the request shape and
- * the failure policy. Decoding the body is {@link decodeOchreResponse}.
- * @param parameters - The request parameters
- * @param parameters.xquery - The XQuery to post
- * @param parameters.schema - The schema the response must satisfy
- * @param parameters.label - What is being fetched, used in failure messages
- * @param parameters.options - Transport options
- * @param parameters.checkRawData - Guard run against the parsed XML before validation
- * @returns The validated response, with XML source metadata restored
- * @throws When the request fails, the guard rejects, or validation fails
- * @internal
- */
+Post an XQuery to the OCHRE API and validate the response
+
+Owns every fact about talking to OCHRE: the endpoint, the request shape and
+the failure policy. Decoding the body is {@link decodeOchreResponse}.
+@param parameters - The request parameters
+@param parameters.xquery - The XQuery to post
+@param parameters.schema - The schema the response must satisfy
+@param parameters.label - What is being fetched, used in failure messages
+@param parameters.options - Transport options
+@param parameters.checkRawData - Guard run against the parsed XML before validation
+@returns The validated response, with XML source metadata restored
+@throws When the request fails, the guard rejects, or validation fails
+@internal
+*/
 export async function requestOchre<TOutput>(parameters: {
   xquery: string;
   schema: v.GenericSchema<unknown, TOutput>;
@@ -122,15 +122,15 @@ export async function requestOchre<TOutput>(parameters: {
 }
 
 /**
- * Post a JSON payload to the OCHRE API
- * @param parameters - The request parameters
- * @param parameters.body - The JSON payload to post
- * @param parameters.label - What is being posted, used in failure messages
- * @param parameters.options - Transport options
- * @returns Whether the API accepted the payload
- * @throws When the request cannot be completed at all
- * @internal
- */
+Post a JSON payload to the OCHRE API
+@param parameters - The request parameters
+@param parameters.body - The JSON payload to post
+@param parameters.label - What is being posted, used in failure messages
+@param parameters.options - Transport options
+@returns Whether the API accepted the payload
+@throws When the request cannot be completed at all
+@internal
+*/
 export async function isOchreJsonAccepted(parameters: {
   body: unknown;
   label: string;

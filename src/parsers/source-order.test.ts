@@ -9,12 +9,12 @@ const PROJECT_UUID = "02000000-0000-4000-8000-000000000000";
 const SET_UUID = "03000000-0000-4000-8000-000000000000";
 
 /**
- * A Set whose items interleave two categories in the document
- *
- * `fast-xml-parser` groups same-named elements, so the parsed object holds one
- * array per category and loses the interleaving. Only the source offsets it
- * records alongside can put the items back in the order OCHRE sent them.
- */
+A Set whose items interleave two categories in the document
+
+`fast-xml-parser` groups same-named elements, so the parsed object holds one
+array per category and loses the interleaving. Only the source offsets it
+records alongside can put the items back in the order OCHRE sent them.
+*/
 function mixedSetXML(): string {
   function resource(uuid: string, label: string): string {
     return `<resource uuid="${uuid}" publicationDateTime="${PUBLICATION_DATE}"><identification><label><content lang="eng"><string>${label}</string></content></label></identification></resource>`;

@@ -1,12 +1,12 @@
 /**
- * What an OCHRE language code tags
- *
- * - `language`: text in a natural language
- * - `transliteration`: a language written in another script (`ota-xlt`)
- * - `vocabulary`: codes or notation that are not a language (`rel`)
- * - `non-linguistic`: `zxx`, which OCHRE publishes for aliases and for
- *   labels that are not in any language
- */
+What an OCHRE language code tags
+
+- `language`: text in a natural language
+- `transliteration`: a language written in another script (`ota-xlt`)
+- `vocabulary`: codes or notation that are not a language (`rel`)
+- `non-linguistic`: `zxx`, which OCHRE publishes for aliases and for
+  labels that are not in any language
+*/
 export type OchreLanguageKind =
   | "language"
   | "transliteration"
@@ -14,15 +14,15 @@ export type OchreLanguageKind =
   | "non-linguistic";
 
 /**
- * The standard an OCHRE language code is taken from
- *
- * - `iso639-2b`: the bibliographic ISO 639-2 code, which is OCHRE's rule
- * - `iso639-2t`: the terminology ISO 639-2 code, which OCHRE uses for Dutch
- * - `iso639-3`: the ISO 639-3 identifier, for languages ISO 639-2 has no
- *   code for
- * - `ochre`: a code of OCHRE's own, which may collide with an unrelated
- *   ISO 639-3 language (`rel` is OCHRE's relator vocabulary, ISO's Rendille)
- */
+The standard an OCHRE language code is taken from
+
+- `iso639-2b`: the bibliographic ISO 639-2 code, which is OCHRE's rule
+- `iso639-2t`: the terminology ISO 639-2 code, which OCHRE uses for Dutch
+- `iso639-3`: the ISO 639-3 identifier, for languages ISO 639-2 has no
+  code for
+- `ochre`: a code of OCHRE's own, which may collide with an unrelated
+  ISO 639-3 language (`rel` is OCHRE's relator vocabulary, ISO's Rendille)
+*/
 export type OchreLanguageStandard =
   | "iso639-2b"
   | "iso639-2t"
@@ -30,46 +30,46 @@ export type OchreLanguageStandard =
   | "ochre";
 
 /**
- * A language code OCHRE publishes, with the standard codes it stands for
- */
+A language code OCHRE publishes, with the standard codes it stands for
+*/
 export type OchreLanguage = {
   /**
-   * The English name of the language
-   */
+  The English name of the language
+  */
   name: string;
   /**
-   * What the code tags
-   */
+  What the code tags
+  */
   kind: OchreLanguageKind;
   /**
-   * The standard the OCHRE code itself is taken from
-   */
+  The standard the OCHRE code itself is taken from
+  */
   standard: OchreLanguageStandard;
   /**
-   * The ISO 639-3 identifier of the language, or null when the code tags
-   * no language, or a language ISO 639-3 does not code
-   */
+  The ISO 639-3 identifier of the language, or null when the code tags
+  no language, or a language ISO 639-3 does not code
+  */
   iso639_3: string | null;
   /**
-   * The BCP 47 tag to hand to `Intl` and HTML `lang` attributes, or null
-   * when no standard tag fits
-   */
+  The BCP 47 tag to hand to `Intl` and HTML `lang` attributes, or null
+  when no standard tag fits
+  */
   bcp47: string | null;
 };
 
 /**
- * Every language code OCHRE publishes, mapped to the ISO 639-3 and BCP 47
- * codes it stands for
- *
- * OCHRE publishes ISO 639-2 codes in their bibliographic (B) form, the
- * Library of Congress MARC convention (`per`, not ISO 639-3 `fas`), with
- * three exceptions: the ISO 639-3 identifier where ISO 639-2 has no code
- * (`yua`), the terminology (T) form for Dutch (`nld`, not `dut`), and codes
- * of its own for transliterations and vocabularies (`ota-xlt`, `rel`), some
- * of which collide with unrelated ISO 639-3 languages. Key everything by
- * these codes, because they are what OCHRE serves, and convert through this
- * table when a standard code is needed.
- */
+Every language code OCHRE publishes, mapped to the ISO 639-3 and BCP 47
+codes it stands for
+
+OCHRE publishes ISO 639-2 codes in their bibliographic (B) form, the
+Library of Congress MARC convention (`per`, not ISO 639-3 `fas`), with
+three exceptions: the ISO 639-3 identifier where ISO 639-2 has no code
+(`yua`), the terminology (T) form for Dutch (`nld`, not `dut`), and codes
+of its own for transliterations and vocabularies (`ota-xlt`, `rel`), some
+of which collide with unrelated ISO 639-3 languages. Key everything by
+these codes, because they are what OCHRE serves, and convert through this
+table when a standard code is needed.
+*/
 export const OCHRE_LANGUAGES = {
   akk: {
     name: "Akkadian",
@@ -662,34 +662,34 @@ export const OCHRE_LANGUAGES = {
 } as const satisfies Record<string, OchreLanguage>;
 
 /**
- * A language code OCHRE publishes
- */
+A language code OCHRE publishes
+*/
 export type OchreLanguageCode = keyof typeof OCHRE_LANGUAGES;
 
 /**
- * Check whether a string is a language code OCHRE publishes
- * @param code - The code to check
- * @returns Whether OCHRE publishes the code
- */
+Check whether a string is a language code OCHRE publishes
+@param code - The code to check
+@returns Whether OCHRE publishes the code
+*/
 export function isOchreLanguageCode(code: string): code is OchreLanguageCode {
   return Object.hasOwn(OCHRE_LANGUAGES, code);
 }
 
 /**
- * Look up a language OCHRE publishes by its OCHRE code
- * @param code - The OCHRE language code
- * @returns The language, or null when OCHRE does not publish the code
- */
+Look up a language OCHRE publishes by its OCHRE code
+@param code - The OCHRE language code
+@returns The language, or null when OCHRE does not publish the code
+*/
 export function getOchreLanguage(code: string): OchreLanguage | null {
   return isOchreLanguageCode(code) ? OCHRE_LANGUAGES[code] : null;
 }
 
 /**
- * Find the OCHRE code of a language from its ISO 639-3 identifier
- * @param iso639_3 - The ISO 639-3 identifier
- * @returns The OCHRE code of the language itself, not of a transliteration,
- * or null when OCHRE publishes no code for it
- */
+Find the OCHRE code of a language from its ISO 639-3 identifier
+@param iso639_3 - The ISO 639-3 identifier
+@returns The OCHRE code of the language itself, not of a transliteration,
+or null when OCHRE publishes no code for it
+*/
 export function getOchreLanguageCode(
   iso639_3: string,
 ): OchreLanguageCode | null {

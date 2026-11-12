@@ -130,12 +130,12 @@ function resource(uuid: string, label: string): XMLResource {
   };
 }
 
-function text(uuid: string, label: string): XMLText {
+function text(uuid: string): XMLText {
   return {
     uuid,
     publicationDateTime: PUBLICATION_DATE,
-    identification: identification({ eng: label, spa: `${label} ES` }),
-    text: label,
+    identification: identification({ eng: "Text", spa: "Text ES" }),
+    text: "Text",
     language: "eng",
   };
 }
@@ -240,7 +240,7 @@ describe("parseItem", () => {
                 resource: [
                   resource("e0000000-0000-4000-8000-000000000000", "Resource"),
                 ],
-                text: [text("f0000000-0000-4000-8000-000000000000", "Text")],
+                text: [text("f0000000-0000-4000-8000-000000000000")],
               },
             },
           ],
@@ -369,7 +369,7 @@ describe("parseItem", () => {
                 resource: [
                   resource("04000000-0000-4000-8000-000000000000", "Resource"),
                 ],
-                text: [text("05000000-0000-4000-8000-000000000000", "Text")],
+                text: [text("05000000-0000-4000-8000-000000000000")],
               },
             },
           ],

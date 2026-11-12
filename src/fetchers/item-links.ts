@@ -29,11 +29,11 @@ import {
 } from "#/xquery.js";
 
 /**
- * Build an XQuery string to fetch linked items from the OCHRE API.
- *
- * @param uuid - The UUID of the OCHRE item whose links should be fetched
- * @returns An XQuery string
- */
+Build an XQuery string to fetch linked items from the OCHRE API.
+
+@param uuid - The UUID of the OCHRE item whose links should be fetched
+@returns An XQuery string
+*/
 function buildXQuery(
   uuid: string,
   contentLanguage: OchreContentLanguage | null,
@@ -78,15 +78,15 @@ return
 }
 
 /**
- * Fetches linked OCHRE items by source-item UUID.
- *
- * @param uuid - The UUID of the OCHRE item whose linked items should be fetched
- * @param options - Fetch and parser options
- * @param options.containedItemCategory - The category of items inside linked Trees/Sets to parse. Tree accepts one category; Set accepts one category or an array.
- * @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
- * @param options.fetch - Custom fetch function to use instead of the default fetch
- * @returns An object containing parsed linked items
- */
+Fetches linked OCHRE items by source-item UUID.
+
+@param uuid - The UUID of the OCHRE item whose linked items should be fetched
+@param options - Fetch and parser options
+@param options.containedItemCategory - The category of items inside linked Trees/Sets to parse. Tree accepts one category; Set accepts one category or an array.
+@param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
+@param options.fetch - Custom fetch function to use instead of the default fetch
+@returns An object containing parsed linked items
+*/
 export async function fetchItemLinks<
   const TContainedItemCategory extends
     | ContainedItemCategoryOption<ItemContainerCategory>

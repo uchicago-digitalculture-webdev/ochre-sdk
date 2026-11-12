@@ -4,12 +4,12 @@ import { isObject, readEntries } from "#/reflection.js";
 type SchemaValidationIssue = v.BaseIssue<unknown>;
 
 /**
- * The shape a valibot issue has to have for this module to render it
- *
- * A schema rather than a hand-written predicate: the fields being checked are
- * exactly a shape, and `v.is` narrows without asserting anything unchecked. An
- * array cannot pass, because it carries none of these fields.
- */
+The shape a valibot issue has to have for this module to render it
+
+A schema rather than a hand-written predicate: the fields being checked are
+exactly a shape, and `v.is` narrows without asserting anything unchecked. An
+array cannot pass, because it carries none of these fields.
+*/
 const schemaValidationIssueSchema = v.looseObject({
   kind: v.string(),
   type: v.string(),
@@ -96,10 +96,12 @@ function appendSchemaValidationIssues(
       lines.push(`${indent}   Requirement: ${requirement}`);
     }
 
-    if (issue.issues != null && issue.issues.length > 0) {
-      lines.push(`${indent}   Nested issues:`);
-      appendSchemaValidationIssues(lines, issue.issues, depth + 1, number);
+    if (issue.issues == null || issue.issues.length === 0) {
+      continue;
     }
+
+    lines.push(`${indent}   Nested issues:`);
+    appendSchemaValidationIssues(lines, issue.issues, depth + 1, number);
   }
 }
 
@@ -259,12 +261,12 @@ function getDetailedError(
 }
 
 /**
- * Render an error as a short message and a fully detailed report
- * @param error - The thrown value
- * @param fallbackMessage - The message to use when the value is not an Error
- * @returns The message and the detailed report
- * @internal
- */
+Render an error as a short message and a fully detailed report
+@param error - The thrown value
+@param fallbackMessage - The message to use when the value is not an Error
+@returns The message and the detailed report
+@internal
+*/
 export function getErrorOutput(
   error: unknown,
   fallbackMessage: string,
@@ -274,12 +276,12 @@ export function getErrorOutput(
 }
 
 /**
- * Wrap schema validation issues in an error {@link getErrorOutput} can render
- * @param message - The failure message
- * @param issues - The validation issues to carry as the cause
- * @returns The error
- * @internal
- */
+Wrap schema validation issues in an error {@link getErrorOutput} can render
+@param message - The failure message
+@param issues - The validation issues to carry as the cause
+@returns The error
+@internal
+*/
 export function createSchemaValidationError(
   message: string,
   issues: ReadonlyArray<SchemaValidationIssue>,
@@ -288,8 +290,8 @@ export function createSchemaValidationError(
 }
 
 /**
- * Validates a pseudo-UUID string
- * @param value - The string to validate
- * @returns True if the string is a valid pseudo-UUID, false otherwise
- * @internal
- */
+Validates a pseudo-UUID string
+@param value - The string to validate
+@returns True if the string is a valid pseudo-UUID, false otherwise
+@internal
+*/

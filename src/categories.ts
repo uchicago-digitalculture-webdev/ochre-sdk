@@ -9,19 +9,19 @@ import type {
 } from "#/types/index.js";
 
 /**
- * Every category an item hierarchy entry can carry, including the
- * pseudo-category OCHRE uses to group entries
- */
+Every category an item hierarchy entry can carry, including the
+pseudo-category OCHRE uses to group entries
+*/
 export type HierarchyEntryCategory = ItemLinkCategory | "heading";
 
 /**
- * Everything the SDK knows about one OCHRE item category
- *
- * The set of categories used to be spelled out in four `switch` statements,
- * four constant tables, three XQuery collection lists and a second module of
- * membership lists. It is one row per category here, and every list below is
- * derived from it, so adding a category is one edit.
- */
+Everything the SDK knows about one OCHRE item category
+
+The set of categories used to be spelled out in four `switch` statements,
+four constant tables, three XQuery collection lists and a second module of
+membership lists. It is one row per category here, and every list below is
+derived from it, so adding a category is one edit.
+*/
 type ItemCategoryFacts = {
   /** The element names OCHRE serves this category under, canonical name first */
   aliases: ReadonlyArray<string>;
@@ -44,9 +44,9 @@ type ItemCategoryFacts = {
 };
 
 /**
- * The one table describing the OCHRE item categories
- * @internal
- */
+The one table describing the OCHRE item categories
+@internal
+*/
 export const ITEM_CATEGORY_FACTS = {
   tree: {
     aliases: ["tree"],
@@ -194,9 +194,9 @@ export const ITEM_CATEGORY_FACTS = {
 } as const satisfies Record<HierarchyEntryCategory, ItemCategoryFacts>;
 
 /**
- * Every element name OCHRE serves an item category under, canonical name first
- * @internal
- */
+Every element name OCHRE serves an item category under, canonical name first
+@internal
+*/
 export const ITEM_CATEGORY_ALIASES = {
   tree: ITEM_CATEGORY_FACTS.tree.aliases,
   bibliography: ITEM_CATEGORY_FACTS.bibliography.aliases,
@@ -226,9 +226,9 @@ function categoriesWhere(
 }
 
 /**
- * The canonical category each element name maps to
- * @internal
- */
+The canonical category each element name maps to
+@internal
+*/
 export const ITEM_CATEGORY_BY_ALIAS: ReadonlyMap<
   string,
   HierarchyEntryCategory
@@ -241,60 +241,60 @@ export const ITEM_CATEGORY_BY_ALIAS: ReadonlyMap<
 );
 
 /**
- * The OCHRE collections an item document can live in
- *
- * Document URIs are bare item UUIDs, so a lookup by UUID does not need these.
- * A search does: `fn:collection("ochre/<category>")`.
- * @internal
- */
+The OCHRE collections an item document can live in
+
+Document URIs are bare item UUIDs, so a lookup by UUID does not need these.
+A search does: `fn:collection("ochre/<category>")`.
+@internal
+*/
 export const OCHRE_COLLECTION_CATEGORIES = categoriesWhere(
   (facts) => facts.hasCollection,
 ) as Array<ItemCategory>;
 
 /**
- * The item categories that can sit directly inside a Tree
- * @internal
- */
+The item categories that can sit directly inside a Tree
+@internal
+*/
 export const TREE_ITEM_CATEGORIES = categoriesWhere(
   (facts) => facts.isTreeItem,
 ) as Array<TreeItemCategory>;
 
 /**
- * The item categories that can sit directly inside a Set
- * @internal
- */
+The item categories that can sit directly inside a Set
+@internal
+*/
 export const SET_ITEM_CATEGORIES = categoriesWhere(
   (facts) => facts.isSetItem,
 ) as Array<ItemCategory>;
 
 /**
- * The item categories that can sit under a heading
- * @internal
- */
+The item categories that can sit under a heading
+@internal
+*/
 export const HEADING_ITEM_CATEGORIES = categoriesWhere(
   (facts) => facts.isHeadingItem,
 ) as Array<HeadingItemCategory>;
 
 /**
- * The item categories that hold other items under a `containedItemCategory`
- * @internal
- */
+The item categories that hold other items under a `containedItemCategory`
+@internal
+*/
 export const ITEM_CONTAINER_CATEGORIES = categoriesWhere(
   (facts) => facts.isContainer,
 ) as Array<ItemContainerCategory>;
 
 /**
- * The item categories that carry an embedded item hierarchy
- * @internal
- */
+The item categories that carry an embedded item hierarchy
+@internal
+*/
 export const ITEM_CATEGORIES_WITH_EMBEDDED_ITEMS = categoriesWhere(
   (facts) => facts.hasEmbeddedItems,
 ) as Array<ItemCategoryWithEmbeddedItems>;
 
 /**
- * Each element name that can appear in a context path, and the category it means
- * @internal
- */
+Each element name that can appear in a context path, and the category it means
+@internal
+*/
 export const CONTEXT_CATEGORY_ALIASES: ReadonlyArray<{
   alias: string;
   category: ContextItemCategory;
@@ -308,11 +308,11 @@ export const CONTEXT_CATEGORY_ALIASES: ReadonlyArray<{
 );
 
 /**
- * Whether an item of this category holds other items
- * @param category - The item category
- * @returns True when the category accepts a `containedItemCategory`
- * @internal
- */
+Whether an item of this category holds other items
+@param category - The item category
+@returns True when the category accepts a `containedItemCategory`
+@internal
+*/
 export function isItemContainerCategory(
   category: ItemCategory,
 ): category is ItemContainerCategory {
@@ -320,11 +320,11 @@ export function isItemContainerCategory(
 }
 
 /**
- * Whether an item of this category carries an embedded item hierarchy
- * @param category - The item category
- * @returns True when the category exposes embedded items
- * @internal
- */
+Whether an item of this category carries an embedded item hierarchy
+@param category - The item category
+@returns True when the category exposes embedded items
+@internal
+*/
 export function isItemCategoryWithEmbeddedItems(
   category: ItemCategory,
 ): category is ItemCategoryWithEmbeddedItems {
@@ -332,11 +332,11 @@ export function isItemCategoryWithEmbeddedItems(
 }
 
 /**
- * Whether an item of this category can sit under a heading
- * @param category - The item category
- * @returns True when the category is allowed under a heading
- * @internal
- */
+Whether an item of this category can sit under a heading
+@param category - The item category
+@returns True when the category is allowed under a heading
+@internal
+*/
 export function isHeadingItemCategory(
   category: TreeItemCategory,
 ): category is HeadingItemCategory {
@@ -344,11 +344,11 @@ export function isHeadingItemCategory(
 }
 
 /**
- * Resolve an OCHRE element name to the category it means
- * @param category - The element name, which may be an alias
- * @returns The canonical category, or null when the name is not one
- * @internal
- */
+Resolve an OCHRE element name to the category it means
+@param category - The element name, which may be an alias
+@returns The canonical category, or null when the name is not one
+@internal
+*/
 export function normalizeItemCategory(
   category: string | undefined,
 ): ItemCategory | null {

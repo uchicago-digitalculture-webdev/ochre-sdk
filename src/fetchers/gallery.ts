@@ -57,18 +57,18 @@ function buildXQuery(parameters: {
 }
 
 /**
- * Fetches and parses a gallery from the OCHRE API
- *
- * @param parameters - The parameters for the fetch
- * @param parameters.uuid - The UUID of the gallery
- * @param parameters.filter - The filter to apply to the gallery
- * @param parameters.page - The page number to fetch
- * @param parameters.perPage - The number of items per page
- * @param options - The options for the fetch
- * @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
- * @param options.fetch - The fetch function to use
- * @returns The parsed gallery or an error message if the fetch/parse fails
- */
+Fetches and parses a gallery from the OCHRE API
+
+@param parameters - The parameters for the fetch
+@param parameters.uuid - The UUID of the gallery
+@param parameters.filter - The filter to apply to the gallery
+@param parameters.page - The page number to fetch
+@param parameters.perPage - The number of items per page
+@param options - The options for the fetch
+@param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
+@param options.fetch - The fetch function to use
+@returns The parsed gallery or an error message if the fetch/parse fails
+*/
 export async function fetchGallery<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(

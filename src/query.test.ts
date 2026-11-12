@@ -23,9 +23,9 @@ function compiledItemsClause(queries: Query | null): string {
 }
 
 /**
- * Compile a query tree and read back the single CTS query it binds, which is
- * null when the plan resolves without one
- */
+Compile a query tree and read back the single CTS query it binds, which is
+null when the plan resolves without one
+*/
 function compiledQueryPlan(parameters: { queries: Query | null }): {
   prolog: string;
   queryExpression: string | null;

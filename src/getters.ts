@@ -6,8 +6,8 @@ import type {
 } from "#/types/index.js";
 
 /**
- * Options for property search operations.
- */
+Options for property search operations.
+*/
 export type PropertyOptions = {
   /**
   Whether to recursively search through nested properties.
@@ -27,14 +27,14 @@ type PropertyContent<T extends LanguageCodes> =
 type SearchableProperty<T extends LanguageCodes> = PropertyLike<T>;
 
 /**
- * Which property to look for
- *
- * A property is named either by its variable UUID or by its variable label, and
- * a label can be narrowed further by the values the property carries. The value
- * forms differ in what they compare: `values` and `valueContents` require the
- * property to carry exactly that sequence, while `value` and `valueContent`
- * only require it to carry that one among others.
- */
+Which property to look for
+
+A property is named either by its variable UUID or by its variable label, and
+a label can be narrowed further by the values the property carries. The value
+forms differ in what they compare: `values` and `valueContents` require the
+property to carry exactly that sequence, while `value` and `valueContent`
+only require it to carry that one among others.
+*/
 export type PropertySelector<T extends LanguageCodes = LanguageCodes> =
   | { uuid: string }
   | { label: string }
@@ -44,8 +44,8 @@ export type PropertySelector<T extends LanguageCodes = LanguageCodes> =
   | { label: string; valueContent: PropertyContent<T> };
 
 /**
- * The variable label that asks a filter to match against every property
- */
+The variable label that asks a filter to match against every property
+*/
 const ALL_FIELDS_VARIABLE_LABEL = "all-fields";
 
 const DEFAULT_OPTIONS: PropertyOptions = {
@@ -54,14 +54,14 @@ const DEFAULT_OPTIONS: PropertyOptions = {
 };
 
 /**
- * Normalize an OCHRE property variable label for comparison
- *
- * OCHRE varies the casing and the word separator of a property label, so every
- * comparison against a label goes through here. This is the only rule in the
- * SDK for deciding whether a label names a given property.
- * @param value - The label to normalize
- * @returns The normalized label
- */
+Normalize an OCHRE property variable label for comparison
+
+OCHRE varies the casing and the word separator of a property label, so every
+comparison against a label goes through here. This is the only rule in the
+SDK for deciding whether a label names a given property.
+@param value - The label to normalize
+@returns The normalized label
+*/
 export function normalizePropertyVariableLabel(value: string): string {
   return value
     .trim()
@@ -132,10 +132,10 @@ function hasEqualPropertyValueContents<T extends LanguageCodes>(
 }
 
 /**
- * Compile a selector into a predicate over one property
- *
- * The label is normalized once here rather than once per candidate property.
- */
+Compile a selector into a predicate over one property
+
+The label is normalized once here rather than once per candidate property.
+*/
 function createPropertyPredicate<T extends LanguageCodes>(
   selector: PropertySelector<T>,
 ): (property: SearchableProperty<T>) => boolean {
@@ -184,11 +184,11 @@ function createPropertyPredicate<T extends LanguageCodes>(
 }
 
 /**
- * Find the first property matching a predicate, descending when asked to
- *
- * Every property at one level is tested before descending, so a match on the
- * item's own properties always wins over one on a nested property.
- */
+Find the first property matching a predicate, descending when asked to
+
+Every property at one level is tested before descending, so a match on the
+item's own properties always wins over one on a nested property.
+*/
 function findProperty<T extends LanguageCodes>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   isMatch: (property: SearchableProperty<T>) => boolean,
@@ -219,15 +219,15 @@ function findProperty<T extends LanguageCodes>(
 }
 
 /**
- * Keep only the leaf values from an array of property values
- *
- * OCHRE property values form a hierarchy, and a value with children is usually
- * a grouping rather than something to show. This asks that of a values array
- * the caller already holds; the same filter is available on the lookups
- * through `limitToLeafPropertyValues`.
- * @param propertyValues - The values to filter
- * @returns The values that have no children
- */
+Keep only the leaf values from an array of property values
+
+OCHRE property values form a hierarchy, and a value with children is usually
+a grouping rather than something to show. This asks that of a values array
+the caller already holds; the same filter is available on the lookups
+through `limitToLeafPropertyValues`.
+@param propertyValues - The values to filter
+@returns The values that have no children
+*/
 export function getLeafPropertyValues<T extends LanguageCodes = LanguageCodes>(
   propertyValues: ReadonlyArray<PropertyValueContent<T>>,
 ): Array<PropertyValueContent<T>> {
@@ -242,8 +242,8 @@ export function getLeafPropertyValues<T extends LanguageCodes = LanguageCodes>(
 }
 
 /**
- * Project a property's values, copying so callers cannot mutate the source
- */
+Project a property's values, copying so callers cannot mutate the source
+*/
 function projectPropertyValues<T extends LanguageCodes>(
   values: ReadonlyArray<PropertyValueContent<T>>,
   shouldLimitToLeafPropertyValues: boolean,
@@ -274,17 +274,17 @@ function visitProperties<T extends LanguageCodes>(
 }
 
 /**
- * Find the property a selector names
- *
- * The property is returned exactly as it was found, so its `values` are
- * whatever the item carries and `limitToLeafPropertyValues` does not apply.
- * Use {@link getPropertyValues} when leaf filtering matters.
- * @param properties - The properties to search
- * @param selector - Which property to look for
- * @param options - Search options
- * @param options.includeNestedProperties - Whether to descend into nested properties
- * @returns The matching property, or null when there is none
- */
+Find the property a selector names
+
+The property is returned exactly as it was found, so its `values` are
+whatever the item carries and `limitToLeafPropertyValues` does not apply.
+Use {@link getPropertyValues} when leaf filtering matters.
+@param properties - The properties to search
+@param selector - Which property to look for
+@param options - Search options
+@param options.includeNestedProperties - Whether to descend into nested properties
+@returns The matching property, or null when there is none
+*/
 export function getProperty<
   T extends LanguageCodes = LanguageCodes,
   TProperty extends PropertyLike<T> = PropertyLike<T>,
@@ -303,14 +303,14 @@ export function getProperty<
 }
 
 /**
- * Read every value of the property a selector names
- * @param properties - The properties to search
- * @param selector - Which property to look for
- * @param options - Search options
- * @param options.includeNestedProperties - Whether to descend into nested properties
- * @param options.limitToLeafPropertyValues - Whether to keep only leaf values
- * @returns The values, or null when no property matched
- */
+Read every value of the property a selector names
+@param properties - The properties to search
+@param selector - Which property to look for
+@param options - Search options
+@param options.includeNestedProperties - Whether to descend into nested properties
+@param options.limitToLeafPropertyValues - Whether to keep only leaf values
+@returns The values, or null when no property matched
+*/
 export function getPropertyValues<T extends LanguageCodes = LanguageCodes>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   selector: PropertySelector<T>,
@@ -330,14 +330,14 @@ export function getPropertyValues<T extends LanguageCodes = LanguageCodes>(
 }
 
 /**
- * Read the first value of the property a selector names
- * @param properties - The properties to search
- * @param selector - Which property to look for
- * @param options - Search options
- * @param options.includeNestedProperties - Whether to descend into nested properties
- * @param options.limitToLeafPropertyValues - Whether to keep only leaf values
- * @returns The first value, or null when no property matched or it has none
- */
+Read the first value of the property a selector names
+@param properties - The properties to search
+@param selector - Which property to look for
+@param options - Search options
+@param options.includeNestedProperties - Whether to descend into nested properties
+@param options.limitToLeafPropertyValues - Whether to keep only leaf values
+@returns The first value, or null when no property matched or it has none
+*/
 export function getPropertyValue<T extends LanguageCodes = LanguageCodes>(
   properties: ReadonlyArray<SearchableProperty<T>>,
   selector: PropertySelector<T>,
@@ -347,15 +347,15 @@ export function getPropertyValue<T extends LanguageCodes = LanguageCodes>(
 }
 
 /**
- * Gets all unique properties from an array of properties.
- *
- * Properties are returned exactly as they were found, deduplicated by variable
- * UUID, keeping the first occurrence.
- * @param properties - Array of properties to get unique properties from
- * @param options - Search options
- * @param options.includeNestedProperties - Whether to descend into nested properties
- * @returns Array of unique properties
- */
+Gets all unique properties from an array of properties.
+
+Properties are returned exactly as they were found, deduplicated by variable
+UUID, keeping the first occurrence.
+@param properties - Array of properties to get unique properties from
+@param options - Search options
+@param options.includeNestedProperties - Whether to descend into nested properties
+@returns Array of unique properties
+*/
 export function getUniqueProperties<
   T extends LanguageCodes = LanguageCodes,
   TProperty extends PropertyLike<T> = PropertyLike<T>,
@@ -380,12 +380,12 @@ export function getUniqueProperties<
 }
 
 /**
- * Gets all unique property variable labels from an array of properties.
- * @param properties - Array of properties to get unique property variable labels from
- * @param options - Search options
- * @param options.includeNestedProperties - Whether to descend into nested properties
- * @returns Array of unique property variable labels
- */
+Gets all unique property variable labels from an array of properties.
+@param properties - Array of properties to get unique property variable labels from
+@param options - Search options
+@param options.includeNestedProperties - Whether to descend into nested properties
+@returns Array of unique property variable labels
+*/
 export function getUniquePropertyVariableLabels<
   T extends LanguageCodes = LanguageCodes,
 >(
@@ -430,20 +430,20 @@ function isContentMatchingFilter<T extends LanguageCodes>(
 }
 
 /**
- * Whether a property matches a variable label and value content criterion.
- *
- * Matching is client-side and deliberately loose: string contents match on a
- * case-insensitive substring, numbers and booleans on equality. A
- * `variableLabel` of "all fields" matches against every property.
- * @param property - The property to test
- * @param filter - Filter criteria containing variable label and value to match
- * @param filter.variableLabel - The variable label to filter by
- * @param filter.value - The value to filter by
- * @param options - Search options
- * @param options.includeNestedProperties - Whether to descend into nested properties
- * @param options.limitToLeafPropertyValues - Whether to test only leaf values
- * @returns True if the property matches the filter criteria, false otherwise
- */
+Whether a property matches a variable label and value content criterion.
+
+Matching is client-side and deliberately loose: string contents match on a
+case-insensitive substring, numbers and booleans on equality. A
+`variableLabel` of "all fields" matches against every property.
+@param property - The property to test
+@param filter - Filter criteria containing variable label and value to match
+@param filter.variableLabel - The variable label to filter by
+@param filter.value - The value to filter by
+@param options - Search options
+@param options.includeNestedProperties - Whether to descend into nested properties
+@param options.limitToLeafPropertyValues - Whether to test only leaf values
+@returns True if the property matches the filter criteria, false otherwise
+*/
 export function isPropertyMatchingFilter<
   T extends LanguageCodes = LanguageCodes,
 >(

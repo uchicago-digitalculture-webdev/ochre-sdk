@@ -15,8 +15,8 @@ function ochre(body: string): string {
 <result><ochre uuid="${ITEM_UUID}" belongsTo="TEST" uuidBelongsTo="${ITEM_UUID}" publicationDateTime="2026-01-01T00:00:00Z">${body}</ochre></result>`;
 }
 
-function linkedResourceXML(uuid: string, label: string): string {
-  return `<resource uuid="${uuid}">
+function linkedResourceXML(label: string): string {
+  return `<resource uuid="${CHILD_UUID}">
   <identification><label><content lang="eng"><string>${label}</string></content></label></identification>
 </resource>`;
 }
@@ -24,7 +24,7 @@ function linkedResourceXML(uuid: string, label: string): string {
 describe("fetchItemLinks", () => {
   it("posts a query branching on every collection category alias and parses the links", async () => {
     const mock = ochreFixtureFetch(
-      ochre(`<items>${linkedResourceXML(CHILD_UUID, "Linked")}</items>`),
+      ochre(`<items>${linkedResourceXML("Linked")}</items>`),
     );
 
     const result = await fetchItemLinks(ITEM_UUID, { fetch: mock.fetch });
@@ -53,7 +53,7 @@ describe("fetchItemLinks", () => {
 describe("fetchItemChildren", () => {
   it("posts a child query for the requested item and parses the children", async () => {
     const mock = ochreFixtureFetch(
-      ochre(`<items>${linkedResourceXML(CHILD_UUID, "Child")}</items>`),
+      ochre(`<items>${linkedResourceXML("Child")}</items>`),
     );
 
     const result = await fetchItemChildren(ITEM_UUID, { fetch: mock.fetch });
@@ -74,7 +74,7 @@ describe("fetchGallery", () => {
   <item uuid="${ITEM_UUID}" category="resource">
     <identification><label><content lang="eng"><string>Item</string></content></label></identification>
   </item>
-  ${linkedResourceXML(CHILD_UUID, "Gallery resource")}
+  ${linkedResourceXML("Gallery resource")}
 </gallery>`),
     );
 

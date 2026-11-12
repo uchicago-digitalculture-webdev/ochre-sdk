@@ -74,11 +74,11 @@ const XMLRichTextEnvelope = {
 };
 
 /**
- * The entries every string-like OCHRE element carries
- *
- * Spread rather than re-listed by the shapes that embed a string envelope, so
- * a shape cannot declare the envelope in its type and forget to validate it.
- */
+The entries every string-like OCHRE element carries
+
+Spread rather than re-listed by the shapes that embed a string envelope, so
+a shape cannot declare the envelope in its type and forget to validate it.
+*/
 const XMLStringEntries = {
   payload: v.optional(v.string("XMLString: payload is string and optional")),
   rend: v.optional(v.string("XMLString: rend is string and optional")),
@@ -817,13 +817,13 @@ const XMLProperty: v.GenericSchema<unknown, XML.XMLProperty> = v.lazy(() =>
 );
 
 /**
- * The raw shape of a simplified property
- *
- * Identical to {@link XMLProperty}: OCHRE serves one shape, and the
- * "simplified" distinction is a parsing choice, not a wire-format one. The
- * parser decides whether a label becomes a multilingual string or a plain
- * string; nothing about the XML differs.
- */
+The raw shape of a simplified property
+
+Identical to {@link XMLProperty}: OCHRE serves one shape, and the
+"simplified" distinction is a parsing choice, not a wire-format one. The
+parser decides whether a label becomes a multilingual string or a plain
+string; nothing about the XML differs.
+*/
 const XMLSimplifiedProperty = XMLProperty;
 
 const XMLBaseItem = v.object(
@@ -2330,17 +2330,17 @@ const XMLWebsiteSegment = v.lazy(() =>
 );
 
 /**
- * A website resource item
- *
- * The member order is load-bearing, because a union returns its first match
- * and every member is an object schema, which drops the keys its own shape
- * does not name. {@link XMLWebsiteSegment} goes first: every entry on
- * {@link XMLWebsiteResource} other than `uuid` is optional, so a segment
- * wrapper satisfies that schema too and would come back without its
- * `segments`. {@link XMLWebsiteResourceGroup} goes last for the mirror
- * reason, since a resource holding children satisfies the group shape and
- * would lose its own slug and properties.
- */
+A website resource item
+
+The member order is load-bearing, because a union returns its first match
+and every member is an object schema, which drops the keys its own shape
+does not name. {@link XMLWebsiteSegment} goes first: every entry on
+{@link XMLWebsiteResource} other than `uuid` is optional, so a segment
+wrapper satisfies that schema too and would come back without its
+`segments`. {@link XMLWebsiteResourceGroup} goes last for the mirror
+reason, since a resource holding children satisfies the group shape and
+would lose its own slug and properties.
+*/
 const XMLWebsiteResourceItem: v.GenericSchema<
   unknown,
   XML.XMLWebsiteResourceItem
@@ -2524,11 +2524,11 @@ export const XMLDataItem: v.GenericSchema<unknown, XML.XMLDataItem> = v.union(
 );
 
 /**
- * Whether any child of these items has children of its own
- *
- * Driven by the child element's name rather than an accessor, so the check does
- * not have to name a declared element type and cannot drift from one.
- */
+Whether any child of these items has children of its own
+
+Driven by the child element's name rather than an accessor, so the check does
+not have to name a declared element type and cannot drift from one.
+*/
 function hasNestedRecursiveChildren(
   items: ReadonlyArray<unknown>,
   childKey: string,
@@ -2944,20 +2944,20 @@ export const XMLWebsiteData = v.object(
 );
 
 /**
- * Whether two types are exactly the same, in both directions
- */
+Whether two types are exactly the same, in both directions
+*/
 type Exact<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 
 /**
- * Whether a schema's inferred output matches the type declared for it
- *
- * A schema annotated `v.GenericSchema<unknown, T>` only promises its output is
- * assignable to `T`, which is how a field came to be declared in xml/types.ts,
- * read by the parser, and never validated. The schemas here infer their own
- * shapes instead, and this compares each inferred shape against the declared
- * type: the key sets have to match exactly, so an extra or missing field is a
- * build error, and the output still has to satisfy the declared type.
- */
+Whether a schema's inferred output matches the type declared for it
+
+A schema annotated `v.GenericSchema<unknown, T>` only promises its output is
+assignable to `T`, which is how a field came to be declared in xml/types.ts,
+read by the parser, and never validated. The schemas here infer their own
+shapes instead, and this compares each inferred shape against the declared
+type: the key sets have to match exactly, so an extra or missing field is a
+build error, and the output still has to satisfy the declared type.
+*/
 type SchemaMatchesType<
   TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>,
   TType,
@@ -2969,11 +2969,11 @@ type SchemaMatchesType<
     : false;
 
 /**
- * Whether a schema's inferred output satisfies the type declared for it
- *
- * For the two shapes carrying a rest signature, whose key set is `string` on
- * the inferred side and a literal union on the declared side.
- */
+Whether a schema's inferred output satisfies the type declared for it
+
+For the two shapes carrying a rest signature, whose key set is `string` on
+the inferred side and a literal union on the declared side.
+*/
 type SchemaSatisfiesType<
   TSchema extends v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>,
   TType,

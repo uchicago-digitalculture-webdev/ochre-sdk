@@ -12,22 +12,22 @@ type WebsitePropertyContent<T extends LanguageCodes> =
   PropertyValueContent<T>["content"];
 
 /**
- * The fields of an object that hold a UUID, which are the only ones
- * {@link WebsitePresentationReader.readAllUuids} can write
- */
+The fields of an object that hold a UUID, which are the only ones
+{@link WebsitePresentationReader.readAllUuids} can write
+*/
 type UuidKeys<O> = {
   [K in keyof O]-?: O[K] extends string | null ? K : never;
 }[keyof O];
 
 /**
- * Reads a website's presentation properties
- *
- * OCHRE stores everything a website declares about itself as labeled property
- * values nested under a "presentation" property, so every read is "find the
- * property with this label, then take its first value". This owns that walk
- * and the coercions that go with it, and hands back readers for nested levels
- * so the caller never touches the raw property array.
- */
+Reads a website's presentation properties
+
+OCHRE stores everything a website declares about itself as labeled property
+values nested under a "presentation" property, so every read is "find the
+property with this label, then take its first value". This owns that walk
+and the coercions that go with it, and hands back readers for nested levels
+so the caller never touches the raw property array.
+*/
 export class WebsitePresentationReader<T extends LanguageCodes> {
   private readonly sourceProperties: ReadonlyArray<SimplifiedProperty<T>>;
 
@@ -43,12 +43,12 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
   }
 
   /**
-   * Overwrite one field from a labeled OCHRE property
-   *
-   * Private because {@link readAll} covers every caller: a single-field read
-   * is a one-entry label map, and going through the map keeps the field's type
-   * coming from the target rather than from a type argument.
-   */
+  Overwrite one field from a labeled OCHRE property
+  
+  Private because {@link readAll} covers every caller: a single-field read
+  is a one-entry label map, and going through the map keeps the field's type
+  coming from the target rather than from a type argument.
+  */
   private readOne<O extends object, K extends keyof O>(
     target: O,
     key: K,
@@ -84,15 +84,15 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
   }
 
   /**
-   * Read a property whose field is a string but whose OCHRE value may not be
-   *
-   * OCHRE types a dimension like "width" from what was entered, so the same
-   * property arrives as `"50%"` on one resource and `50` on another. Anything
-   * that is neither is treated as unset rather than stringified, so a stray
-   * boolean does not become the literal text "true".
-   * @param label - The OCHRE property label to read
-   * @returns The string, or null when the property is unset or not string-like
-   */
+  Read a property whose field is a string but whose OCHRE value may not be
+  
+  OCHRE types a dimension like "width" from what was entered, so the same
+  property arrives as `"50%"` on one resource and `50` on another. Anything
+  that is neither is treated as unset rather than stringified, so a stray
+  boolean does not become the literal text "true".
+  @param label - The OCHRE property label to read
+  @returns The string, or null when the property is unset or not string-like
+  */
   stringValue(label: string): string | null {
     const value = this.value<WebsitePropertyContent<T>>(label);
     if (typeof value === "string") {
@@ -144,15 +144,15 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
   }
 
   /**
-   * Overwrite several fields from the OCHRE properties naming them
-   *
-   * The defaults object carries the shape and the fallback values, and the
-   * label map carries the OCHRE names, so a component states each property
-   * twice rather than five times: once as a default and once as a label. The
-   * field's type comes from the defaults object, so no type argument is needed.
-   * @param target - The object holding the fields, pre-filled with defaults
-   * @param labels - The OCHRE property label for each field to overwrite
-   */
+  Overwrite several fields from the OCHRE properties naming them
+  
+  The defaults object carries the shape and the fallback values, and the
+  label map carries the OCHRE names, so a component states each property
+  twice rather than five times: once as a default and once as a label. The
+  field's type comes from the defaults object, so no type argument is needed.
+  @param target - The object holding the fields, pre-filled with defaults
+  @param labels - The OCHRE property label for each field to overwrite
+  */
   readAll<O extends object>(
     target: O,
     labels: Partial<Record<keyof O, string>>,
@@ -167,14 +167,14 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
   }
 
   /**
-   * Overwrite several UUID fields from the UUIDs labeled OCHRE properties
-   * point at
-   *
-   * The same shape as {@link readAll}, for the fields that take the value's
-   * target rather than its content.
-   * @param target - The object holding the fields, pre-filled with defaults
-   * @param labels - The OCHRE property label for each field to overwrite
-   */
+  Overwrite several UUID fields from the UUIDs labeled OCHRE properties
+  point at
+  
+  The same shape as {@link readAll}, for the fields that take the value's
+  target rather than its content.
+  @param target - The object holding the fields, pre-filled with defaults
+  @param labels - The OCHRE property label for each field to overwrite
+  */
   readAllUuids<O extends object>(
     target: O,
     labels: Partial<Record<UuidKeys<O>, string>>,

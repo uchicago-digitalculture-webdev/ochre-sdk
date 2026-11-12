@@ -119,17 +119,17 @@ return
 }
 
 /**
- * Fetches direct child items for an OCHRE item UUID without fetching parent
- * item data.
- *
- * @param uuid - The UUID of the OCHRE item whose children should be fetched
- * @param options - Fetch and parser options
- * @param options.category - Optional parent item category. Passing it lets the XQuery search only the matching OCHRE collection.
- * @param options.containedItemCategory - The category of items inside returned Trees/Sets to parse. Tree accepts one category; Set accepts one category or an array.
- * @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
- * @param options.fetch - Custom fetch function to use instead of the default fetch
- * @returns An object containing parsed child items
- */
+Fetches direct child items for an OCHRE item UUID without fetching parent
+item data.
+
+@param uuid - The UUID of the OCHRE item whose children should be fetched
+@param options - Fetch and parser options
+@param options.category - Optional parent item category. Passing it lets the XQuery search only the matching OCHRE collection.
+@param options.containedItemCategory - The category of items inside returned Trees/Sets to parse. Tree accepts one category; Set accepts one category or an array.
+@param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
+@param options.fetch - Custom fetch function to use instead of the default fetch
+@returns An object containing parsed child items
+*/
 export async function fetchItemChildren<
   const TContainedItemCategory extends
     | ContainedItemCategoryOption<ItemContainerCategory>

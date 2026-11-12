@@ -60,10 +60,10 @@ function resource(parameters: {
   };
 }
 
-function segmentWrapper(uuid: string, abbreviation: string): XMLWebsiteSegment {
+function segmentWrapper(): XMLWebsiteSegment {
   return {
-    uuid: `${uuid}-wrapper`,
-    segments: { tree: [segmentTree(uuid, abbreviation)] },
+    uuid: "seg-wrapper",
+    segments: { tree: [segmentTree("seg", "docs")] },
   };
 }
 
@@ -89,7 +89,7 @@ describe("normalizeWebsiteResources", () => {
     const page = resource({ uuid: "page", slug: "p", presentation: "page" });
     const normalized = normalizeWebsiteResources([
       { resource: [page] },
-      segmentWrapper("seg", "docs"),
+      segmentWrapper(),
       page,
     ]);
 
@@ -162,7 +162,7 @@ describe("readWebsitePages", () => {
           uuid: "home",
           slug: "home",
           presentation: "page",
-          children: [segmentWrapper("seg", "docs")],
+          children: [segmentWrapper()],
         }),
       ],
       OPTIONS,
@@ -182,7 +182,7 @@ describe("readWebsitePages", () => {
   });
 
   it("throws when a segment tree carries no abbreviation", () => {
-    const wrapper = segmentWrapper("seg", "docs");
+    const wrapper = segmentWrapper();
     delete wrapper.segments.tree[0]!.identification.abbreviation;
 
     expect(() =>
@@ -211,7 +211,7 @@ describe("collectWebsitePageSlugs", () => {
           presentation: "page",
           children: [
             resource({ uuid: "child", slug: "child", presentation: "page" }),
-            segmentWrapper("seg", "docs"),
+            segmentWrapper(),
           ],
         }),
       ],

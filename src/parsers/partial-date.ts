@@ -312,18 +312,18 @@ function formatEdtf(
 }
 
 /**
- * Parse the partial dates of an event
- *
- * Reads the year, month and day fields rather than the EDTF text OCHRE
- * writes alongside them, which leaves out every field that is not a plain
- * four-digit year. An end identical to the start is a single date. The EDTF
- * string is only set for what EDTF can express: no qualifier on a year with
- * unspecified digits or on a season, no season in a range, and no range
- * whose end begins before its start.
- * @param rawPartialDates - The raw partialDates element
- * @returns The parsed partial dates, or null when every field is empty
- * @internal
- */
+Parse the partial dates of an event
+
+Reads the year, month and day fields rather than the EDTF text OCHRE
+writes alongside them, which leaves out every field that is not a plain
+four-digit year. An end identical to the start is a single date. The EDTF
+string is only set for what EDTF can express: no qualifier on a year with
+unspecified digits or on a season, no season in a range, and no range
+whose end begins before its start.
+@param rawPartialDates - The raw partialDates element
+@returns The parsed partial dates, or null when every field is empty
+@internal
+*/
 export function parsePartialDate(
   rawPartialDates: XMLPartialDates | undefined,
 ): PartialDate | null {

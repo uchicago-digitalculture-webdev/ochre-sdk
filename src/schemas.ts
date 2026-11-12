@@ -16,42 +16,38 @@ import { getOchreLanguageCode, isOchreLanguageCode } from "#/languages.js";
 const PSEUDO_UUID_REGEX = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
 
 /**
- * Validates a pseudo-UUID string
- * @param value - The string to validate
- * @returns True if the string is a valid pseudo-UUID, false otherwise
- * @internal
- */
+Validates a pseudo-UUID string
+@param value - The string to validate
+@returns True if the string is a valid pseudo-UUID, false otherwise
+@internal
+*/
 export function isPseudoUuid(value: string): boolean {
   return PSEUDO_UUID_REGEX.test(value);
 }
 
 const positiveNumber = (message: string): v.GenericSchema<unknown, number> =>
   v.pipe(v.number(), v.minValue(1, message));
-const defaultString = (value: string): v.GenericSchema<unknown, string> =>
-  v.optional(v.string(), value);
-const defaultBoolean = (
-  // eslint-disable-next-line unicorn/consistent-boolean-name -- `value` is the default value, not a predicate
-  value: boolean,
-): v.GenericSchema<unknown, boolean> => v.optional(v.boolean(), value);
+const defaultLanguageSchema = v.optional(v.string(), "eng");
+const defaultFalseSchema = v.optional(v.boolean(), false);
 
 const sortDirectionSchema = v.optional(v.picklist(["asc", "desc"]), "asc");
 
 /**
- * Schema for validating UUIDs
- * @internal
- */
+Schema for validating UUIDs
+@internal
+*/
 export const uuidSchema = v.pipe(
   v.string(),
   v.check(isPseudoUuid, "Invalid pseudo-UUID"),
 );
 
 /**
- * Schema for validating OCHRE language codes
- *
- * Rejects standard codes OCHRE does not store, naming the OCHRE code to use
- * instead (`per` for ISO 639-3 `fas`).
- * @internal
- */
+Schema for validating OCHRE language codes
+
+Rejects standard codes OCHRE does not store, naming the OCHRE code to use
+instead (`per` for ISO 639-3 `fas`).
+@internal
+*/
 export const ochreLanguageCodeSchema = v.pipe(
   v.string("Language code must be a string"),
   v.check(isOchreLanguageCode, (issue) => {
@@ -65,9 +61,9 @@ export const ochreLanguageCodeSchema = v.pipe(
 );
 
 /**
- * Valid component types for web elements
- * @internal
- */
+Valid component types for web elements
+@internal
+*/
 export const componentSchema = v.picklist(
   [
     "3d-viewer",
@@ -96,9 +92,9 @@ export const componentSchema = v.picklist(
 );
 
 /**
- * Valid variants for the "collection" component
- * @internal
- */
+Valid variants for the "collection" component
+@internal
+*/
 export const collectionVariantSchema = v.picklist([
   "slide",
   "table",
@@ -108,9 +104,9 @@ export const collectionVariantSchema = v.picklist([
 ] as const satisfies ReadonlyArray<WebCollectionVariant>);
 
 /**
- * Schema for validating gallery parameters
- * @internal
- */
+Schema for validating gallery parameters
+@internal
+*/
 export const gallerySchema = v.object({
   uuid: v.pipe(v.string(), v.check(isPseudoUuid, "Invalid pseudo-UUID")),
   filter: v.optional(v.string()),
@@ -125,9 +121,9 @@ export const gallerySchema = v.object({
 });
 
 /**
- * Schema for validating and parsing render options
- * @internal
- */
+Schema for validating and parsing render options
+@internal
+*/
 export const renderOptionsSchema = v.pipe(
   v.string(),
   v.transform((string) => string.split(" ")),
@@ -135,9 +131,9 @@ export const renderOptionsSchema = v.pipe(
 );
 
 /**
- * Schema for validating date data types
- * @internal
- */
+Schema for validating date data types
+@internal
+*/
 const dateDataTypeSchema = v.picklist([
   "date",
   "dateTime",
@@ -146,15 +142,15 @@ const dateDataTypeSchema = v.picklist([
 >);
 
 /**
- * Shared schema for query fields
- * @internal
- */
+Shared schema for query fields
+@internal
+*/
 const standardQueryFields = {
   matchMode: v.picklist(["includes", "exact"]),
   isCaseSensitive: v.boolean(),
-  language: defaultString("eng"),
+  language: defaultLanguageSchema,
   fallbackLanguage: v.optional(v.string()),
-  isNegated: defaultBoolean(false),
+  isNegated: defaultFalseSchema,
 } as const;
 
 const propertyRelationSchema = v.picklist([
@@ -163,9 +159,9 @@ const propertyRelationSchema = v.picklist([
 ] as const satisfies ReadonlyArray<PropertyRelation>);
 
 /**
- * Shared schema for Set queries
- * @internal
- */
+Shared schema for Set queries
+@internal
+*/
 const setQueryLeafSchema = v.union([
   v.pipe(
     v.strictObject({
@@ -258,9 +254,9 @@ const setQueryLeafSchema = v.union([
 ]) satisfies v.GenericSchema<unknown, QueryLeaf>;
 
 /**
- * Schema for validating Set queries
- * @internal
- */
+Schema for validating Set queries
+@internal
+*/
 const setQuerySchema: v.GenericSchema<unknown, Query> = v.lazy(() =>
   v.union([
     setQueryLeafSchema,
@@ -280,22 +276,22 @@ const setQuerySchema: v.GenericSchema<unknown, Query> = v.lazy(() =>
 );
 
 /**
- * Schema for validating Set queries
- * @internal
- */
+Schema for validating Set queries
+@internal
+*/
 const setQueriesSchema = v.optional(v.nullable(setQuerySchema), null);
 
 /**
- * Schema for validating Set items sort
- * @internal
- */
+Schema for validating Set items sort
+@internal
+*/
 const setItemsSortSchema = v.optional(
   v.variant("target", [
     v.strictObject({ target: v.literal("none") }),
     v.strictObject({
       target: v.literal("title"),
       direction: sortDirectionSchema,
-      language: defaultString("eng"),
+      language: defaultLanguageSchema,
     }),
     v.strictObject({
       target: v.literal("date"),
@@ -315,7 +311,7 @@ const setItemsSortSchema = v.optional(
         "IDREF",
       ] as const satisfies ReadonlyArray<QueryablePropertyValueDataType>),
       direction: sortDirectionSchema,
-      language: defaultString("eng"),
+      language: defaultLanguageSchema,
     }),
     v.strictObject({
       target: v.literal("distance"),
@@ -328,9 +324,9 @@ const setItemsSortSchema = v.optional(
 ) satisfies v.GenericSchema<unknown, SetItemsSort>;
 
 /**
- * Schema for validating the parameters for the Set property values fetching function
- * @internal
- */
+Schema for validating the parameters for the Set property values fetching function
+@internal
+*/
 export const setPropertyValuesParametersSchema = v.object({
   setScopeUuids: v.pipe(
     v.array(uuidSchema),
@@ -340,19 +336,19 @@ export const setPropertyValuesParametersSchema = v.object({
   queries: setQueriesSchema,
   attributes: v.optional(
     v.object({
-      bibliographies: defaultBoolean(false),
-      periods: defaultBoolean(false),
+      bibliographies: defaultFalseSchema,
+      periods: defaultFalseSchema,
     }),
     { bibliographies: false, periods: false },
   ),
-  isLimitedToLeafPropertyValues: defaultBoolean(false),
-  language: defaultString("eng"),
+  isLimitedToLeafPropertyValues: defaultFalseSchema,
+  language: defaultLanguageSchema,
 });
 
 /**
- * Schema for validating the parameters for the item OCR data fetching function
- * @internal
- */
+Schema for validating the parameters for the item OCR data fetching function
+@internal
+*/
 export const itemOcrDataParametersSchema = v.object({
   uuid: uuidSchema,
   value: v.pipe(
@@ -360,13 +356,13 @@ export const itemOcrDataParametersSchema = v.object({
     v.check((value) => value.trim() !== "", "A search value is required"),
   ),
   matchMode: v.optional(v.picklist(["includes", "exact"]), "includes"),
-  isCaseSensitive: defaultBoolean(false),
+  isCaseSensitive: defaultFalseSchema,
 });
 
 /**
- * Schema for validating Set items parameters
- * @internal
- */
+Schema for validating Set items parameters
+@internal
+*/
 const containerItemsParametersEntries = {
   belongsToCollectionScopeUuids: v.optional(v.array(uuidSchema), []),
   queries: setQueriesSchema,
@@ -387,9 +383,9 @@ export const setItemsParametersSchema = v.object({
 });
 
 /**
- * Schema for validating the parameters of the item locations fetching function
- * @internal
- */
+Schema for validating the parameters of the item locations fetching function
+@internal
+*/
 export const itemLocationsParametersSchema = v.pipe(
   v.object({
     setScopeUuids: v.optional(v.array(uuidSchema), []),

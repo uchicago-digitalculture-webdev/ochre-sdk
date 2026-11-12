@@ -9,8 +9,8 @@ import type { WebImage } from "#/types/website.js";
 import { transformPermanentIdentificationUrlToItemLink } from "#/parsers/string.js";
 
 /**
- * The link categories a website can point at
- */
+The link categories a website can point at
+*/
 export type WebsiteLinkCategory = Extract<
   ItemLinkCategory,
   "resource" | "set" | "tree"
@@ -70,16 +70,16 @@ export function getWebsiteLinks<
 }
 
 /**
- * Where a "link-to", "navigate-to" or "redirect-to" property points
- *
- * An external href is rewritten to an item route; anything else resolves
- * through the page slug map, so a link to a page inside a segment gets that
- * segment's full slug rather than the bare one OCHRE stores on the page.
- * @param value - The raw property value holding the target
- * @param pageSlugs - The website's resolved page slugs
- * @returns The target, or null when the property carries none
- * @internal
- */
+Where a "link-to", "navigate-to" or "redirect-to" property points
+
+An external href is rewritten to an item route; anything else resolves
+through the page slug map, so a link to a page inside a segment gets that
+segment's full slug rather than the bare one OCHRE stores on the page.
+@param value - The raw property value holding the target
+@param pageSlugs - The website's resolved page slugs
+@returns The target, or null when the property carries none
+@internal
+*/
 export function parseWebsiteLinkTarget<T extends ReadonlyArray<string>>(
   value: PropertyValueContent<T> | null,
   pageSlugs: WebsitePageSlugs | undefined,
@@ -98,16 +98,16 @@ export function parseWebsiteLinkTarget<T extends ReadonlyArray<string>>(
 }
 
 /**
- * The image a link stands for
- *
- * Built the same way wherever a website shows a linked image, so the six
- * fields and the fallbacks for a link OCHRE has no dimensions for are stated
- * once.
- * @param link - The resource link pointing at the image
- * @param quality - The quality the consumer should request
- * @returns The image
- * @internal
- */
+The image a link stands for
+
+Built the same way wherever a website shows a linked image, so the six
+fields and the fallbacks for a link OCHRE has no dimensions for are stated
+once.
+@param link - The resource link pointing at the image
+@param quality - The quality the consumer should request
+@returns The image
+@internal
+*/
 export function webImageFromLink<T extends ReadonlyArray<string>>(
   link: ItemLinks<T>[number],
   quality: WebImage<T>["quality"],

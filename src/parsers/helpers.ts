@@ -14,15 +14,15 @@ export type FetchBaseOptions<
 > = {
   languages?: TLanguages;
   /**
-   * Fetch only this language of every multilingual field, instead of every
-   * language OCHRE holds. A field without it keeps its `fallbackLanguage`
-   * content, else its content in any language; aliases are always kept.
-   */
+  Fetch only this language of every multilingual field, instead of every
+  language OCHRE holds. A field without it keeps its `fallbackLanguage`
+  content, else its content in any language; aliases are always kept.
+  */
   language?: string;
   /**
-   * The language shown for fields that have no `language` content, typically
-   * the website's default language (defaults to `"eng"`)
-   */
+  The language shown for fields that have no `language` content, typically
+  the website's default language (defaults to `"eng"`)
+  */
   fallbackLanguage?: string;
   fetch?: FetchFunction;
   signal?: AbortSignal;
@@ -42,12 +42,12 @@ export type FetchLanguages<
 export type ParserOptions<T extends ReadonlyArray<string>> = {
   languages: T;
   /**
-   * The language the dataset declares as its default
-   *
-   * Threaded into every {@link MultilingualString} so a read with no language
-   * resolves to the dataset's default rather than whichever language happens to
-   * come first in the payload.
-   */
+  The language the dataset declares as its default
+  
+  Threaded into every {@link MultilingualString} so a read with no language
+  resolves to the dataset's default rather than whichever language happens to
+  come first in the payload.
+  */
   defaultLanguage?: T[number];
 };
 
@@ -65,15 +65,15 @@ export function getParserOptions<T extends ReadonlyArray<string>>(
 }
 
 /**
- * Drop the keys whose value is undefined
- *
- * Constrained to `object` rather than `Record<string, unknown>`, which an
- * interface never satisfies for want of an index signature. `Object.entries`
- * cannot be typed precisely, so the one cast that costs is here rather than at
- * the call site.
- * @param object - The object to clean
- * @returns A copy carrying only the defined keys
- */
+Drop the keys whose value is undefined
+
+Constrained to `object` rather than `Record<string, unknown>`, which an
+interface never satisfies for want of an index signature. `Object.entries`
+cannot be typed precisely, so the one cast that costs is here rather than at
+the call site.
+@param object - The object to clean
+@returns A copy carrying only the defined keys
+*/
 export function cleanObject<T extends object>(object: T): Partial<T> {
   const entries = Object.entries(object) as Array<[keyof T, T[keyof T]]>;
   const cleaned: Partial<T> = {};

@@ -22,20 +22,20 @@ type FetchSetItemsCategory<
     : SetItemCategory;
 
 /**
- * Fetches and parses Set items from the OCHRE API
- *
- * @param parameters - The parameters for the fetch
- * @param parameters.setScopeUuids - The Set scope UUIDs to filter by
- * @param parameters.queries - Recursive query tree used to filter matching items
- * @param parameters.sort - Optional sorting configuration applied before pagination.
- * For propertyValue sorting, dataType is required and the sort key uses the first valid leaf value (value[not(@i)]).
- * @param parameters.page - The page number (1-indexed)
- * @param parameters.pageSize - The number of items per page
- * @param containedItemCategories - The categories of the items to fetch
- * @param options - Options for the fetch
- * @param options.fetch - The fetch function to use
- * @returns The parsed Set items or null if the fetch/parse fails
- */
+Fetches and parses Set items from the OCHRE API
+
+@param parameters - The parameters for the fetch
+@param parameters.setScopeUuids - The Set scope UUIDs to filter by
+@param parameters.queries - Recursive query tree used to filter matching items
+@param parameters.sort - Optional sorting configuration applied before pagination.
+For propertyValue sorting, dataType is required and the sort key uses the first valid leaf value (value[not(@i)]).
+@param parameters.page - The page number (1-indexed)
+@param parameters.pageSize - The number of items per page
+@param containedItemCategories - The categories of the items to fetch
+@param options - Options for the fetch
+@param options.fetch - The fetch function to use
+@returns The parsed Set items or null if the fetch/parse fails
+*/
 export async function fetchSetItems<
   const TContainedItemCategories extends
     | ReadonlyArray<SetItemCategory>

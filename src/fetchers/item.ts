@@ -69,18 +69,18 @@ function assertItemCategoryAllowed(
 }
 
 /**
- * Build an XQuery string to fetch a single OCHRE item document by UUID.
- *
- * Nodes marked `supplemental="true"` are always dropped. `$item` only ever
- * binds the item categories that carry embedded items, so the omission branch
- * is a no-op for every other category.
- *
- * @param parameters - The parameters for the fetch
- * @param parameters.uuid - The UUID of the OCHRE item to fetch
- * @param parameters.shouldOmitEmbeddedItems - Whether to drop the embedded item hierarchy
- * @param parameters.contentLanguage - Keep only this language of every multilingual field
- * @returns An XQuery string
- */
+Build an XQuery string to fetch a single OCHRE item document by UUID.
+
+Nodes marked `supplemental="true"` are always dropped. `$item` only ever
+binds the item categories that carry embedded items, so the omission branch
+is a no-op for every other category.
+
+@param parameters - The parameters for the fetch
+@param parameters.uuid - The UUID of the OCHRE item to fetch
+@param parameters.shouldOmitEmbeddedItems - Whether to drop the embedded item hierarchy
+@param parameters.contentLanguage - Keep only this language of every multilingual field
+@returns An XQuery string
+*/
 function buildXQuery(parameters: {
   uuid: string;
   shouldOmitEmbeddedItems: boolean;
@@ -136,19 +136,19 @@ function omitEmbeddedItems(
 }
 
 /**
- * Fetches an OCHRE item by UUID from the OCHRE API
- *
- * @param uuid - The UUID of the OCHRE item to fetch
- * @param options - Required options object
- * @param options.category - The category of the OCHRE item to fetch. Pass a
- * single category when it is known, or an array when the item may be any
- * category in that list.
- * @param options.containedItemCategory - The category of items inside the OCHRE item to fetch. Only valid for Trees and Sets. Tree accepts one category; Set accepts one category or an array.
- * @param options.shouldOmitEmbeddedItems - Whether to omit the embedded item hierarchy when fetching a recursive item category. Ignored when the fetched item does not expose recursive embedded items.
- * @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
- * @param options.fetch - Custom fetch function to use instead of the default fetch
- * @returns An object containing the parsed item
- */
+Fetches an OCHRE item by UUID from the OCHRE API
+
+@param uuid - The UUID of the OCHRE item to fetch
+@param options - Required options object
+@param options.category - The category of the OCHRE item to fetch. Pass a
+single category when it is known, or an array when the item may be any
+category in that list.
+@param options.containedItemCategory - The category of items inside the OCHRE item to fetch. Only valid for Trees and Sets. Tree accepts one category; Set accepts one category or an array.
+@param options.shouldOmitEmbeddedItems - Whether to omit the embedded item hierarchy when fetching a recursive item category. Ignored when the fetched item does not expose recursive embedded items.
+@param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
+@param options.fetch - Custom fetch function to use instead of the default fetch
+@returns An object containing the parsed item
+*/
 export async function fetchItem<
   const TContainedItemCategory extends
     | ContainedItemCategoryOption<ItemContainerCategory>

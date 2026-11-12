@@ -7,11 +7,11 @@ import { websitePresentationReader } from "#/parsers/website/reader.js";
 import { parseStylesheets } from "#/parsers/website/styles.js";
 
 /**
- * Parses raw website properties into a standardized Website properties structure
- *
- * @param properties - Array of raw website properties in OCHRE format
- * @returns Parsed WebsiteProperties object
- */
+Parses raw website properties into a standardized Website properties structure
+
+@param properties - Array of raw website properties in OCHRE format
+@returns Parsed WebsiteProperties object
+*/
 export function parseWebsiteProperties<T extends ReadonlyArray<string>>(
   properties: XMLWebsiteProperties["property"],
   websiteTree: XMLWebsiteTree,

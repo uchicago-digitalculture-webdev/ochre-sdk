@@ -97,8 +97,8 @@ export const XML_PARSER_OPTIONS: X2jOptions = {
 export const DEFAULT_LANGUAGES = ["eng"] as const;
 
 /**
- * The default page size to use for fetching paginated items
- */
+The default page size to use for fetching paginated items
+*/
 export const DEFAULT_PAGE_SIZE = 48;
 
 export const OCHRE_ENDPOINT =
@@ -108,12 +108,12 @@ export const PERMANENT_IDENTIFICATION_URL_PREFIX =
   "https://pi.lib.uchicago.edu/1001/org/ochre/";
 
 /**
- * Build the URL of an OCHRE item document
- * @param uuid - The UUID of the OCHRE item
- * @param searchParameters - Extra query string parameters to append
- * @returns The item document URL
- * @internal
- */
+Build the URL of an OCHRE item document
+@param uuid - The UUID of the OCHRE item
+@param searchParameters - Extra query string parameters to append
+@returns The item document URL
+@internal
+*/
 export function getOchreItemUrl(
   uuid: string,
   searchParameters?: string,

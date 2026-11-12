@@ -1,6 +1,6 @@
 /**
- * Regular expression to match ISO date/time strings and OCHRE's "YYYY-MM-DD HH:mm:ss" format.
- */
+Regular expression to match ISO date/time strings and OCHRE's "YYYY-MM-DD HH:mm:ss" format.
+*/
 const DATE_TIME_REGEX =
   /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?(?:T(\d{2})(?::(\d{2})(?::(\d{2})(?:[.,](\d+))?)?)?(Z|[+-]\d{2}(?::?\d{2})?)?)?$/;
 
@@ -19,15 +19,15 @@ function applyTimezoneOffset(date: Date, timezone: string): Date {
 }
 
 /**
- * Parses ISO date/time strings and OCHRE's "YYYY-MM-DD HH:mm:ss" format.
- * Like date-fns parseISO: strings without a timezone offset (including
- * date-only strings) are parsed as local time, not UTC. Returns an
- * Invalid Date for anything unparseable.
- *
- * @param value - The date/time string to parse.
- * @returns A Date object representing the parsed date/time, or an Invalid Date if parsing fails.
- * @internal
- */
+Parses ISO date/time strings and OCHRE's "YYYY-MM-DD HH:mm:ss" format.
+Like date-fns parseISO: strings without a timezone offset (including
+date-only strings) are parsed as local time, not UTC. Returns an
+Invalid Date for anything unparseable.
+
+@param value - The date/time string to parse.
+@returns A Date object representing the parsed date/time, or an Invalid Date if parsing fails.
+@internal
+*/
 export function parseDateTime(value: string): Date {
   const match = DATE_TIME_REGEX.exec(value.replace(" ", "T"));
   if (match == null) {

@@ -16,12 +16,12 @@ const STYLESHEET_NON_STYLE_KEYS = new Set([
 ]);
 
 /**
- * The CSS declarations a presentation variant carries
- *
- * @param properties - Array of properties to parse
- * @param cssVariant - CSS variant to parse
- * @returns Array of CSS styles
- */
+The CSS declarations a presentation variant carries
+
+@param properties - Array of properties to parse
+@param cssVariant - CSS variant to parse
+@returns Array of CSS styles
+*/
 function parseCssStylesFromProperties<T extends ReadonlyArray<string>>(
   properties: ReadonlyArray<SimplifiedProperty<T>>,
   cssVariant?: string,
@@ -44,11 +44,11 @@ function parseCssStylesFromProperties<T extends ReadonlyArray<string>>(
 }
 
 /**
- * The CSS declarations for every viewport a resource defines
- * @param properties - Array of properties to parse
- * @returns The styles per viewport
- * @internal
- */
+The CSS declarations for every viewport a resource defines
+@param properties - Array of properties to parse
+@returns The styles per viewport
+@internal
+*/
 export function parseResponsiveCssStyles<T extends ReadonlyArray<string>>(
   properties: ReadonlyArray<SimplifiedProperty<T>>,
 ): ResponsiveStyles {
@@ -60,23 +60,23 @@ export function parseResponsiveCssStyles<T extends ReadonlyArray<string>>(
 }
 
 /**
- * An empty set of responsive styles, for resources that define none
- * @returns The empty styles
- * @internal
- */
+An empty set of responsive styles, for resources that define none
+@returns The empty styles
+@internal
+*/
 export function emptyResponsiveStyles(): ResponsiveStyles {
   return { default: [], tablet: [], mobile: [] };
 }
 
 /**
- * The stylesheet a website attaches to a property variable or value
- *
- * OCHRE has no viewport dimension on stylesheet entries, so these only ever
- * carry default styles, unlike the per-element styles above.
- * @param styles - The raw stylesheet entries
- * @returns The parsed stylesheet items
- * @internal
- */
+The stylesheet a website attaches to a property variable or value
+
+OCHRE has no viewport dimension on stylesheet entries, so these only ever
+carry default styles, unlike the per-element styles above.
+@param styles - The raw stylesheet entries
+@returns The parsed stylesheet items
+@internal
+*/
 export function parseStylesheets<T extends LanguageCodes>(
   styles: Array<XMLWebsiteStyle>,
 ): Array<StylesheetItem<T>> {

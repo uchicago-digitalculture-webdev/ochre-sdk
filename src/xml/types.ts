@@ -19,10 +19,10 @@ export type XMLRecursiveItemCategory = Exclude<
 >;
 
 /**
- * Rich text envelope shared by `<string>` and `<content>` nodes, carrying the
- * inline links, presentation properties and annotation identifier that turn a
- * span of text into an annotation.
- */
+Rich text envelope shared by `<string>` and `<content>` nodes, carrying the
+inline links, presentation properties and annotation identifier that turn a
+span of text into an annotation.
+*/
 export type XMLRichTextEnvelope = {
   links?: XMLLink;
   properties?: { property: Array<XMLProperty> };
@@ -263,11 +263,11 @@ export type XMLProperty = {
 };
 
 /**
- * The raw shape of a simplified property
- *
- * Identical to {@link XMLProperty}: the "simplified" distinction is a parsing
- * choice, not a wire-format one.
- */
+The raw shape of a simplified property
+
+Identical to {@link XMLProperty}: the "simplified" distinction is a parsing
+choice, not a wire-format one.
+*/
 export type XMLSimplifiedProperty = XMLProperty;
 
 export type XMLBaseItem = {

@@ -106,15 +106,15 @@ function getLinkStringProperty(
 }
 
 /**
- * Rewrite a permanent identification URL as an OCHRE API endpoint
- *
- * The counterpart of {@link transformPermanentIdentificationUrlToItemLink}:
- * the same prefix becomes an API call here and a route into a consuming
- * website there, so which one a caller wants depends on who reads the result.
- * @param url - The permanent identification URL
- * @returns The API URL
- * @internal
- */
+Rewrite a permanent identification URL as an OCHRE API endpoint
+
+The counterpart of {@link transformPermanentIdentificationUrlToItemLink}:
+the same prefix becomes an API call here and a route into a consuming
+website there, so which one a caller wants depends on who reads the result.
+@param url - The permanent identification URL
+@returns The API URL
+@internal
+*/
 export function transformPermanentIdentificationUrl(url: string): string {
   return url.replace(
     PERMANENT_IDENTIFICATION_URL_PREFIX,
@@ -123,11 +123,11 @@ export function transformPermanentIdentificationUrl(url: string): string {
 }
 
 /**
- * Rewrite a permanent identification URL as a website item route
- * @param url - The permanent identification URL
- * @returns The item route
- * @internal
- */
+Rewrite a permanent identification URL as a website item route
+@param url - The permanent identification URL
+@returns The item route
+@internal
+*/
 export function transformPermanentIdentificationUrlToItemLink(
   url: string,
 ): string {
@@ -135,14 +135,14 @@ export function transformPermanentIdentificationUrlToItemLink(
 }
 
 /**
- * Applies text rendering options (bold, italic, underline) to a string
- *
- * @param contentString - The string content to render
- * @param renderString - Space-separated string of render options
- * @param rendering - Which text rendering to produce
- * @returns String with rich-text formatting applied
- * @internal
- */
+Applies text rendering options (bold, italic, underline) to a string
+
+@param contentString - The string content to render
+@param renderString - Space-separated string of render options
+@param rendering - Which text rendering to produce
+@returns String with rich-text formatting applied
+@internal
+*/
 function parseRenderOptions(
   contentString: string,
   renderString: string,
@@ -202,11 +202,7 @@ function applyNewlineWhitespace(
   whitespace: string | undefined,
   rendering: TextRendering,
 ): string {
-  if (whitespace == null) {
-    return contentString;
-  }
-
-  if (!whitespace.split(" ").includes("newline")) {
+  if (!whitespace?.split(" ").includes("newline")) {
     return contentString;
   }
 
@@ -220,15 +216,15 @@ function applyNewlineWhitespace(
 }
 
 /**
- * Parses XML string into a formatted string with rendering options
- *
- * @param string - XML string to parse
- * @param options - Options for parsing
- * @param options.rendering - Which text rendering to produce
- * @returns Formatted string with rendering options
- *
- * @internal
- */
+Parses XML string into a formatted string with rendering options
+
+@param string - XML string to parse
+@param options - Options for parsing
+@param options.rendering - Which text rendering to produce
+@returns Formatted string with rendering options
+
+@internal
+*/
 function parseXMLStringVariant(
   string: XMLString,
   options: { rendering: TextRendering },
@@ -266,20 +262,20 @@ export function parseXMLString(string: XMLString): MultilingualStringText {
 }
 
 /**
- * Creates an MDX component based on the variant
- *
- * @param variant - The variant of the component
- * @param properties - The properties of the component
- * @param properties.uuid - The UUID of the component
- * @param properties.href - The href of the component
- * @param properties.height - The height of the component
- * @param properties.width - The width of the component
- * @param properties.content - The content of the component
- * @param properties.text - The text of the component
- * @returns The MDX component as a string
- *
- * @internal
- */
+Creates an MDX component based on the variant
+
+@param variant - The variant of the component
+@param properties - The properties of the component
+@param properties.uuid - The UUID of the component
+@param properties.href - The href of the component
+@param properties.height - The height of the component
+@param properties.width - The width of the component
+@param properties.content - The content of the component
+@param properties.text - The text of the component
+@returns The MDX component as a string
+
+@internal
+*/
 function createMDXComponent(
   variant:
     | "inlineImage"
@@ -296,7 +292,14 @@ function createMDXComponent(
     width?: string;
   },
 ): string {
-  const { uuid, href, height, width, content, text } = properties;
+  const {
+    uuid,
+    href,
+    height = "null",
+    width = "null",
+    content,
+    text,
+  } = properties;
   let returnString = "";
 
   switch (variant) {
@@ -307,7 +310,7 @@ function createMDXComponent(
       )}${createMDXStringAttribute(
         "content",
         content,
-      )} height={${height ?? "null"}} width={${width ?? "null"}} />`;
+      )} height={${height}} width={${width}} />`;
       break;
     }
     case "internalLink": {
@@ -515,11 +518,8 @@ function extractAnnotationMetadata(
 ): AnnotationMetadata {
   const result: AnnotationMetadata = { linkVariant: null, textStyling: null };
   const itemProperty = item.properties?.property[0];
-  if (itemProperty == null) {
-    return result;
-  }
-
   if (
+    itemProperty == null ||
     !hasMatchingPropertyLabel(
       itemProperty,
       PRESENTATION_ITEM_UUID,
@@ -1047,16 +1047,16 @@ function renderRichTextItem<V extends ReadonlyArray<string>>(
 }
 
 /**
- * Parses rich text content into a formatted string with links and annotations
- *
- * @param item - XML-based rich text item to parse
- * @param options - Options for parsing
- * @param options.languages - Languages of the content
- * @param options.defaultLanguage - The language the dataset declares as its default
- * @returns Plain and rich formatted strings
- *
- * @internal
- */
+Parses rich text content into a formatted string with links and annotations
+
+@param item - XML-based rich text item to parse
+@param options - Options for parsing
+@param options.languages - Languages of the content
+@param options.defaultLanguage - The language the dataset declares as its default
+@returns Plain and rich formatted strings
+
+@internal
+*/
 export function parseXMLContent<V extends ReadonlyArray<string>>(
   item: XMLContent,
   options: { languages: V; defaultLanguage?: V[number] },
@@ -1154,15 +1154,15 @@ function parseXMLContentItem<V extends ReadonlyArray<string>>(
 }
 
 /**
- * Extracts alias strings from XMLContent where lang="zxx"
- *
- * They are aliases only beside another language; parseXMLContent reads
- * `zxx` content standing alone as non-linguistic text instead.
- * @param content - The XMLContent to extract aliases from
- * @returns Array of alias strings, or null if none found
- *
- * @internal
- */
+Extracts alias strings from XMLContent where lang="zxx"
+
+They are aliases only beside another language; parseXMLContent reads
+`zxx` content standing alone as non-linguistic text instead.
+@param content - The XMLContent to extract aliases from
+@returns Array of alias strings, or null if none found
+
+@internal
+*/
 export function extractAliases(
   content: XMLContent | undefined,
 ): Array<string> | null {

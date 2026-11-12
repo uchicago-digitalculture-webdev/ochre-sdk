@@ -246,12 +246,12 @@ type RegistryParserOptions = ParserOptions<ReadonlyArray<string>>;
 type RegistryEmbeddedOptions = EmbeddedItemParserOptions<ReadonlyArray<string>>;
 
 /**
- * Everything the parsers need to know about one OCHRE item category
- *
- * The category list used to be spelled out in four `switch` statements and four
- * constant tables, so adding a category meant finding all eight. It is one
- * table now: a category is whatever has a row here.
- */
+Everything the parsers need to know about one OCHRE item category
+
+The category list used to be spelled out in four `switch` statements and four
+constant tables, so adding a category meant finding all eight. It is one
+table now: a category is whatever has a row here.
+*/
 type ItemCategoryEntry = {
   parseEmbedded:
     | ((item: unknown, options: RegistryEmbeddedOptions) => unknown)
@@ -608,13 +608,13 @@ function getHierarchyEntryCategory(key: string): HierarchyEntryCategory | null {
 }
 
 /**
- * A group element wrapping child resources rather than being one itself
- *
- * A schema rather than a hand-written predicate: `v.is` narrows to exactly what
- * it checked, and a wrapper is distinguished from a resource by carrying no
- * `uuid`, which the `undefined` entry states rather than leaving to a
- * `!("uuid" in value)` test whose false branch means nothing in particular.
- */
+A group element wrapping child resources rather than being one itself
+
+A schema rather than a hand-written predicate: `v.is` narrows to exactly what
+it checked, and a wrapper is distinguished from a resource by carrying no
+`uuid`, which the `undefined` entry states rather than leaving to a
+`!("uuid" in value)` test whose false branch means nothing in particular.
+*/
 const resourceWrapperSchema = v.looseObject({
   uuid: v.undefined(),
   resource: v.array(v.unknown()),
@@ -941,30 +941,27 @@ function parseImageMapArea(area: XMLImageMapArea): ImageMapArea {
     type: area.type,
     title: area.title,
     slug: area.slug ?? null,
-    items:
+    items: [
       shape === "rectangle"
-        ? [
-            {
-              shape,
-              coords: [
-                coords[0] ?? 0,
-                coords[1] ?? 0,
-                coords[2] ?? 0,
-                coords[3] ?? 0,
-              ],
-            },
-          ]
+        ? {
+            shape,
+            coords: [
+              coords[0] ?? 0,
+              coords[1] ?? 0,
+              coords[2] ?? 0,
+              coords[3] ?? 0,
+            ],
+          }
         : shape === "circle"
-          ? [
-              {
-                shape,
-                center: { x: coords[0] ?? 0, y: coords[1] ?? 0 },
-                radius: coords[2] ?? 0,
-              },
-            ]
+          ? {
+              shape,
+              center: { x: coords[0] ?? 0, y: coords[1] ?? 0 },
+              radius: coords[2] ?? 0,
+            }
           : shape === "point"
-            ? [{ shape, point: { x: coords[0] ?? 0, y: coords[1] ?? 0 } }]
-            : [{ shape, coords }],
+            ? { shape, point: { x: coords[0] ?? 0, y: coords[1] ?? 0 } }
+            : { shape, coords },
+    ],
   };
 }
 

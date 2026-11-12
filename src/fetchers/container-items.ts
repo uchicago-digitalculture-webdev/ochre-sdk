@@ -26,12 +26,12 @@ function hasArray<T>(items: Array<T> | undefined): boolean {
 }
 
 /**
- * Whether a container payload carries any item of a category
- * @param items - The parsed `<items>` payload
- * @param category - The category to look for
- * @returns True when the payload carries at least one item of it
- * @internal
- */
+Whether a container payload carries any item of a category
+@param items - The parsed `<items>` payload
+@param category - The category to look for
+@returns True when the payload carries at least one item of it
+@internal
+*/
 export function hasItemsCategory(
   items: XMLSetItems,
   category: ItemCategory,
@@ -221,27 +221,27 @@ function buildOrderedItemsClause(sort: SetItemsSort): string {
 }
 
 /**
- * Fetch one page of the items a Set or a Tree holds
- *
- * The only thing that differs between the two containers is the searchable
- * path {@link compileContainerItemsQuery} picks, so counting, sorting,
- * paginating, validating and parsing are written once here and the public
- * fetchers are thin wrappers that name their own scope parameter.
- * @param parameters - The request parameters
- * @param parameters.container - Whether the scope UUIDs name Sets or Trees
- * @param parameters.scopeUuids - The container UUIDs to search within
- * @param parameters.belongsToCollectionScopeUuids - Collection scope UUIDs to narrow to
- * @param parameters.queries - The query tree to filter by, or null to match every item
- * @param parameters.sort - The sort applied before pagination
- * @param parameters.page - The page number, 1-indexed
- * @param parameters.pageSize - The number of items per page
- * @param parameters.containedItemCategories - Categories the payload must carry
- * @param parameters.label - What is being fetched, used in failure messages
- * @param parameters.options - Fetch and parser options
- * @returns The page of items, deduplicated by UUID
- * @throws When the request fails, validation fails, or a category is missing
- * @internal
- */
+Fetch one page of the items a Set or a Tree holds
+
+The only thing that differs between the two containers is the searchable
+path {@link compileContainerItemsQuery} picks, so counting, sorting,
+paginating, validating and parsing are written once here and the public
+fetchers are thin wrappers that name their own scope parameter.
+@param parameters - The request parameters
+@param parameters.container - Whether the scope UUIDs name Sets or Trees
+@param parameters.scopeUuids - The container UUIDs to search within
+@param parameters.belongsToCollectionScopeUuids - Collection scope UUIDs to narrow to
+@param parameters.queries - The query tree to filter by, or null to match every item
+@param parameters.sort - The sort applied before pagination
+@param parameters.page - The page number, 1-indexed
+@param parameters.pageSize - The number of items per page
+@param parameters.containedItemCategories - Categories the payload must carry
+@param parameters.label - What is being fetched, used in failure messages
+@param parameters.options - Fetch and parser options
+@returns The page of items, deduplicated by UUID
+@throws When the request fails, validation fails, or a category is missing
+@internal
+*/
 export async function fetchContainerItems(parameters: {
   container: "set" | "tree";
   scopeUuids: Array<string>;

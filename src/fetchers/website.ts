@@ -30,11 +30,11 @@ async function areWebsiteCredentialsValid(
 }
 
 /**
- * Build an XQuery string to fetch a website tree document by abbreviation.
- *
- * @param abbreviation - The lowercased website abbreviation to match
- * @returns An XQuery string
- */
+Build an XQuery string to fetch a website tree document by abbreviation.
+
+@param abbreviation - The lowercased website abbreviation to match
+@returns An XQuery string
+*/
 function buildXQuery(abbreviation: string): string {
   return compileOchreQuery({
     body: ({ omitSupplemental }) =>
@@ -55,14 +55,14 @@ return
 }
 
 /**
- * Fetches and parses a website configuration from the OCHRE API.
- *
- * For password-protected or OCHRE-credential-protected websites, if no credentials
- * are provided the function returns a minimal `protectedWebsite` object instead of
- * the full website. Pass `credentials` (a shared password string, or an object with
- * `username` and `password` for OCHRE accounts) to authenticate and receive the full
- * website data.
- */
+Fetches and parses a website configuration from the OCHRE API.
+
+For password-protected or OCHRE-credential-protected websites, if no credentials
+are provided the function returns a minimal `protectedWebsite` object instead of
+the full website. Pass `credentials` (a shared password string, or an object with
+`username` and `password` for OCHRE accounts) to authenticate and receive the full
+website data.
+*/
 export async function fetchWebsite<
   const T extends LanguageCodes = LanguageCodes,
 >(

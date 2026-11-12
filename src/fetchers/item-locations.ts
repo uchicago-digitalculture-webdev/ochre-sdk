@@ -24,25 +24,25 @@ import { XMLItemLocationsData as XMLItemLocationsDataSchema } from "#/xml/schema
 import { getContentLanguage, stringLiteral } from "#/xquery.js";
 
 /**
- * Fetches the location of every Set or Tree item that matches a query, without paging
- *
- * Each item carries only its identification, the scope Sets and Trees it
- * belongs to, its publication date, its coordinates, optionally its map
- * polygons, and the values of the requested property variables (inherited
- * values included), which is what a map needs to draw, color and group every
- * match into layers while a list pages through the same query with
- * {@link fetchSetItems} or {@link fetchTreeItems}.
- *
- * @param parameters - The parameters for the fetch
- * @param parameters.setScopeUuids - The Set scope UUIDs to search within
- * @param parameters.treeScopeUuids - The Tree scope UUIDs to search within
- * @param parameters.queries - Recursive query tree used to filter matching items
- * @param parameters.propertyVariableUuids - The property variables whose values each item should carry
- * @param parameters.isMapDataIncluded - Whether each item should carry its map polygons
- * @param options - Options for the fetch
- * @param options.fetch - The fetch function to use
- * @returns The item locations, or an error if the fetch/parse fails
- */
+Fetches the location of every Set or Tree item that matches a query, without paging
+
+Each item carries only its identification, the scope Sets and Trees it
+belongs to, its publication date, its coordinates, optionally its map
+polygons, and the values of the requested property variables (inherited
+values included), which is what a map needs to draw, color and group every
+match into layers while a list pages through the same query with
+{@link fetchSetItems} or {@link fetchTreeItems}.
+
+@param parameters - The parameters for the fetch
+@param parameters.setScopeUuids - The Set scope UUIDs to search within
+@param parameters.treeScopeUuids - The Tree scope UUIDs to search within
+@param parameters.queries - Recursive query tree used to filter matching items
+@param parameters.propertyVariableUuids - The property variables whose values each item should carry
+@param parameters.isMapDataIncluded - Whether each item should carry its map polygons
+@param options - Options for the fetch
+@param options.fetch - The fetch function to use
+@returns The item locations, or an error if the fetch/parse fails
+*/
 export async function fetchItemLocations<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(

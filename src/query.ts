@@ -54,10 +54,10 @@ type CtsQueryLeaf = Exclude<QueryLeaf, OcrQuery>;
 type OcrBinding = { name: string; expression: string };
 
 /**
- * A search over the Set items, optionally narrowed by item path predicates.
- * Predicates carry the OCR joins, which only ever AND, so anything a predicate
- * cannot express becomes a `union`/`intersect` of plans instead.
- */
+A search over the Set items, optionally narrowed by item path predicates.
+Predicates carry the OCR joins, which only ever AND, so anything a predicate
+cannot express becomes a `union`/`intersect` of plans instead.
+*/
 type ItemsSearchPlan = {
   kind: "search";
   itemPredicates: Array<string>;
@@ -97,13 +97,13 @@ const CONTENT_TARGET_FIELD_ELEMENT_PATHS: Record<
 };
 
 /**
- * A search value as it travels through the query builders
- *
- * `text` drives tokenization and the wildcard/stemming classification, while
- * `expression` is what the emitted XQuery carries. They come apart inside a
- * parameterized helper, whose body has to reference the helper's `$value`
- * parameter while still being classified from the sample term it was built for.
- */
+A search value as it travels through the query builders
+
+`text` drives tokenization and the wildcard/stemming classification, while
+`expression` is what the emitted XQuery carries. They come apart inside a
+parameterized helper, whose body has to reference the helper's `$value`
+parameter while still being classified from the sample term it was built for.
+*/
 type QuerySearchValue = { text: string; expression: string };
 
 const HELPER_SEARCH_VALUE_REFERENCE = "$value";
@@ -209,15 +209,11 @@ function shouldUseFullValueFallbackForIncludes(parameters: {
   for (const rawTerm of rawSpaceTerms) {
     const wildcardStrippedTerm = getWildcardStrippedValue(rawTerm);
 
-    if (hasWildcardCharacters(rawTerm)) {
-      return true;
-    }
-
-    if (!CTS_INCLUDES_TOKEN_WORD_REGEX.test(wildcardStrippedTerm)) {
-      return true;
-    }
-
-    if (CTS_INCLUDES_STOP_WORDS.has(rawTerm.toLowerCase())) {
+    if (
+      hasWildcardCharacters(rawTerm) ||
+      !CTS_INCLUDES_TOKEN_WORD_REGEX.test(wildcardStrippedTerm) ||
+      CTS_INCLUDES_STOP_WORDS.has(rawTerm.toLowerCase())
+    ) {
       return true;
     }
   }
@@ -506,13 +502,13 @@ function buildValueIdReferenceQuery(): string {
 }
 
 /**
- * Match a field's `content` in a language, falling back to another language
- * only for fields that carry no content in the first one
- *
- * Placed inside the field element (a label, a note, a property value), so the
- * missing-language check is scoped to that one field. Without a distinct
- * fallback it is the single-language query this always compiled to.
- */
+Match a field's `content` in a language, falling back to another language
+only for fields that carry no content in the first one
+
+Placed inside the field element (a label, a note, a property value), so the
+missing-language check is scoped to that one field. Without a distinct
+fallback it is the single-language query this always compiled to.
+*/
 function buildLocalizedContentQueryExpression(parameters: {
   language: string;
   fallbackLanguage?: string;
@@ -1062,11 +1058,11 @@ function tokenizeOcrExactValue(value: string): Array<string> {
 }
 
 /**
- * Word queries against the OCR layer cannot carry a stemming option: the OCHRE
- * database has unstemmed word searches turned off, and asking a word query for
- * `unstemmed` fails with `XDMP-WORDSEARCH`. Omitting the option altogether
- * resolves the term against the database default instead.
- */
+Word queries against the OCR layer cannot carry a stemming option: the OCHRE
+database has unstemmed word searches turned off, and asking a word query for
+`unstemmed` fails with `XDMP-WORDSEARCH`. Omitting the option altogether
+resolves the term against the database default instead.
+*/
 function buildOcrWordQueryExpression(parameters: {
   value: QuerySearchValue;
   isCaseSensitive: boolean;
@@ -1096,22 +1092,22 @@ function buildOcrValueQueryExpression(parameters: {
 }
 
 /**
- * Compile an OCR text search into a query over the `<ocr>` layers of a
- * Resource document
- *
- * Each word node in a layer holds a single OCR word in its `CONTENT`
- * attribute, so `includes` matches every search term as a word inside that
- * attribute, and `exact` requires every term to equal a whole `CONTENT` value.
- * A Resource carries one layer per page, so each term is its own element query
- * and the terms may fall on different pages, which is also all the indexes can
- * tell apart.
- *
- * The conjunction is only an index narrowing for `exact`. Attribute values
- * carry no word positions, so `cts:near-query` over them silently degenerates
- * into a conjunction and cannot express a phrase at all. Word order and
- * adjacency are instead enforced by {@link registerOcrPhraseHelper} over the
- * documents this narrowing returns.
- */
+Compile an OCR text search into a query over the `<ocr>` layers of a
+Resource document
+
+Each word node in a layer holds a single OCR word in its `CONTENT`
+attribute, so `includes` matches every search term as a word inside that
+attribute, and `exact` requires every term to equal a whole `CONTENT` value.
+A Resource carries one layer per page, so each term is its own element query
+and the terms may fall on different pages, which is also all the indexes can
+tell apart.
+
+The conjunction is only an index narrowing for `exact`. Attribute values
+carry no word positions, so `cts:near-query` over them silently degenerates
+into a conjunction and cannot express a phrase at all. Word order and
+adjacency are instead enforced by {@link registerOcrPhraseHelper} over the
+documents this narrowing returns.
+*/
 function buildOcrQueryExpression(query: OcrQuery): string {
   const { value, matchMode, isCaseSensitive } = query;
   const terms =
@@ -1139,9 +1135,9 @@ function buildOcrQueryExpression(query: OcrQuery): string {
 }
 
 /**
- * Declare the filter that holds an `exact` multi-term search to a run of
- * adjacent OCR words, which no CTS query over the layer can express
- */
+Declare the filter that holds an `exact` multi-term search to a run of
+adjacent OCR words, which no CTS query over the layer can express
+*/
 function registerOcrPhraseHelper(context: QueryCompilerContext): string {
   const helperName = "local:ocrHasPhrase";
 
@@ -1172,9 +1168,9 @@ function registerOcrPhraseHelper(context: QueryCompilerContext): string {
 }
 
 /**
- * Bind the UUIDs of the Resource documents whose OCR layer matches a query,
- * reusing the binding when the same search is requested more than once
- */
+Bind the UUIDs of the Resource documents whose OCR layer matches a query,
+reusing the binding when the same search is requested more than once
+*/
 function registerOcrBinding(
   context: QueryCompilerContext,
   query: OcrQuery,
@@ -1339,12 +1335,10 @@ function buildLeafValueQueryExpression(parameters: {
   }
 }
 
-function indentBlock(value: string, spaces: number): string {
-  const prefix = " ".repeat(spaces);
-
+function indentBlock(value: string): string {
   return value
     .split("\n")
-    .map((line) => (line === "" ? line : `${prefix}${line}`))
+    .map((line) => (line === "" ? line : `  ${line}`))
     .join("\n");
 }
 
@@ -1377,7 +1371,7 @@ function registerConstantHelper(parameters: {
   context.nextHelperSerial += 1;
   context.helperNamesByKey.set(key, helperName);
   context.helperDeclarations.push(
-    `declare function ${helperName}() as cts:query {\n${indentBlock(bodyExpression, 2)}\n};`,
+    `declare function ${helperName}() as cts:query {\n${indentBlock(bodyExpression)}\n};`,
   );
 
   return { name: helperName, callExpression: `${helperName}()` };
@@ -1402,7 +1396,7 @@ function registerParameterizedHelper(parameters: {
   context.nextHelperSerial += 1;
   context.helperNamesByKey.set(key, helperName);
   context.helperDeclarations.push(
-    `declare function ${helperName}($value as xs:string) as cts:query {\n${indentBlock(bodyExpression, 2)}\n};`,
+    `declare function ${helperName}($value as xs:string) as cts:query {\n${indentBlock(bodyExpression)}\n};`,
   );
 
   return {
@@ -1790,14 +1784,14 @@ function buildCtsItemsPlan(queryExpression: string): ItemsSearchPlan {
 }
 
 /**
- * Plan a leaf that falls back to a second language for fields missing the first
- *
- * The strict query needs a `cts:not-query` scoped to one field, which CTS
- * resolves against the Set's single fragment and so rules out every item the
- * moment any item holds the first language. The search therefore runs a
- * superset (the leaf in either language), and `cts:contains` then applies the
- * strict query to each matched item projection, where the negation is exact.
- */
+Plan a leaf that falls back to a second language for fields missing the first
+
+The strict query needs a `cts:not-query` scoped to one field, which CTS
+resolves against the Set's single fragment and so rules out every item the
+moment any item holds the first language. The search therefore runs a
+superset (the leaf in either language), and `cts:contains` then applies the
+strict query to each matched item projection, where the negation is exact.
+*/
 function buildFallbackItemsPlan(parameters: {
   supersetQueryExpression: string;
   strictQueryExpression: string;
@@ -1813,15 +1807,15 @@ function buildFallbackItemsPlan(parameters: {
 }
 
 /**
- * Plan a negated leaf as an item path predicate
- *
- * A Set holds every one of its items in one fragment, and CTS resolves
- * `cts:not-query` from the fragment indexes without filtering the match down to
- * the node it came from. Negating inside the search query would therefore drop
- * every item of a Set as soon as one of them matched, and keep every item of a
- * Set that held no match at all. `cts:contains` evaluates the leaf against one
- * item projection instead, which is the scope the negation is asking about.
- */
+Plan a negated leaf as an item path predicate
+
+A Set holds every one of its items in one fragment, and CTS resolves
+`cts:not-query` from the fragment indexes without filtering the match down to
+the node it came from. Negating inside the search query would therefore drop
+every item of a Set as soon as one of them matched, and keep every item of a
+Set that held no match at all. `cts:contains` evaluates the leaf against one
+item projection instead, which is the scope the negation is asking about.
+*/
 function buildNegatedItemsPlan(queryExpression: string): ItemsSearchPlan {
   return {
     kind: "search",
@@ -1832,9 +1826,9 @@ function buildNegatedItemsPlan(queryExpression: string): ItemsSearchPlan {
 }
 
 /**
- * Splice the children of same-kind child plans into their parent, so that a
- * nested group of the same operator does not cost an extra search
- */
+Splice the children of same-kind child plans into their parent, so that a
+nested group of the same operator does not cost an extra search
+*/
 function flattenItemsPlans(
   childPlans: Array<ItemsPlan>,
   kind: "union" | "intersect",
@@ -1865,12 +1859,12 @@ function appendUniquePredicates(
 }
 
 /**
- * Fold the children of an `and` group into one plan
- *
- * Conjunction is the direction the item path predicates already run in, so
- * every child that is a plain search collapses into a single search, and only
- * the children that resolved to a union stay separate.
- */
+Fold the children of an `and` group into one plan
+
+Conjunction is the direction the item path predicates already run in, so
+every child that is a plain search collapses into a single search, and only
+the children that resolved to a union stay separate.
+*/
 function buildAndItemsPlan(childPlans: Array<ItemsPlan>): ItemsPlan {
   const mergedPlan: ItemsSearchPlan = {
     kind: "search",
@@ -1912,11 +1906,11 @@ function buildAndItemsPlan(childPlans: Array<ItemsPlan>): ItemsPlan {
 }
 
 /**
- * Fold the children of an `or` group into one plan
- *
- * Item path predicates cannot be disjoined, so a child carrying one becomes its
- * own arm of a node union. Everything else is still a single CTS query.
- */
+Fold the children of an `or` group into one plan
+
+Item path predicates cannot be disjoined, so a child carrying one becomes its
+own arm of a node union. Everything else is still a single CTS query.
+*/
 function buildOrItemsPlan(childPlans: Array<ItemsPlan>): ItemsPlan {
   const mergedQueryExpressions: Array<string> = [];
   const unionedPlans: Array<ItemsPlan> = [];
@@ -2096,45 +2090,45 @@ export function buildBelongsToCollectionQueryExpression(
 }
 
 /**
- * Compile a query tree into the XQuery `let` clauses that bind `$items` to the
- * matching Set items
- *
- * Most queries compile to a single `cts:search` over the Set item projections.
- * An `ocr` leaf cannot: the projections drop the `<ocr>` layer, so it resolves
- * to a search over the Resource documents whose matching UUIDs are joined back
- * in as an item path predicate. A negated leaf cannot either, because CTS
- * answers a negation for the whole fragment rather than for the item that
- * matched, so it is filtered per item instead. Path predicates only ever AND,
- * so such a leaf that sits under an `or` becomes its own arm of a node union
- * instead, and one that sits under an `and` alongside a union becomes an
- * intersection.
- *
- * The searchable path has to stay inline in `cts:search`: binding it to a
- * variable first makes every query XDMP-UNSEARCHABLE.
- * @param parameters - The parameters for the compilation
- * @param parameters.queries - Recursive query tree to compile, if any
- * @param parameters.baseItemsExpression - The inline XQuery path selecting the items to search
- * @param parameters.scopeQueryExpression - An optional CTS query ANDed into every compiled search
- * @returns The prolog declaring the query helpers, and the `let` clauses binding `$items`
- */
+Compile a query tree into the XQuery `let` clauses that bind `$items` to the
+matching Set items
+
+Most queries compile to a single `cts:search` over the Set item projections.
+An `ocr` leaf cannot: the projections drop the `<ocr>` layer, so it resolves
+to a search over the Resource documents whose matching UUIDs are joined back
+in as an item path predicate. A negated leaf cannot either, because CTS
+answers a negation for the whole fragment rather than for the item that
+matched, so it is filtered per item instead. Path predicates only ever AND,
+so such a leaf that sits under an `or` becomes its own arm of a node union
+instead, and one that sits under an `and` alongside a union becomes an
+intersection.
+
+The searchable path has to stay inline in `cts:search`: binding it to a
+variable first makes every query XDMP-UNSEARCHABLE.
+@param parameters - The parameters for the compilation
+@param parameters.queries - Recursive query tree to compile, if any
+@param parameters.baseItemsExpression - The inline XQuery path selecting the items to search
+@param parameters.scopeQueryExpression - An optional CTS query ANDed into every compiled search
+@returns The prolog declaring the query helpers, and the `let` clauses binding `$items`
+*/
 const ITEMS_VARIABLE = "$items";
 
 /**
- * The scope variable and searchable path of each item container
- *
- * A path has to stay inline in `cts:search`: binding it to a variable first
- * materializes the sequence and makes every query `XDMP-UNSEARCHABLE`, even a
- * plain word query. Each references its own scope variable, which
- * {@link compileContainerItemsQuery} declares.
- *
- * A Tree nests its items under headings to any depth, so its path walks the
- * descendant axis and then keeps only the nodes a heading or `items` holds
- * directly, which is what distinguishes an item from the elements inside one.
- * Excluding `heading` matters twice: a heading is not an item, and searching
- * over headings would match every item under a heading whose own text matches.
- * The union form `items/(* | heading/*)` is deliberately not used, because
- * MarkLogic rejects a union as `XDMP-UNSEARCHABLE`.
- */
+The scope variable and searchable path of each item container
+
+A path has to stay inline in `cts:search`: binding it to a variable first
+materializes the sequence and makes every query `XDMP-UNSEARCHABLE`, even a
+plain word query. Each references its own scope variable, which
+{@link compileContainerItemsQuery} declares.
+
+A Tree nests its items under headings to any depth, so its path walks the
+descendant axis and then keeps only the nodes a heading or `items` holds
+directly, which is what distinguishes an item from the elements inside one.
+Excluding `heading` matters twice: a heading is not an item, and searching
+over headings would match every item under a heading whose own text matches.
+The union form `items/(* | heading/*)` is deliberately not used, because
+MarkLogic rejects a union as `XDMP-UNSEARCHABLE`.
+*/
 const ITEMS_CONTAINERS = {
   set: {
     scopeVariable: "$setScopeUuids",
@@ -2148,19 +2142,19 @@ const ITEMS_CONTAINERS = {
 } as const;
 
 /**
- * Compile a query tree into the clauses that bind the matching Set items
- *
- * The returned `itemsClause` binds {@link ITEMS_VARIABLE} and has to be placed
- * inside an XQuery body, with `prolog` declared ahead of it.
- * {@link compileContainerItemsQuery} does both and is what fetchers should use;
- * this is exposed for tests that assert on the compiled CTS.
- * @param parameters - The plan parameters
- * @param parameters.queries - The query tree to compile, or null to match every item
- * @param parameters.baseItemsExpression - The inline searchable path to filter
- * @param parameters.scopeQueryExpression - An extra query AND-ed into every search
- * @returns The prolog, the clauses binding the items, and the bound CTS queries
- * @internal
- */
+Compile a query tree into the clauses that bind the matching Set items
+
+The returned `itemsClause` binds {@link ITEMS_VARIABLE} and has to be placed
+inside an XQuery body, with `prolog` declared ahead of it.
+{@link compileContainerItemsQuery} does both and is what fetchers should use;
+this is exposed for tests that assert on the compiled CTS.
+@param parameters - The plan parameters
+@param parameters.queries - The query tree to compile, or null to match every item
+@param parameters.baseItemsExpression - The inline searchable path to filter
+@param parameters.scopeQueryExpression - An extra query AND-ed into every search
+@returns The prolog, the clauses binding the items, and the bound CTS queries
+@internal
+*/
 export function buildQueryPlan(parameters: {
   queries: Query | null;
   baseItemsExpression: string;
@@ -2234,30 +2228,30 @@ export function buildQueryPlan(parameters: {
 }
 
 /**
- * The OCHRE item containers a paginated item query can run over
- */
+The OCHRE item containers a paginated item query can run over
+*/
 export type ItemsContainer = keyof typeof ITEMS_CONTAINERS;
 
 /**
- * Compile an item query over a Set or a Tree into a complete XQuery document
- *
- * Owns everything a caller would otherwise have to know and restate: the
- * version declaration, the scope variable, the supplemental-stripping prolog,
- * the inline searchable path for the container, where the compiled helper
- * prolog goes and that it is only declared when non-empty, the `<ochre>`
- * wrapper, and the name of the variable holding the matching items. The body
- * receives that name, so it is identical for either container.
- * @param parameters - The query parameters
- * @param parameters.container - Whether the scope UUIDs name Sets or Trees
- * @param parameters.scopeUuids - The container UUIDs to search within
- * @param parameters.belongsToCollectionScopeUuids - Collection scope UUIDs to narrow to
- * @param parameters.queries - The query tree to compile, or null to match every item
- * @param parameters.declarations - Extra prolog declarations, placed before the compiled prolog
- * @param parameters.body - Builds the body from the name of the variable holding the items
- * @param parameters.contentLanguage - Keep only this language of every multilingual field in the result
- * @returns A complete XQuery document
- * @internal
- */
+Compile an item query over a Set or a Tree into a complete XQuery document
+
+Owns everything a caller would otherwise have to know and restate: the
+version declaration, the scope variable, the supplemental-stripping prolog,
+the inline searchable path for the container, where the compiled helper
+prolog goes and that it is only declared when non-empty, the `<ochre>`
+wrapper, and the name of the variable holding the matching items. The body
+receives that name, so it is identical for either container.
+@param parameters - The query parameters
+@param parameters.container - Whether the scope UUIDs name Sets or Trees
+@param parameters.scopeUuids - The container UUIDs to search within
+@param parameters.belongsToCollectionScopeUuids - Collection scope UUIDs to narrow to
+@param parameters.queries - The query tree to compile, or null to match every item
+@param parameters.declarations - Extra prolog declarations, placed before the compiled prolog
+@param parameters.body - Builds the body from the name of the variable holding the items
+@param parameters.contentLanguage - Keep only this language of every multilingual field in the result
+@returns A complete XQuery document
+@internal
+*/
 export function compileContainerItemsQuery(parameters: {
   container: ItemsContainer;
   scopeUuids: ReadonlyArray<string>;
@@ -2303,15 +2297,15 @@ ${body({ ...context, items: plan.itemsVariable })}
 }
 
 /**
- * Reduce a property-value facet query tree to the leaves that filter items
- *
- * A facet request carries property leaves that name a variable without naming
- * a value, which select what to aggregate rather than which items to keep.
- * Those are dropped, and groups left with a single child collapse into it.
- * @param queries - The query tree to reduce
- * @returns The reduced tree, or null when nothing filters items
- * @internal
- */
+Reduce a property-value facet query tree to the leaves that filter items
+
+A facet request carries property leaves that name a variable without naming
+a value, which select what to aggregate rather than which items to keep.
+Those are dropped, and groups left with a single child collapse into it.
+@param queries - The query tree to reduce
+@returns The reduced tree, or null when nothing filters items
+@internal
+*/
 export function getItemFilterQueries(queries: Query | null): Query | null {
   if (queries == null) {
     return null;
@@ -2349,11 +2343,11 @@ export function getItemFilterQueries(queries: Query | null): Query | null {
 }
 
 /**
- * Collect the property variables a query tree asks to be aggregated
- * @param queries - The query tree to walk
- * @returns One selector per distinct property variable and relation pair
- * @internal
- */
+Collect the property variables a query tree asks to be aggregated
+@param queries - The query tree to walk
+@returns One selector per distinct property variable and relation pair
+@internal
+*/
 export function getPropertyFacetSelectors(
   queries: Query | null,
 ): Array<{ uuid: string; relation: PropertyRelation | null }> {

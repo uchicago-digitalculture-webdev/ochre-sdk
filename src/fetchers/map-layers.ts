@@ -38,10 +38,10 @@ const REGEX_TRAILING_SLASH = /\/$/;
 const REGEX_ARCGIS_SOAP_SERVICES = /\/arcgis\/services\//i;
 
 /**
- * Classify the href of a webpage Resource as a geospatial web service
- * @param href - The Resource href
- * @returns The service layer, or null when the href names no supported service
- */
+Classify the href of a webpage Resource as a geospatial web service
+@param href - The Resource href
+@returns The service layer, or null when the href names no supported service
+*/
 function parseServiceLayer(
   href: string,
 ):
@@ -113,11 +113,11 @@ function parseServiceLayer(
 }
 
 /**
- * Build the layer a Set, Tree or Resource of a map's layer list stands for
- * @param member - The linked Set, Tree or Resource
- * @param languages - The languages to parse
- * @returns The layer, or null when a Resource names no supported service
- */
+Build the layer a Set, Tree or Resource of a map's layer list stands for
+@param member - The linked Set, Tree or Resource
+@param languages - The languages to parse
+@returns The layer, or null when a Resource names no supported service
+*/
 function parseMapLayer(
   member: XMLMapSource | XMLMapLayer,
   languages: ReadonlyArray<string>,
@@ -142,20 +142,20 @@ function parseMapLayer(
 }
 
 /**
- * Fetches the layers a map draws from the Sets and Trees it links to
- *
- * A linked Set holding only Sets, Trees and Resources is a layer list: each
- * linked Set or Tree becomes an OCHRE layer and each webpage Resource whose
- * href points at a geospatial web service becomes a service layer. Any other
- * linked Set or Tree is drawn as one OCHRE layer itself. The variant is
- * `"arcgis"` when any service layer is present, else `"maplibre-gl"`.
- *
- * @param uuids - The UUIDs of the Sets and Trees the map links to, in order
- * @param options - Options for the fetch
- * @param options.languages - Language codes to parse
- * @param options.fetch - The fetch function to use
- * @returns The map variant and layers, or an error if the fetch/parse fails
- */
+Fetches the layers a map draws from the Sets and Trees it links to
+
+A linked Set holding only Sets, Trees and Resources is a layer list: each
+linked Set or Tree becomes an OCHRE layer and each webpage Resource whose
+href points at a geospatial web service becomes a service layer. Any other
+linked Set or Tree is drawn as one OCHRE layer itself. The variant is
+`"arcgis"` when any service layer is present, else `"maplibre-gl"`.
+
+@param uuids - The UUIDs of the Sets and Trees the map links to, in order
+@param options - Options for the fetch
+@param options.languages - Language codes to parse
+@param options.fetch - The fetch function to use
+@returns The map variant and layers, or an error if the fetch/parse fails
+*/
 export async function fetchMapLayers<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
@@ -243,17 +243,20 @@ export async function fetchMapLayers(
         }
       }
 
-      const mapServerUrls = sourceLayers.flatMap((layer) =>
-        layer.type === "arcgis-map" ? [`${layer.url}/`] : [],
-      );
+      const mapServerUrls = sourceLayers
+        .map((layer) => (layer.type === "arcgis-map" ? `${layer.url}/` : null))
+        .filter((url) => url != null);
+
       for (const layer of sourceLayers) {
         const isMapServerDuplicate =
           layer.type === "wmts" &&
           mapServerUrls.some((url) => layer.url.startsWith(url));
-        if (!isMapServerDuplicate && !layerUuids.has(layer.uuid)) {
-          layerUuids.add(layer.uuid);
-          layers.push(layer);
+        if (isMapServerDuplicate || layerUuids.has(layer.uuid)) {
+          continue;
         }
+
+        layerUuids.add(layer.uuid);
+        layers.push(layer);
       }
     }
 

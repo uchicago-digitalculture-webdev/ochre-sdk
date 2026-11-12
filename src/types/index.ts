@@ -3,16 +3,16 @@ import type { Prettify } from "#/types/utilities.js";
 import type { Style, Webpage } from "#/types/website.js";
 
 /**
- * Language-code tuple or array used by OCHRE multilingual fields.
- *
- * Use the default when the consumer does not need to narrow a value to a
- * specific language tuple.
- */
+Language-code tuple or array used by OCHRE multilingual fields.
+
+Use the default when the consumer does not need to narrow a value to a
+specific language tuple.
+*/
 export type LanguageCodes = ReadonlyArray<string>;
 
 /**
- * The category of an item in OCHRE
- */
+The category of an item in OCHRE
+*/
 export type ItemCategory =
   | "tree"
   | "bibliography"
@@ -27,13 +27,13 @@ export type ItemCategory =
   | "set";
 
 /**
- * OCHRE item categories that can contain other items in API payloads.
- */
+OCHRE item categories that can contain other items in API payloads.
+*/
 export type ItemContainerCategory = Extract<ItemCategory, "tree" | "set">;
 
 /**
- * OCHRE item categories that expose recursive embedded item payloads.
- */
+OCHRE item categories that expose recursive embedded item payloads.
+*/
 export type ItemCategoryWithEmbeddedItems = Extract<
   ItemCategory,
   | "tree"
@@ -46,13 +46,13 @@ export type ItemCategoryWithEmbeddedItems = Extract<
 >;
 
 /**
- * The category of items in a Tree
- */
+The category of items in a Tree
+*/
 export type TreeItemCategory = Exclude<ItemCategory, "tree">;
 
 /**
- * The category of items in a Set
- */
+The category of items in a Set
+*/
 export type SetItemCategory = ItemCategory;
 
 export type ItemCategoryOption<U extends ItemCategory = ItemCategory> =
@@ -93,24 +93,24 @@ export type ContainedItemCategoryFromOption<
       : ContainedItemCategory<U>;
 
 /**
- * The category of items in a heading
- */
+The category of items in a heading
+*/
 export type HeadingItemCategory = Exclude<
   ItemCategory,
   "tree" | "bibliography" | "spatialUnit" | "concept" | "period"
 >;
 
 /**
- *  The category names that can appear in OCHRE context paths
- */
+The category names that can appear in OCHRE context paths
+*/
 export type ContextItemCategory = Exclude<
   ItemCategory,
   "tree" | "person" | "set"
 >;
 
 /**
- *  Basic identification information
- */
+Basic identification information
+*/
 export type Identification<T extends LanguageCodes = LanguageCodes> = {
   label: MultilingualString<T>;
   abbreviation: MultilingualString<T> | null;
@@ -120,8 +120,8 @@ export type Identification<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- *  Metadata in OCHRE
- */
+Metadata in OCHRE
+*/
 export type Metadata<T extends LanguageCodes = LanguageCodes> = {
   dataset: string;
   description: string;
@@ -157,11 +157,11 @@ export type Metadata<T extends LanguageCodes = LanguageCodes> = {
 export type BelongsTo = { uuid: string; abbreviation: string };
 
 /**
- * Parsed item payload context.
- *
- * Direct children of standalone non-Tree items are shallow. Items parsed from
- * Trees still use "embedded" and can expose recursive descendants.
- */
+Parsed item payload context.
+
+Direct children of standalone non-Tree items are shallow. Items parsed from
+Trees still use "embedded" and can expose recursive descendants.
+*/
 export type ItemPayloadKind = "topLevel" | "embedded" | "standaloneChild";
 
 type RecursiveChildPayloadKind<U extends ItemPayloadKind> = U extends "topLevel"
@@ -185,13 +185,13 @@ type ItemEnvelopeFields<
   : { belongsTo: null; metadata: null; persistentUrl: null };
 
 /**
- *  License in OCHRE
- */
+License in OCHRE
+*/
 export type License = { content: string; target: string | null };
 
 /**
- *  Context item in OCHRE
- */
+Context item in OCHRE
+*/
 export type ContextItem = {
   uuid: string | null;
   publicationDateTime: Date | null;
@@ -200,8 +200,8 @@ export type ContextItem = {
 };
 
 /**
- *  Context node in OCHRE
- */
+Context node in OCHRE
+*/
 export type ContextNode<U extends ContextItemCategory = ContextItemCategory> = {
   tree: ContextItem;
   project: ContextItem;
@@ -209,33 +209,33 @@ export type ContextNode<U extends ContextItemCategory = ContextItemCategory> = {
 } & Partial<Record<U, Array<ContextItem>>>;
 
 /**
- *  Context in OCHRE
- */
+Context in OCHRE
+*/
 export type Context<U extends ContextItemCategory = ContextItemCategory> = {
   nodes: Array<ContextNode<U>>;
   displayPath: string;
 };
 
 /**
- *  Qualifier of a partial date, the EDTF `?`, `~` and `%`
- */
+Qualifier of a partial date, the EDTF `?`, `~` and `%`
+*/
 export type PartialDateQualifier =
   | "uncertain"
   | "approximate"
   | "uncertainAndApproximate";
 
 /**
- *  Season of a partial date, the EDTF months 21 to 24
- */
+Season of a partial date, the EDTF months 21 to 24
+*/
 export type PartialDateSeason = "spring" | "summer" | "autumn" | "winter";
 
 /**
- *  Partial date in OCHRE
- *
- *  `year` has four characters, each a digit or `X` for an unspecified digit,
- *  as in `1941` or `194X`. A date has a month or a season, never both, and a
- *  day only with a month.
- */
+Partial date in OCHRE
+
+`year` has four characters, each a digit or `X` for an unspecified digit,
+as in `1941` or `194X`. A date has a month or a season, never both, and a
+day only with a month.
+*/
 export type PartialDateValue = {
   year: string;
   month: number | null;
@@ -245,11 +245,11 @@ export type PartialDateValue = {
 };
 
 /**
- *  Start or end of a partial date range in OCHRE
- *
- *  `oneOf` is a year field that lists alternative years, as in `1951/1952`.
- *  `unparsed` keeps the fields as entered when they are not a partial date.
- */
+Start or end of a partial date range in OCHRE
+
+`oneOf` is a year field that lists alternative years, as in `1951/1952`.
+`unparsed` keeps the fields as entered when they are not a partial date.
+*/
 export type PartialDateBound =
   | { kind: "date"; value: PartialDateValue }
   | { kind: "oneOf"; values: Array<PartialDateValue> }
@@ -261,11 +261,11 @@ export type PartialDateBound =
     };
 
 /**
- *  Partial dates of an event in OCHRE
- *
- *  `edtf` is the range as an Extended Date/Time Format string, or `null` when
- *  EDTF cannot express it
- */
+Partial dates of an event in OCHRE
+
+`edtf` is the range as an Extended Date/Time Format string, or `null` when
+EDTF cannot express it
+*/
 export type PartialDate = {
   start: PartialDateBound | null;
   end: PartialDateBound | null;
@@ -273,8 +273,8 @@ export type PartialDate = {
 };
 
 /**
- *  Event in OCHRE
- */
+Event in OCHRE
+*/
 export type Event<T extends LanguageCodes = LanguageCodes> = {
   date: Date | { start: Date; end: Date } | null;
   partialDate: PartialDate | null;
@@ -304,8 +304,8 @@ export type Event<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- *  Source of coordinates in OCHRE
- */
+Source of coordinates in OCHRE
+*/
 export type CoordinatesSource<T extends LanguageCodes = LanguageCodes> =
   | { context: "self"; uuid: string; label: MultilingualString<T> }
   | {
@@ -322,8 +322,8 @@ export type CoordinatesSource<T extends LanguageCodes = LanguageCodes> =
     };
 
 /**
- *  Coordinates in OCHRE
- */
+Coordinates in OCHRE
+*/
 export type Coordinates<T extends LanguageCodes = LanguageCodes> =
   | {
       type: "point";
@@ -341,8 +341,8 @@ export type Coordinates<T extends LanguageCodes = LanguageCodes> =
     };
 
 /**
- *  Image in OCHRE
- */
+Image in OCHRE
+*/
 export type Image<T extends LanguageCodes = LanguageCodes> = {
   publicationDateTime: Date | null;
   identification: Identification<T> | null;
@@ -355,8 +355,8 @@ export type Image<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- *  Download option of an item in OCHRE
- */
+Download option of an item in OCHRE
+*/
 export type DownloadOption = {
   type: "highQuality" | "iiifManifest" | "document" | "ocr" | "mets" | "alto";
   href: string;
@@ -365,8 +365,8 @@ export type DownloadOption = {
 };
 
 /**
- *  Area of an image map in OCHRE
- */
+Area of an image map in OCHRE
+*/
 export type ImageMapArea = {
   uuid: string;
   publicationDateTime: Date | null;
@@ -382,8 +382,8 @@ export type ImageMapArea = {
 };
 
 /**
- *  Image map in OCHRE
- */
+Image map in OCHRE
+*/
 export type ImageMap = {
   areas: Array<ImageMapArea>;
   width: number;
@@ -391,22 +391,22 @@ export type ImageMap = {
 };
 
 /**
- *  Positioned OCR string in OCHRE
- *
- *  OCHRE gives no guarantee about the node hierarchy inside a Resource's
- *  `<ocr>` layer, so only its word nodes are parsed, at whatever depth they
- *  occur. A word node is any element named `string` in any casing and any
- *  namespace, and its text is read from the `CONTENT` attribute.
- *
- *  `x` and `y` come from `HPOS` and `VPOS` and locate the top-left corner of
- *  the word's box, while `vertices` comes from `VERTICES` and is its full
- *  bounding polygon, which is not necessarily rectangular. Every geometry
- *  attribute is optional in the source, so each one is null when absent or
- *  unparseable, and `vertices` is then empty.
- *
- *  `resourceUuid` is the Resource that owns the OCR layer, which differs from
- *  the requested item when the OCR lives on a child Resource.
- */
+Positioned OCR string in OCHRE
+
+OCHRE gives no guarantee about the node hierarchy inside a Resource's
+`<ocr>` layer, so only its word nodes are parsed, at whatever depth they
+occur. A word node is any element named `string` in any casing and any
+namespace, and its text is read from the `CONTENT` attribute.
+
+`x` and `y` come from `HPOS` and `VPOS` and locate the top-left corner of
+the word's box, while `vertices` comes from `VERTICES` and is its full
+bounding polygon, which is not necessarily rectangular. Every geometry
+attribute is optional in the source, so each one is null when absent or
+unparseable, and `vertices` is then empty.
+
+`resourceUuid` is the Resource that owns the OCR layer, which differs from
+the requested item when the OCR lives on a child Resource.
+*/
 export type OcrString = {
   resourceUuid: string | null;
   content: string;
@@ -418,8 +418,8 @@ export type OcrString = {
 };
 
 /**
- *  Note in OCHRE
- */
+Note in OCHRE
+*/
 export type Note<T extends LanguageCodes = LanguageCodes> = {
   number: number;
   title: MultilingualString<T> | null;
@@ -428,8 +428,8 @@ export type Note<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- *  Property value content in OCHRE
- */
+Property value content in OCHRE
+*/
 export type PropertyValueContent<T extends LanguageCodes = LanguageCodes> =
   Prettify<
     {
@@ -457,8 +457,8 @@ export type PropertyValueContent<T extends LanguageCodes = LanguageCodes> =
   >;
 
 /**
- *  Property in OCHRE
- */
+Property in OCHRE
+*/
 export type Property<T extends LanguageCodes = LanguageCodes> = {
   variable: {
     uuid: string;
@@ -472,9 +472,9 @@ export type Property<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- * Simplified property in OCHRE website payloads. Simplified property variables
- * expose scalar labels rather than multilingual labels.
- */
+Simplified property in OCHRE website payloads. Simplified property variables
+expose scalar labels rather than multilingual labels.
+*/
 export type SimplifiedProperty<T extends LanguageCodes = LanguageCodes> = {
   variable: {
     uuid: string;
@@ -488,8 +488,8 @@ export type SimplifiedProperty<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- *  Property in a Set item. OCHRE exposes Set item properties as a flat list.
- */
+Property in a Set item. OCHRE exposes Set item properties as a flat list.
+*/
 export type SetItemProperty<T extends LanguageCodes = LanguageCodes> = Omit<
   Property<T>,
   "properties"
@@ -521,8 +521,8 @@ type WithSetItemProperties<
   : never;
 
 /**
- *  Base item in OCHRE
- */
+Base item in OCHRE
+*/
 export type BaseItem<
   U extends ItemCategory = ItemCategory,
   T extends LanguageCodes = LanguageCodes,
@@ -545,8 +545,8 @@ export type BaseItem<
 export type ItemLinkCategory = ItemCategory | "dictionaryUnit";
 
 /**
- *  Base item data exposed by OCHRE link and reverse-link payloads.
- */
+Base item data exposed by OCHRE link and reverse-link payloads.
+*/
 export type BaseItemLink<
   U extends ItemLinkCategory = ItemLinkCategory,
   T extends LanguageCodes = LanguageCodes,
@@ -688,8 +688,8 @@ export type DictionaryUnitItemLink<T extends LanguageCodes = LanguageCodes> =
   Prettify<BaseItemLink<"dictionaryUnit", T>>;
 
 /**
- * An abridged item reference exposed inside OCHRE links and reverse links.
- */
+An abridged item reference exposed inside OCHRE links and reverse links.
+*/
 export type ItemLink<
   U extends ItemLinkCategory = ItemLinkCategory,
   T extends LanguageCodes = LanguageCodes,
@@ -722,8 +722,8 @@ export type ItemLink<
   : never;
 
 /**
- * An Item in OCHRE (can be a tree, set, bibliography, concept, spatial unit, period, person, property value, property variable, or resource)
- */
+An Item in OCHRE (can be a tree, set, bibliography, concept, spatial unit, period, person, property value, property variable, or resource)
+*/
 export type Item<
   U extends ItemCategory = ItemCategory,
   V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
@@ -756,8 +756,8 @@ export type Item<
   : never;
 
 /**
- * An item fetched without its embedded item hierarchy.
- */
+An item fetched without its embedded item hierarchy.
+*/
 export type ItemWithoutEmbeddedItems<
   U extends ItemCategoryWithEmbeddedItems = ItemCategoryWithEmbeddedItems,
   V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
@@ -782,8 +782,8 @@ export type ItemWithoutEmbeddedItems<
   : never;
 
 /**
- *  Heading in OCHRE
- */
+Heading in OCHRE
+*/
 export type Heading<
   U extends HeadingItemCategory = HeadingItemCategory,
   T extends LanguageCodes = LanguageCodes,
@@ -794,8 +794,8 @@ export type Heading<
 };
 
 /**
- *  Tree in OCHRE
- */
+Tree in OCHRE
+*/
 export type Tree<
   U extends TreeItemCategory = TreeItemCategory,
   T extends LanguageCodes = LanguageCodes,
@@ -816,8 +816,8 @@ export type Tree<
 >;
 
 /**
- *  Property of a Set style in OCHRE, with the look its values take
- */
+Property of a Set style in OCHRE, with the look its values take
+*/
 export type SetStyleProperty<T extends LanguageCodes = LanguageCodes> =
   Prettify<
     Omit<Property<T>, "properties"> & {
@@ -827,8 +827,8 @@ export type SetStyleProperty<T extends LanguageCodes = LanguageCodes> =
   >;
 
 /**
- *  Style of a Set in OCHRE
- */
+Style of a Set in OCHRE
+*/
 export type SetStyle<T extends LanguageCodes = LanguageCodes> = {
   date: Date | null;
   title: MultilingualString<T> | null;
@@ -838,8 +838,8 @@ export type SetStyle<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- *  Set in OCHRE
- */
+Set in OCHRE
+*/
 export type Set<
   U extends SetItemCategory = SetItemCategory,
   T extends LanguageCodes = LanguageCodes,
@@ -927,9 +927,9 @@ export type SetItem<
                       : never;
 
 /**
- * The location of a Set item, without its properties, for drawing and ordering
- * every match of a query at once
- */
+The location of a Set item, without its properties, for drawing and ordering
+every match of a query at once
+*/
 export type ItemLocation<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   category: SetItemCategory;
@@ -946,9 +946,9 @@ export type ItemLocation<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- * A layer a map draws, from a Set or Tree of OCHRE items or from a geospatial
- * web service linked as a webpage Resource
- */
+A layer a map draws, from a Set or Tree of OCHRE items or from a geospatial
+web service linked as a webpage Resource
+*/
 export type MapLayer<T extends LanguageCodes = LanguageCodes> =
   | {
       type: "ochre-set" | "ochre-tree";
@@ -977,8 +977,8 @@ export type MapLayer<T extends LanguageCodes = LanguageCodes> =
     };
 
 /**
- *  Person in OCHRE
- */
+Person in OCHRE
+*/
 export type Person<
   T extends LanguageCodes = LanguageCodes,
   U extends ItemPayloadKind = "topLevel",
@@ -1004,8 +1004,8 @@ export type Person<
 >;
 
 /**
- *  Period in OCHRE
- */
+Period in OCHRE
+*/
 export type Period<
   T extends LanguageCodes = LanguageCodes,
   U extends ItemPayloadKind = "topLevel",
@@ -1023,8 +1023,8 @@ export type Period<
 >;
 
 /**
- *  Bibliography in OCHRE
- */
+Bibliography in OCHRE
+*/
 export type Bibliography<
   T extends LanguageCodes = LanguageCodes,
   U extends ItemPayloadKind = "topLevel",
@@ -1061,8 +1061,8 @@ export type Bibliography<
 >;
 
 /**
- *  Concept in OCHRE
- */
+Concept in OCHRE
+*/
 export type Concept<
   T extends LanguageCodes = LanguageCodes,
   U extends ItemPayloadKind = "topLevel",
@@ -1076,8 +1076,8 @@ export type Concept<
 >;
 
 /**
- *  Interpretation in OCHRE
- */
+Interpretation in OCHRE
+*/
 export type Interpretation<T extends LanguageCodes = LanguageCodes> = {
   number: number;
   date: Date | null;
@@ -1091,8 +1091,8 @@ export type Interpretation<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- *  Spatial unit in OCHRE
- */
+Spatial unit in OCHRE
+*/
 export type SpatialUnit<
   T extends LanguageCodes = LanguageCodes,
   U extends ItemPayloadKind = "topLevel",
@@ -1111,8 +1111,8 @@ export type SpatialUnit<
 >;
 
 /**
- *  Observation in OCHRE
- */
+Observation in OCHRE
+*/
 export type Observation<T extends LanguageCodes = LanguageCodes> = {
   number: number;
   date: Date | null;
@@ -1127,8 +1127,8 @@ export type Observation<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- *  Property variable in OCHRE
- */
+Property variable in OCHRE
+*/
 export type PropertyVariable<
   T extends LanguageCodes = LanguageCodes,
   U extends ItemPayloadKind = "topLevel",
@@ -1144,8 +1144,8 @@ export type PropertyVariable<
 >;
 
 /**
- *  Property value in OCHRE
- */
+Property value in OCHRE
+*/
 export type PropertyValue<
   T extends LanguageCodes = LanguageCodes,
   U extends ItemPayloadKind = "topLevel",
@@ -1161,8 +1161,8 @@ export type PropertyValue<
 >;
 
 /**
- *  Resource in OCHRE
- */
+Resource in OCHRE
+*/
 export type Resource<
   T extends LanguageCodes = LanguageCodes,
   U extends ItemPayloadKind = "topLevel",
@@ -1192,8 +1192,8 @@ export type Resource<
 >;
 
 /**
- *  Text in OCHRE
- */
+Text in OCHRE
+*/
 export type Text<
   T extends LanguageCodes = LanguageCodes,
   U extends ItemPayloadKind = "topLevel",
@@ -1215,8 +1215,8 @@ export type Text<
 >;
 
 /**
- *  Section in OCHRE
- */
+Section in OCHRE
+*/
 export type Section<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   publicationDateTime: Date | null;
@@ -1225,8 +1225,8 @@ export type Section<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- * Represents a gallery with its identification, project identification, resources and max length
- */
+Represents a gallery with its identification, project identification, resources and max length
+*/
 export type Gallery<T extends LanguageCodes = LanguageCodes> = {
   identification: Identification<T>;
   projectIdentification: Identification<T>;
@@ -1235,8 +1235,8 @@ export type Gallery<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- * Represents a property query item with its UUID, raw value, count, and content
- */
+Represents a property query item with its UUID, raw value, count, and content
+*/
 export type PropertyValueQueryItem = {
   uuid: string | null;
   count: number;
@@ -1246,11 +1246,11 @@ export type PropertyValueQueryItem = {
 };
 
 /**
- * Represents a grouped Set attribute value query item
- *
- * `content` is the label in the requested language, which facet queries match
- * on; `label` carries the label in every language for display.
- */
+Represents a grouped Set attribute value query item
+
+`content` is the label in the requested language, which facet queries match
+on; `label` carries the label in every language for display.
+*/
 export type SetAttributeValueQueryItem = {
   count: number;
   content: string;
@@ -1258,21 +1258,21 @@ export type SetAttributeValueQueryItem = {
 };
 
 /**
- * Represents sorting direction for Set items
- */
+Represents sorting direction for Set items
+*/
 export type SetItemsSortDirection = "asc" | "desc";
 
 /**
- * Represents sorting options for Set items
- */
+Represents sorting options for Set items
+*/
 export type SetItemsSort =
   | { target: "none" }
   | { target: "title"; direction?: SetItemsSortDirection; language?: string }
   /**
-   * Sort on the item's own date, falling back to its first interpretation's
-   * date. A Concept carries no date of its own and dates its interpretations
-   * instead, so the two together are the one date an item has.
-   */
+  Sort on the item's own date, falling back to its first interpretation's
+  date. A Concept carries no date of its own and dates its interpretations
+  instead, so the two together are the one date an item has.
+  */
   | { target: "date"; direction?: SetItemsSortDirection }
   | {
       target: "propertyValue";
@@ -1282,9 +1282,9 @@ export type SetItemsSort =
       language?: string;
     }
   /**
-   * Sort on the distance from a point, using an item's first point or, failing
-   * that, the center of its first plane. Items without coordinates sort last.
-   */
+  Sort on the distance from a point, using an item's first point or, failing
+  that, the center of its first plane. Items without coordinates sort last.
+  */
   | {
       target: "distance";
       latitude: number;
@@ -1293,25 +1293,25 @@ export type SetItemsSort =
     };
 
 /**
- * Represents a leaf query for Set items
- *
- * The `ocr` target matches the OCR text layer of Resource items. Set item
- * projections do not carry `<ocr>`, so it is resolved by a document join rather
- * than by a CTS term, and it composes with `and`, `or`, and `isNegated` at the
- * cost of one extra search per distinct OCR value. Each `<string>` in that
- * layer holds a single OCR word, so `includes` matches every search term as its
- * own word and `exact` matches the terms as an adjacent run of whole words. OCR
- * text carries no language, so `ocr` leaves take no `language`.
- *
- * An `IDREF` property leaf matches by identity under `exact`, where `value` is
- * the UUID of the linked item, and by the linked item's displayed name under
- * `includes`, which OCHRE copies into the value's `content`. The `all` data
- * type searches the text of every value, linked names included.
- *
- * `fallbackLanguage` searches a field in that language only when the field has
- * no content in `language`, so a match follows the text a reader of `language`
- * is shown. Leave it unset to search `language` alone.
- */
+Represents a leaf query for Set items
+
+The `ocr` target matches the OCR text layer of Resource items. Set item
+projections do not carry `<ocr>`, so it is resolved by a document join rather
+than by a CTS term, and it composes with `and`, `or`, and `isNegated` at the
+cost of one extra search per distinct OCR value. Each `<string>` in that
+layer holds a single OCR word, so `includes` matches every search term as its
+own word and `exact` matches the terms as an adjacent run of whole words. OCR
+text carries no language, so `ocr` leaves take no `language`.
+
+An `IDREF` property leaf matches by identity under `exact`, where `value` is
+the UUID of the linked item, and by the linked item's displayed name under
+`includes`, which OCHRE copies into the value's `content`. The `all` data
+type searches the text of every value, linked names included.
+
+`fallbackLanguage` searches a field in that language only when the field has
+no content in `language`, so a match follows the text a reader of `language`
+is shown. Leave it unset to search `language` alone.
+*/
 export type QueryLeaf =
   | {
       target: "property";
@@ -1414,13 +1414,13 @@ export type QueryLeaf =
     };
 
 /**
- * Represents a boolean query group for Set items
- */
+Represents a boolean query group for Set items
+*/
 export type QueryGroup = { and: Array<Query> } | { or: Array<Query> };
 
 /**
- * Represents a query for Set items
- */
+Represents a query for Set items
+*/
 export type Query = QueryLeaf | QueryGroup;
 
 export type AnyBibliography<T extends LanguageCodes = LanguageCodes> =
@@ -1532,8 +1532,8 @@ export type ItemProperty<T extends LanguageCodes = LanguageCodes> =
   | SetItemProperty<T>;
 
 /**
- * The category of items that expose recursive subitem structures.
- */
+The category of items that expose recursive subitem structures.
+*/
 export type RecursiveItemCategory = Exclude<
   ItemCategory,
   "tree" | "person" | "propertyVariable" | "propertyValue" | "set"

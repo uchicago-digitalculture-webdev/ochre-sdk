@@ -362,13 +362,15 @@ function expectMetadataMatchesRaw(
     ),
   );
 
-  if (rawMetadata.item != null) {
-    expect(metadata.item?.category).toBe(
-      normalizeCategory(rawMetadata.item.category),
-    );
-    expect(metadata.item?.type).toBe(rawMetadata.item.type);
-    expect(metadata.item?.maxLength).toBe(rawMetadata.item.maxLength ?? null);
+  if (rawMetadata.item == null) {
+    return;
   }
+
+  expect(metadata.item?.category).toBe(
+    normalizeCategory(rawMetadata.item.category),
+  );
+  expect(metadata.item?.type).toBe(rawMetadata.item.type);
+  expect(metadata.item?.maxLength).toBe(rawMetadata.item.maxLength ?? null);
 }
 
 function expectIdentificationMatchesRaw(
@@ -737,47 +739,27 @@ function countResourceItems(
   return count;
 }
 
-function hasCategory(
-  categories: ReadonlyArray<ItemCategory> | undefined,
-  category: ItemCategory,
-): boolean {
-  return categories == null || categories.includes(category);
-}
-
 function countItemsInHierarchy(
   hierarchy: XMLItemHierarchy | undefined,
-  categories?: ReadonlyArray<ItemCategory>,
 ): number {
   if (hierarchy == null) {
     return 0;
   }
 
-  let count = 0;
-  if (hasCategory(categories, "tree")) count += hierarchy.tree?.length ?? 0;
-  if (hasCategory(categories, "bibliography")) {
-    count += hierarchy.bibliography?.length ?? 0;
-  }
-  if (hasCategory(categories, "concept"))
-    count += hierarchy.concept?.length ?? 0;
-  if (hasCategory(categories, "spatialUnit")) {
-    count += hierarchy.spatialUnit?.length ?? 0;
-  }
-  if (hasCategory(categories, "period")) count += hierarchy.period?.length ?? 0;
-  if (hasCategory(categories, "person")) count += hierarchy.person?.length ?? 0;
-  if (hasCategory(categories, "propertyVariable")) {
-    count += hierarchy.propertyVariable?.length ?? 0;
-    count += hierarchy.variable?.length ?? 0;
-  }
-  if (hasCategory(categories, "propertyValue")) {
-    count += hierarchy.propertyValue?.length ?? 0;
-  }
-  if (hasCategory(categories, "resource")) {
-    count += countResourceItems(hierarchy.resource);
-  }
-  if (hasCategory(categories, "text")) count += hierarchy.text?.length ?? 0;
-  if (hasCategory(categories, "set")) count += hierarchy.set?.length ?? 0;
-
-  return count;
+  return (
+    (hierarchy.tree?.length ?? 0) +
+    (hierarchy.bibliography?.length ?? 0) +
+    (hierarchy.concept?.length ?? 0) +
+    (hierarchy.spatialUnit?.length ?? 0) +
+    (hierarchy.period?.length ?? 0) +
+    (hierarchy.person?.length ?? 0) +
+    (hierarchy.propertyVariable?.length ?? 0) +
+    (hierarchy.variable?.length ?? 0) +
+    (hierarchy.propertyValue?.length ?? 0) +
+    countResourceItems(hierarchy.resource) +
+    (hierarchy.text?.length ?? 0) +
+    (hierarchy.set?.length ?? 0)
+  );
 }
 
 const RAW_SET_ITEM_KEYS = [
@@ -1630,12 +1612,14 @@ describe("fetchItem", () => {
 
       const inferredResult = await fetchItem(uuid);
       expect(inferredResult.error).toBeNull();
-      if (inferredResult.error === null) {
-        const inferredItem: Item = inferredResult.item;
-        expect(inferredItem.uuid).toBe(uuid);
-        expect(inferredItem.category).toBe("resource");
-        expect(inferredResult.item.metadata.item?.category).toBe("resource");
+      if (inferredResult.error !== null) {
+        return;
       }
+
+      const inferredItem: Item = inferredResult.item;
+      expect(inferredItem.uuid).toBe(uuid);
+      expect(inferredItem.category).toBe("resource");
+      expect(inferredResult.item.metadata.item?.category).toBe("resource");
     },
     LIVE_TEST_TIMEOUT_MS,
   );

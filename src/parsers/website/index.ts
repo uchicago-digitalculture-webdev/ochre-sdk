@@ -59,20 +59,20 @@ import {
 } from "#/parsers/website/walk.js";
 
 /**
- * What a website's pages inherit from the tree holding them
- */
+What a website's pages inherit from the tree holding them
+*/
 type WebsiteParseContext<T extends ReadonlyArray<string>> = Pick<
   Website<T>,
   "belongsTo" | "metadata"
 > & {
   pageSlugsByUuid?: ReadonlyMap<string, string>;
   /**
-   * The resolved properties and license of the nearest enclosing Website or
-   * WebsiteSegment. Segments inherit these so that anything they do not
-   * explicitly define cascades down from their parent, while anything they do
-   * define overrides it. This keeps inheritance a parsing-time concern so
-   * consumers can read a segment's properties naively.
-   */
+  The resolved properties and license of the nearest enclosing Website or
+  WebsiteSegment. Segments inherit these so that anything they do not
+  explicitly define cascades down from their parent, while anything they do
+  define overrides it. This keeps inheritance a parsing-time concern so
+  consumers can read a segment's properties naively.
+  */
   parentProperties?: Website<T>["properties"];
   parentLicense?: Website<T>["license"];
 };
@@ -189,11 +189,11 @@ function createWebpage<T extends ReadonlyArray<string>>(
 }
 
 /**
- * Parses a walked page node into a standardized Webpage structure
- *
- * @param page - The page node, with its slug and nesting already resolved
- * @returns Parsed Webpage object
- */
+Parses a walked page node into a standardized Webpage structure
+
+@param page - The page node, with its slug and nesting already resolved
+@returns Parsed Webpage object
+*/
 function parseWebpage<T extends ReadonlyArray<string>>(
   page: WebsitePageNode,
   options: ParserOptions<T>,
@@ -270,11 +270,11 @@ function parseWebpage<T extends ReadonlyArray<string>>(
 }
 
 /**
- * Parses walked page nodes into an array of Webpage objects
- *
- * @param pages - The page nodes to parse
- * @returns Array of parsed Webpage objects
- */
+Parses walked page nodes into an array of Webpage objects
+
+@param pages - The page nodes to parse
+@returns Array of parsed Webpage objects
+*/
 function parseWebpages<T extends ReadonlyArray<string>>(
   pages: ReadonlyArray<WebsitePageNode>,
   options: ParserOptions<T>,
@@ -315,11 +315,11 @@ function parseWebsiteSegments<T extends ReadonlyArray<string>>(
 }
 
 /**
- * Parses raw sidebar data into a standardized Sidebar structure
- *
- * @param resources - Array of raw sidebar resources in OCHRE format
- * @returns Parsed Sidebar object
- */
+Parses raw sidebar data into a standardized Sidebar structure
+
+@param resources - Array of raw sidebar resources in OCHRE format
+@returns Parsed Sidebar object
+*/
 function parseSidebar<T extends ReadonlyArray<string>>(
   resources: Array<XMLWebsiteResource>,
   options: ParserOptions<T>,
@@ -473,11 +473,11 @@ function parseAccordionAwareBlockItems<T extends ReadonlyArray<string>>(
 }
 
 /**
- * Parses raw block data into a standardized WebBlock structure
- *
- * @param blockResource - Raw block resource data in OCHRE format
- * @returns Parsed WebBlock object
- */
+Parses raw block data into a standardized WebBlock structure
+
+@param blockResource - Raw block resource data in OCHRE format
+@returns Parsed WebBlock object
+*/
 function parseWebBlock<T extends ReadonlyArray<string>>(
   blockResource: XMLWebsiteResource,
   options: ParserOptions<T>,

@@ -83,12 +83,12 @@ function parsePropertyValueLabel(
 }
 
 /**
- * The prefix OCHRE puts on every `dataType` attribute
- *
- * Kept as a constant because the facet XQuery has to strip the same prefix
- * server-side: it compares `@dataType` against the unprefixed names, so a
- * prefixed value falls through every typed branch.
- */
+The prefix OCHRE puts on every `dataType` attribute
+
+Kept as a constant because the facet XQuery has to strip the same prefix
+server-side: it compares `@dataType` against the unprefixed names, so a
+prefixed value falls through every typed branch.
+*/
 const XML_SCHEMA_TYPE_PREFIX = "xs:";
 
 function normalizePropertyValueDataType(
@@ -177,13 +177,13 @@ const propertyValueLabelContentSchema = v.object({
 });
 
 /**
- * Give the canonical value the type its `dataType` implies
- *
- * Which value a facet stands for is decided once, server-side, by
- * `local:value-content`, and travels back as `canonicalValue`. This only gives
- * that string a TypeScript type: re-deriving it here from `rawValue`, `uuid`
- * and the label is what let the facet key and the facet content disagree.
- */
+Give the canonical value the type its `dataType` implies
+
+Which value a facet stands for is decided once, server-side, by
+`local:value-content`, and travels back as `canonicalValue`. This only gives
+that string a TypeScript type: re-deriving it here from `rawValue`, `uuid`
+and the label is what let the facet key and the facet content disagree.
+*/
 function typePropertyValueContent(
   dataType: PropertyValueQueryItem["dataType"],
   canonicalValue: string | undefined,
@@ -210,8 +210,8 @@ function typePropertyValueContent(
 }
 
 /**
- * Schema for a single property value query item in the OCHRE API response
- */
+Schema for a single property value query item in the OCHRE API response
+*/
 const propertyValueQueryItemSchema = v.pipe(
   v.object({
     uuid: v.optional(v.string(), ""),
@@ -260,8 +260,8 @@ const attributeValueQueryItemSchema = v.pipe(
 );
 
 /**
- * Schema for the property values OCHRE API response
- */
+Schema for the property values OCHRE API response
+*/
 const responseSchema = v.object({
   result: v.object({
     ochre: v.object({
@@ -283,19 +283,19 @@ const responseSchema = v.object({
 });
 
 /**
- * Build an XQuery string to fetch property values from the OCHRE API
- * @param parameters - The parameters for the fetch
- * @param parameters.setScopeUuids - An array of set scope UUIDs to filter by
- * @param parameters.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
- * @param parameters.queries - Recursive query tree used to filter matching items
- * @param parameters.propertyFacetSelectors - Property variable/relation selectors to aggregate, if any
- * @param parameters.attributes - Whether to return values for bibliographies and periods
- * @param parameters.attributes.bibliographies - Whether to return values for bibliographies
- * @param parameters.attributes.periods - Whether to return values for periods
- * @param parameters.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
- * @param parameters.language - Language of the text value, bibliography, and period labels that facets are keyed by (defaults to `"eng"`)
- * @returns An XQuery string
- */
+Build an XQuery string to fetch property values from the OCHRE API
+@param parameters - The parameters for the fetch
+@param parameters.setScopeUuids - An array of set scope UUIDs to filter by
+@param parameters.belongsToCollectionScopeUuids - An array of collection scope UUIDs to filter by
+@param parameters.queries - Recursive query tree used to filter matching items
+@param parameters.propertyFacetSelectors - Property variable/relation selectors to aggregate, if any
+@param parameters.attributes - Whether to return values for bibliographies and periods
+@param parameters.attributes.bibliographies - Whether to return values for bibliographies
+@param parameters.attributes.periods - Whether to return values for periods
+@param parameters.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
+@param parameters.language - Language of the text value, bibliography, and period labels that facets are keyed by (defaults to `"eng"`)
+@returns An XQuery string
+*/
 function buildXQuery(parameters: {
   setScopeUuids: Array<string>;
   belongsToCollectionScopeUuids: Array<string>;
@@ -621,16 +621,17 @@ function collectPropertyValues(
       existingGlobalPropertyValue.label = globalPropertyValueItem.label;
     }
 
-    if (propertyValue.scope === "global") {
+    if (
+      propertyValue.scope === "global" ||
+      propertyValue.variableUuid == null
+    ) {
       continue;
     }
 
-    if (propertyValue.variableUuid != null) {
-      const valuesByPropertyVariableUuid =
-        (propertyValuesByPropertyVariableUuid[propertyValue.variableUuid] ??=
-          []);
-      valuesByPropertyVariableUuid.push(propertyValueItem);
-    }
+    const valuesByPropertyVariableUuid = (propertyValuesByPropertyVariableUuid[
+      propertyValue.variableUuid
+    ] ??= []);
+    valuesByPropertyVariableUuid.push(propertyValueItem);
   }
 
   for (const [propertyVariableUuid, values] of Object.entries(
@@ -672,21 +673,21 @@ function collectAttributeValues(
 }
 
 /**
- * Fetches and parses Set property values from the OCHRE API
- *
- * @param parameters - The parameters for the fetch
- * @param parameters.setScopeUuids - An array of set scope UUIDs to filter by
- * @param parameters.queries - Recursive query tree used to filter matching items
- * @param parameters.attributes - Whether to return values for bibliographies and periods
- * @param parameters.attributes.bibliographies - Whether to return values for bibliographies
- * @param parameters.attributes.periods - Whether to return values for periods
- * @param parameters.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
- * @param parameters.language - Language of the text value, bibliography, and period labels that facets are keyed by (defaults to `"eng"`)
- * @param options - Options for the fetch
- * @param options.fetch - The fetch function to use
- * @returns Parsed Set property values and requested attribute values.
- * Returns empty arrays/objects when no matches are found, and null outputs on fetch/parse errors.
- */
+Fetches and parses Set property values from the OCHRE API
+
+@param parameters - The parameters for the fetch
+@param parameters.setScopeUuids - An array of set scope UUIDs to filter by
+@param parameters.queries - Recursive query tree used to filter matching items
+@param parameters.attributes - Whether to return values for bibliographies and periods
+@param parameters.attributes.bibliographies - Whether to return values for bibliographies
+@param parameters.attributes.periods - Whether to return values for periods
+@param parameters.isLimitedToLeafPropertyValues - Whether to limit the property values to leaf property values
+@param parameters.language - Language of the text value, bibliography, and period labels that facets are keyed by (defaults to `"eng"`)
+@param options - Options for the fetch
+@param options.fetch - The fetch function to use
+@returns Parsed Set property values and requested attribute values.
+Returns empty arrays/objects when no matches are found, and null outputs on fetch/parse errors.
+*/
 export async function fetchSetPropertyValues(
   parameters: {
     setScopeUuids: Array<string>;

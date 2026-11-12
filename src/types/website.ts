@@ -12,15 +12,15 @@ import type {
 import type { Prettify } from "#/types/utilities.js";
 
 /**
- * Represents a context tree level item with a variable and value
- */
+Represents a context tree level item with a variable and value
+*/
 export type ContextTreeLevelItem = {
   variableUuid: string;
   valueUuid: string | null;
 };
 /**
- * Represents a context tree level with a context item
- */
+Represents a context tree level with a context item
+*/
 export type ContextTreeLevel<T extends LanguageCodes = LanguageCodes> = {
   context: Array<ContextTreeLevelItem>;
   identification: Identification<T>;
@@ -29,8 +29,8 @@ export type ContextTreeLevel<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- * Represents the input control a filter context level is rendered with
- */
+Represents the input control a filter context level is rendered with
+*/
 export type ContextTreeFilterVariant =
   | "checkbox"
   | "chip"
@@ -39,8 +39,8 @@ export type ContextTreeFilterVariant =
   | "toggle";
 
 /**
- * Represents a filter context tree level with a context item
- */
+Represents a filter context tree level with a context item
+*/
 export type ContextTreeFilterLevel<T extends LanguageCodes = LanguageCodes> =
   Prettify<
     ContextTreeLevel<T> & {
@@ -53,8 +53,8 @@ export type ContextTreeFilterLevel<T extends LanguageCodes = LanguageCodes> =
   >;
 
 /**
- * Represents a context tree with levels grouped by behavior
- */
+Represents a context tree with levels grouped by behavior
+*/
 export type ContextTree<T extends LanguageCodes = LanguageCodes> = {
   flatten: Array<ContextTreeLevel<T>>;
   suppress: Array<ContextTreeLevel<T>>;
@@ -67,8 +67,8 @@ export type ContextTree<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- * Represents a scope with its UUID, type and identification
- */
+Represents a scope with its UUID, type and identification
+*/
 export type Scope<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   type: string;
@@ -76,9 +76,9 @@ export type Scope<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- * Represents the parsed OCHRE "options" block shared by the website itself and
- * by every web element component that supports it
- */
+Represents the parsed OCHRE "options" block shared by the website itself and
+by every web element component that supports it
+*/
 export type WebOptions<T extends LanguageCodes = LanguageCodes> = {
   scopes: Array<Scope<T>> | null;
   contextTree: ContextTree<T> | null;
@@ -86,8 +86,8 @@ export type WebOptions<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- * The style overrides for each viewport a website presentation targets
- */
+The style overrides for each viewport a website presentation targets
+*/
 export type ResponsiveStyles = {
   default: Array<Style>;
   tablet: Array<Style>;
@@ -95,16 +95,16 @@ export type ResponsiveStyles = {
 };
 
 /**
- * Whether an item page section and its header are shown
- */
+Whether an item page section and its header are shown
+*/
 export type WebSectionDisplay = {
   isDisplayed: boolean;
   isHeaderDisplayed: boolean;
 };
 
 /**
- * How a collection displays its items
- */
+How a collection displays its items
+*/
 export type WebCollectionVariant =
   | "slide"
   | "table"
@@ -113,13 +113,13 @@ export type WebCollectionVariant =
   | "showcase";
 
 /**
- * How a website indicates that content is loading
- */
+How a website indicates that content is loading
+*/
 export type WebLoadingVariant = "spinner" | "skeleton" | "animation" | "none";
 
 /**
- * How an item page groups a repeated section
- */
+How an item page groups a repeated section
+*/
 export type WebSectionVariant =
   | "discrete"
   | "tabs-horizontal"
@@ -127,8 +127,8 @@ export type WebSectionVariant =
   | "tabular";
 
 /**
- * How a website displays an item's related items
- */
+How a website displays an item's related items
+*/
 export type WebRelationVariant =
   | "list"
   | "dropdown-list"
@@ -137,13 +137,13 @@ export type WebRelationVariant =
   | "inline";
 
 /**
- * The IIIF viewer a website renders images with
- */
+The IIIF viewer a website renders images with
+*/
 export type WebIiifViewer = "universal-viewer" | "clover";
 
 /**
- * How a website restricts access to its content
- */
+How a website restricts access to its content
+*/
 export type WebsitePrivacy = "public" | "password" | "credentials-ochre";
 
 export type StylesheetItem<T extends LanguageCodes = LanguageCodes> =
@@ -178,8 +178,8 @@ export type WebsitePropertyQuery<T extends LanguageCodes = LanguageCodes> =
   | { or: Array<WebsitePropertyQuery<T>> };
 
 /**
- * Represents the OCHRE website type
- */
+Represents the OCHRE website type
+*/
 export type WebsiteType =
   | "traditional"
   | "digital-collection"
@@ -191,8 +191,8 @@ export type WebsiteType =
   | "palm";
 
 /**
- * Represents a sidebar with its title, items, layout and responsive styles
- */
+Represents a sidebar with its title, items, layout and responsive styles
+*/
 export type WebSidebar<T extends LanguageCodes = LanguageCodes> = {
   isDisplayed: boolean;
   items: Array<WebElement<T> | WebBlock<T>>;
@@ -203,8 +203,8 @@ export type WebSidebar<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- * Represents a website with its properties and items
- */
+Represents a website with its properties and items
+*/
 export type Website<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   type: "website" | "segment";
@@ -281,10 +281,10 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
     >;
   };
   /**
-   * The bare Map element of an OAK website, null for every other design. Its
-   * bare Collection elements are in `items` as pages hidden from the navbar,
-   * in tree order.
-   */
+  The bare Map element of an OAK website, null for every other design. Its
+  bare Collection elements are in `items` as pages hidden from the navbar,
+  in tree order.
+  */
   oak: { map: WebElementOf<"map", T> | null } | null;
 };
 
@@ -292,8 +292,8 @@ export type WebsiteSegment<T extends LanguageCodes = LanguageCodes> =
   Website<T> & { type: "segment" };
 
 /**
- * Represents a webpage with its title, slug, properties, items and subpages
- */
+Represents a webpage with its title, slug, properties, items and subpages
+*/
 export type Webpage<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   type: "page";
@@ -322,8 +322,8 @@ export type Webpage<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- * Represents a title with its label and variant
- */
+Represents a title with its label and variant
+*/
 export type WebTitle<T extends LanguageCodes = LanguageCodes> = {
   label: MultilingualString<T>;
   variant: "default" | "simple";
@@ -337,8 +337,8 @@ export type WebTitle<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- * Base properties for web elements
- */
+Base properties for web elements
+*/
 export type WebElement<T extends LanguageCodes = LanguageCodes> = {
   uuid: string;
   language: string | null;
@@ -348,8 +348,8 @@ export type WebElement<T extends LanguageCodes = LanguageCodes> = {
 } & WebElementComponent<T>;
 
 /**
- * Union type of all possible web element components
- */
+Union type of all possible web element components
+*/
 export type WebElementComponent<T extends LanguageCodes = LanguageCodes> =
   | {
       component: "3d-viewer";
@@ -572,8 +572,8 @@ export type WebElementOf<
 > = Extract<WebElement<T>, { component: U }>;
 
 /**
- * Represents an image used in web elements
- */
+Represents an image used in web elements
+*/
 export type WebImage<T extends LanguageCodes = LanguageCodes> = {
   uuid: string | null;
   label: MultilingualString<T> | null;
@@ -584,8 +584,8 @@ export type WebImage<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- * Represents a CSS style with label and value
- */
+Represents a CSS style with label and value
+*/
 export type Style = { label: string; value: string };
 
 export type WebBlockLayout =
@@ -608,8 +608,8 @@ export type WebAccordionItem<T extends LanguageCodes = LanguageCodes> = {
 };
 
 /**
- * Represents a block of vertical or horizontal content alignment
- */
+Represents a block of vertical or horizontal content alignment
+*/
 export type WebBlock<
   T extends LanguageCodes = LanguageCodes,
   U extends WebBlockLayout = WebBlockLayout,
@@ -626,12 +626,12 @@ export type WebBlock<
       layout: U;
       wrap: "nowrap" | "wrap" | "wrap-reverse";
       /**
-       * valid `gridTemplateColumns` or `gridTemplateRows` CSS property value
-       */
+      valid `gridTemplateColumns` or `gridTemplateRows` CSS property value
+      */
       spacing: string | null;
       /**
-       * `gap` CSS property value
-       */
+      `gap` CSS property value
+      */
       gap: string | null;
       isAccordionEnabled: U extends "accordion" ? boolean : never;
       isAccordionExpandedByDefault: U extends "accordion" ? boolean : never;
@@ -670,8 +670,8 @@ export type AccordionWebBlock<T extends LanguageCodes = LanguageCodes> =
   WebBlock<T, "accordion">;
 
 /**
- * Represents a stylesheet item with its UUID and category
- */
+Represents a stylesheet item with its UUID and category
+*/
 export type StylesheetCategory = Extract<
   ItemCategory,
   "propertyVariable" | "propertyValue"

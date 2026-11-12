@@ -29,10 +29,10 @@ type BibliographyPropertySource<T extends LanguageCodes> = {
 };
 
 /**
- * Flatten the properties of an item
- * @param item - The item whose properties to flatten
- * @returns The item with the properties flattened
- */
+Flatten the properties of an item
+@param item - The item whose properties to flatten
+@returns The item with the properties flattened
+*/
 export function flattenItemProperties<
   U extends ItemCategory = ItemCategory,
   V extends ContainedItemCategory<U> = ContainedItemCategory<U>,
@@ -70,11 +70,11 @@ export function flattenItemProperties<
 }
 
 /**
- * Flatten a properties array
- * @param properties - The properties to flatten
- * @returns The flattened properties
- * @internal
- */
+Flatten a properties array
+@param properties - The properties to flatten
+@returns The flattened properties
+@internal
+*/
 function flattenProperties<T extends LanguageCodes = LanguageCodes>(
   properties: ReadonlyArray<Property<T> | SetItemProperty<T>>,
 ): Array<SetItemProperty<T>> {

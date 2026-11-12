@@ -27,13 +27,13 @@ import {
 } from "#/xquery.js";
 
 /**
- * The presentation properties the metadata projection carries
- *
- * The XQuery whitelists exactly these labels and the parser reads exactly
- * these labels, so they come from one list: whitelisting a label the parser
- * ignores is dead weight, and reading one the whitelist drops silently yields
- * the default.
- */
+The presentation properties the metadata projection carries
+
+The XQuery whitelists exactly these labels and the parser reads exactly
+these labels, so they come from one list: whitelisting a label the parser
+ignores is dead weight, and reading one the whitelist drops silently yields
+the default.
+*/
 const METADATA_PRESENTATION_LABELS = {
   privacy: "privacy",
   faviconIco: "favicon-ico",
@@ -201,9 +201,9 @@ return
 }
 
 /**
- * Fetches and parses a page-scoped website metadata projection from the OCHRE
- * API.
- */
+Fetches and parses a page-scoped website metadata projection from the OCHRE
+API.
+*/
 export async function fetchWebsiteMetadata<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
