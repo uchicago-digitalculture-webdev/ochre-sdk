@@ -273,7 +273,7 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
     component name: the "component" properties of this website, then of each
     enclosing one, which an element overrides by setting the property itself.
     The settings naming what an element points at ("link-to", "navigate-to",
-    and "bound-element") are left out, since every element sets its own.
+    and "bound-element") cannot be defaults, since every element sets its own.
     */
     componentDefaults: Partial<
       Record<WebElementComponentName, Array<Array<SimplifiedProperty<T>>>>

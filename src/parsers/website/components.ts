@@ -238,15 +238,19 @@ const ELEMENT_TARGET_LABELS = ["link-to", "navigate-to", "bound-element"];
 /**
 Reads the "customize-special" "element" properties of a website, each
 holding "component" properties whose settings every element of that
-component starts from, except the ones in {@link ELEMENT_TARGET_LABELS}
+component starts from
 
 @param websiteReader - Reader over the website's "presentation" properties
 @param parent - The defaults of the enclosing website, which these extend
+@param websiteUuid - The website's UUID, for error messages
 @returns The component defaults in effect for the website's elements
+@throws When a default sets one of {@link ELEMENT_TARGET_LABELS}, which
+every element has to set itself
 */
 export function parseComponentDefaults<T extends ReadonlyArray<string>>(
   websiteReader: WebsitePresentationReader<T>,
   parent: WebComponentDefaults<T>,
+  websiteUuid: string,
 ): WebComponentDefaults<T> {
   const elementReaders = websiteReader.nestedAllByValue(
     "customize-special",
@@ -259,13 +263,19 @@ export function parseComponentDefaults<T extends ReadonlyArray<string>>(
   const defaults: WebComponentDefaults<T> = { ...parent };
   for (const component of componentSchema.options) {
     for (const elementReader of elementReaders) {
-      const componentProperties = elementReader
-        .propertyByValue("component", component)
-        ?.properties.filter((property) =>
-          ELEMENT_TARGET_LABELS.every(
-            (label) => getProperty([property], { label }) == null,
-          ),
+      const componentProperties = elementReader.propertyByValue(
+        "component",
+        component,
+      )?.properties;
+      const targetLabel = ELEMENT_TARGET_LABELS.find(
+        (label) => getProperty(componentProperties ?? [], { label }) != null,
+      );
+      if (targetLabel != null) {
+        throw new Error(
+          `Component defaults cannot set \u{201C}${targetLabel}\u{201D}, which each element sets itself (component \u{201C}${component}\u{201D}, website uuid \u{201C}${websiteUuid}\u{201D})`,
+          { cause: componentProperties },
         );
+      }
       if (componentProperties != null && componentProperties.length > 0) {
         defaults[component] = [
           componentProperties,

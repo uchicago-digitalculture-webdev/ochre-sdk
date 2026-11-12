@@ -660,6 +660,7 @@ function parseWebsiteTree<
     componentDefaults: parseComponentDefaults(
       websiteReader,
       context.componentDefaults,
+      websiteTree.uuid,
     ),
   };
   const sidebar = parseSidebar(resources, options, treeContext);
