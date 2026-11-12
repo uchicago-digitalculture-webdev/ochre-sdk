@@ -17,6 +17,7 @@ import type {
 } from "#/types/website.js";
 import type { XMLWebsiteResource } from "#/xml/types.js";
 import { normalizeItemCategory } from "#/categories.js";
+import { getProperty } from "#/getters.js";
 import { parseStringContent } from "#/parsers/helpers.js";
 import {
   parseBibliographyList,
@@ -232,10 +233,12 @@ export type WebElementContext<T extends ReadonlyArray<string>> = {
   componentDefaults: WebComponentDefaults<T>;
 };
 
+const ELEMENT_TARGET_LABELS = ["link-to", "navigate-to", "bound-element"];
+
 /**
 Reads the "customize-special" "element" properties of a website, each
 holding "component" properties whose settings every element of that
-component starts from
+component starts from, except the ones in {@link ELEMENT_TARGET_LABELS}
 
 @param websiteReader - Reader over the website's "presentation" properties
 @param parent - The defaults of the enclosing website, which these extend
@@ -256,10 +259,13 @@ export function parseComponentDefaults<T extends ReadonlyArray<string>>(
   const defaults: WebComponentDefaults<T> = { ...parent };
   for (const component of componentSchema.options) {
     for (const elementReader of elementReaders) {
-      const componentProperties = elementReader.propertyByValue(
-        "component",
-        component,
-      )?.properties;
+      const componentProperties = elementReader
+        .propertyByValue("component", component)
+        ?.properties.filter((property) =>
+          ELEMENT_TARGET_LABELS.every(
+            (label) => getProperty([property], { label }) == null,
+          ),
+        );
       if (componentProperties != null && componentProperties.length > 0) {
         defaults[component] = [
           componentProperties,
