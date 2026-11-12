@@ -27,19 +27,35 @@ values nested under a "presentation" property, so every read is "find the
 property with this label, then take its first value". This owns that walk
 and the coercions that go with it, and hands back readers for nested levels
 so the caller never touches the raw property array.
+
+A reader can fall back to another reader, which is how a website's
+"customize-special" defaults reach the resources below it: a label the
+resource leaves unset is read from the fallback, and a label it sets wins.
+A property is inherited whole, so a list-valued label takes the resource's
+values or the fallback's, never a mix of both, and the children of a label
+set on both sides only fall back under the same value.
 */
 export class WebsitePresentationReader<T extends LanguageCodes> {
   private readonly sourceProperties: ReadonlyArray<SimplifiedProperty<T>>;
+  private readonly fallback: WebsitePresentationReader<T> | null;
 
-  constructor(sourceProperties: ReadonlyArray<SimplifiedProperty<T>>) {
+  constructor(
+    sourceProperties: ReadonlyArray<SimplifiedProperty<T>>,
+    fallback: WebsitePresentationReader<T> | null = null,
+  ) {
     this.sourceProperties = sourceProperties;
+    this.fallback = fallback;
   }
 
   private propertyByValue(
     label: string,
     value: WebsitePropertyContent<T>,
   ): SimplifiedProperty<T> | null {
-    return getProperty(this.sourceProperties, { label, valueContent: value });
+    return (
+      getProperty(this.sourceProperties, { label, valueContent: value }) ??
+      this.fallback?.propertyByValue(label, value) ??
+      null
+    );
   }
 
   /**
@@ -58,7 +74,11 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
   }
 
   property(label: string): SimplifiedProperty<T> | null {
-    return getProperty(this.sourceProperties, { label });
+    return (
+      getProperty(this.sourceProperties, { label }) ??
+      this.fallback?.property(label) ??
+      null
+    );
   }
 
   requiredProperty(label: string, message: string): SimplifiedProperty<T> {
@@ -71,7 +91,11 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
   }
 
   valueNode(label: string): PropertyValueContent<T> | null {
-    return getPropertyValue(this.sourceProperties, { label });
+    return (
+      getPropertyValue(this.sourceProperties, { label }) ??
+      this.fallback?.valueNode(label) ??
+      null
+    );
   }
 
   value<U = WebsitePropertyContent<T>>(label: string): U | null {
@@ -118,7 +142,9 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
       }
     }
 
-    return values;
+    return values.length === 0 && this.fallback != null
+      ? this.fallback.stringValues(label)
+      : values;
   }
 
   uuid(label: string): string | null {
@@ -189,8 +215,17 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
   }
 
   nested(label: string): WebsitePresentationReader<T> {
+    const property = getProperty(this.sourceProperties, { label });
+    if (property == null) {
+      return this.fallback?.nested(label) ?? new WebsitePresentationReader([]);
+    }
+
+    const value = property.values[0]?.content;
     return new WebsitePresentationReader(
-      this.property(label)?.properties ?? [],
+      property.properties,
+      value == null
+        ? null
+        : (this.fallback?.nestedByValue(label, value) ?? null),
     );
   }
 
@@ -199,7 +234,9 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
     value: WebsitePropertyContent<T>,
   ): WebsitePresentationReader<T> {
     return new WebsitePresentationReader(
-      this.propertyByValue(label, value)?.properties ?? [],
+      getProperty(this.sourceProperties, { label, valueContent: value })
+        ?.properties ?? [],
+      this.fallback?.nestedByValue(label, value) ?? null,
     );
   }
 
@@ -214,16 +251,25 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
       }
     }
 
-    return readers;
+    return readers.length === 0 && this.fallback != null
+      ? this.fallback.nestedAllByValue(label, value)
+      : readers;
+  }
+
+  withFallback(
+    fallback: WebsitePresentationReader<T> | null,
+  ): WebsitePresentationReader<T> {
+    return new WebsitePresentationReader(this.sourceProperties, fallback);
   }
 
   get size(): number {
-    return this.sourceProperties.length;
+    return this.sourceProperties.length + (this.fallback?.size ?? 0);
   }
 }
 
 export function websitePresentationReader<T extends LanguageCodes>(
   properties: ReadonlyArray<SimplifiedProperty<T>>,
+  fallback: WebsitePresentationReader<T> | null = null,
 ): WebsitePresentationReader<T> {
-  return new WebsitePresentationReader(properties);
+  return new WebsitePresentationReader(properties, fallback);
 }

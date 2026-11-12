@@ -1,31 +1,39 @@
 import type { ParserOptions } from "#/parsers/helpers.js";
+import type { WebsitePresentationReader } from "#/parsers/website/reader.js";
 import type { WebSidebar, Website } from "#/types/website.js";
-import type { XMLWebsiteProperties, XMLWebsiteTree } from "#/xml/types.js";
-import { parseSimplifiedProperties } from "#/parsers/index.js";
+import type { XMLWebsiteTree } from "#/xml/types.js";
 import { parseWebsiteOptions } from "#/parsers/website/options.js";
-import { websitePresentationReader } from "#/parsers/website/reader.js";
 import { parseStylesheets } from "#/parsers/website/styles.js";
+
+export const WEBPAGE_PROPERTY_DEFAULTS: Website["properties"]["page"] = {
+  width: "default",
+  variant: "default",
+  isBreadcrumbsDisplayed: false,
+  isSidebarDisplayed: true,
+  isNavbarSearchBarDisplayed: true,
+};
+
+export const WEBPAGE_PROPERTY_LABELS = {
+  width: "width",
+  variant: "variant",
+  isBreadcrumbsDisplayed: "breadcrumbs-displayed",
+  isSidebarDisplayed: "sidebar-displayed",
+  isNavbarSearchBarDisplayed: "navbar-search-bar-displayed",
+} as const satisfies Record<keyof Website["properties"]["page"], string>;
 
 /**
 Parses raw website properties into a standardized Website properties structure
 
-@param properties - Array of raw website properties in OCHRE format
+@param websiteReader - Reader over the website's "presentation" properties
 @returns Parsed WebsiteProperties object
 */
 export function parseWebsiteProperties<T extends ReadonlyArray<string>>(
-  properties: XMLWebsiteProperties["property"],
+  websiteReader: WebsitePresentationReader<T>,
   websiteTree: XMLWebsiteTree,
   sidebar: WebSidebar<T> | null,
   options: ParserOptions<T>,
   parent: Website<T>["properties"] | null,
 ): Website<T>["properties"] {
-  const mainProperties = parseSimplifiedProperties(
-    { property: properties },
-    options,
-  );
-  const websiteReader =
-    websitePresentationReader(mainProperties).nested("presentation");
-
   const returnProperties: Website<T>["properties"] = {
     type: parent?.type ?? "traditional",
     status: parent?.status ?? "development",
@@ -49,6 +57,7 @@ export function parseWebsiteProperties<T extends ReadonlyArray<string>>(
       items: parent?.footer.items ?? null,
     },
     sidebar: sidebar ?? parent?.sidebar ?? null,
+    page: { ...(parent?.page ?? WEBPAGE_PROPERTY_DEFAULTS) },
     itemPage: {
       isMainContentDisplayed: parent?.itemPage.isMainContentDisplayed ?? true,
       description: {
@@ -146,6 +155,10 @@ export function parseWebsiteProperties<T extends ReadonlyArray<string>>(
   websiteReader.readAllUuids(returnProperties.footer, {
     logoUuid: "footer-logo",
   });
+
+  websiteReader
+    .nestedByValue("customize-special", "page")
+    .readAll(returnProperties.page, WEBPAGE_PROPERTY_LABELS);
 
   const itemPageReader = websiteReader.nestedByValue(
     "customize-special",

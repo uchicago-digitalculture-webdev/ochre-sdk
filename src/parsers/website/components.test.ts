@@ -86,6 +86,7 @@ function parameters(options: {
     websiteLinks,
     options: OPTIONS,
     pageSlugs: options.pageSlugs,
+    componentDefaults: new Map(),
   };
 }
 

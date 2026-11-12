@@ -218,21 +218,77 @@ function parseCollectionRelations<T extends ReadonlyArray<string>>(
 }
 
 /**
-What every component parser is handed
-
-`pageSlugs` is the only thing the component, element and block parsers read
-from the enclosing website, so it is passed on its own rather than as part
-of a wider parse context. That keeps this module reachable from a test with
-a six-field object instead of a whole OCHRE website envelope.
+The component settings a website gives every element of a component, keyed
+by component name, each reader falling back to the enclosing website's
 */
-export type WebElementComponentParameters<T extends ReadonlyArray<string>> = {
-  componentProperty: SimplifiedProperty<T>;
-  componentReader: WebsitePresentationReader<T>;
-  elementResource: XMLWebsiteResource;
-  websiteLinks: ItemLinks<T>;
-  options: ParserOptions<T>;
-  pageSlugs: WebsitePageSlugs | undefined;
+export type WebComponentDefaults<T extends ReadonlyArray<string>> = ReadonlyMap<
+  WebElementComponent["component"],
+  WebsitePresentationReader<T>
+>;
+
+/**
+What the element parsers read from the enclosing website
+
+Passed on its own rather than as a wider parse context, which keeps this
+module reachable from a test without a whole OCHRE website envelope.
+*/
+export type WebElementContext<T extends ReadonlyArray<string>> = {
+  pageSlugs?: WebsitePageSlugs;
+  componentDefaults: WebComponentDefaults<T>;
 };
+
+/**
+Reads the "customize-special" "element" properties of a website, each
+holding "component" properties whose settings every element of that
+component starts from
+
+@param websiteReader - Reader over the website's "presentation" properties
+@param parent - The defaults of the enclosing website, which these extend
+@returns The component defaults in effect for the website's elements
+*/
+export function parseComponentDefaults<T extends ReadonlyArray<string>>(
+  websiteReader: WebsitePresentationReader<T>,
+  parent: WebComponentDefaults<T>,
+): WebComponentDefaults<T> {
+  const elementReaders = websiteReader.nestedAllByValue(
+    "customize-special",
+    "element",
+  );
+  if (elementReaders.length === 0) {
+    return parent;
+  }
+
+  const defaults = new Map(parent);
+  for (const component of componentSchema.options) {
+    for (const elementReader of elementReaders) {
+      const componentReader = elementReader.nestedByValue(
+        "component",
+        component,
+      );
+      if (componentReader.size > 0) {
+        defaults.set(
+          component,
+          componentReader.withFallback(parent.get(component) ?? null),
+        );
+        break;
+      }
+    }
+  }
+
+  return defaults;
+}
+
+/**
+What every component parser is handed
+*/
+export type WebElementComponentParameters<T extends ReadonlyArray<string>> =
+  WebElementContext<T> & {
+    componentProperty: SimplifiedProperty<T>;
+    componentReader: WebsitePresentationReader<T>;
+    elementResource: XMLWebsiteResource;
+    websiteLinks: ItemLinks<T>;
+    options: ParserOptions<T>;
+  };
 
 const THREE_D_VIEWER_COMPONENT_DEFAULTS: Pick<
   Extract<WebElementComponent, { component: "3d-viewer" }>,
@@ -539,6 +595,7 @@ function parseButtonComponent<T extends ReadonlyArray<string>>(
     websiteLinks,
     options,
     pageSlugs,
+    componentDefaults,
   } = parameters;
 
   type ButtonComponent = Extract<
@@ -604,7 +661,9 @@ function parseButtonComponent<T extends ReadonlyArray<string>>(
       continue;
     }
 
-    elements.push(parseWebElement(childResource, options, pageSlugs));
+    elements.push(
+      parseWebElement(childResource, options, { pageSlugs, componentDefaults }),
+    );
   }
 
   return {
@@ -1479,18 +1538,14 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
   componentProperty: SimplifiedProperty<T>,
   elementResource: XMLWebsiteResource,
   options: ParserOptions<T>,
-  pageSlugs: WebsitePageSlugs | undefined,
+  context: WebElementContext<T>,
 ): WebElementComponent<T> {
   const unparsedComponentName = componentProperty.values[0]!.content;
   const componentNameResult = v.safeParse(
     componentSchema,
     unparsedComponentName,
   );
-  const parse = componentNameResult.success
-    ? WEB_ELEMENT_COMPONENT_PARSERS[componentNameResult.output]
-    : undefined;
-
-  if (parse == null) {
+  if (!componentNameResult.success) {
     throw new Error(
       `Invalid or non-implemented component name \u{201C}${unparsedComponentName.toString()}\u{201D} for the following element: \u{201C}${parseStringContent(
         elementResource.identification.label,
@@ -1499,13 +1554,19 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
     );
   }
 
-  return parse({
+  const component = componentNameResult.output;
+
+  return WEB_ELEMENT_COMPONENT_PARSERS[component]({
     componentProperty,
-    componentReader: websitePresentationReader(componentProperty.properties),
+    componentReader: websitePresentationReader(
+      componentProperty.properties,
+      context.componentDefaults.get(component) ?? null,
+    ),
     elementResource,
     websiteLinks: parseLinks(elementResource.links, options),
     options,
-    pageSlugs,
+    pageSlugs: context.pageSlugs,
+    componentDefaults: context.componentDefaults,
   });
 }
 
@@ -1553,7 +1614,7 @@ Parses raw web element data into a standardized WebElement structure
 export function parseWebElement<T extends ReadonlyArray<string>>(
   elementResource: XMLWebsiteResource,
   options: ParserOptions<T>,
-  pageSlugs: WebsitePageSlugs | undefined,
+  context: WebElementContext<T>,
 ): WebElement<T> {
   const identification = parseIdentification(
     elementResource.identification,
@@ -1586,7 +1647,7 @@ export function parseWebElement<T extends ReadonlyArray<string>>(
     componentProperty,
     elementResource,
     options,
-    pageSlugs,
+    context,
   );
 
   const cssStyles = parseResponsiveCssStyles(elementProperties);

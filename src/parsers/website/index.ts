@@ -1,4 +1,5 @@
 import type { ParserOptions } from "#/parsers/helpers.js";
+import type { WebElementContext } from "#/parsers/website/components.js";
 import type { WebsitePresentationReader } from "#/parsers/website/reader.js";
 import type { WebsitePageNode } from "#/parsers/website/walk.js";
 import type { PropertyValueContent } from "#/types/index.js";
@@ -36,6 +37,7 @@ import {
   resolveLanguages,
 } from "#/parsers/languages.js";
 import {
+  parseComponentDefaults,
   parseWebElement,
   parseWebTitle,
 } from "#/parsers/website/components.js";
@@ -45,7 +47,11 @@ import {
   webImageFromLink,
 } from "#/parsers/website/links.js";
 import { formatXMLWebsiteResourceMetadata } from "#/parsers/website/messages.js";
-import { parseWebsiteProperties } from "#/parsers/website/properties.js";
+import {
+  parseWebsiteProperties,
+  WEBPAGE_PROPERTY_DEFAULTS,
+  WEBPAGE_PROPERTY_LABELS,
+} from "#/parsers/website/properties.js";
 import { websitePresentationReader } from "#/parsers/website/reader.js";
 import { cleanWebsitePageSlug } from "#/parsers/website/slug.js";
 import {
@@ -64,18 +70,18 @@ What a website's pages inherit from the tree holding them
 type WebsiteParseContext<T extends ReadonlyArray<string>> = Pick<
   Website<T>,
   "belongsTo" | "metadata"
-> & {
-  pageSlugsByUuid?: ReadonlyMap<string, string>;
-  /**
+> &
+  WebElementContext<T> & {
+    /**
   The resolved properties and license of the nearest enclosing Website or
   WebsiteSegment. Segments inherit these so that anything they do not
   explicitly define cascades down from their parent, while anything they do
   define overrides it. This keeps inheritance a parsing-time concern so
   consumers can read a segment's properties naively.
   */
-  parentProperties?: Website<T>["properties"];
-  parentLicense?: Website<T>["license"];
-};
+    parentProperties?: Website<T>["properties"];
+    parentLicense?: Website<T>["license"];
+  };
 
 function isSidebarResource<T extends ReadonlyArray<string>>(
   resource: XMLWebsiteResource,
@@ -116,7 +122,7 @@ function parseWebBlockItems<T extends ReadonlyArray<string>>(
 
     switch (resourceType) {
       case "element": {
-        items.push(parseWebElement(resource, options, context.pageSlugsByUuid));
+        items.push(parseWebElement(resource, options, context));
         break;
       }
       case "block": {
@@ -138,7 +144,7 @@ function parseWebpageRedirect<T extends ReadonlyArray<string>>(
 ): Webpage<T>["properties"]["redirect"] {
   const redirectTarget = parseWebsiteLinkTarget(
     redirectValue,
-    context.pageSlugsByUuid,
+    context.pageSlugs,
   );
   if (redirectTarget != null) {
     if (redirectValue?.href == null && redirectValue?.uuid != null) {
@@ -163,6 +169,7 @@ function createWebpage<T extends ReadonlyArray<string>>(
   resource: XMLWebsiteResource,
   slug: string,
   options: ParserOptions<T>,
+  context: WebsiteParseContext<T>,
 ): Webpage<T> {
   return {
     uuid: resource.uuid,
@@ -173,12 +180,8 @@ function createWebpage<T extends ReadonlyArray<string>>(
     items: [],
     segments: [],
     properties: {
-      width: "default",
-      variant: "default",
-      isBreadcrumbsDisplayed: false,
-      isSidebarDisplayed: true,
+      ...(context.parentProperties?.page ?? WEBPAGE_PROPERTY_DEFAULTS),
       isDisplayedInNavbar: true,
-      isNavbarSearchBarDisplayed: true,
       redirect: null,
       backgroundImage: null,
       sidebar: null,
@@ -207,7 +210,12 @@ function parseWebpage<T extends ReadonlyArray<string>>(
   );
   const webpageReader = websitePresentationReader(webpageProperties);
 
-  const returnWebpage = createWebpage(webpageResource, page.slug, options);
+  const returnWebpage = createWebpage(
+    webpageResource,
+    page.slug,
+    options,
+    context,
+  );
 
   const websiteLinks = parseLinks(webpageResource.links, options);
   const imageLink = findWebsiteLink(
@@ -242,12 +250,8 @@ function parseWebpage<T extends ReadonlyArray<string>>(
   const pageReader = webpageReader.nestedByValue("presentation", "page");
   if (pageReader.size > 0) {
     pageReader.readAll(returnWebpage.properties, {
+      ...WEBPAGE_PROPERTY_LABELS,
       isDisplayedInNavbar: "displayed-in-navbar",
-      width: "width",
-      variant: "variant",
-      isSidebarDisplayed: "sidebar-displayed",
-      isBreadcrumbsDisplayed: "breadcrumbs-displayed",
-      isNavbarSearchBarDisplayed: "navbar-search-bar-displayed",
     });
 
     returnWebpage.properties.redirect = parseWebpageRedirect(
@@ -293,7 +297,8 @@ export function parseWebpageView<T extends ReadonlyArray<string>>(
   return (
     parseWebpages(pages, options, {
       ...context,
-      pageSlugsByUuid: collectWebsitePageSlugs(pages, options),
+      pageSlugs: collectWebsitePageSlugs(pages, options),
+      componentDefaults: new Map(),
     })[0] ?? null
   );
 }
@@ -375,7 +380,7 @@ function parseWebAccordionItem<T extends ReadonlyArray<string>>(
   const trigger = parseWebElement(
     elementResource,
     options,
-    context.pageSlugsByUuid,
+    context,
   ) as WebAccordionItem<T>["trigger"];
 
   const items = parseWebBlockItems(childResources, options, context);
@@ -455,7 +460,7 @@ function parseAccordionAwareBlockItems<T extends ReadonlyArray<string>>(
             componentType === "text" &&
             childResources.length > 0
             ? parseWebAccordionItem(resource, childResources, options, context)
-            : parseWebElement(resource, options, context.pageSlugsByUuid),
+            : parseWebElement(resource, options, context),
         );
         break;
       }
@@ -587,7 +592,7 @@ function parseOakWebsite<T extends ReadonlyArray<string>>(
       continue;
     }
 
-    const element = parseWebElement(resource, options, context.pageSlugsByUuid);
+    const element = parseWebElement(resource, options, context);
     if (element.component === "map") {
       map ??= element;
       continue;
@@ -605,7 +610,7 @@ function parseOakWebsite<T extends ReadonlyArray<string>>(
       );
     }
 
-    const collectionPage = createWebpage(resource, slug, options);
+    const collectionPage = createWebpage(resource, slug, options, context);
     collectionPage.items = [element];
     collectionPage.properties.isDisplayedInNavbar = false;
     items.push(collectionPage);
@@ -644,13 +649,21 @@ function parseWebsiteTree<
     options,
     slugPrefix,
   );
-  const pageSlugsByUuid =
-    context.pageSlugsByUuid ?? collectWebsitePageSlugs(pages, options);
-  const treeContext: WebsiteParseContext<T> = { ...context, pageSlugsByUuid };
+  const websiteReader = websitePresentationReader(
+    parseSimplifiedProperties(websiteTree.properties, options),
+  ).nested("presentation");
+  const treeContext: WebsiteParseContext<T> = {
+    ...context,
+    pageSlugs: context.pageSlugs ?? collectWebsitePageSlugs(pages, options),
+    componentDefaults: parseComponentDefaults(
+      websiteReader,
+      context.componentDefaults,
+    ),
+  };
   const sidebar = parseSidebar(resources, options, treeContext);
 
   const properties = parseWebsiteProperties(
-    websiteTree.properties.property,
+    websiteReader,
     websiteTree,
     sidebar,
     options,
@@ -660,14 +673,15 @@ function parseWebsiteTree<
   const license =
     parseLicense(websiteTree.availability) ?? context.parentLicense ?? null;
 
-  const webpages = parseWebpages(pages, options, {
+  const pageContext: WebsiteParseContext<T> = {
     ...treeContext,
     parentProperties: properties,
     parentLicense: license,
-  });
+  };
+  const webpages = parseWebpages(pages, options, pageContext);
   const { items, oak } =
     type === "website" && properties.type === "oak"
-      ? parseOakWebsite(resources, webpages, options, treeContext)
+      ? parseOakWebsite(resources, webpages, options, pageContext)
       : { items: webpages, oak: null };
 
   return {
@@ -709,6 +723,7 @@ export function parseWebsite<
         abbreviation: rawOchre.belongsTo,
       },
       metadata: parseMetadata(rawOchre, parserOptions, defaultLanguage),
+      componentDefaults: new Map(),
     },
     "website",
   );

@@ -252,6 +252,18 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
       items: Array<WebElement<T> | WebBlock<T>> | null;
     };
     sidebar: WebSidebar<T> | null;
+    /**
+    The defaults every page of the website starts from, which a page
+    overrides by setting the property itself
+    */
+    page: Pick<
+      Webpage<T>["properties"],
+      | "width"
+      | "variant"
+      | "isBreadcrumbsDisplayed"
+      | "isSidebarDisplayed"
+      | "isNavbarSearchBarDisplayed"
+    >;
     itemPage: {
       isMainContentDisplayed: boolean;
       description: WebSectionDisplay;
