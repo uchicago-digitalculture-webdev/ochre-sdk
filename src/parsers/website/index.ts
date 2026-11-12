@@ -49,7 +49,7 @@ import {
 import { formatXMLWebsiteResourceMetadata } from "#/parsers/website/messages.js";
 import {
   parseWebsiteProperties,
-  WEBPAGE_PROPERTY_DEFAULTS,
+  resolveWebpageSettings,
   WEBPAGE_PROPERTY_LABELS,
 } from "#/parsers/website/properties.js";
 import { websitePresentationReader } from "#/parsers/website/reader.js";
@@ -180,7 +180,7 @@ function createWebpage<T extends ReadonlyArray<string>>(
     items: [],
     segments: [],
     properties: {
-      ...(context.parentProperties?.page ?? WEBPAGE_PROPERTY_DEFAULTS),
+      ...resolveWebpageSettings(context.parentProperties?.page),
       isDisplayedInNavbar: true,
       redirect: null,
       backgroundImage: null,
@@ -291,6 +291,7 @@ export function parseWebpageView<T extends ReadonlyArray<string>>(
   view: { resource?: Array<XMLWebsiteResource> } | undefined,
   options: ParserOptions<T>,
   context: Pick<Website<T>, "belongsTo" | "metadata">,
+  website: Pick<Website<T>, "properties"> | null,
 ): Webpage<T> | null {
   const pages = readWebsitePages(view?.resource, options);
 
@@ -298,7 +299,8 @@ export function parseWebpageView<T extends ReadonlyArray<string>>(
     parseWebpages(pages, options, {
       ...context,
       pageSlugs: collectWebsitePageSlugs(pages, options),
-      componentDefaults: new Map(),
+      parentProperties: website?.properties,
+      componentDefaults: website?.properties.componentDefaults ?? {},
     })[0] ?? null
   );
 }
@@ -668,6 +670,7 @@ function parseWebsiteTree<
     sidebar,
     options,
     context.parentProperties ?? null,
+    treeContext.componentDefaults,
   );
 
   const license =
@@ -723,7 +726,7 @@ export function parseWebsite<
         abbreviation: rawOchre.belongsTo,
       },
       metadata: parseMetadata(rawOchre, parserOptions, defaultLanguage),
-      componentDefaults: new Map(),
+      componentDefaults: {},
     },
     "website",
   );

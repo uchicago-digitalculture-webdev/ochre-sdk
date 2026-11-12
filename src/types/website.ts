@@ -8,6 +8,7 @@ import type {
   Metadata,
   Person,
   QueryablePropertyValueDataType,
+  SimplifiedProperty,
 } from "#/types/index.js";
 import type { Prettify } from "#/types/utilities.js";
 
@@ -253,16 +254,27 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
     };
     sidebar: WebSidebar<T> | null;
     /**
-    The defaults every page of the website starts from, which a page
-    overrides by setting the property itself
+    The settings every page of the website starts from, which a page
+    overrides by setting the property itself, each null when the website
+    leaves it unset
     */
-    page: Pick<
-      Webpage<T>["properties"],
-      | "width"
-      | "variant"
-      | "isBreadcrumbsDisplayed"
-      | "isSidebarDisplayed"
-      | "isNavbarSearchBarDisplayed"
+    page: {
+      [
+        K in
+          | "width"
+          | "variant"
+          | "isBreadcrumbsDisplayed"
+          | "isSidebarDisplayed"
+          | "isNavbarSearchBarDisplayed"
+      ]: Webpage<T>["properties"][K] | null;
+    };
+    /**
+    The settings every element of a component starts from, keyed by
+    component name: the "component" properties of this website, then of each
+    enclosing one, which an element overrides by setting the property itself
+    */
+    componentDefaults: Partial<
+      Record<WebElementComponentName, Array<Array<SimplifiedProperty<T>>>>
     >;
     itemPage: {
       isMainContentDisplayed: boolean;

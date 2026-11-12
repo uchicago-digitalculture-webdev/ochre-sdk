@@ -47,17 +47,6 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
     this.fallback = fallback;
   }
 
-  private propertyByValue(
-    label: string,
-    value: WebsitePropertyContent<T>,
-  ): SimplifiedProperty<T> | null {
-    return (
-      getProperty(this.sourceProperties, { label, valueContent: value }) ??
-      this.fallback?.propertyByValue(label, value) ??
-      null
-    );
-  }
-
   /**
   Overwrite one field from a labeled OCHRE property
   
@@ -71,6 +60,17 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
     label: string,
   ): void {
     target[key] = this.valueOr<O[K]>(label, target[key]);
+  }
+
+  propertyByValue(
+    label: string,
+    value: WebsitePropertyContent<T>,
+  ): SimplifiedProperty<T> | null {
+    return (
+      getProperty(this.sourceProperties, { label, valueContent: value }) ??
+      this.fallback?.propertyByValue(label, value) ??
+      null
+    );
   }
 
   property(label: string): SimplifiedProperty<T> | null {
@@ -254,12 +254,6 @@ export class WebsitePresentationReader<T extends LanguageCodes> {
     return readers.length === 0 && this.fallback != null
       ? this.fallback.nestedAllByValue(label, value)
       : readers;
-  }
-
-  withFallback(
-    fallback: WebsitePresentationReader<T> | null,
-  ): WebsitePresentationReader<T> {
-    return new WebsitePresentationReader(this.sourceProperties, fallback);
   }
 
   get size(): number {

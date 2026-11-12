@@ -12,6 +12,7 @@ import type {
   ItemWithoutEmbeddedItems,
   SetItemCategory,
 } from "#/types/index.js";
+import type { Website } from "#/types/website.js";
 import type { OchreContentLanguage } from "#/xquery.js";
 import {
   isItemCategoryWithEmbeddedItems,
@@ -32,6 +33,11 @@ import {
   OCHRE_RESPONSE_PADDING,
   stringLiteral,
 } from "#/xquery.js";
+
+type FetchItemOptions<TLanguages extends ReadonlyArray<string> | undefined> =
+  FetchBaseOptions<TLanguages> & {
+    website?: Pick<Website, "properties"> | null;
+  };
 
 type FetchItemResult<TItem> = Promise<
   | { item: TItem; error: null; detailedError: null }
@@ -145,6 +151,7 @@ single category when it is known, or an array when the item may be any
 category in that list.
 @param options.containedItemCategory - The category of items inside the OCHRE item to fetch. Only valid for Trees and Sets. Tree accepts one category; Set accepts one category or an array.
 @param options.shouldOmitEmbeddedItems - Whether to omit the embedded item hierarchy when fetching a recursive item category. Ignored when the fetched item does not expose recursive embedded items.
+@param options.website - The website the item is shown in, whose page and component settings a resource's view starts from, as the website's own pages do
 @param options.languages - Language codes to parse. Inline arrays preserve literal types automatically.
 @param options.fetch - Custom fetch function to use instead of the default fetch
 @returns An object containing the parsed item
@@ -156,7 +163,7 @@ export async function fetchItem<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
-  options?: FetchBaseOptions<TLanguages> & {
+  options?: FetchItemOptions<TLanguages> & {
     category?: undefined;
     containedItemCategory?: TContainedItemCategory;
     shouldOmitEmbeddedItems?: false;
@@ -175,7 +182,7 @@ export async function fetchItem<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
-  options: FetchBaseOptions<TLanguages> & {
+  options: FetchItemOptions<TLanguages> & {
     category?: undefined;
     containedItemCategory?: TContainedItemCategory;
     shouldOmitEmbeddedItems?: true;
@@ -203,7 +210,7 @@ export async function fetchItem<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
-  options: FetchBaseOptions<TLanguages> & {
+  options: FetchItemOptions<TLanguages> & {
     category: TCategory;
     containedItemCategory?: TContainedItemCategory;
     shouldOmitEmbeddedItems?: false;
@@ -231,7 +238,7 @@ export async function fetchItem<
   const TLanguages extends ReadonlyArray<string> | undefined = undefined,
 >(
   uuid: string,
-  options: FetchBaseOptions<TLanguages> & {
+  options: FetchItemOptions<TLanguages> & {
     category: TCategory;
     containedItemCategory?: TContainedItemCategory;
     shouldOmitEmbeddedItems: true;
@@ -256,7 +263,7 @@ export async function fetchItem<
 >;
 export async function fetchItem(
   uuid: string,
-  options?: FetchBaseOptions<ReadonlyArray<string>> & {
+  options?: FetchItemOptions<ReadonlyArray<string>> & {
     category?: ItemCategoryOption;
     containedItemCategory?: ContainedItemCategoryOption<ItemCategory>;
     shouldOmitEmbeddedItems?: boolean;
@@ -314,6 +321,7 @@ export async function fetchItem(
           view,
           { languages: context.metadata.languages },
           context,
+          options?.website ?? null,
         ),
     });
     assertItemCategoryAllowed(

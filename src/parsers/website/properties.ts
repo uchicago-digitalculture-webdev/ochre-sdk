@@ -1,17 +1,21 @@
 import type { ParserOptions } from "#/parsers/helpers.js";
 import type { WebsitePresentationReader } from "#/parsers/website/reader.js";
-import type { WebSidebar, Website } from "#/types/website.js";
+import type { Webpage, WebSidebar, Website } from "#/types/website.js";
 import type { XMLWebsiteTree } from "#/xml/types.js";
 import { parseWebsiteOptions } from "#/parsers/website/options.js";
 import { parseStylesheets } from "#/parsers/website/styles.js";
 
-export const WEBPAGE_PROPERTY_DEFAULTS: Website["properties"]["page"] = {
-  width: "default",
-  variant: "default",
-  isBreadcrumbsDisplayed: false,
-  isSidebarDisplayed: true,
-  isNavbarSearchBarDisplayed: true,
-};
+export function resolveWebpageSettings(
+  page: Website["properties"]["page"] | undefined,
+): Pick<Webpage["properties"], keyof Website["properties"]["page"]> {
+  return {
+    width: page?.width ?? "default",
+    variant: page?.variant ?? "default",
+    isBreadcrumbsDisplayed: page?.isBreadcrumbsDisplayed ?? false,
+    isSidebarDisplayed: page?.isSidebarDisplayed ?? true,
+    isNavbarSearchBarDisplayed: page?.isNavbarSearchBarDisplayed ?? true,
+  };
+}
 
 export const WEBPAGE_PROPERTY_LABELS = {
   width: "width",
@@ -33,6 +37,7 @@ export function parseWebsiteProperties<T extends ReadonlyArray<string>>(
   sidebar: WebSidebar<T> | null,
   options: ParserOptions<T>,
   parent: Website<T>["properties"] | null,
+  componentDefaults: Website<T>["properties"]["componentDefaults"],
 ): Website<T>["properties"] {
   const returnProperties: Website<T>["properties"] = {
     type: parent?.type ?? "traditional",
@@ -57,7 +62,15 @@ export function parseWebsiteProperties<T extends ReadonlyArray<string>>(
       items: parent?.footer.items ?? null,
     },
     sidebar: sidebar ?? parent?.sidebar ?? null,
-    page: { ...(parent?.page ?? WEBPAGE_PROPERTY_DEFAULTS) },
+    page: {
+      width: parent?.page.width ?? null,
+      variant: parent?.page.variant ?? null,
+      isBreadcrumbsDisplayed: parent?.page.isBreadcrumbsDisplayed ?? null,
+      isSidebarDisplayed: parent?.page.isSidebarDisplayed ?? null,
+      isNavbarSearchBarDisplayed:
+        parent?.page.isNavbarSearchBarDisplayed ?? null,
+    },
+    componentDefaults,
     itemPage: {
       isMainContentDisplayed: parent?.itemPage.isMainContentDisplayed ?? true,
       description: {

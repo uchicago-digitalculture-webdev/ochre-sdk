@@ -12,6 +12,7 @@ import type {
   WebElement,
   WebElementComponent,
   WebImage,
+  Website,
   WebTitle,
 } from "#/types/website.js";
 import type { XMLWebsiteResource } from "#/xml/types.js";
@@ -217,14 +218,8 @@ function parseCollectionRelations<T extends ReadonlyArray<string>>(
   return relations;
 }
 
-/**
-The component settings a website gives every element of a component, keyed
-by component name, each reader falling back to the enclosing website's
-*/
-export type WebComponentDefaults<T extends ReadonlyArray<string>> = ReadonlyMap<
-  WebElementComponent["component"],
-  WebsitePresentationReader<T>
->;
+export type WebComponentDefaults<T extends ReadonlyArray<string>> =
+  Website<T>["properties"]["componentDefaults"];
 
 /**
 What the element parsers read from the enclosing website
@@ -258,24 +253,35 @@ export function parseComponentDefaults<T extends ReadonlyArray<string>>(
     return parent;
   }
 
-  const defaults = new Map(parent);
+  const defaults: WebComponentDefaults<T> = { ...parent };
   for (const component of componentSchema.options) {
     for (const elementReader of elementReaders) {
-      const componentReader = elementReader.nestedByValue(
+      const componentProperties = elementReader.propertyByValue(
         "component",
         component,
-      );
-      if (componentReader.size > 0) {
-        defaults.set(
-          component,
-          componentReader.withFallback(parent.get(component) ?? null),
-        );
+      )?.properties;
+      if (componentProperties != null && componentProperties.length > 0) {
+        defaults[component] = [
+          componentProperties,
+          ...(parent[component] ?? []),
+        ];
         break;
       }
     }
   }
 
   return defaults;
+}
+
+function componentDefaultsReader<T extends ReadonlyArray<string>>(
+  layers: ReadonlyArray<ReadonlyArray<SimplifiedProperty<T>>>,
+): WebsitePresentationReader<T> | null {
+  let reader: WebsitePresentationReader<T> | null = null;
+  for (const layer of layers.toReversed()) {
+    reader = websitePresentationReader(layer, reader);
+  }
+
+  return reader;
 }
 
 /**
@@ -1560,7 +1566,7 @@ function parseWebElementProperties<T extends ReadonlyArray<string>>(
     componentProperty,
     componentReader: websitePresentationReader(
       componentProperty.properties,
-      context.componentDefaults.get(component) ?? null,
+      componentDefaultsReader(context.componentDefaults[component] ?? []),
     ),
     elementResource,
     websiteLinks: parseLinks(elementResource.links, options),
