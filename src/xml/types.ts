@@ -809,13 +809,23 @@ export type XMLItemLocation = {
   identification: XMLIdentification;
   coordinates?: XMLCoordinates;
   mapData?: XMLSpatialUnit["mapData"];
+  popupView?: XMLItemView;
   value?: Array<{ variable: string; uuid: string } & XMLContent>;
 };
 
 export type XMLItemLocationsData = {
   result: {
     ochre: {
-      items: { totalCount: number; itemLocation?: Array<XMLItemLocation> };
+      items: {
+        totalCount: number;
+        scope?: Array<{
+          uuid: string;
+          uuidBelongsTo: string;
+          belongsTo: string;
+          metadata: XMLMetadata;
+        }>;
+        itemLocation?: Array<XMLItemLocation>;
+      };
     };
   };
 };

@@ -2747,6 +2747,7 @@ const XMLItemLocation = v.object(
     identification: XMLIdentification,
     coordinates: v.optional(XMLCoordinates),
     mapData: XMLMapData,
+    popupView: v.optional(XMLItemView),
     value: v.optional(
       v.array(
         v.intersect([
@@ -2777,6 +2778,25 @@ export const XMLItemLocationsData = v.object(
           items: v.object(
             {
               totalCount: XMLNumber,
+              scope: v.optional(
+                v.array(
+                  v.object(
+                    {
+                      uuid: v.string(
+                        "XMLItemLocationsData: scope uuid is string and required",
+                      ),
+                      uuidBelongsTo: v.string(
+                        "XMLItemLocationsData: scope uuidBelongsTo is string and required",
+                      ),
+                      belongsTo: v.string(
+                        "XMLItemLocationsData: scope belongsTo is string and required",
+                      ),
+                      metadata: XMLMetadata,
+                    },
+                    "XMLItemLocationsData: scope is object with uuid, uuidBelongsTo, belongsTo, and metadata",
+                  ),
+                ),
+              ),
               itemLocation: v.optional(
                 v.array(
                   XMLItemLocation,

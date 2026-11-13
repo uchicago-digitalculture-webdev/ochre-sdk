@@ -938,6 +938,7 @@ export type ItemLocation<T extends LanguageCodes = LanguageCodes> = {
   identification: Identification<T>;
   coordinates: Array<Coordinates<T>>;
   mapData: SpatialUnit<T>["mapData"];
+  popupView: Webpage<T> | null;
   propertyValues: Array<{
     variableUuid: string;
     valueUuid: string;
