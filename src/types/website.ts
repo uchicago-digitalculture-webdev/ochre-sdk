@@ -234,6 +234,12 @@ export type Website<T extends LanguageCodes = LanguageCodes> = {
       isThemeToggleDisplayed: boolean;
       defaultTheme: "light" | "dark" | "system";
     };
+    /**
+    The website's brand colors as lowercase `#rrggbb` hex, read from a hex
+    value with or without its `#`, each null when the website leaves it unset
+    or sets a value that is not a hex color
+    */
+    colors: { primary: string | null };
     icon: {
       logoUuid: string | null;
       faviconUuid: string | null;

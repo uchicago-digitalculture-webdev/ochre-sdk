@@ -26,6 +26,24 @@ export const WEBPAGE_PROPERTY_LABELS = {
 } as const satisfies Record<keyof Website["properties"]["page"], string>;
 
 /**
+A hex color as lowercase `#rrggbb`, from `#rgb` or `#rrggbb` with or without
+the `#`
+
+@param value - The raw OCHRE value
+@returns The normalized hex color, or null when the value is not one
+*/
+function parseHexColor(value: string | null): string | null {
+  const hex = /^#?([\da-f]{3}|[\da-f]{6})$/i
+    .exec(value?.trim() ?? "")?.[1]
+    ?.toLowerCase();
+  if (hex == null) {
+    return null;
+  }
+
+  return `#${hex.length === 3 ? [...hex].map((digit) => digit.repeat(2)).join("") : hex}`;
+}
+
+/**
 Parses raw website properties into a standardized Website properties structure
 
 @param websiteReader - Reader over the website's "presentation" properties
@@ -47,6 +65,7 @@ export function parseWebsiteProperties<T extends ReadonlyArray<string>>(
     contact: parent?.contact ?? null,
     loadingVariant: "spinner",
     theme: { isThemeToggleDisplayed: true, defaultTheme: "system" },
+    colors: { primary: parent?.colors.primary ?? null },
     icon: { logoUuid: null, faviconUuid: null, appleTouchIconUuid: null },
     navbar: {
       isDisplayed: true,
@@ -136,6 +155,10 @@ export function parseWebsiteProperties<T extends ReadonlyArray<string>>(
       );
     }
   }
+
+  returnProperties.colors.primary =
+    parseHexColor(websiteReader.stringValue("primary-color")) ??
+    returnProperties.colors.primary;
 
   websiteReader.readAll(returnProperties, {
     type: "webUI",
